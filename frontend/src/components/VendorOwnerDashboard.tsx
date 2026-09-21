@@ -8,7 +8,7 @@ import {
   Layers, ChevronDown, Bell, Terminal, Server, MessageSquare,
   Send, Volume2, Globe, Key, CheckCircle, ExternalLink, Sparkles, Download, Zap,
   CreditCard, Percent, Banknote, Receipt, ArrowDownRight, UserCheck, Lock, Unlock, UserPlus,
-  Copy, Inbox, AtSign, BookOpen, Settings
+  Copy, Inbox, AtSign, BookOpen, Settings, Trash2, HelpCircle
 } from 'lucide-react';
 import { 
   VendorPortalConfig, TeamMember, RoleMatrixResponse, CertifiedAffiliatePartner, 
@@ -20,7 +20,11 @@ import {
   deleteVendorTeamMember, generateTeamMemberImpersonateToken, fetchVendorRolesMatrix,
   fetchGlobalAffiliateDirectory, fetchAffiliateRecommendations, farmOutAffiliateRide, fetchVendorAffiliateRecords,
   fetchVendorAffiliatePolicy, updateVendorAffiliatePolicy, fetchGlobalHubKnowledgeBase,
-  createVendorVehicle, toggleVehicleNetwork, getAuthHeaders
+  createVendorVehicle, toggleVehicleNetwork, getAuthHeaders,
+  fetchVendorOnboardingStatus, sendVendorOnboardingInvite,
+  fetchVendorStripeStatus, createVendorStripeConnectLink, createVendorStripeLoginLink,
+  fetchVendorSubscription, upgradeVendorSubscription, switchVendorToPayAsYouGo,
+  cancelVendorSubscription, requestVendorAccountDeletion
 } from '../api';
 
 interface VendorOwnerDashboardProps {
@@ -31,7 +35,7 @@ interface VendorOwnerDashboardProps {
 type AutonomyLevel = 'L5_FULL_AUTONOMY' | 'L3_SHADOW_ASSIST' | 'L0_MANUAL_KILL_SWITCH';
 
 interface NavItem {
-  id: 'overview' | 'dispatch' | 'fleet' | 'drivers' | 'corporate' | 'pricing' | 'email_rfq' | 'team' | 'affiliates' | 'voice_ai' | 'omnichannel';
+  id: 'overview' | 'dispatch' | 'fleet' | 'drivers' | 'corporate' | 'pricing' | 'email_rfq' | 'team' | 'affiliates' | 'voice_ai' | 'omnichannel' | 'subscription';
   label: string;
   icon: React.ReactNode;
   category: string;
@@ -44,7 +48,7 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
 }) => {
   const { switchPersona, role: currentAuthRole } = useAuth();
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'dispatch' | 'fleet' | 'drivers' | 'corporate' | 'pricing' | 'email_rfq' | 'team' | 'affiliates' | 'voice_ai' | 'omnichannel'
+    'overview' | 'dispatch' | 'fleet' | 'drivers' | 'corporate' | 'pricing' | 'email_rfq' | 'team' | 'affiliates' | 'voice_ai' | 'omnichannel' | 'subscription'
   >('overview');
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -149,192 +153,39 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
     opt_in_url: config.branding?.domain ? `https://${config.branding.domain}/book` : ''
   });
 
-  const [affiliateJobs, setAffiliateJobs] = useState([
-    {
-      id: 'TRP-HUB-904',
-      type: 'INCOMING_HUB',
-      direction: '📥 Farmed-In (85% Net)',
-      passenger: 'Julian Drake',
-      phone: '+1 (212) 555-0199',
-      pickup: 'PHL Airport Private FBO (Atlantic Aviation)',
-      dropoff: 'Citadel Securities Office, Philadelphia',
-      partner: 'Global Hub Worldwide Concierge',
-      city: 'Philadelphia, PA',
-      vehicle_class: 'FIRST_CLASS',
-      gross_fare: 165.00,
-      net_cut: 140.25,
-      cut_label: '85% Net Payout',
-      status: 'UNASSIGNED',
-      chauffeur: 'Unassigned',
-      date: 'Today, 2:30 PM',
-      escrow_status: 'ESCROW_LOCKED'
-    },
-    {
-      id: 'TRP-HUB-915',
-      type: 'INCOMING_HUB',
-      direction: '📥 Farmed-In (85% Net)',
-      passenger: 'Sarah Jenkins',
-      phone: '+1 (312) 555-0144',
-      pickup: 'PHL Airport Terminal E (Gate E3)',
-      dropoff: 'King of Prussia Luxury Mall / Hotel',
-      partner: 'Global Hub Worldwide Concierge',
-      city: 'Philadelphia, PA',
-      vehicle_class: 'LUXURY_SUV',
-      gross_fare: 110.00,
-      net_cut: 93.50,
-      cut_label: '85% Net Payout',
-      status: 'IN_TRANSIT',
-      chauffeur: 'Marcus Brody',
-      date: 'Today, 3:15 PM',
-      escrow_status: 'ESCROW_LOCKED'
-    },
-    {
-      id: 'TRP-HUB-928',
-      type: 'INCOMING_HUB',
-      direction: '📥 Farmed-In (85% Net)',
-      passenger: 'David Sterling',
-      phone: '+1 (617) 555-0182',
-      pickup: '30th Street Station VIP Concourse',
-      dropoff: 'Center City Marriott Downtown',
-      partner: 'Global Hub Corporate Exchange',
-      city: 'Philadelphia, PA',
-      vehicle_class: 'BUSINESS_SEDAN',
-      gross_fare: 85.00,
-      net_cut: 72.25,
-      cut_label: '85% Net Payout',
-      status: 'SETTLED',
-      chauffeur: 'Carlos Santos',
-      date: 'Today, 11:00 AM',
-      escrow_status: 'PAID_OUT'
-    },
-    {
-      id: 'TRP-NYC-102',
-      type: 'OUTGOING_FARM',
-      direction: '📤 Farmed-Out (10% Referral)',
-      passenger: 'Robert Vance (VIP Client)',
-      phone: '+1 (215) 555-0811',
-      pickup: 'JFK Airport Terminal 4 VIP',
-      dropoff: 'Manhattan Midtown Office (57th St)',
-      partner: 'NY Executive Limousine',
-      city: 'New York, NY',
-      vehicle_class: 'FIRST_CLASS',
-      gross_fare: 195.00,
-      net_cut: 19.50,
-      cut_label: '10% Referral Cut',
-      status: 'IN_TRANSIT',
-      chauffeur: 'NY Chauffeur #41',
-      date: 'Today, 4:00 PM',
-      escrow_status: 'ESCROW_LOCKED'
-    },
-    {
-      id: 'TRP-MIA-405',
-      type: 'OUTGOING_FARM',
-      direction: '📤 Farmed-Out (10% Referral)',
-      passenger: 'Senator Alexander Hayes',
-      phone: '+1 (202) 555-0177',
-      pickup: 'Miami International (MIA) Concourse D',
-      dropoff: '1 Hotel South Beach, Miami Beach',
-      partner: 'Miami VIP Chauffeur Fleet',
-      city: 'Miami, FL',
-      vehicle_class: 'LUXURY_SUV',
-      gross_fare: 240.00,
-      net_cut: 24.00,
-      cut_label: '10% Referral Cut',
-      status: 'SCHEDULED',
-      chauffeur: 'Miami Chauffeur #12',
-      date: 'Tomorrow, 9:30 AM',
-      escrow_status: 'ESCROW_LOCKED'
-    },
-    {
-      id: 'TRP-LON-711',
-      type: 'OUTGOING_FARM',
-      direction: '📤 Farmed-Out (10% Referral)',
-      passenger: 'Lady Victoria Spencer',
-      phone: '+44 20 7946 0912',
-      pickup: 'London Heathrow (LHR) Terminal 5 FBO',
-      dropoff: 'The Connaught Hotel, Mayfair London',
-      partner: 'London Executive Car Service',
-      city: 'London, UK',
-      vehicle_class: 'FIRST_CLASS',
-      gross_fare: 280.00,
-      net_cut: 28.00,
-      cut_label: '10% Referral Cut',
-      status: 'SETTLED',
-      chauffeur: 'London Chauffeur #08',
-      date: 'Yesterday, 8:00 AM',
-      escrow_status: 'PAID_OUT'
-    }
-  ]);
+  const [affiliateJobs, setAffiliateJobs] = useState<any[]>([]);
 
   // Local KPI Metrics
   const [metrics, setMetrics] = useState({
-    today_revenue_usd: 3420.50,
-    trips_completed_today: 14,
-    trips_active: 3,
-    active_chauffeurs_on_duty: 6,
-    fleet_utilization_pct: 78,
-    direct_bookings_pct: 82,
-    farmed_in_hub_pct: 18,
+    today_revenue_usd: 0,
+    trips_completed_today: 0,
+    trips_active: 0,
+    active_chauffeurs_on_duty: 0,
+    fleet_utilization_pct: 0,
+    direct_bookings_pct: 0,
+    farmed_in_hub_pct: 0,
     compliance_ppa_tlc_score: 100
   });
 
   // Local Live Trips
-  const [trips, setTrips] = useState([
-    {
-      id: 'TRP-PHL-891',
-      passenger: 'Hon. Elena Vance',
-      pickup: 'PHL Airport Terminal A (Gate 14)',
-      dropoff: 'The Ritz-Carlton Philadelphia, 10 Ave of the Arts',
-      vehicle_class: 'FIRST_CLASS',
-      chauffeur: 'Marcus Brody',
-      status: 'PASSENGER_ONBOARD',
-      fare_usd: 125.00,
-      source: 'DIRECT_STOREFRONT',
-      eta_minutes: 18
-    },
-    {
-      id: 'TRP-PHL-892',
-      passenger: 'Dr. Arthur Sterling',
-      pickup: '30th Street Station VIP Gate',
-      dropoff: 'Four Seasons Hotel Philadelphia, Comcast Center',
-      vehicle_class: 'LUXURY_SUV',
-      chauffeur: 'Carlos Santos',
-      status: 'EN_ROUTE',
-      fare_usd: 95.00,
-      source: 'DIRECT_STOREFRONT',
-      eta_minutes: 8
-    },
-    {
-      id: 'TRP-HUB-904',
-      passenger: 'Managing Dir. Julian Drake',
-      pickup: 'Philadelphia International Airport (PHL) Private FBO',
-      dropoff: 'Citadel Securities Office, Philadelphia',
-      vehicle_class: 'FIRST_CLASS',
-      chauffeur: 'Unassigned',
-      status: 'UNASSIGNED',
-      fare_usd: 165.00,
-      source: 'GLOBAL_HUB_MARKETPLACE',
-      net_payout_usd: 140.25, // 85%
-      eta_minutes: 45
-    }
-  ]);
+  const [trips, setTrips] = useState<any[]>([]);
 
   // Local Fleet
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [showAddVehicleModal, setShowAddVehicleModal] = useState(false);
   const [newVehicleForm, setNewVehicleForm] = useState({
-    make: 'Mercedes-Benz',
-    model: 'S 580 4MATIC',
-    year: 2026,
+    make: '',
+    model: '',
+    year: new Date().getFullYear(),
     vehicle_class: 'FIRST_CLASS',
-    license_plate: 'PA-EXEC88',
-    vin: 'W1K8G8EB3NA109283',
+    license_plate: '',
+    vin: '',
     capacity_passengers: 3,
     capacity_luggage: 3,
     hourly_rate_usd: 125.0,
     per_km_usd: 3.85,
     is_network_shared: true,
-    image_url: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=1200&q=80'
+    image_url: ''
   });
 
   // Local Chauffeurs with Compensation Models
@@ -356,63 +207,24 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
   const [payrollSearch, setPayrollSearch] = useState('');
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [newShiftEntry, setNewShiftEntry] = useState({
-    driver_id: 'drv_02',
+    driver_id: '',
     hours: 8.0,
-    tips: 35.0,
-    tolls: 12.50,
-    trips_count: 4
+    tips: 0.0,
+    tolls: 0.0,
+    trips_count: 0
   });
 
-  const [instantPayoutRecords, setInstantPayoutRecords] = useState<any[]>([
-    {
-      id: 'TX-STRIPE-891',
-      trip_id: 'TRP-PHL-891',
-      driver_id: 'drv_01',
-      driver_name: 'Marcus Brody',
-      transfer_sid: 'tr_1Q7zL92eZvKYlo2CL884391',
-      gross_fare: 125.00,
-      split_pct: 65,
-      driver_base_cut: 81.25,
-      tip_amount: 25.00,
-      toll_reimbursement: 10.00,
-      total_payout: 116.25,
-      payout_channel: 'STRIPE_CONNECT_INSTANT',
-      status: 'SETTLED_INSTANT',
-      created_at: 'Today, 2:45 PM'
-    },
-    {
-      id: 'TX-STRIPE-874',
-      trip_id: 'TRP-HUB-904',
-      driver_id: 'drv_04',
-      driver_name: 'David Miller',
-      transfer_sid: 'tr_1Q7xK42eZvKYlo2C991823',
-      gross_fare: 165.00,
-      split_pct: 70,
-      driver_base_cut: 115.50,
-      tip_amount: 30.00,
-      toll_reimbursement: 15.00,
-      total_payout: 160.50,
-      payout_channel: 'STRIPE_CONNECT_INSTANT',
-      status: 'SETTLED_INSTANT',
-      created_at: 'Today, 11:20 AM'
-    },
-    {
-      id: 'TX-STRIPE-862',
-      trip_id: 'TRP-PHL-844',
-      driver_id: 'drv_01',
-      driver_name: 'Marcus Brody',
-      transfer_sid: 'tr_1Q7vM12eZvKYlo2CP10928',
-      gross_fare: 140.00,
-      split_pct: 65,
-      driver_base_cut: 91.00,
-      tip_amount: 20.00,
-      toll_reimbursement: 8.50,
-      total_payout: 119.50,
-      payout_channel: 'STRIPE_CONNECT_INSTANT',
-      status: 'SETTLED_INSTANT',
-      created_at: 'Yesterday, 6:15 PM'
-    }
-  ]);
+  const [instantPayoutRecords, setInstantPayoutRecords] = useState<any[]>([]);
+  const [stripeConnectStatus, setStripeConnectStatus] = useState<any>(null);
+  const [isLoadingStripe, setIsLoadingStripe] = useState<boolean>(false);
+
+  // Vendor SaaS Subscription & Hub Billing State
+  const [subscriptionData, setSubscriptionData] = useState<any | null>(null);
+  const [isLoadingSub, setIsLoadingSub] = useState<boolean>(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState<boolean>(false);
+  const [deleteReason, setDeleteReason] = useState<string>('Business restructuring');
+  const [deleteConfirmText, setDeleteConfirmText] = useState<string>('');
+  const [isProcessingSubAction, setIsProcessingSubAction] = useState<boolean>(false);
 
   // Local Pricing Rules
   const [pricingRules, setPricingRules] = useState({
@@ -542,10 +354,112 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
     { id: 'pricing', label: 'Dynamic Tariff Matrix', icon: <Sliders size={16} />, category: 'Commercial' },
     { id: 'email_rfq', label: 'Email Gateway & BYOE', icon: <Mail size={16} />, category: 'Intelligence', badge: emailInbox.filter(e => e.status === 'PARSED_AWAITING_CONVERSION').length > 0 ? `${emailInbox.filter(e => e.status === 'PARSED_AWAITING_CONVERSION').length}` : undefined },
     { id: 'team', label: 'Team & RBAC Access', icon: <ShieldCheck size={16} />, category: 'Administration', badge: `${teamMembers.length} Staff` },
+    { id: 'subscription', label: 'Subscription & Hub Billing', icon: <CreditCard size={16} />, category: 'Administration', badge: subscriptionData?.billing_status === 'PAST_DUE' ? '⚠️ Due' : subscriptionData?.tier_name ? subscriptionData.tier_name.split(' ')[0] : 'SaaS' },
     { id: 'affiliates', label: 'Affiliate Network (Hub)', icon: <ArrowUpRight size={16} />, category: 'Commercial', badge: '85%' },
     { id: 'omnichannel', label: 'Omnichannel & Telecom', icon: <Radio size={16} />, category: 'Communications', badge: '10DLC OK' },
     { id: 'voice_ai', label: 'Voice AI Telephony', icon: <Phone size={16} />, category: 'Intelligence' },
   ];
+
+  const [onboardingStatus, setOnboardingStatus] = useState<any>(null);
+  const [showOnboardingBanner, setShowOnboardingBanner] = useState(true);
+  const [isSendingInvite, setIsSendingInvite] = useState(false);
+  const [inviteSuccessMsg, setInviteSuccessMsg] = useState<string | null>(null);
+
+  const loadOnboardingStatus = () => {
+    if (config?.vendor_id) {
+      fetchVendorOnboardingStatus(config.vendor_id)
+        .then(data => setOnboardingStatus(data))
+        .catch(err => console.log('Could not fetch onboarding status:', err));
+    }
+  };
+
+  const loadSubscription = () => {
+    if (config?.vendor_id) {
+      setIsLoadingSub(true);
+      fetchVendorSubscription(config.vendor_id)
+        .then(data => setSubscriptionData(data))
+        .catch(err => console.log('Could not fetch subscription data:', err))
+        .finally(() => setIsLoadingSub(false));
+    }
+  };
+
+  const handleUpgradeTier = async (planId: string) => {
+    setIsProcessingSubAction(true);
+    try {
+      const res = await upgradeVendorSubscription(config.vendor_id, planId, 'monthly');
+      setActionNotice(`🎉 Successfully switched to ${res.tier_name}! Next renewal: ${res.renews_at ? new Date(res.renews_at).toLocaleDateString() : 'Active'}`);
+      loadSubscription();
+    } catch (err: any) {
+      setActionNotice(`⚠️ Subscription change failed: ${err.message}`);
+    } finally {
+      setIsProcessingSubAction(false);
+    }
+  };
+
+  const handleSwitchPayAsYouGo = async () => {
+    if (!confirm('Switch to Pay-As-You-Go ($0/mo fixed fee + 5% per completed ride)? Monthly SaaS fees will stop immediately.')) return;
+    setIsProcessingSubAction(true);
+    try {
+      const res = await switchVendorToPayAsYouGo(config.vendor_id);
+      setActionNotice(`✓ Switched to Pay-As-You-Go ($0/mo fixed + 5% per booking)! Monthly subscription charges stopped.`);
+      loadSubscription();
+    } catch (err: any) {
+      setActionNotice(`⚠️ Failed to switch to Pay-As-You-Go: ${err.message}`);
+    } finally {
+      setIsProcessingSubAction(false);
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    if (!confirm('Cancel your Hub SaaS subscription? Your account will switch to Free Tier at the end of the current billing cycle.')) return;
+    setIsProcessingSubAction(true);
+    try {
+      const res = await cancelVendorSubscription(config.vendor_id, 'Vendor requested cancellation via dashboard');
+      setActionNotice(`✓ Subscription cancelled. Free tier features remain available.`);
+      loadSubscription();
+    } catch (err: any) {
+      setActionNotice(`⚠️ Cancellation error: ${err.message}`);
+    } finally {
+      setIsProcessingSubAction(false);
+    }
+  };
+
+  const handleConfirmAccountDeletion = async () => {
+    if (deleteConfirmText.trim().toUpperCase() !== 'DELETE') {
+      alert('Please type "DELETE" into the confirmation field.');
+      return;
+    }
+    setIsProcessingSubAction(true);
+    try {
+      const res = await requestVendorAccountDeletion(config.vendor_id, deleteReason, true);
+      setShowDeleteAccountModal(false);
+      setActionNotice(`🛑 Account Decommission Submitted: Ticket ${res.ticket_id}. Status: ${res.status}. All container services will be decommissioned.`);
+      loadSubscription();
+    } catch (err: any) {
+      setActionNotice(`⚠️ Account deletion error: ${err.message}`);
+    } finally {
+      setIsProcessingSubAction(false);
+    }
+  };
+
+  const handleSendInviteEmail = async () => {
+    if (!config?.vendor_id) return;
+    setIsSendingInvite(true);
+    try {
+      const res = await sendVendorOnboardingInvite(config.vendor_id);
+      setInviteSuccessMsg(`Setup guide successfully sent to ${res.recipient || 'owner email'}!`);
+      setTimeout(() => setInviteSuccessMsg(null), 5000);
+    } catch (err: any) {
+      alert(`Could not send email: ${err.message}`);
+    } finally {
+      setIsSendingInvite(false);
+    }
+  };
+
+  React.useEffect(() => {
+    loadOnboardingStatus();
+    loadSubscription();
+  }, [config?.vendor_id]);
 
   React.useEffect(() => {
     // 1. Fetch Fleet Vehicles for THIS specific vendor
@@ -745,6 +659,15 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
         }
       })
       .catch(err => console.log('Recommendations load notice:', err));
+
+    // 11. Fetch Live Stripe Connect Verification & Payout Status
+    fetchVendorStripeStatus(config.vendor_id)
+      .then(status => {
+        if (status) {
+          setStripeConnectStatus(status);
+        }
+      })
+      .catch(err => console.log('Stripe status load notice:', err));
   }, [config.vendor_id]);
 
   const handleSaveAffiliatePolicy = async () => {
@@ -919,6 +842,38 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
       setActionNotice(`⚠️ Payout error: ${err.message}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOpenStripeConnect = async () => {
+    if (!config?.vendor_id) return;
+    setIsLoadingStripe(true);
+    try {
+      const res = await createVendorStripeConnectLink(config.vendor_id);
+      if (res.onboarding_url) {
+        window.open(res.onboarding_url, '_blank');
+        setActionNotice('🔗 Opened Stripe Connect Express onboarding portal in a new tab.');
+      }
+    } catch (err: any) {
+      setActionNotice(`⚠️ Stripe Connect error: ${err.message}`);
+    } finally {
+      setIsLoadingStripe(false);
+    }
+  };
+
+  const handleOpenStripeLogin = async () => {
+    if (!config?.vendor_id) return;
+    setIsLoadingStripe(true);
+    try {
+      const res = await createVendorStripeLoginLink(config.vendor_id);
+      if (res.url) {
+        window.open(res.url, '_blank');
+        setActionNotice('🔗 Opened Stripe Express Dashboard SSO portal in a new tab.');
+      }
+    } catch (err: any) {
+      setActionNotice(`⚠️ Stripe Dashboard error: ${err.message}`);
+    } finally {
+      setIsLoadingStripe(false);
     }
   };
 
@@ -1701,6 +1656,203 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
 
           {/* Primary View Workspace */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+            
+            {/* Delinquent Subscription & Dunning Grace Notice Banner */}
+            {subscriptionData && (subscriptionData.billing_status === 'PAST_DUE' || subscriptionData.is_grace_period_active) && (
+              <div style={{
+                backgroundColor: '#FEF2F2',
+                border: '1px solid #FECACA',
+                borderLeft: '5px solid #DC2626',
+                borderRadius: '10px',
+                padding: '16px 20px',
+                marginBottom: '20px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '14px',
+                boxShadow: '0 2px 6px rgba(220, 38, 38, 0.08)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                  <div style={{ padding: '8px', backgroundColor: '#FEE2E2', borderRadius: '8px', color: '#DC2626' }}>
+                    <AlertTriangle size={20} />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#991B1B' }}>
+                        ⚠️ Monthly Hub SaaS Subscription Payment Past Due (Stage {subscriptionData.dunning_stage || 1})
+                      </h4>
+                      <span style={{ fontSize: '10px', fontWeight: 800, backgroundColor: '#DC2626', color: '#FFFFFF', padding: '2px 8px', borderRadius: '12px' }}>
+                        7-DAY GRACE ACTIVE
+                      </span>
+                    </div>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#B91C1C' }}>
+                      {subscriptionData.grace_period_expires_at 
+                        ? `Grace period expires on ${new Date(subscriptionData.grace_period_expires_at).toLocaleDateString()} at ${new Date(subscriptionData.grace_period_expires_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Please settle balance or switch to Pay-As-You-Go ($0/mo) to prevent automatic sovereign cell pause.`
+                        : 'Please settle past due balance or switch to Pay-As-You-Go ($0/mo) to keep your Sovereign Cell active.'}
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    onClick={handleSwitchPayAsYouGo}
+                    disabled={isProcessingSubAction}
+                    style={{
+                      padding: '8px 14px',
+                      backgroundColor: '#FFFFFF',
+                      color: '#991B1B',
+                      border: '1px solid #FECACA',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 800,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Switch to Pay-As-You-Go ($0/mo)
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('subscription')}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: '#DC2626',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 800,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Manage Billing & Renew
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Progressive Onboarding & Setup Readiness Checklist Banner */}
+            {showOnboardingBanner && onboardingStatus && (
+              <div style={{
+                backgroundColor: '#FFFFFF',
+                border: '1px solid #E5E7EB',
+                borderLeft: `5px solid ${onboardingStatus.readiness_score >= 100 ? '#16A34A' : '#0078D4'}`,
+                borderRadius: '10px',
+                padding: '16px 20px',
+                marginBottom: '24px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.04)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '18px' }}>{onboardingStatus.readiness_score >= 100 ? '🎉' : '🚀'}</span>
+                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0F172A' }}>
+                        Sovereign Cell Setup Readiness: {onboardingStatus.readiness_score}% Complete
+                      </h3>
+                      <span style={{
+                        fontSize: '11px',
+                        fontWeight: 800,
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        backgroundColor: onboardingStatus.readiness_score >= 100 ? '#DCFCE7' : '#EFF6FF',
+                        color: onboardingStatus.readiness_score >= 100 ? '#15803D' : '#0078D4'
+                      }}>
+                        {onboardingStatus.completed_milestones_count} of {onboardingStatus.total_milestones_count} Milestones Configured
+                      </span>
+                    </div>
+                    <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#6B7280' }}>
+                      Your isolated cell is running in <strong>{config.tier || 'AUTONOMOUS_T1'}</strong> mode. Complete the checklist below to activate full custom branding, BYOE email routing, fleet permits, and direct carrier SMS.
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button
+                      onClick={handleSendInviteEmail}
+                      disabled={isSendingInvite}
+                      style={{
+                        padding: '6px 12px',
+                        backgroundColor: '#F3F4F6',
+                        color: '#1F2937',
+                        border: '1px solid #D1D5DB',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Mail size={12} /> {isSendingInvite ? 'Sending...' : 'Email Setup Guide'}
+                    </button>
+                    <button
+                      onClick={() => setShowOnboardingBanner(false)}
+                      style={{ background: 'transparent', border: 'none', color: '#9CA3AF', cursor: 'pointer', padding: '4px' }}
+                      title="Dismiss banner"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                {inviteSuccessMsg && (
+                  <div style={{ marginTop: '10px', fontSize: '12px', color: '#15803D', backgroundColor: '#DCFCE7', padding: '6px 12px', borderRadius: '4px', fontWeight: 600 }}>
+                    ✓ {inviteSuccessMsg}
+                  </div>
+                )}
+
+                {/* Progress Bar */}
+                <div style={{ marginTop: '12px', background: '#F3F4F6', borderRadius: '6px', height: '8px', overflow: 'hidden' }}>
+                  <div style={{
+                    background: onboardingStatus.readiness_score >= 100 ? '#16A34A' : '#0078D4',
+                    height: '100%',
+                    width: `${onboardingStatus.readiness_score}%`,
+                    transition: 'width 0.4s ease'
+                  }} />
+                </div>
+
+                {/* 7 Milestones Quick Chips */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px', marginTop: '14px' }}>
+                  {onboardingStatus.milestones?.map((m: any) => (
+                    <div
+                      key={m.id}
+                      onClick={() => {
+                        if (m.target_tab === 'fleet') setActiveTab('fleet');
+                        else if (m.target_tab === 'email') setActiveTab('email_rfq');
+                        else if (m.target_tab === 'pricing') setActiveTab('pricing');
+                        else if (m.target_tab === 'compliance') setActiveTab('omnichannel');
+                        else if (m.target_tab === 'branding') setActiveTab('omnichannel');
+                        else if (m.target_tab === 'payouts') setActiveTab('drivers');
+                        else setActiveTab('overview');
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        backgroundColor: m.completed ? '#F0FDF4' : '#F9FAFB',
+                        border: `1px solid ${m.completed ? '#BBF7D0' : '#E5E7EB'}`,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '13px' }}>{m.completed ? '✅' : '⏳'}</span>
+                        <div>
+                          <div style={{ fontSize: '11px', fontWeight: 700, color: m.completed ? '#166534' : '#1F2937' }}>
+                            {m.title}
+                          </div>
+                          <div style={{ fontSize: '10px', color: '#6B7280' }}>
+                            {m.completed ? 'Completed' : m.action_label}
+                          </div>
+                        </div>
+                      </div>
+                      <ChevronRight size={12} color={m.completed ? '#166534' : '#9CA3AF'} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             
             {/* TAB 1: EXECUTIVE OVERVIEW */}
             {activeTab === 'overview' && (
@@ -2995,6 +3147,92 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                 {/* SUB-VIEW 3: INSTANT STRIPE TRANSFER AUDIT TRAIL */}
                 {payrollSubTab === 'payouts' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+                    {/* VENDOR STRIPE CONNECT EXPRESS PAYOUT STATUS BANNER */}
+                    <div style={{
+                      backgroundColor: '#F8FAFC',
+                      borderRadius: '10px',
+                      padding: '18px 20px',
+                      border: '1.5px solid #CBD5E1',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: '16px',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                        <div style={{ backgroundColor: '#2563EB', color: '#FFFFFF', padding: '10px', borderRadius: '8px', display: 'flex' }}>
+                          <CreditCard size={22} />
+                        </div>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0F172A' }}>
+                              Vendor Treasury Stripe Express Account
+                            </h4>
+                            <span style={{
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: 800,
+                              backgroundColor: stripeConnectStatus?.payouts_enabled ? '#DCFCE7' : '#FEF3C7',
+                              color: stripeConnectStatus?.payouts_enabled ? '#15803D' : '#D97706'
+                            }}>
+                              {stripeConnectStatus?.payouts_enabled ? '● PAYOUTS ACTIVE' : '● ACTION NEEDED: BANK VERIFICATION'}
+                            </span>
+                          </div>
+                          <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#64748B' }}>
+                            Connected Account: <code style={{ backgroundColor: '#E2E8F0', padding: '1px 6px', borderRadius: '3px', fontWeight: 700 }}>{stripeConnectStatus?.stripe_account_id || `acct_conn_${config.vendor_id}`}</code> &bull; Currency: <strong>{stripeConnectStatus?.default_currency || 'USD'}</strong> &bull; 85% Farm-In Clearing & Direct Deposits
+                          </p>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <button
+                          onClick={handleOpenStripeConnect}
+                          disabled={isLoadingStripe}
+                          style={{
+                            backgroundColor: '#2563EB',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            padding: '8px 16px',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            cursor: isLoadingStripe ? 'not-allowed' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 2px 4px rgba(37,99,235,0.2)'
+                          }}
+                        >
+                          <Sliders size={14} />
+                          <span>{isLoadingStripe ? 'Opening...' : 'Update Bank Routing / Debit Card'}</span>
+                        </button>
+
+                        <button
+                          onClick={handleOpenStripeLogin}
+                          disabled={isLoadingStripe}
+                          style={{
+                            backgroundColor: '#FFFFFF',
+                            color: '#334155',
+                            border: '1px solid #CBD5E1',
+                            padding: '8px 14px',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            cursor: isLoadingStripe ? 'not-allowed' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          <ExternalLink size={14} />
+                          <span>Stripe Express Portal</span>
+                        </button>
+                      </div>
+                    </div>
+
                     <div style={{ backgroundColor: '#FFFFFF', borderRadius: '10px', overflow: 'hidden', border: '1px solid #E5E7EB', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                       <div style={{ padding: '16px 20px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
@@ -7552,11 +7790,551 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
               </div>
             )}
 
+            {/* TAB 10: VENDOR SAAS SUBSCRIPTION & HUB BILLING */}
+            {activeTab === 'subscription' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '1000px' }}>
+                
+                {/* Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+                  <div>
+                    <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#0F172A' }}>
+                      Sovereign Cell SaaS Subscription & Hub Billing
+                    </h2>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#6B7280' }}>
+                      Manage your monthly container hosting plan, switch to Pay-As-You-Go ($0/mo), manage dunning renewals, or decommission your cell.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={loadSubscription}
+                    disabled={isLoadingSub}
+                    style={{
+                      padding: '6px 14px',
+                      backgroundColor: '#FFFFFF',
+                      color: '#374151',
+                      border: '1px solid #D1D5DB',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <RefreshCw size={13} className={isLoadingSub ? 'animate-spin' : ''} />
+                    <span>Refresh Plan Status</span>
+                  </button>
+                </div>
+
+                {/* Active Plan Overview Banner */}
+                <div style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '12px',
+                  border: '1px solid #E2E8F0',
+                  padding: '24px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div style={{
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: '10px',
+                        backgroundColor: '#EFF6FF',
+                        color: '#0078D4',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <CreditCard size={24} />
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>
+                            {subscriptionData?.tier_name || 'Pro Sovereign (Dedicated Cell)'}
+                          </h3>
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            backgroundColor: subscriptionData?.billing_status === 'ACTIVE' ? '#DCFCE7' : subscriptionData?.billing_status === 'PAST_DUE' ? '#FEE2E2' : '#F1F5F9',
+                            color: subscriptionData?.billing_status === 'ACTIVE' ? '#15803D' : subscriptionData?.billing_status === 'PAST_DUE' ? '#B91C1C' : '#64748B'
+                          }}>
+                            ● {subscriptionData?.billing_status || 'ACTIVE'}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '3px' }}>
+                          Vendor Cell: <strong style={{ color: '#0F172A', fontFamily: 'monospace' }}>{config.vendor_id}</strong> • Dedicated Isolated DB Partition: <strong style={{ color: '#0F172A', fontFamily: 'monospace' }}>db_{config.vendor_id}</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '28px', fontWeight: 900, color: subscriptionData?.monthly_fee === 0 ? '#64748B' : '#0078D4' }}>
+                        ${(subscriptionData?.monthly_fee ?? 99).toFixed(2)}
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#64748B' }}> / month</span>
+                      </div>
+                      {subscriptionData?.pay_as_you_go_rate > 0 && (
+                        <div style={{ fontSize: '11px', color: '#D97706', fontWeight: 700 }}>
+                          +{(subscriptionData.pay_as_you_go_rate * 100).toFixed(0)}% fee on completed bookings
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                    gap: '12px',
+                    padding: '16px',
+                    backgroundColor: '#F8FAFC',
+                    borderRadius: '8px',
+                    border: '1px solid #E2E8F0',
+                    fontSize: '12px'
+                  }}>
+                    <div>
+                      <div style={{ color: '#64748B', fontWeight: 600, fontSize: '11px' }}>NEXT RENEWAL DATE</div>
+                      <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>
+                        {subscriptionData?.renews_at ? new Date(subscriptionData.renews_at).toLocaleDateString() : 'N/A (Free/Pay-As-You-Go)'}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={{ color: '#64748B', fontWeight: 600, fontSize: '11px' }}>DUNNING & GRACE PERIOD</div>
+                      <div style={{ fontWeight: 800, color: subscriptionData?.is_grace_period_active ? '#DC2626' : '#16A34A', marginTop: '2px' }}>
+                        {subscriptionData?.is_grace_period_active 
+                          ? `⚠️ 7-Day Grace Active (Expires ${new Date(subscriptionData.grace_period_expires_at).toLocaleDateString()})` 
+                          : '✓ In Good Standing'}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={{ color: '#64748B', fontWeight: 600, fontSize: '11px' }}>AUTOMATIC CONTAINER SUSPENSION</div>
+                      <div style={{ fontWeight: 800, color: '#0078D4', marginTop: '2px' }}>
+                        {subscriptionData?.auto_cell_suspension ? '🛡️ Enabled on Non-Payment' : 'Manual Review'}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={{ color: '#64748B', fontWeight: 600, fontSize: '11px' }}>STRIPE CONNECT PAYOUTS</div>
+                      <div style={{ fontWeight: 800, color: '#16A34A', marginTop: '2px' }}>
+                        ✓ Express Verified (24h Direct ACH)
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4-Tier Plan Selection Matrix */}
+                <div>
+                  <h3 style={{ margin: '0 0 14px 0', fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>
+                    Choose Your Sovereign Cell Tier
+                  </h3>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+                    
+                    {/* Plan 1: Starter Free */}
+                    <div style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '10px',
+                      border: `2px solid ${subscriptionData?.tier === 'tier_starter_free' ? '#0078D4' : '#E5E7EB'}`,
+                      padding: '20px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '14px',
+                      position: 'relative'
+                    }}>
+                      {subscriptionData?.tier === 'tier_starter_free' && (
+                        <span style={{ position: 'absolute', top: '-10px', right: '14px', backgroundColor: '#0078D4', color: '#FFFFFF', fontSize: '10px', fontWeight: 800, padding: '2px 8px', borderRadius: '10px' }}>
+                          CURRENT PLAN
+                        </span>
+                      )}
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: '15px', color: '#0F172A' }}>Starter / Free Trial</div>
+                        <div style={{ fontSize: '22px', fontWeight: 900, color: '#0F172A', marginTop: '4px' }}>$0 <span style={{ fontSize: '12px', fontWeight: 500, color: '#64748B' }}>/mo</span></div>
+                        <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>Zero fixed commitment</div>
+                      </div>
+
+                      <div style={{ fontSize: '11.5px', color: '#4B5563', display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
+                        <div>✓ 1 Sovereign Fleet Vehicle</div>
+                        <div>✓ Single Chauffeur Driver</div>
+                        <div>✓ Basic AI Booking Form</div>
+                        <div>✓ Local DB Partition</div>
+                      </div>
+
+                      <button
+                        onClick={() => handleUpgradeTier('tier_starter_free')}
+                        disabled={subscriptionData?.tier === 'tier_starter_free' || isProcessingSubAction}
+                        style={{
+                          marginTop: 'auto',
+                          padding: '8px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: subscriptionData?.tier === 'tier_starter_free' ? 'default' : 'pointer',
+                          backgroundColor: subscriptionData?.tier === 'tier_starter_free' ? '#F1F5F9' : '#FFFFFF',
+                          color: subscriptionData?.tier === 'tier_starter_free' ? '#94A3B8' : '#0F172A',
+                          border: '1px solid #CBD5E1'
+                        }}
+                      >
+                        {subscriptionData?.tier === 'tier_starter_free' ? 'Active Plan' : 'Downgrade to Free'}
+                      </button>
+                    </div>
+
+                    {/* Plan 2: Pro Sovereign (Recommended) */}
+                    <div style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '10px',
+                      border: `2px solid ${subscriptionData?.tier === 'tier_pro_sovereign' ? '#0078D4' : '#BFDBFE'}`,
+                      padding: '20px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '14px',
+                      position: 'relative',
+                      boxShadow: '0 4px 12px rgba(0, 120, 212, 0.08)'
+                    }}>
+                      <span style={{ position: 'absolute', top: '-10px', right: '14px', backgroundColor: '#16A34A', color: '#FFFFFF', fontSize: '10px', fontWeight: 800, padding: '2px 8px', borderRadius: '10px' }}>
+                        MOST POPULAR
+                      </span>
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: '15px', color: '#0F172A' }}>Pro Sovereign Cell</div>
+                        <div style={{ fontSize: '22px', fontWeight: 900, color: '#0078D4', marginTop: '4px' }}>$99 <span style={{ fontSize: '12px', fontWeight: 500, color: '#64748B' }}>/mo</span></div>
+                        <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>Full autonomous agency</div>
+                      </div>
+
+                      <div style={{ fontSize: '11.5px', color: '#4B5563', display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
+                        <div>✓ Unlimited Fleet Vehicles & Drivers</div>
+                        <div>✓ Isolated Docker Container</div>
+                        <div>✓ BYOE Inbound RFQ AI Gateway</div>
+                        <div>✓ Chauffeur Contractor & W2 Payroll</div>
+                        <div>✓ Stripe Express 24h Payouts</div>
+                      </div>
+
+                      <button
+                        onClick={() => handleUpgradeTier('tier_pro_sovereign')}
+                        disabled={subscriptionData?.tier === 'tier_pro_sovereign' || isProcessingSubAction}
+                        style={{
+                          marginTop: 'auto',
+                          padding: '8px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 800,
+                          cursor: subscriptionData?.tier === 'tier_pro_sovereign' ? 'default' : 'pointer',
+                          backgroundColor: subscriptionData?.tier === 'tier_pro_sovereign' ? '#EFF6FF' : '#0078D4',
+                          color: subscriptionData?.tier === 'tier_pro_sovereign' ? '#0078D4' : '#FFFFFF',
+                          border: subscriptionData?.tier === 'tier_pro_sovereign' ? '1px solid #BFDBFE' : 'none'
+                        }}
+                      >
+                        {subscriptionData?.tier === 'tier_pro_sovereign' ? 'Active Plan' : 'Upgrade to Pro ($99/mo)'}
+                      </button>
+                    </div>
+
+                    {/* Plan 3: Enterprise Cluster */}
+                    <div style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '10px',
+                      border: `2px solid ${subscriptionData?.tier === 'tier_enterprise_cluster' ? '#7E22CE' : '#E5E7EB'}`,
+                      padding: '20px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '14px',
+                      position: 'relative'
+                    }}>
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: '15px', color: '#0F172A' }}>Enterprise Cluster</div>
+                        <div style={{ fontSize: '22px', fontWeight: 900, color: '#7E22CE', marginTop: '4px' }}>$249 <span style={{ fontSize: '12px', fontWeight: 500, color: '#64748B' }}>/mo</span></div>
+                        <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>Multi-Region High Availability</div>
+                      </div>
+
+                      <div style={{ fontSize: '11.5px', color: '#4B5563', display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
+                        <div>✓ Multi-Region Route53 & ACM TLS</div>
+                        <div>✓ Dedicated AWS WAF & Rate Limiter</div>
+                        <div>✓ Voice AI Telephony Fine-Tuning</div>
+                        <div>✓ 99.99% Uptime Enterprise SLA</div>
+                        <div>✓ Priority Hub Clearing Routing</div>
+                      </div>
+
+                      <button
+                        onClick={() => handleUpgradeTier('tier_enterprise_cluster')}
+                        disabled={subscriptionData?.tier === 'tier_enterprise_cluster' || isProcessingSubAction}
+                        style={{
+                          marginTop: 'auto',
+                          padding: '8px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 800,
+                          cursor: subscriptionData?.tier === 'tier_enterprise_cluster' ? 'default' : 'pointer',
+                          backgroundColor: subscriptionData?.tier === 'tier_enterprise_cluster' ? '#FAF5FF' : '#7E22CE',
+                          color: subscriptionData?.tier === 'tier_enterprise_cluster' ? '#7E22CE' : '#FFFFFF',
+                          border: subscriptionData?.tier === 'tier_enterprise_cluster' ? '1px solid #E9D5FF' : 'none'
+                        }}
+                      >
+                        {subscriptionData?.tier === 'tier_enterprise_cluster' ? 'Active Plan' : 'Upgrade to Enterprise ($249/mo)'}
+                      </button>
+                    </div>
+
+                    {/* Plan 4: Pay-As-You-Go */}
+                    <div style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '10px',
+                      border: `2px solid ${subscriptionData?.tier === 'tier_pay_as_you_go' ? '#D97706' : '#E5E7EB'}`,
+                      padding: '20px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '14px',
+                      position: 'relative'
+                    }}>
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: '15px', color: '#0F172A' }}>Pay-As-You-Go</div>
+                        <div style={{ fontSize: '22px', fontWeight: 900, color: '#D97706', marginTop: '4px' }}>$0 <span style={{ fontSize: '12px', fontWeight: 500, color: '#64748B' }}>+ 5% / ride</span></div>
+                        <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>Zero fixed monthly fee</div>
+                      </div>
+
+                      <div style={{ fontSize: '11.5px', color: '#4B5563', display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
+                        <div>✓ $0 Monthly Fixed Fee Forever</div>
+                        <div>✓ 5% Platform Fee Only on Completed Rides</div>
+                        <div>✓ Full Dispatch & Fleet Access</div>
+                        <div>✓ Never Suspended for Non-Payment</div>
+                      </div>
+
+                      <button
+                        onClick={handleSwitchPayAsYouGo}
+                        disabled={subscriptionData?.tier === 'tier_pay_as_you_go' || isProcessingSubAction}
+                        style={{
+                          marginTop: 'auto',
+                          padding: '8px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 800,
+                          cursor: subscriptionData?.tier === 'tier_pay_as_you_go' ? 'default' : 'pointer',
+                          backgroundColor: subscriptionData?.tier === 'tier_pay_as_you_go' ? '#FFFBEB' : '#D97706',
+                          color: subscriptionData?.tier === 'tier_pay_as_you_go' ? '#D97706' : '#FFFFFF',
+                          border: subscriptionData?.tier === 'tier_pay_as_you_go' ? '1px solid #FDE68A' : 'none'
+                        }}
+                      >
+                        {subscriptionData?.tier === 'tier_pay_as_you_go' ? 'Active Plan' : 'Switch to Pay-As-You-Go ($0/mo)'}
+                      </button>
+                    </div>
+
+                  </div>
+                </div>
+
+                {/* Self-Serve Governance & Danger Zone Actions */}
+                <div style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '10px',
+                  border: '1px solid #E5E7EB',
+                  padding: '22px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '14px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+                }}>
+                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0F172A' }}>
+                    Account Governance & Self-Serve Controls
+                  </h3>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
+                    
+                    {/* Action 1: Switch to Pay-As-You-Go */}
+                    <div style={{ padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ fontWeight: 800, fontSize: '13px', color: '#0F172A' }}>⚡ Pause Fixed Monthly Charges</div>
+                      <p style={{ margin: 0, fontSize: '11.5px', color: '#64748B', lineHeight: '1.4' }}>
+                        Switch instantly to Pay-As-You-Go ($0/mo + 5% per ride). You keep all dispatch capabilities without recurring monthly fees.
+                      </p>
+                      <button
+                        onClick={handleSwitchPayAsYouGo}
+                        disabled={isProcessingSubAction || subscriptionData?.tier === 'tier_pay_as_you_go'}
+                        style={{
+                          marginTop: 'auto',
+                          padding: '7px 12px',
+                          backgroundColor: '#FFFFFF',
+                          color: '#D97706',
+                          border: '1px solid #FDE68A',
+                          borderRadius: '6px',
+                          fontSize: '11px',
+                          fontWeight: 800,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Switch to Pay-As-You-Go ($0/mo)
+                      </button>
+                    </div>
+
+                    {/* Action 2: Cancel Subscription */}
+                    <div style={{ padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ fontWeight: 800, fontSize: '13px', color: '#0F172A' }}>🛑 Cancel Subscription Plan</div>
+                      <p style={{ margin: 0, fontSize: '11.5px', color: '#64748B', lineHeight: '1.4' }}>
+                        Cancel your active subscription. Your account will automatically revert to the Free Tier at the end of the billing period.
+                      </p>
+                      <button
+                        onClick={handleCancelSubscription}
+                        disabled={isProcessingSubAction || subscriptionData?.billing_status === 'CANCELLED'}
+                        style={{
+                          marginTop: 'auto',
+                          padding: '7px 12px',
+                          backgroundColor: '#FFFFFF',
+                          color: '#475569',
+                          border: '1px solid #CBD5E1',
+                          borderRadius: '6px',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {subscriptionData?.billing_status === 'CANCELLED' ? 'Subscription Cancelled' : 'Cancel Subscription'}
+                      </button>
+                    </div>
+
+                    {/* Action 3: Request Account Deletion */}
+                    <div style={{ padding: '16px', backgroundColor: '#FEF2F2', borderRadius: '8px', border: '1px solid #FECACA', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ fontWeight: 800, fontSize: '13px', color: '#991B1B' }}>⚠️ Decommission & Delete Account</div>
+                      <p style={{ margin: 0, fontSize: '11.5px', color: '#B91C1C', lineHeight: '1.4' }}>
+                        Permanently decommission your Sovereign Cell container, scale replicas to 0, and archive data partition.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setDeleteConfirmText('');
+                          setShowDeleteAccountModal(true);
+                        }}
+                        style={{
+                          marginTop: 'auto',
+                          padding: '7px 12px',
+                          backgroundColor: '#DC2626',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '11px',
+                          fontWeight: 800,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Request Account Deletion
+                      </button>
+                    </div>
+
+                  </div>
+                </div>
+
+              </div>
+            )}
+
           </div>
 
         </main>
 
       </div>
+
+      {/* ACCOUNT DELETION CONFIRMATION MODAL */}
+      {showDeleteAccountModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.65)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '12px',
+            maxWidth: '520px',
+            width: '100%',
+            padding: '24px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Trash2 size={20} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#991B1B' }}>
+                  Decommission Sovereign Cell & Delete Account
+                </h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748B' }}>
+                  Vendor Cell ID: <strong style={{ fontFamily: 'monospace', color: '#0F172A' }}>{config.vendor_id}</strong>
+                </p>
+              </div>
+            </div>
+
+            <div style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '6px', padding: '12px', fontSize: '12px', color: '#991B1B', lineHeight: '1.4' }}>
+              <strong>⚠️ CRITICAL WARNING:</strong> Submitting this decommission request will:
+              <ul style={{ margin: '6px 0 0 0', paddingLeft: '18px' }}>
+                <li>Scale isolated container replicas to 0</li>
+                <li>Halt incoming customer bookings and email RFQ routing</li>
+                <li>Archive database partition <code style={{ fontFamily: 'monospace' }}>db_{config.vendor_id}</code></li>
+                <li>Cancel all future Hub recurring monthly SaaS subscription fees</li>
+              </ul>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#374151' }}>Reason for Decommissioning</label>
+              <select
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', marginTop: '4px' }}
+              >
+                <option value="Business restructuring">Business restructuring / Change of operations</option>
+                <option value="Switching to another platform">Switching to another platform</option>
+                <option value="Seasonal fleet shutdown">Seasonal fleet shutdown</option>
+                <option value="Cost reduction">Cost reduction</option>
+                <option value="Other">Other reason</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#374151' }}>
+                Type <strong style={{ color: '#DC2626' }}>DELETE</strong> to confirm decommission:
+              </label>
+              <input
+                type="text"
+                placeholder="DELETE"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '13px', fontFamily: 'monospace', marginTop: '4px' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+              <button
+                onClick={() => setShowDeleteAccountModal(false)}
+                disabled={isProcessingSubAction}
+                style={{ padding: '8px 16px', backgroundColor: '#F1F5F9', color: '#475569', border: '1px solid #CBD5E1', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmAccountDeletion}
+                disabled={deleteConfirmText.trim().toUpperCase() !== 'DELETE' || isProcessingSubAction}
+                style={{
+                  padding: '8px 18px',
+                  backgroundColor: deleteConfirmText.trim().toUpperCase() === 'DELETE' ? '#DC2626' : '#94A3B8',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 800,
+                  cursor: deleteConfirmText.trim().toUpperCase() === 'DELETE' && !isProcessingSubAction ? 'pointer' : 'not-allowed'
+                }}
+              >
+                {isProcessingSubAction ? 'Processing Decommission...' : 'Confirm & Decommission Cell'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

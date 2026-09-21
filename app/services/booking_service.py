@@ -42,7 +42,9 @@ class BookingService:
         distance_miles: Optional[Decimal] = None,
         hourly_hours: Optional[int] = None,
         wait_minutes: int = 0,
-        currency: str = "USD"
+        currency: str = "USD",
+        pickup_time_utc: Optional[datetime] = None,
+        meet_and_greet_inside: bool = False
     ) -> Quote:
         resolved_vendor_id = vendor_id or os.getenv("SOVEREIGN_VENDOR_ID") or "vendor_anb_philly"
         resolved_tenant_id = tenant_id or os.getenv("TENANT_ID") or "tenant-us-east"
@@ -59,7 +61,9 @@ class BookingService:
             distance_miles=distance_miles,
             hourly_hours=hourly_hours,
             wait_minutes=wait_minutes,
-            currency=currency
+            currency=currency,
+            pickup_time_utc=pickup_time_utc,
+            meet_and_greet_inside=meet_and_greet_inside
         )
         db.quotes[quote.id] = quote
 
@@ -258,23 +262,29 @@ class BookingService:
         except Exception as e:
             logger.warning(f"Twilio SMS broadcast: {e}")
 
-        # 5. Proactively run Autonomous Dispatch
-        eligible = DispatchService.find_eligible_resources(
-            tenant_id=quote.tenant_id,
-            vendor_id=quote.vendor_id,
-            vehicle_class=quote.vehicle_class,
-            passenger_count=party.passenger_count,
-            luggage_count=party.luggage_count
-        )
-        if eligible:
-            best = eligible[0]
-            payout = quote.subtotal_net * Decimal("0.70")  # 70% driver payout
-            DispatchService.create_and_dispatch_offer(
-                trip=trip,
-                driver_id=best["driver"].id,
-                vehicle_id=best["vehicle"].id,
-                payout_net=payout
+        # 5. Deferred 24-Hour Just-In-Time Chauffeur Assignment:
+        # Future bookings remain SCHEDULED with unassigned chauffeur until the 24h window
+        # or explicit dispatcher dispatch. Immediate rides (<2h) can trigger immediate dispatch if required.
+        now_utc = datetime.now(timezone.utc)
+        hours_to_pickup = (pickup_time_utc - now_utc).total_seconds() / 3600.0 if pickup_time_utc else 0.0
+
+        if hours_to_pickup <= 2.0 and hours_to_pickup >= 0.0:
+            eligible = DispatchService.find_eligible_resources(
+                tenant_id=quote.tenant_id,
+                vendor_id=quote.vendor_id,
+                vehicle_class=quote.vehicle_class,
+                passenger_count=party.passenger_count,
+                luggage_count=party.luggage_count
             )
+            if eligible:
+                best = eligible[0]
+                payout = quote.subtotal_net * Decimal("0.70")  # 70% driver payout
+                DispatchService.create_and_dispatch_offer(
+                    trip=trip,
+                    driver_id=best["driver"].id,
+                    vehicle_id=best["vehicle"].id,
+                    payout_net=payout
+                )
 
         return booking
 

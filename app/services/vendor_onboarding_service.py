@@ -231,7 +231,7 @@ class VendorOnboardingService:
         }
 
     @classmethod
-    def generate_vendor_yaml(cls, dto: VendorOnboardingRequestDTO, slug: str) -> str:
+    def generate_vendor_yaml(cls, dto: VendorOnboardingRequestDTO, slug: str, stripe_account_id: Optional[str] = None) -> str:
         """Constructs clean declarative YAML structure matching system schema."""
         outbound_sender = dto.outbound_sender or f"{dto.brand_display_name} Dispatch <confirmations@{dto.domain}>"
         twilio_number = dto.twilio_sms_number or dto.contact_phone
@@ -302,6 +302,11 @@ class VendorOnboardingService:
                 "auto_accept_affiliate_rides": True,
                 "clearing_split_pct": float(dto.clearing_split_pct)
             },
+            "stripe_connect": {
+                "account_id": stripe_account_id or f"acct_conn_{slug}",
+                "account_type": "EXPRESS_CONNECTED",
+                "payouts_enabled": True
+            },
             "telecom_compliance": {
                 "legal_business_name": dto.legal_business_name,
                 "ein_tax_id": dto.ein_tax_id,
@@ -369,10 +374,13 @@ class VendorOnboardingService:
         Executes full automated onboarding:
         1. Pre-flight check & slug generation.
         2. Stripe onboarding fee payment capture.
-        3. YAML generation & S3/disk persistence.
-        4. Dynamic runtime cell provisioning.
-        5. Encrypted access token handover.
+        3. Automated Stripe Connect Express Account provisioning.
+        4. YAML generation & S3/disk persistence.
+        5. Dynamic runtime cell provisioning.
+        6. Stripe Account Link generation for 1-click bank setup.
+        7. Encrypted access token handover.
         """
+        from app.services.stripe_connect_service import StripeConnectService
         slug = dto.vendor_slug or cls.sanitize_slug(dto.brand_display_name)
 
         # 1. Capture Stripe Payment
@@ -383,16 +391,35 @@ class VendorOnboardingService:
             receipt_email=dto.compliance_email
         )
 
-        # 2. Generate YAML
-        yaml_str = cls.generate_vendor_yaml(dto, slug)
+        # 2. Automatically Provision Stripe Connect Express Account
+        stripe_acc_res = StripeConnectService.create_express_connected_account(
+            vendor_id=slug,
+            legal_business_name=dto.legal_business_name,
+            email=dto.compliance_email,
+            country_code=dto.country_code or "US",
+            business_type=dto.business_type or "company",
+            ein_tax_id=dto.ein_tax_id,
+            phone=dto.contact_phone
+        )
+        stripe_account_id = stripe_acc_res.get("stripe_account_id", f"acct_conn_{slug}")
 
-        # 3. Persist to Disk & S3
+        # 3. Generate Hosted Stripe Onboarding Link for Instant Bank Setup
+        connect_link_res = StripeConnectService.create_account_onboarding_link(
+            stripe_account_id=stripe_account_id,
+            vendor_id=slug
+        )
+        stripe_onboarding_url = connect_link_res.get("onboarding_url")
+
+        # 4. Generate YAML
+        yaml_str = cls.generate_vendor_yaml(dto, slug, stripe_account_id=stripe_account_id)
+
+        # 5. Persist to Disk & S3
         file_path = cls.persist_to_s3_and_disk(yaml_str, slug)
 
-        # 4. Spin up sovereign cell live in runtime memory
+        # 6. Spin up sovereign cell live in runtime memory
         cell_cfg = vendor_spinup_service.spin_up_from_yaml_file(file_path)
 
-        # 5. Generate secure encrypted URL token
+        # 7. Generate secure encrypted URL token
         encrypted_token = vendor_token_encryption_service.encrypt_vendor_token(
             vendor_id=slug,
             domain=dto.domain
@@ -410,6 +437,13 @@ class VendorOnboardingService:
             "secure_portal_url": secure_portal_url,
             "payment_receipt": payment_res,
             "gap_analysis_report": gap_report,
+            "stripe_connect": {
+                "account_id": stripe_account_id,
+                "onboarding_url": stripe_onboarding_url,
+                "payouts_enabled": stripe_acc_res.get("payouts_enabled", False),
+                "charges_enabled": stripe_acc_res.get("charges_enabled", False),
+                "status": "REQUIRES_BANK_ACCOUNT" if not stripe_acc_res.get("payouts_enabled") else "ACTIVE"
+            },
             "dns_instructions": {
                 "cname_record": f"rides.{dto.domain}",
                 "cname_target": "hub.limo-network.com",

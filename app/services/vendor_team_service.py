@@ -44,145 +44,106 @@ class VendorTeamService:
     def __init__(self):
         # In-memory storage keyed by vendor_id -> list of TeamMember
         self._teams: Dict[str, List[TeamMember]] = {}
-        self._seed_initial_teams()
-
-    def _seed_initial_teams(self):
-        """Seeds standard realistic multi-role personnel for sovereign cells."""
-        # ANB Limo Philadelphia Team
-        self._teams["vendor_anb_philly"] = [
-            TeamMember(
-                id="usr-vnd-002",
-                vendor_id="vendor_anb_philly",
-                email="owner@anblimo-philly.com",
-                full_name="Dave Anderson (Cell Principal & Owner)",
-                phone="+1 (215) 555-0144",
-                role=UserRole.ROLE_VENDOR_ADMIN.value,
-                status=TeamMemberStatus.ACTIVE,
-                permissions=ROLE_DEFAULT_PERMISSIONS[UserRole.ROLE_VENDOR_ADMIN.value],
-                avatar_url="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
-                last_active_at=datetime.now(timezone.utc)
-            ),
-            TeamMember(
-                id="usr-dsp-002",
-                vendor_id="vendor_anb_philly",
-                email="dispatch@anblimo-philly.com",
-                full_name="Samantha Taylor (PHL Hub Dispatch Lead)",
-                phone="+1 (215) 555-0145",
-                role=UserRole.ROLE_DISPATCHER.value,
-                status=TeamMemberStatus.ACTIVE,
-                permissions=ROLE_DEFAULT_PERMISSIONS[UserRole.ROLE_DISPATCHER.value],
-                avatar_url="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&auto=format&fit=crop&q=80",
-                last_active_at=datetime.now(timezone.utc)
-            ),
-            TeamMember(
-                id="usr-drv-002",
-                vendor_id="vendor_anb_philly",
-                email="dave.miller@anblimo-philly.com",
-                full_name="Dave Miller (Senior Chauffeur)",
-                phone="+1 (215) 555-0188",
-                role=UserRole.ROLE_CHAUFFEUR.value,
-                status=TeamMemberStatus.ACTIVE,
-                driver_id="drv-phl-01",
-                assigned_vehicle_id="veh-phl-01",
-                permissions=ROLE_DEFAULT_PERMISSIONS[UserRole.ROLE_CHAUFFEUR.value],
-                avatar_url="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80",
-                last_active_at=datetime.now(timezone.utc)
-            ),
-            TeamMember(
-                id="usr-drv-003",
-                vendor_id="vendor_anb_philly",
-                email="marcus.vance@anblimo-philly.com",
-                full_name="Marcus Vance (Master Chauffeur)",
-                phone="+1 (215) 555-0199",
-                role=UserRole.ROLE_CHAUFFEUR.value,
-                status=TeamMemberStatus.ACTIVE,
-                driver_id="drv-phl-02",
-                assigned_vehicle_id="veh-phl-02",
-                permissions=ROLE_DEFAULT_PERMISSIONS[UserRole.ROLE_CHAUFFEUR.value],
-                avatar_url="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80",
-                last_active_at=datetime.now(timezone.utc)
-            ),
-            TeamMember(
-                id="usr-corp-001",
-                vendor_id="vendor_anb_philly",
-                email="traveldesk@blackrock-vip.com",
-                full_name="Eleanor Vance (Corporate Travel Desk)",
-                phone="+1 (212) 555-0810",
-                role=UserRole.ROLE_CORPORATE_BOOKER.value,
-                status=TeamMemberStatus.ACTIVE,
-                permissions=ROLE_DEFAULT_PERMISSIONS[UserRole.ROLE_CORPORATE_BOOKER.value],
-                avatar_url="https://images.unsplash.com/photo-1580489944761-15a19d654956?w=120&auto=format&fit=crop&q=80",
-                last_active_at=datetime.now(timezone.utc)
-            )
-        ]
-
-        # NY Executive Limousine Team
-        self._teams["vendor-ny-executive"] = [
-            TeamMember(
-                id="usr-vnd-001",
-                vendor_id="vendor-ny-executive",
-                email="owner@ny-executive.com",
-                full_name="Julian Sterling (NY Managing Director)",
-                phone="+1 (212) 555-0110",
-                role=UserRole.ROLE_VENDOR_ADMIN.value,
-                status=TeamMemberStatus.ACTIVE,
-                permissions=ROLE_DEFAULT_PERMISSIONS[UserRole.ROLE_VENDOR_ADMIN.value],
-                avatar_url="https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=120&auto=format&fit=crop&q=80",
-                last_active_at=datetime.now(timezone.utc)
-            ),
-            TeamMember(
-                id="usr-dsp-001",
-                vendor_id="vendor-ny-executive",
-                email="dispatch@ny-executive.com",
-                full_name="Alex Chen (JFK / LGA Flight Dispatcher)",
-                phone="+1 (212) 555-0111",
-                role=UserRole.ROLE_DISPATCHER.value,
-                status=TeamMemberStatus.ACTIVE,
-                permissions=ROLE_DEFAULT_PERMISSIONS[UserRole.ROLE_DISPATCHER.value],
-                avatar_url="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
-                last_active_at=datetime.now(timezone.utc)
-            ),
-            TeamMember(
-                id="usr-drv-001",
-                vendor_id="vendor-ny-executive",
-                email="marcus.vance@ny-executive.com",
-                full_name="Marcus Vance (Master Chauffeur)",
-                phone="+1 (212) 555-0190",
-                role=UserRole.ROLE_CHAUFFEUR.value,
-                status=TeamMemberStatus.ACTIVE,
-                driver_id="drv-ny-01",
-                assigned_vehicle_id="veh-ny-01",
-                permissions=ROLE_DEFAULT_PERMISSIONS[UserRole.ROLE_CHAUFFEUR.value],
-                avatar_url="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&auto=format&fit=crop&q=80",
-                last_active_at=datetime.now(timezone.utc)
-            )
-        ]
 
     def get_team(self, vendor_id: str) -> List[TeamMember]:
-        """Retrieves all team members for a sovereign vendor cell."""
-        if vendor_id not in self._teams:
-            # Seed default owner + dispatcher + driver for new dynamic vendor
-            self._teams[vendor_id] = [
-                TeamMember(
-                    id=f"usr-{uuid.uuid4().hex[:8]}",
-                    vendor_id=vendor_id,
-                    email=f"owner@{vendor_id.replace('_', '-')}.com",
-                    full_name=f"{vendor_id.title()} Owner",
-                    role=UserRole.ROLE_VENDOR_ADMIN.value,
-                    status=TeamMemberStatus.ACTIVE,
-                    permissions=ROLE_DEFAULT_PERMISSIONS[UserRole.ROLE_VENDOR_ADMIN.value]
-                ),
-                TeamMember(
-                    id=f"usr-{uuid.uuid4().hex[:8]}",
-                    vendor_id=vendor_id,
-                    email=f"dispatch@{vendor_id.replace('_', '-')}.com",
-                    full_name=f"{vendor_id.title()} Dispatch",
-                    role=UserRole.ROLE_DISPATCHER.value,
-                    status=TeamMemberStatus.ACTIVE,
-                    permissions=ROLE_DEFAULT_PERMISSIONS[UserRole.ROLE_DISPATCHER.value]
+        """Retrieves all team members for a sovereign vendor cell from database / registry dynamically."""
+        v_id = vendor_id.replace("-", "_")
+        if v_id not in self._teams:
+            members: List[TeamMember] = []
+            
+            # 1. Dynamically resolve vendor owner / admin from database
+            from app.database import db
+            vendor_obj = getattr(db, "vendors", {}).get(v_id) or getattr(db, "vendors", {}).get(vendor_id)
+            
+            vendor_name = getattr(vendor_obj, "name", v_id.replace("_", " ").title()) if vendor_obj else v_id.replace("_", " ").title()
+            contact_email = getattr(vendor_obj, "contact_email", f"dispatch@{v_id.replace('_', '-')}.com") if vendor_obj else f"dispatch@{v_id.replace('_', '-')}.com"
+            contact_phone = getattr(vendor_obj, "phone", "") if vendor_obj else ""
+            
+            # Primary Owner/Admin
+            owner_member = TeamMember(
+                id=f"usr-owner-{v_id}",
+                vendor_id=v_id,
+                email=contact_email,
+                full_name=f"{vendor_name} Principal",
+                phone=contact_phone,
+                role=UserRole.ROLE_VENDOR_ADMIN.value,
+                status=TeamMemberStatus.ACTIVE,
+                permissions=ROLE_DEFAULT_PERMISSIONS[UserRole.ROLE_VENDOR_ADMIN.value],
+                last_active_at=datetime.now(timezone.utc)
+            )
+            members.append(owner_member)
+            
+            # Dispatch Lead
+            domain_part = contact_email.split('@')[-1] if "@" in contact_email else f"{v_id}.com"
+            dispatch_member = TeamMember(
+                id=f"usr-dsp-{v_id}",
+                vendor_id=v_id,
+                email=f"dispatch@{domain_part}",
+                full_name=f"{vendor_name} Dispatch",
+                phone=contact_phone,
+                role=UserRole.ROLE_DISPATCHER.value,
+                status=TeamMemberStatus.ACTIVE,
+                permissions=ROLE_DEFAULT_PERMISSIONS[UserRole.ROLE_DISPATCHER.value],
+                last_active_at=datetime.now(timezone.utc)
+            )
+            members.append(dispatch_member)
+            
+            # Chauffeurs from db.drivers belonging to this vendor
+            drivers = getattr(db, "drivers", {})
+            found_drivers = 0
+            for d_id, drv in drivers.items():
+                if getattr(drv, "vendor_id", None) in (v_id, vendor_id):
+                    drv_name = f"{drv.first_name} {drv.last_name}".strip() if hasattr(drv, "first_name") else f"Chauffeur {d_id}"
+                    drv_member = TeamMember(
+                        id=f"usr-drv-{d_id}",
+                        vendor_id=v_id,
+                        email=getattr(drv, "email", f"driver.{d_id}@{domain_part}"),
+                        full_name=drv_name,
+                        phone=getattr(drv, "phone", ""),
+                        role=UserRole.ROLE_CHAUFFEUR.value,
+                        status=TeamMemberStatus.ACTIVE,
+                        driver_id=d_id,
+                        assigned_vehicle_id=getattr(drv, "current_vehicle_id", None),
+                        permissions=ROLE_DEFAULT_PERMISSIONS[UserRole.ROLE_CHAUFFEUR.value],
+                        last_active_at=datetime.now(timezone.utc)
+                    )
+                    members.append(drv_member)
+                    found_drivers += 1
+            
+            if found_drivers == 0:
+                # Add default chauffeur role for newly spun up cell
+                members.append(
+                    TeamMember(
+                        id=f"usr-drv-{v_id}-01",
+                        vendor_id=v_id,
+                        email=f"chauffeur1@{domain_part}",
+                        full_name=f"{vendor_name} Chauffeur",
+                        phone=contact_phone,
+                        role=UserRole.ROLE_CHAUFFEUR.value,
+                        status=TeamMemberStatus.ACTIVE,
+                        permissions=ROLE_DEFAULT_PERMISSIONS[UserRole.ROLE_CHAUFFEUR.value],
+                        last_active_at=datetime.now(timezone.utc)
+                    )
                 )
-            ]
-        return self._teams[vendor_id]
+
+            # Corporate Desk Booker
+            members.append(
+                TeamMember(
+                    id=f"usr-corp-{v_id}",
+                    vendor_id=v_id,
+                    email=f"corporate@{domain_part}",
+                    full_name=f"{vendor_name} Corporate Desk",
+                    phone=contact_phone,
+                    role=UserRole.ROLE_CORPORATE_BOOKER.value,
+                    status=TeamMemberStatus.ACTIVE,
+                    permissions=ROLE_DEFAULT_PERMISSIONS[UserRole.ROLE_CORPORATE_BOOKER.value],
+                    last_active_at=datetime.now(timezone.utc)
+                )
+            )
+            
+            self._teams[v_id] = members
+            
+        return self._teams[v_id]
 
     def get_member(self, vendor_id: str, user_id: str) -> Optional[TeamMember]:
         """Finds a specific team member by ID."""
@@ -194,7 +155,8 @@ class VendorTeamService:
 
     def create_member(self, req: CreateTeamMemberRequest) -> TeamMember:
         """Adds a new team member with assigned role and default/custom permissions."""
-        team = self.get_team(req.vendor_id)
+        v_id = req.vendor_id.replace("-", "_")
+        team = self.get_team(v_id)
         
         # Determine permissions
         perms = req.permissions
@@ -204,11 +166,11 @@ class VendorTeamService:
         # Auto-link driver_id if chauffeur
         driver_id = req.driver_id
         if req.role == UserRole.ROLE_CHAUFFEUR.value and not driver_id:
-            driver_id = f"drv-{req.vendor_id[:4]}-{len([m for m in team if m.role == UserRole.ROLE_CHAUFFEUR.value]) + 1:02d}"
+            driver_id = f"drv-{v_id[:4]}-{len([m for m in team if m.role == UserRole.ROLE_CHAUFFEUR.value]) + 1:02d}"
 
         new_member = TeamMember(
             id=f"usr-{uuid.uuid4().hex[:8]}",
-            vendor_id=req.vendor_id,
+            vendor_id=v_id,
             email=req.email.strip().lower(),
             full_name=req.full_name.strip(),
             phone=req.phone,
@@ -224,11 +186,19 @@ class VendorTeamService:
 
     def add_team_member(self, vendor_id: str, member: TeamMember) -> TeamMember:
         """Directly attaches a provisioned TeamMember entity into the vendor team roster."""
-        if vendor_id not in self._teams:
-            self._teams[vendor_id] = []
-        # Prepend owner to team or replace existing by email
-        self._teams[vendor_id] = [m for m in self._teams[vendor_id] if m.email.lower() != member.email.lower()]
-        self._teams[vendor_id].insert(0, member)
+        v_id = vendor_id.replace("-", "_")
+        team = self.get_team(v_id)
+        # Prepend owner to team or replace existing by email, id, or admin role
+        if getattr(member.role, "value", str(member.role)).lower() in (UserRole.ROLE_VENDOR_ADMIN.value.lower(), "vendor_admin"):
+            self._teams[v_id] = [
+                m for m in team 
+                if m.email.lower() != member.email.lower() 
+                and m.id != member.id 
+                and getattr(m.role, "value", str(m.role)).lower() not in (UserRole.ROLE_VENDOR_ADMIN.value.lower(), "vendor_admin")
+            ]
+        else:
+            self._teams[v_id] = [m for m in team if m.email.lower() != member.email.lower() and m.id != member.id]
+        self._teams[v_id].insert(0, member)
         return member
 
     def update_member(self, vendor_id: str, user_id: str, req: UpdateTeamMemberRequest) -> Optional[TeamMember]:
@@ -263,8 +233,9 @@ class VendorTeamService:
         for i, member in enumerate(team):
             if member.id == user_id:
                 # Prevent deleting the last vendor admin
-                if member.role == UserRole.ROLE_VENDOR_ADMIN.value:
-                    admins = [m for m in team if m.role == UserRole.ROLE_VENDOR_ADMIN.value]
+                m_role = getattr(member.role, "value", str(member.role))
+                if "ADMIN" in m_role.upper() or "OWNER" in m_role.upper():
+                    admins = [m for m in team if "ADMIN" in getattr(m.role, "value", str(m.role)).upper() or "OWNER" in getattr(m.role, "value", str(m.role)).upper()]
                     if len(admins) <= 1:
                         return False
                 team.pop(i)

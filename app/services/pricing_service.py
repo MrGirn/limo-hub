@@ -1,13 +1,15 @@
 """
-Authoritative US & Multi-Region Limo Pricing Engine.
+Authoritative US & Multi-Region Luxury Chauffeur Pricing Engine.
 Includes:
-- Automatic Flight & Train intelligence lookup (Airlines, Terminals, Train Stations, Track & Live Status).
-- 3-Leg Comprehensive Route & Positioning calculation:
-    1. Outbound Positioning (Vendor Depot -> Pickup)
+- Dynamic Multi-Vendor Pricing Matrix Loading (from DB/YAML vendor configs).
+- Live Google Maps & Autonomous 3-Leg Journey Routing:
+    1. Outbound Staging (Vendor Depot -> Pickup)
     2. Passenger Ride (Pickup -> Dropoff)
     3. Return Deadhead (Dropoff -> Vendor Depot)
-- Automatic Bridge & Highway Tolls estimation (Port Authority, MTA Tunnels/Bridges, Turnpikes).
-- US State/City Sales Tax (8.875%) & 20% Standard Chauffeur Gratuity.
+- Automatic Bridge, Tunnel, Highway & Turnpike Tolls pass-through.
+- Peak Rush-Hour Traffic & Late-Night Chauffeur Staging Surcharges.
+- Airport Terminal Flight Radar Tracking & Inside Baggage Meet & Greet.
+- Jurisdiction-Validated Regional Sales Tax / VAT and Dynamic Gratuity.
 """
 
 import re
@@ -16,6 +18,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from datetime import datetime, timezone, timedelta
 import uuid
 from typing import Optional, List, Dict, Any, Tuple
+
 from app.domain_models import (
     VehicleClass, ServiceType, TransitType, TransitDetails, 
     RouteMetrics, Quote, QuoteLineItem, RegionalTaxRule, FXRateSnapshot
@@ -24,11 +27,15 @@ from app.database import db
 from app.services.google_maps_service import GoogleMapsService
 
 
+def round_cur(val: Decimal) -> Decimal:
+    return val.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
 def get_regional_tax_and_surcharges(pickup_address: str, currency: str = "USD") -> RegionalTaxRule:
     lower = pickup_address.lower()
     curr_upper = currency.upper()
     
-    # 1. Check physical address location first
+    # 1. Physical location match
     if "london" in lower or "heathrow" in lower or "lhr" in lower or "gatwick" in lower or "uk" in lower or "united kingdom" in lower:
         return db.regional_tax_rules.get("UK_LON") or RegionalTaxRule(
             jurisdiction_code="UK_LON", country="United Kingdom", city_or_region="London",
@@ -49,12 +56,16 @@ def get_regional_tax_and_surcharges(pickup_address: str, currency: str = "USD") 
             jurisdiction_code="AE_DXB", country="UAE", city_or_region="Dubai",
             vat_or_sales_tax_rate=Decimal("0.05"), airport_access_fee=Decimal("25.00"), congestion_charge=Decimal("0.00"), currency="AED"
         )
+    elif "philadelphia" in lower or "phl" in lower or " pa" in lower or "pennsylvania" in lower or "wilmington" in lower or " delaware" in lower or " de" in lower:
+        return RegionalTaxRule(
+            jurisdiction_code="US_PA_PHL", country="United States", city_or_region="Philadelphia/Delaware Valley",
+            vat_or_sales_tax_rate=Decimal("0.0800"), airport_access_fee=Decimal("15.00"), congestion_charge=Decimal("0.00"), currency="USD"
+        )
     elif "new york" in lower or " ny" in lower or "jfk" in lower or "lga" in lower or "ewr" in lower or "manhattan" in lower:
         return db.regional_tax_rules.get("US_NY") or RegionalTaxRule(
             jurisdiction_code="US_NY", country="United States", city_or_region="New York",
             vat_or_sales_tax_rate=Decimal("0.08875"), airport_access_fee=Decimal("18.00"), congestion_charge=Decimal("0.00"), currency="USD"
         )
-    # 2. Fallback to currency jurisdiction if address is generic
     elif curr_upper == "GBP":
         return db.regional_tax_rules.get("UK_LON") or RegionalTaxRule(
             jurisdiction_code="UK_LON", country="United Kingdom", city_or_region="London",
@@ -70,15 +81,10 @@ def get_regional_tax_and_surcharges(pickup_address: str, currency: str = "USD") 
             jurisdiction_code="JP_TYO", country="Japan", city_or_region="Tokyo",
             vat_or_sales_tax_rate=Decimal("0.10"), airport_access_fee=Decimal("2000.00"), congestion_charge=Decimal("0.00"), currency="JPY"
         )
-    elif curr_upper == "AED":
-        return db.regional_tax_rules.get("AE_DXB") or RegionalTaxRule(
-            jurisdiction_code="AE_DXB", country="UAE", city_or_region="Dubai",
-            vat_or_sales_tax_rate=Decimal("0.05"), airport_access_fee=Decimal("25.00"), congestion_charge=Decimal("0.00"), currency="AED"
-        )
     else:
-        return db.regional_tax_rules.get("US_NY") or RegionalTaxRule(
-            jurisdiction_code="US_NY", country="United States", city_or_region="New York",
-            vat_or_sales_tax_rate=Decimal("0.08875"), airport_access_fee=Decimal("18.00"), congestion_charge=Decimal("0.00"), currency="USD"
+        return RegionalTaxRule(
+            jurisdiction_code="US_DOMESTIC", country="United States", city_or_region="Domestic Corridors",
+            vat_or_sales_tax_rate=Decimal("0.0800"), airport_access_fee=Decimal("15.00"), congestion_charge=Decimal("0.00"), currency="USD"
         )
 
 
@@ -101,7 +107,8 @@ US_CLASS_TARIFFS = {
         "per_mile_rate": Decimal("4.25"),
         "per_hour_rate": Decimal("145.00"),
         "wait_per_min": Decimal("1.75"),
-        "min_fare": Decimal("135.00")
+        "min_fare": Decimal("135.00"),
+        "deadhead_rate_per_mile": Decimal("1.75")
     },
     VehicleClass.FIRST_CLASS: {
         "title": "First Class Sedan (Mercedes-Benz S 580, BMW 760i)",
@@ -109,7 +116,8 @@ US_CLASS_TARIFFS = {
         "per_mile_rate": Decimal("4.50"),
         "per_hour_rate": Decimal("165.00"),
         "wait_per_min": Decimal("1.90"),
-        "min_fare": Decimal("150.00")
+        "min_fare": Decimal("150.00"),
+        "deadhead_rate_per_mile": Decimal("1.85")
     },
     VehicleClass.BUSINESS_VAN: {
         "title": "Executive Van VIP (Mercedes-Benz Sprinter 3500)",
@@ -117,7 +125,8 @@ US_CLASS_TARIFFS = {
         "per_mile_rate": Decimal("5.25"),
         "per_hour_rate": Decimal("195.00"),
         "wait_per_min": Decimal("2.25"),
-        "min_fare": Decimal("185.00")
+        "min_fare": Decimal("185.00"),
+        "deadhead_rate_per_mile": Decimal("2.25")
     },
     VehicleClass.ELECTRIC_VIP: {
         "title": "Electric VIP Lounge (Lucid Air Grand Touring, Tesla Model S Plaid)",
@@ -125,7 +134,8 @@ US_CLASS_TARIFFS = {
         "per_mile_rate": Decimal("4.35"),
         "per_hour_rate": Decimal("155.00"),
         "wait_per_min": Decimal("1.80"),
-        "min_fare": Decimal("145.00")
+        "min_fare": Decimal("145.00"),
+        "deadhead_rate_per_mile": Decimal("1.75")
     },
     VehicleClass.BUSINESS_SEDAN: {
         "title": "Business Sedan (Mercedes-Benz E-Class, BMW 5 Series)",
@@ -133,142 +143,108 @@ US_CLASS_TARIFFS = {
         "per_mile_rate": Decimal("3.50"),
         "per_hour_rate": Decimal("115.00"),
         "wait_per_min": Decimal("1.40"),
-        "min_fare": Decimal("105.00")
+        "min_fare": Decimal("105.00"),
+        "deadhead_rate_per_mile": Decimal("1.50")
     }
 }
 
 
-def round_cur(val: Decimal) -> Decimal:
-    return val.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+# Global Airline IATA Registry for Dynamic Flight Carrier Resolution
+GLOBAL_AIRLINE_IATA_REGISTRY: Dict[str, str] = {
+    "BA": "British Airways", "AA": "American Airlines", "DL": "Delta Air Lines",
+    "UA": "United Airlines", "B6": "JetBlue Airways", "AF": "Air France",
+    "LH": "Lufthansa", "EK": "Emirates", "SQ": "Singapore Airlines",
+    "VS": "Virgin Atlantic", "QR": "Qatar Airways", "JL": "Japan Airlines",
+    "NH": "All Nippon Airways", "QF": "Qantas Airways", "AC": "Air Canada",
+    "KL": "KLM Royal Dutch Airlines", "TK": "Turkish Airlines", "CX": "Cathay Pacific",
+    "EY": "Etihad Airways", "IB": "Iberia", "LX": "Swiss International Air Lines",
+    "OS": "Austrian Airlines", "AZ": "ITA Airways", "EI": "Aer Lingus",
+    "SK": "SAS Scandinavian Airlines", "AY": "Finnair", "TP": "TAP Air Portugal",
+    "WN": "Southwest Airlines", "AS": "Alaska Airlines", "NK": "Spirit Airlines",
+    "F9": "Frontier Airlines", "G4": "Allegiant Air", "WS": "WestJet",
+    "AM": "Aeromexico", "LA": "LATAM Airlines", "AV": "Avianca",
+    "NZ": "Air New Zealand", "VA": "Virgin Australia", "KE": "Korean Air",
+    "OZ": "Asiana Airlines", "BR": "EVA Air", "CI": "China Airlines",
+    "MU": "China Eastern", "CA": "Air China", "CZ": "China Southern",
+    "AI": "Air India", "6E": "IndiGo", "ET": "Ethiopian Airlines",
+    "MS": "EgyptAir", "SA": "South African Airways", "SV": "Saudia"
+}
 
 
-# Automatic Flight & Train Resolver
+# Fully Dynamic Flight & Train Resolver
 def resolve_transit_info(identifier: Optional[str], pickup_or_dropoff: str) -> Optional[TransitDetails]:
-    if not identifier or not identifier.strip():
-        # Check if address implies an airport or train station
-        lower = pickup_or_dropoff.lower()
-        if "jfk" in lower or "kennedy" in lower:
-            return TransitDetails(
-                transit_type=TransitType.FLIGHT,
-                carrier_name="Commercial / Private Aviation",
-                identifier="JFK Arrival",
-                station_or_airport="John F. Kennedy International Airport (JFK)",
-                terminal_or_track="Terminal 4 VIP Arrival Ramp",
-                status_summary="Flight Tracking Active · 45m Free Wait"
-            )
-        elif "lga" in lower or "laguardia" in lower:
-            return TransitDetails(
-                transit_type=TransitType.FLIGHT,
-                carrier_name="Commercial Aviation",
-                identifier="LGA Arrival",
-                station_or_airport="LaGuardia Airport (LGA)",
-                terminal_or_track="Terminal B VIP Gate",
-                status_summary="Flight Tracking Active · 45m Free Wait"
-            )
-        elif "ewr" in lower or "newark" in lower:
-            return TransitDetails(
-                transit_type=TransitType.FLIGHT,
-                carrier_name="Commercial Aviation",
-                identifier="EWR Arrival",
-                station_or_airport="Newark Liberty International (EWR)",
-                terminal_or_track="Terminal C VIP Gate",
-                status_summary="Flight Tracking Active · 45m Free Wait"
-            )
-        elif "penn" in lower or "moynihan" in lower or "amtrak" in lower:
+    """
+    Dynamically resolves flight or train transit details from:
+    1. Flight / Train identifier codes (IATA airline prefixes, Amtrak / Eurostar train IDs)
+    2. Dynamic geocoding of the pickup/dropoff address via Google Maps / OpenStreetMap APIs.
+    """
+    from app.services.google_maps_service import GoogleMapsService
+
+    if identifier and identifier.strip():
+        raw = identifier.strip().upper()
+        # 1. Dynamic Train Check
+        train_keywords = ("ACELA", "AMTRAK", "BRIGHTLINE", "EUROSTAR", "TGV", "ICE", "SHINKANSEN", "VIA RAIL", "THALYS", "FRECCIAROSSA", "TRAIN", "TR-")
+        if any(kw in raw for kw in train_keywords):
+            train_num = re.findall(r'\d+', raw)
+            t_id = f"Rail #{train_num[0]}" if train_num else raw
+            carrier = "Amtrak High-Speed Rail" if "ACELA" in raw else ("Eurostar International" if "EUROSTAR" in raw else "Intercity Passenger Rail")
             return TransitDetails(
                 transit_type=TransitType.TRAIN,
-                carrier_name="Amtrak Rail",
-                identifier="Northeast Corridor",
-                station_or_airport="Moynihan Train Hall / NY Penn Station",
-                terminal_or_track="8th Ave VIP Staging Area",
-                status_summary="Train Signal Active · 20m Free Wait"
+                carrier_name=carrier,
+                identifier=raw,
+                station_or_airport="Central Passenger Rail Terminal",
+                terminal_or_track="VIP Executive Staging Ramp",
+                scheduled_arrival="On Schedule",
+                estimated_arrival="On Time",
+                status_summary="Train Tracking Active · Approaching Station"
             )
-        elif "grand central" in lower:
+
+        # 2. Dynamic Flight Code Check (IATA 2-character / 3-character prefix + Flight Number)
+        match = re.match(r'^([A-Z0-9]{2,3})\s*(\d{1,4})$', raw)
+        if match:
+            code, num = match.groups()
+            carrier = GLOBAL_AIRLINE_IATA_REGISTRY.get(code, f"Aviation Carrier ({code})")
+            return TransitDetails(
+                transit_type=TransitType.FLIGHT,
+                carrier_name=carrier,
+                identifier=f"{code} {num}",
+                station_or_airport="International Airport Terminal",
+                terminal_or_track="Main Terminal VIP Chauffeur Lane",
+                scheduled_arrival="Scheduled Inbound",
+                estimated_arrival="On Time (In Flight)",
+                status_summary="Live Radar Active · Chauffeur Staging Synced"
+            )
+
+    # 3. Dynamic Address-Based Transit Resolution via Live Geocoding API
+    if pickup_or_dropoff and pickup_or_dropoff.strip():
+        geo = GoogleMapsService.validate_and_geocode_address(pickup_or_dropoff)
+        category = geo.get("category", "GENERAL")
+        formatted = geo.get("formatted_address", pickup_or_dropoff)
+        airport_code = geo.get("airport_code")
+
+        if category == "AIRPORT" or "airport" in pickup_or_dropoff.lower() or "aerodrome" in pickup_or_dropoff.lower():
+            ident = f"{airport_code} Inbound" if airport_code else "Airport Arrival"
+            station_name = formatted if ("airport" in formatted.lower() or "international" in formatted.lower()) else f"{pickup_or_dropoff} (Airport)"
+            return TransitDetails(
+                transit_type=TransitType.FLIGHT,
+                carrier_name="Commercial / Executive Aviation",
+                identifier=ident,
+                station_or_airport=station_name,
+                terminal_or_track="Main Terminal VIP Ground Transportation Ramp",
+                status_summary="Flight Radar Active · 45m Free Wait"
+            )
+        elif category == "TRAIN_STATION" or any(kw in pickup_or_dropoff.lower() for kw in ("station", "amtrak", "railway", "train")):
+            station_name = formatted if ("station" in formatted.lower() or "railway" in formatted.lower() or "terminal" in formatted.lower()) else f"{pickup_or_dropoff} (Train Station)"
             return TransitDetails(
                 transit_type=TransitType.TRAIN,
-                carrier_name="Metro-North / LIRR",
-                identifier="Grand Central Madison",
-                station_or_airport="Grand Central Terminal",
-                terminal_or_track="Vanderbilt Ave Executive Ramp",
+                carrier_name="Intercity Passenger Rail / High-Speed Rail",
+                identifier="Train Arrival",
+                station_or_airport=station_name,
+                terminal_or_track="VIP Executive Staging Area",
                 status_summary="Train Signal Active · 20m Free Wait"
             )
-        return None
 
-    raw = identifier.strip().upper()
-    
-    # Train regex checks (e.g. Amtrak, Acela, Brightline)
-    if "ACELA" in raw or "AMTRAK" in raw or "BRIGHTLINE" in raw or raw.startswith("TR-") or "TRAIN" in raw:
-        train_num = re.findall(r'\d+', raw)
-        t_id = f"Amtrak #{train_num[0]}" if train_num else raw
-        return TransitDetails(
-            transit_type=TransitType.TRAIN,
-            carrier_name="Amtrak High-Speed Rail" if "ACELA" in raw else "Intercity Passenger Rail",
-            identifier=raw,
-            station_or_airport="Moynihan Train Hall / New York Penn Station",
-            terminal_or_track="Track 11 VIP West Exit",
-            scheduled_arrival="On Schedule",
-            estimated_arrival="On Time",
-            status_summary="Train Tracking Active · Approaching Station"
-        )
-
-    # Flight regex checks
-    carrier_map = {
-        "BA": ("British Airways", "JFK Terminal 7"),
-        "AA": ("American Airlines", "JFK Terminal 8"),
-        "DL": ("Delta Air Lines", "JFK Terminal 4"),
-        "UA": ("United Airlines", "EWR Terminal C"),
-        "B6": ("JetBlue Airways", "JFK Terminal 5"),
-        "AF": ("Air France", "JFK Terminal 1"),
-        "LH": ("Lufthansa", "JFK Terminal 1"),
-        "EK": ("Emirates", "JFK Terminal 4"),
-        "SQ": ("Singapore Airlines", "JFK Terminal 4"),
-        "VS": ("Virgin Atlantic", "JFK Terminal 4")
-    }
-
-    match = re.match(r'^([A-Z0-9]{2})\s*(\d+)$', raw)
-    if match:
-        code, num = match.groups()
-        carrier, default_term = carrier_map.get(code, ("Commercial Carrier", "Main Terminal VIP Lane"))
-        return TransitDetails(
-            transit_type=TransitType.FLIGHT,
-            carrier_name=carrier,
-            identifier=f"{code} {num}",
-            station_or_airport="John F. Kennedy International Airport (JFK)",
-            terminal_or_track=default_term,
-            scheduled_arrival="Scheduled Inbound",
-            estimated_arrival="On Time (In Flight)",
-            status_summary="Live Radar Active · Chauffeur Staging Synced"
-        )
-
-    return TransitDetails(
-        transit_type=TransitType.FLIGHT,
-        carrier_name="Commercial / Private Jet",
-        identifier=raw,
-        station_or_airport="Regional Airport VIP Terminal",
-        terminal_or_track="Executive FBO / Signature Flight Support",
-        status_summary="Live Radar Active"
-    )
-
-
-# Estimate Bridge, Tunnel & Highway Tolls for route
-def estimate_route_tolls(pickup: str, dropoff: Optional[str]) -> Decimal:
-    combined = f"{pickup} {dropoff or ''}".lower()
-    tolls = Decimal("0.00")
-
-    # JFK/LGA to Manhattan / Brooklyn
-    if ("jfk" in combined or "laguardia" in combined or "lga" in combined) and ("manhattan" in combined or "new york" in combined or "100" in combined or "plaza" in combined):
-        tolls += Decimal("14.75")  # Queens Midtown Tunnel / RFK Triborough Bridge
-    elif "newark" in combined or "ewr" in combined or "nj" in combined:
-        tolls += Decimal("17.00")  # Lincoln Tunnel / Holland Tunnel Port Authority toll
-    elif "westchester" in combined or "connecticut" in combined or "greenwich" in combined:
-        tolls += Decimal("11.50")  # Major Deegan / Henry Hudson / Hutchinson toll
-    elif "hamptons" in combined or "long island" in combined:
-        tolls += Decimal("16.00")  # LIE & Queens crossing
-    else:
-        # Standard municipal expressway toll baseline
-        tolls += Decimal("8.50")
-
-    return round_cur(tolls)
+    return None
 
 
 class PricingService:
@@ -291,51 +267,82 @@ class PricingService:
     ) -> Quote:
         from app.services.vendor_pricing_ai_service import VendorPricingAIService
 
-        # Detect Regional Jurisdiction and FX Rates
+        # 1. Resolve Regional Tax Rules and Currency FX
         regional_rule = get_regional_tax_and_surcharges(pickup_address, currency)
         target_currency = currency.upper() if currency else regional_rule.currency
         fx_snap = get_fx_snapshot(target_currency)
-        # Fetch custom vendor pricing rule or fallback to standard tariff
+        fx_multiplier = Decimal("1.00") if target_currency == "USD" else fx_snap.rate
+
+        # 2. Dynamically resolve vendor and custom pricing matrix
         vendor = db.vendors.get(vendor_id)
         custom_rule = VendorPricingAIService.get_vendor_pricing_rule(vendor_id, vehicle_class) if vendor_id else None
-        custom_currency_is_direct = bool(custom_rule and custom_rule.currency == target_currency)
-        tariffs = US_CLASS_TARIFFS.get(vehicle_class, US_CLASS_TARIFFS[VehicleClass.LUXURY_SUV])
-        fx_multiplier = Decimal("1.00") if (target_currency == "USD" or custom_currency_is_direct) else fx_snap.rate
+        vendor_depot_address = getattr(vendor, "office_address", None) or "1500 Market St, Philadelphia, PA 19102"
 
         if custom_rule:
-            rule_fx = Decimal("1.00") if custom_currency_is_direct else fx_multiplier
-            base_fee = round_cur(custom_rule.base_rate_net * rule_fx)
-            per_mile_rate = round_cur(custom_rule.per_mile_rate_net * rule_fx)
-            per_hour_rate = round_cur(custom_rule.hourly_rate_net * rule_fx)
-            min_fare = round_cur(custom_rule.minimum_fare_net * rule_fx)
-            deadhead_rate = round_cur(custom_rule.deadhead_rate_per_mile * rule_fx)
-            wait_per_min = round_cur(custom_rule.wait_minute_rate_net * rule_fx) if hasattr(custom_rule, 'wait_minute_rate_net') else round_cur(tariffs["wait_per_min"] * rule_fx)
+            base_fee = round_cur(custom_rule.base_rate_net * fx_multiplier)
+            per_mile_rate = round_cur(custom_rule.per_mile_rate_net * fx_multiplier)
+            per_hour_rate = round_cur(custom_rule.hourly_rate_net * fx_multiplier)
+            hourly_min_hours = getattr(custom_rule, "hourly_minimum_hours", 2) or 2
+            min_fare = round_cur(custom_rule.minimum_fare_net * fx_multiplier)
+            vendor_dh = getattr(custom_rule, "deadhead_rate_per_mile", None) or getattr(vendor, "deadhead_rate_per_mile", None)
+            if vendor_dh is not None:
+                deadhead_rate = round_cur(Decimal(str(vendor_dh)) * fx_multiplier)
+            else:
+                deadhead_rate = round_cur(per_mile_rate * Decimal("0.45"))
+            wait_per_min = round_cur(custom_rule.wait_minute_rate_net * fx_multiplier) if hasattr(custom_rule, 'wait_minute_rate_net') else round_cur(per_hour_rate / Decimal("60.0"))
+            tax_rate = custom_rule.tax_rate
+            fuel_surcharge_pct = Decimal(str(getattr(custom_rule, "fuel_surcharge_pct", None) or getattr(vendor, "fuel_surcharge_pct", None) or Decimal("0.00")))
+            service_charge_pct = Decimal(str(getattr(custom_rule, "service_charge_pct", None) or getattr(vendor, "service_charge_pct", None) or Decimal("0.00")))
+            credit_card_fee_pct = Decimal(str(getattr(custom_rule, "credit_card_fee_pct", None) or getattr(vendor, "credit_card_fee_pct", None) or Decimal("0.00")))
+            deadhead_buffer_outbound = Decimal(str(getattr(custom_rule, "deadhead_buffer_miles_outbound", Decimal("0.00"))))
+            deadhead_buffer_return = Decimal(str(getattr(custom_rule, "deadhead_buffer_miles_return", Decimal("0.00"))))
+            rush_hour_surcharge_net = round_cur(Decimal(str(getattr(custom_rule, "rush_hour_surcharge_net", base_fee * Decimal("0.25")))) * fx_multiplier)
+            late_night_surcharge_net = round_cur(Decimal(str(getattr(custom_rule, "late_night_surcharge_net", base_fee * Decimal("0.35")))) * fx_multiplier)
+            inside_meet_greet_fee_net = round_cur(Decimal(str(getattr(custom_rule, "inside_baggage_meet_and_greet_fee_net", custom_rule.airport_surcharge_net))) * fx_multiplier)
+            airport_fee_net = round_cur(custom_rule.airport_surcharge_net * fx_multiplier)
         else:
+            tariffs = US_CLASS_TARIFFS.get(vehicle_class, US_CLASS_TARIFFS[VehicleClass.LUXURY_SUV])
             base_fee = round_cur(tariffs["base_fee"] * fx_multiplier)
             per_mile_rate = round_cur(tariffs["per_mile_rate"] * fx_multiplier)
             per_hour_rate = round_cur(tariffs["per_hour_rate"] * fx_multiplier)
+            hourly_min_hours = 2
             min_fare = round_cur(tariffs["min_fare"] * fx_multiplier)
-            deadhead_rate = round_cur((vendor.deadhead_rate_per_mile if vendor else Decimal("1.75")) * fx_multiplier)
+            vendor_dh = getattr(vendor, "deadhead_rate_per_mile", None) or tariffs.get("deadhead_rate_per_mile")
+            if vendor_dh is not None:
+                deadhead_rate = round_cur(Decimal(str(vendor_dh)) * fx_multiplier)
+            else:
+                deadhead_rate = round_cur(per_mile_rate * Decimal("0.45"))
             wait_per_min = round_cur(tariffs["wait_per_min"] * fx_multiplier)
-        
-        tax_rate = custom_rule.tax_rate if (custom_rule and custom_currency_is_direct) else regional_rule.vat_or_sales_tax_rate
+            tax_rate = regional_rule.vat_or_sales_tax_rate
+            fuel_surcharge_pct = Decimal(str(getattr(vendor, "fuel_surcharge_pct", Decimal("0.00")) or Decimal("0.00")))
+            service_charge_pct = Decimal(str(getattr(vendor, "service_charge_pct", Decimal("0.00")) or Decimal("0.00")))
+            credit_card_fee_pct = Decimal(str(getattr(vendor, "credit_card_fee_pct", Decimal("0.00")) or Decimal("0.00")))
+            deadhead_buffer_outbound = Decimal("0.00")
+            deadhead_buffer_return = Decimal("0.00")
+            rush_hour_surcharge_net = round_cur(base_fee * Decimal("0.25"))
+            late_night_surcharge_net = round_cur(base_fee * Decimal("0.35"))
+            inside_meet_greet_fee_net = round_cur(regional_rule.airport_access_fee * fx_multiplier)
+            airport_fee_net = round_cur(regional_rule.airport_access_fee * fx_multiplier)
 
-        line_items: List[QuoteLineItem] = []
+        # Normalize percentage values (if configured as e.g. 10.0 for 10%, convert to 0.10)
+        if fuel_surcharge_pct > Decimal("1.0"):
+            fuel_surcharge_pct = fuel_surcharge_pct / Decimal("100.0")
+        if service_charge_pct > Decimal("1.0"):
+            service_charge_pct = service_charge_pct / Decimal("100.0")
+        if credit_card_fee_pct > Decimal("1.0"):
+            credit_card_fee_pct = credit_card_fee_pct / Decimal("100.0")
+        if tax_rate > Decimal("1.0"):
+            tax_rate = tax_rate / Decimal("100.0")
 
-        # Find vendor office depot details
-        vendor_depot_address = vendor.office_address if vendor else "550 W 54th St, New York, NY 10019"
-
-        # 1. Resolve Automatic Transit (Flight / Train) Details
-        transit_ident = flight_number or train_number
-        transit_info = resolve_transit_info(transit_ident, f"{pickup_address} {dropoff_address or ''}")
-        
-        # 2. 3-Leg Comprehensive Route Calculations via Google Maps
+        # 3. 3-Leg Journey & Live Google Maps Route Matrix
+        ref_time = pickup_time_utc or datetime.now(timezone.utc)
         maps_calc = GoogleMapsService.calculate_3_leg_route(
             vendor_depot=vendor_depot_address,
             pickup=pickup_address,
-            dropoff=dropoff_address
+            dropoff=dropoff_address,
+            departure_time_utc=ref_time
         )
-        
+
         passenger_trip_miles = distance_miles or maps_calc["passenger_trip_miles"]
         passenger_trip_km = maps_calc.get("passenger_trip_km", round(passenger_trip_miles * Decimal("1.60934"), 2))
         outbound_miles = maps_calc["outbound_positioning_miles"]
@@ -357,20 +364,31 @@ class PricingService:
             deadhead_recovery_ratio=maps_calc.get("deadhead_recovery_ratio", 0.92)
         )
 
-        # 3. Itemize Charges Based on Service Type
+        # 4. Resolve Transit (Flight / Train) Intelligence
+        transit_ident = flight_number or train_number
+        transit_info = resolve_transit_info(transit_ident, f"{pickup_address} {dropoff_address or ''}")
+        is_airport_mission = (service_type == ServiceType.AIRPORT_TRANSFER) or (transit_info and transit_info.transit_type == TransitType.FLIGHT)
+
+        line_items: List[QuoteLineItem] = []
+
+        # 5. Itemize Charges Based on Service Type
         outbound_positioning_net = Decimal("0.00")
         return_deadhead_net = Decimal("0.00")
         estimated_tolls_net = Decimal("0.00")
         airport_train_surcharge_net = Decimal("0.00")
         wait_net = Decimal("0.00")
         congestion_surcharge_net = Decimal("0.00")
+        rush_hour_net = Decimal("0.00")
+        late_night_net = Decimal("0.00")
+        meet_greet_net = Decimal("0.00")
+        passenger_distance_net = Decimal("0.00")
 
         if service_type == ServiceType.HOURLY_AS_DIRECTED:
-            hours = max(2, hourly_hours or 2)
+            hours = max(hourly_min_hours, hourly_hours or hourly_min_hours)
             hourly_total_net = round_cur(Decimal(hours) * per_hour_rate)
-            subtotal_net = hourly_total_net
+            core_transportation_subtotal = hourly_total_net
             est_duration = hours * 60
-            passenger_distance_net = Decimal("0.00")
+            
             line_items.append(QuoteLineItem(
                 description=f"Hourly As-Directed Chauffeur Service ({hours} Hours Dedicated)",
                 quantity=hours,
@@ -380,11 +398,37 @@ class PricingService:
                 tax_amount=round_cur(hourly_total_net * tax_rate),
                 total_gross=round_cur(hourly_total_net * (Decimal("1.00") + tax_rate))
             ))
-        else:
-            # Point to point & Airport transfer: Passenger Trip Distance
-            passenger_distance_net = round_cur(passenger_trip_miles * per_mile_rate)
-            estimated_tolls_net = round_cur(estimate_route_tolls(pickup_address, dropoff_address) * fx_multiplier)
 
+            # Dynamic Toll Pass-Through for Intercity / Multi-Zone Hourly Charters
+            if dropoff_address and dropoff_address.strip() and dropoff_address.strip().lower() != pickup_address.strip().lower():
+                detected_tolls = GoogleMapsService.detect_corridor_tolls(pickup_address, dropoff_address)
+                estimated_tolls_net = round_cur(detected_tolls * fx_multiplier)
+                if estimated_tolls_net > 0:
+                    line_items.append(QuoteLineItem(
+                        description="Bridge, Tunnel & Turnpike Tolls (Municipal / E-ZPass pass-through)",
+                        quantity=1,
+                        unit_price_net=estimated_tolls_net,
+                        total_net=estimated_tolls_net,
+                        tax_rate=Decimal("0.00"),
+                        tax_amount=Decimal("0.00"),
+                        total_gross=estimated_tolls_net
+                    ))
+        else:
+            # Point-to-Point & Airport Transfer
+            passenger_distance_net = round_cur(passenger_trip_miles * per_mile_rate)
+            
+            # Base Fleet Reservation Line Item
+            line_items.append(QuoteLineItem(
+                description=f"Base Fleet Reservation & Staging ({vehicle_class.value.replace('_', ' ').title()})",
+                quantity=1,
+                unit_price_net=base_fee,
+                total_net=base_fee,
+                tax_rate=tax_rate,
+                tax_amount=round_cur(base_fee * tax_rate),
+                total_gross=round_cur(base_fee * (Decimal("1.00") + tax_rate))
+            ))
+
+            # Passenger Distance Fare
             line_items.append(QuoteLineItem(
                 description=f"Passenger Route Fare ({passenger_trip_miles:.1f} mi @ {per_mile_rate} {target_currency}/mi)",
                 quantity=1,
@@ -395,11 +439,12 @@ class PricingService:
                 total_gross=round_cur(passenger_distance_net * (Decimal("1.00") + tax_rate))
             ))
 
-            # Outbound Positioning (Depot -> Pickup)
-            if outbound_miles > Decimal("5.00"):
-                outbound_positioning_net = round_cur((outbound_miles - Decimal("5.00")) * deadhead_rate)
+            # Outbound Positioning (Depot -> Pickup: only bill if over dynamic buffer)
+            if outbound_miles > deadhead_buffer_outbound:
+                billable_outbound = outbound_miles - deadhead_buffer_outbound
+                outbound_positioning_net = round_cur(billable_outbound * deadhead_rate)
                 line_items.append(QuoteLineItem(
-                    description=f"Outbound Staging from Depot ({outbound_miles:.1f} mi from {vendor_depot_address})",
+                    description=f"Outbound Chauffeur Staging from Fleet Depot ({outbound_miles:.1f} mi from {vendor_depot_address.split(',')[0]})",
                     quantity=1,
                     unit_price_net=outbound_positioning_net,
                     total_net=outbound_positioning_net,
@@ -408,9 +453,10 @@ class PricingService:
                     total_gross=round_cur(outbound_positioning_net * (Decimal("1.00") + tax_rate))
                 ))
 
-            # Return Deadhead (Dropoff -> Depot)
-            if return_deadhead_miles > Decimal("8.00"):
-                return_deadhead_net = round_cur((return_deadhead_miles - Decimal("8.00")) * deadhead_rate)
+            # Return Deadhead (Dropoff -> Depot: only bill if over dynamic buffer)
+            if return_deadhead_miles > deadhead_buffer_return:
+                billable_return = return_deadhead_miles - deadhead_buffer_return
+                return_deadhead_net = round_cur(billable_return * deadhead_rate)
                 line_items.append(QuoteLineItem(
                     description=f"Return Positioning to Fleet Depot ({return_deadhead_miles:.1f} mi return drive)",
                     quantity=1,
@@ -421,23 +467,25 @@ class PricingService:
                     total_gross=round_cur(return_deadhead_net * (Decimal("1.00") + tax_rate))
                 ))
 
-            # Bridge, Highway & Turnpike Route Tolls
+            # Dynamic Highway, Bridge & Turnpike Tolls (Pass-through via TollGuru / Google Routes API)
+            detected_tolls = GoogleMapsService.detect_corridor_tolls(pickup_address, dropoff_address or "")
+            estimated_tolls_net = round_cur(detected_tolls * fx_multiplier)
             if estimated_tolls_net > 0:
                 line_items.append(QuoteLineItem(
-                    description=f"Bridge, Tunnel & Turnpike Tolls (Municipal / E-ZPass pass-through)",
+                    description="Bridge, Tunnel & Turnpike Tolls (Municipal / E-ZPass pass-through)",
                     quantity=1,
                     unit_price_net=estimated_tolls_net,
                     total_net=estimated_tolls_net,
-                    tax_rate=Decimal("0.00"),  # Tolls pass-through without sales tax
+                    tax_rate=Decimal("0.00"),
                     tax_amount=Decimal("0.00"),
                     total_gross=estimated_tolls_net
                 ))
 
-            # Airport / Train Station Access & Flight Radar Tracking
-            if transit_info and transit_info.transit_type != TransitType.NONE:
-                airport_train_surcharge_net = round_cur(regional_rule.airport_access_fee if (regional_rule.currency == target_currency) else regional_rule.airport_access_fee * fx_multiplier)
+            # Airport VIP Terminal Access & Live Flight Radar Tracking
+            if is_airport_mission:
+                airport_train_surcharge_net = airport_fee_net
                 line_items.append(QuoteLineItem(
-                    description=f"VIP Terminal / Station Staging & Live {transit_info.transit_type.value.title()} Radar ({regional_rule.city_or_region})",
+                    description=f"Airport VIP Terminal Staging & Live Flight Radar ({regional_rule.city_or_region})",
                     quantity=1,
                     unit_price_net=airport_train_surcharge_net,
                     total_net=airport_train_surcharge_net,
@@ -448,7 +496,7 @@ class PricingService:
 
             # Regional Congestion / Environmental Surcharge (e.g. London Congestion)
             if regional_rule.congestion_charge > 0:
-                congestion_surcharge_net = round_cur(regional_rule.congestion_charge if (regional_rule.currency == target_currency) else regional_rule.congestion_charge * fx_multiplier)
+                congestion_surcharge_net = round_cur(regional_rule.congestion_charge * fx_multiplier)
                 line_items.append(QuoteLineItem(
                     description=f"City Centre Congestion / Environmental Surcharge ({regional_rule.city_or_region})",
                     quantity=1,
@@ -459,40 +507,9 @@ class PricingService:
                     total_gross=round_cur(congestion_surcharge_net * (Decimal("1.00") + tax_rate))
                 ))
 
-            # Waiting Time Allowance (45 min for Airport, 20 min for Train, 15 min for P2P)
-            free_wait = 45 if (transit_info and transit_info.transit_type == TransitType.FLIGHT) else (20 if (transit_info and transit_info.transit_type == TransitType.TRAIN) else 15)
-            billable_wait = max(0, wait_minutes - free_wait)
-            if billable_wait > 0:
-                wait_net = round_cur(Decimal(billable_wait) * wait_per_min)
-                line_items.append(QuoteLineItem(
-                    description=f"Additional Wait Time ({billable_wait} min above {free_wait}m allowance)",
-                    quantity=billable_wait,
-                    unit_price_net=wait_per_min,
-                    total_net=wait_net,
-                    tax_rate=tax_rate,
-                    tax_amount=round_cur(wait_net * tax_rate),
-                    total_gross=round_cur(wait_net * (Decimal("1.00") + tax_rate))
-                ))
-            # Late-Night / After-Hours Surcharge (23:00 to 05:30 window)
-            late_night_net = Decimal("0.00")
-            if pickup_time_utc:
-                hour = pickup_time_utc.hour
-                if hour >= 23 or hour <= 5:
-                    late_night_net = custom_rule.late_night_surcharge_net if (custom_rule and hasattr(custom_rule, 'late_night_surcharge_net')) else Decimal("35.00")
-                    line_items.append(QuoteLineItem(
-                        description="Late-Night / After-Hours Executive Chauffeur Surcharge (23:00-05:30 Window)",
-                        quantity=1,
-                        unit_price_net=late_night_net,
-                        total_net=late_night_net,
-                        tax_rate=tax_rate,
-                        tax_amount=round_cur(late_night_net * tax_rate),
-                        total_gross=round_cur(late_night_net * (Decimal("1.00") + tax_rate))
-                    ))
-
-            # Inside Baggage Claim Meet & Greet with Name Sign
-            meet_greet_net = Decimal("0.00")
+            # Inside Baggage Claim Meet & Greet with Digital Name Sign
             if meet_and_greet_inside:
-                meet_greet_net = custom_rule.inside_baggage_meet_and_greet_fee_net if (custom_rule and hasattr(custom_rule, 'inside_baggage_meet_and_greet_fee_net')) else Decimal("45.00")
+                meet_greet_net = inside_meet_greet_fee_net
                 line_items.append(QuoteLineItem(
                     description="Inside Terminal Baggage Claim Meet & Greet with Chauffeur Digital iPad Sign",
                     quantity=1,
@@ -503,25 +520,86 @@ class PricingService:
                     total_gross=round_cur(meet_greet_net * (Decimal("1.00") + tax_rate))
                 ))
 
-            subtotal_net = (
-                base_fee + passenger_distance_net + outbound_positioning_net + 
-                return_deadhead_net + estimated_tolls_net + airport_train_surcharge_net + 
-                congestion_surcharge_net + wait_net + late_night_net + meet_greet_net
+            # Peak Rush-Hour Traffic Delay Adjustment (07:00-09:30 & 16:30-19:30 weekdays)
+            hour = ref_time.hour
+            is_weekday = ref_time.weekday() < 5
+            if is_weekday and ((7 <= hour <= 9) or (16 <= hour <= 19)):
+                rush_hour_net = rush_hour_surcharge_net
+                line_items.append(QuoteLineItem(
+                    description="Metropolitan Peak Rush-Hour Traffic Buffer (Dynamic Corridor Optimization)",
+                    quantity=1,
+                    unit_price_net=rush_hour_net,
+                    total_net=rush_hour_net,
+                    tax_rate=tax_rate,
+                    tax_amount=round_cur(rush_hour_net * tax_rate),
+                    total_gross=round_cur(rush_hour_net * (Decimal("1.00") + tax_rate))
+                ))
+
+            # Late-Night / Midnight Surcharge (23:00 to 05:30 window)
+            if hour >= 23 or hour <= 5:
+                late_night_net = late_night_surcharge_net
+                line_items.append(QuoteLineItem(
+                    description="Late-Night / After-Hours Executive Chauffeur Surcharge (23:00-05:30 Window)",
+                    quantity=1,
+                    unit_price_net=late_night_net,
+                    total_net=late_night_net,
+                    tax_rate=tax_rate,
+                    tax_amount=round_cur(late_night_net * tax_rate),
+                    total_gross=round_cur(late_night_net * (Decimal("1.00") + tax_rate))
+                ))
+
+            # Waiting Time Allowance
+            free_wait = 45 if is_airport_mission else 15
+            billable_wait = max(0, wait_minutes - free_wait)
+            if billable_wait > 0:
+                wait_net = round_cur(Decimal(billable_wait) * wait_per_min)
+                line_items.append(QuoteLineItem(
+                    description=f"Additional Chauffeur Wait Time ({billable_wait} min above {free_wait}m allowance)",
+                    quantity=billable_wait,
+                    unit_price_net=wait_per_min,
+                    total_net=wait_net,
+                    tax_rate=tax_rate,
+                    tax_amount=round_cur(wait_net * tax_rate),
+                    total_gross=round_cur(wait_net * (Decimal("1.00") + tax_rate))
+                ))
+
+            core_transportation_subtotal = (
+                base_fee + passenger_distance_net + outbound_positioning_net + return_deadhead_net
             )
-            est_duration = max(20, int(passenger_trip_miles * Decimal("2.2")))
+            est_duration = maps_calc["passenger_duration_minutes"]
 
-        # Add Base Reservation Line Item
-        line_items.insert(0, QuoteLineItem(
-            description=f"Base Fleet Reservation & Staging ({vehicle_class.value.replace('_', ' ').title()})",
-            quantity=1,
-            unit_price_net=base_fee,
-            total_net=base_fee,
-            tax_rate=tax_rate,
-            tax_amount=round_cur(base_fee * tax_rate),
-            total_gross=round_cur(base_fee * (Decimal("1.00") + tax_rate))
-        ))
+        # 6. Dynamic Fuel Surcharge (% of base transportation fare)
+        if fuel_surcharge_pct > Decimal("0.00"):
+            fuel_surcharge_net = round_cur(core_transportation_subtotal * fuel_surcharge_pct)
+            if fuel_surcharge_net > 0:
+                line_items.append(QuoteLineItem(
+                    description=f"Fuel Surcharge ({fuel_surcharge_pct * Decimal('100.0'):.1f}% Dynamic Energy Index)",
+                    quantity=1,
+                    unit_price_net=fuel_surcharge_net,
+                    total_net=fuel_surcharge_net,
+                    tax_rate=tax_rate,
+                    tax_amount=round_cur(fuel_surcharge_net * tax_rate),
+                    total_gross=round_cur(fuel_surcharge_net * (Decimal("1.00") + tax_rate))
+                ))
 
-        # Enforce Minimum Fare
+        # 7. Dynamic Operational & Administrative Service Charge (% of base fare)
+        if service_charge_pct > Decimal("0.00"):
+            service_charge_net = round_cur(core_transportation_subtotal * service_charge_pct)
+            if service_charge_net > 0:
+                line_items.append(QuoteLineItem(
+                    description=f"Operating & Administrative Service Charge ({service_charge_pct * Decimal('100.0'):.1f}%)",
+                    quantity=1,
+                    unit_price_net=service_charge_net,
+                    total_net=service_charge_net,
+                    tax_rate=tax_rate,
+                    tax_amount=round_cur(service_charge_net * tax_rate),
+                    total_gross=round_cur(service_charge_net * (Decimal("1.00") + tax_rate))
+                ))
+
+        # Compute running subtotal from all line items
+        subtotal_net = sum((item.total_net for item in line_items), Decimal("0.00"))
+
+        # Enforce Minimum Fare Tariff
         if subtotal_net < min_fare:
             adjustment = min_fare - subtotal_net
             subtotal_net = min_fare
@@ -535,14 +613,29 @@ class PricingService:
                 total_gross=round_cur(adjustment * (Decimal("1.00") + tax_rate))
             ))
 
+        # 8. Dynamic Credit Card Processing / Merchant Clearing Fee
+        if credit_card_fee_pct > Decimal("0.00"):
+            cc_fee_net = round_cur(subtotal_net * credit_card_fee_pct)
+            if cc_fee_net > 0:
+                line_items.append(QuoteLineItem(
+                    description=f"Credit Card Processing & Merchant Clearing Fee ({credit_card_fee_pct * Decimal('100.0'):.2f}%)",
+                    quantity=1,
+                    unit_price_net=cc_fee_net,
+                    total_net=cc_fee_net,
+                    tax_rate=Decimal("0.00"),
+                    tax_amount=Decimal("0.00"),
+                    total_gross=cc_fee_net
+                ))
+                subtotal_net += cc_fee_net
+
         subtotal_net = round_cur(subtotal_net)
         
-        # 4. Regional Taxes (VAT / Sales Tax on non-toll services) and Dynamic Vendor Gratuity
-        taxable_base = max(Decimal("0.00"), subtotal_net - estimated_tolls_net)
-        tax_amount = round_cur(taxable_base * tax_rate)
+        # 9. Regional Taxes & Dynamic Gratuity
+        # Calculate taxable base (excluding toll and CC pass-throughs with 0% tax)
+        taxable_base = sum((item.total_net for item in line_items if item.tax_rate > Decimal("0.00")), Decimal("0.00"))
+        tax_amount = round_cur(sum((item.tax_amount for item in line_items), Decimal("0.00")))
         
-        # Dynamic Vendor Gratuity Policy (defaults to 0.00 unless explicitly configured & enabled)
-        include_grat = getattr(custom_rule, "include_gratuity_in_billing", False) if custom_rule else False
+        include_grat = getattr(custom_rule, "include_gratuity_in_billing", False)
         gratuity_rate = Decimal(str(custom_rule.gratuity_rate)) if (include_grat and custom_rule and custom_rule.gratuity_rate) else Decimal("0.00")
         gratuity_amount = round_cur(taxable_base * gratuity_rate) if gratuity_rate > 0 else Decimal("0.00")
         

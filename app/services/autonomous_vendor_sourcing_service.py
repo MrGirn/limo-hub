@@ -521,77 +521,11 @@ Global Chauffeur Dispatch & Affiliate Clearinghouse
         return results
 
     @classmethod
-    def _seed_demo_opportunities(cls):
-        """Seeds demo out-of-market RFP records showcasing the 3 stages of sourcing."""
-        now = datetime.now(timezone.utc)
-        
-        # 1. Fresh Sourcing Ticket (Aspen - AI Dispatched, 8 mins left on escalation)
-        r1 = OutboundVendorRFP(
-            rfp_id="rfp-asp-8821",
-            inquiry_id="inq-asp-01",
-            itinerary_id="itin-vip-aspen-01",
-            leg_id="leg-asp-01",
-            target_city="Aspen",
-            target_vendor_name="Aspen Mountain Luxury Chauffeurs LLC",
-            target_vendor_email="dispatch@aspenmountainluxury.com",
-            target_vendor_phone="+1-970-555-0144",
-            target_vendor_website="https://aspenmountainluxury.com",
-            pickup_address="Aspen Pitkin County Airport (ASE) Private Aviation FBO",
-            dropoff_address="Viceroy Snowmass, 130 Wood Rd, Snowmass Village, CO",
-            pickup_time_utc=now + timedelta(days=3),
-            vehicle_class=VehicleClass.LUXURY_SUV,
-            passenger_count=2,
-            luggage_count=3,
-            suggested_benchmark_payout_usd=Decimal("175.00"),
-            manager_cc_email="dispatch@manhattanprestige.com",
-            manager_alert_phone="+12125550188",
-            status=SourcingOpportunityStatus.AI_DISPATCHED,
-            sent_at_utc=now - timedelta(minutes=2),
-            escalation_deadline_utc=now + timedelta(minutes=8),
-            hard_sla_deadline_utc=now + timedelta(minutes=23),
-            quote_token="tok_asp_demo_8821",
-            manager_notes="Auto-discovered via Colorado PUC Livery Registry (★ 4.98 Rating). CC delivered to Owner."
-        )
-
-        # 2. Escalated Sourcing Ticket (Vail - 10 mins passed, Call Vendor prompt active)
-        r2 = OutboundVendorRFP(
-            rfp_id="rfp-vail-3319",
-            inquiry_id="inq-vail-02",
-            itinerary_id="itin-vip-vail-02",
-            leg_id="leg-vail-02",
-            target_city="Vail",
-            target_vendor_name="Vail Valley Premier Chauffeur Services",
-            target_vendor_email="dispatch@vailpremierlimo.com",
-            target_vendor_phone="+1-970-555-0219",
-            target_vendor_website="https://vailpremierlimo.com",
-            pickup_address="Eagle County Regional Airport (EGE) Tarmac",
-            dropoff_address="Four Seasons Resort Vail, 1 Vail Rd, Vail, CO",
-            pickup_time_utc=now + timedelta(days=4),
-            vehicle_class=VehicleClass.FIRST_CLASS,
-            passenger_count=1,
-            luggage_count=2,
-            suggested_benchmark_payout_usd=Decimal("210.00"),
-            manager_cc_email="dispatch@manhattanprestige.com",
-            manager_alert_phone="+12125550188",
-            status=SourcingOpportunityStatus.MANAGER_FOLLOWUP_REQUIRED,
-            sent_at_utc=now - timedelta(minutes=14),
-            escalation_deadline_utc=now - timedelta(minutes=4),
-            hard_sla_deadline_utc=now + timedelta(minutes=11),
-            quote_token="tok_vail_demo_3319",
-            manager_notes="⚠️ Escalation Triggered: Vendor unreplied for 14m. Click 'Call Vendor' button to phone dispatcher."
-        )
-
-        cls._active_rfps[r1.rfp_id] = r1
-        cls._active_rfps[r1.quote_token] = r1
-        cls._active_rfps[r2.rfp_id] = r2
-        cls._active_rfps[r2.quote_token] = r2
-
-    @classmethod
     def get_rfp_by_token(cls, token: str) -> Optional[OutboundVendorRFP]:
         return cls._active_rfps.get(token)
 
 
 # Global singleton instance
 autonomous_vendor_sourcing_service = AutonomousVendorSourcingService()
-autonomous_vendor_sourcing_service._seed_demo_opportunities()
+
 

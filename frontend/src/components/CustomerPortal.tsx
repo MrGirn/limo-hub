@@ -324,6 +324,7 @@ export const CustomerPortal: React.FC = () => {
         setVehicleQuotes(qMap);
       } else {
         const qMap: Record<string, any> = {};
+        const combinedIso = tripDate ? new Date(`${tripDate}T${tripTime || '10:00'}:00Z`).toISOString() : undefined;
         await Promise.all(classes.map(async (vc) => {
           try {
             const q = await requestQuote({
@@ -332,8 +333,8 @@ export const CustomerPortal: React.FC = () => {
               pickup_address: effPickup,
               dropoff_address: selectedRideType === 'HOURLY' ? undefined : effDropoff,
               flight_number: selectedRideType === 'AIRPORT' ? flightNumber : undefined,
-              distance_miles: 18.5,
               hourly_hours: selectedRideType === 'HOURLY' ? hourlyHours : undefined,
+              pickup_time_utc: combinedIso,
               wait_minutes: 0
             });
             qMap[vc] = q;

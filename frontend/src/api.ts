@@ -3,7 +3,7 @@ import {
   ServiceType, VehicleClass, BookingParty, TripStatus, Vendor,
   UserSession, ActorPersonaOption, VendorPortalConfig, SystemRuntimeMode,
   TeamMember, CreateTeamMemberPayload, UpdateTeamMemberPayload, RoleMatrixResponse,
-  CertifiedAffiliatePartner, AffiliateRecommendation
+  CertifiedAffiliatePartner, AffiliateRecommendation, Dispatch24hAlert
 } from './types';
 
 
@@ -153,24 +153,57 @@ export async function requestQuote(params: {
   vehicle_class: VehicleClass;
   pickup_address: string;
   dropoff_address?: string;
+  vendor_id?: string;
+  tenant_id?: string;
   flight_number?: string;
   train_number?: string;
   distance_miles?: number;
   hourly_hours?: number;
   wait_minutes?: number;
+  currency?: string;
+  pickup_time_utc?: string;
+  meet_and_greet_inside?: boolean;
 }): Promise<Quote> {
   const res = await fetch(`${BASE_URL}/api/v1/quotes`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify({
-      tenant_id: 'tenant-us-east',
-      vendor_id: 'vendor-ny-executive',
+      tenant_id: params.tenant_id || 'tenant-us-east',
+      vendor_id: params.vendor_id || undefined,
       ...params
     })
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(extractErrorMessage(err, 'Failed to compute quote'));
+  }
+  return res.json();
+}
+
+export async function compareQuotes(params: {
+  service_type: ServiceType;
+  vehicle_class: VehicleClass;
+  pickup_address: string;
+  dropoff_address?: string;
+  flight_number?: string;
+  train_number?: string;
+  hourly_hours?: number;
+  wait_minutes?: number;
+  currency?: string;
+  pickup_time_utc?: string;
+  meet_and_greet_inside?: boolean;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/quotes/compare`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      tenant_id: 'tenant-us-east',
+      ...params
+    })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to compare market quotes'));
   }
   return res.json();
 }
@@ -822,6 +855,23 @@ export async function submitPublicVendorOnboarding(payload: any): Promise<any> {
     const err = await res.json().catch(() => ({}));
     throw new Error(extractErrorMessage(err, 'Onboarding submission failed. Please check payment method or contact support.'));
   }
+    return res.json();
+}
+
+export async function fetchVendorOnboardingStatus(vendorId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendor-cell/${vendorId}/onboarding-status`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch vendor onboarding status');
+  return res.json();
+}
+
+export async function sendVendorOnboardingInvite(vendorId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendor-cell/${vendorId}/onboarding-invite`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to send vendor onboarding invite');
   return res.json();
 }
 
@@ -1213,6 +1263,244 @@ export async function exportPayrollCsvApi(vendorId: string, format: 'GUSTO' | 'A
   }
   return res.text();
 }
+
+export async function fetchPending24hDispatchAlerts(vendorId?: string): Promise<Dispatch24hAlert[]> {
+  const url = vendorId 
+    ? `${BASE_URL}/api/v1/dispatch/pending-24h-alerts?vendor_id=${encodeURIComponent(vendorId)}`
+    : `${BASE_URL}/api/v1/dispatch/pending-24h-alerts`;
+  const res = await fetch(url, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to fetch 24h dispatch alerts'));
+  }
+  return res.json();
+}
+
+export async function assign24hChauffeur(tripId: string, driverId?: string, vehicleId?: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/dispatch/assign-24h-driver`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      trip_id: tripId,
+      driver_id: driverId || null,
+      vehicle_id: vehicleId || null
+    })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to assign chauffeur in 24h window'));
+  }
+  return res.json();
+}
+
+// --- STRIPE CONNECT EXPRESS VENDOR ONBOARDING & PAYOUTS ---
+
+export async function fetchVendorStripeStatus(vendorId: string): Promise<{
+  vendor_id: string;
+  vendor_name: string;
+  stripe_account_id: string;
+  payouts_enabled: boolean;
+  charges_enabled: boolean;
+  status: string;
+  default_currency: string;
+  requirements: string[];
+}> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${encodeURIComponent(vendorId)}/stripe/connect-status`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to fetch Stripe connect status'));
+  }
+  return res.json();
+}
+
+export async function createVendorStripeConnectLink(vendorId: string, returnUrl?: string): Promise<{
+  success: boolean;
+  vendor_id: string;
+  stripe_account_id: string;
+  onboarding_url: string;
+  expires_at: number;
+}> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${encodeURIComponent(vendorId)}/stripe/connect-link`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ return_url: returnUrl })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to generate Stripe onboarding link'));
+  }
+  return res.json();
+}
+
+export async function createVendorStripeLoginLink(vendorId: string): Promise<{
+  success: boolean;
+  vendor_id: string;
+  stripe_account_id: string;
+  url: string;
+}> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${encodeURIComponent(vendorId)}/stripe/login-link`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to generate Stripe dashboard login link'));
+  }
+  return res.json();
+}
+
+export const fetchVendorStripeLoginLink = createVendorStripeLoginLink;
+
+// --- VENDOR SAAS SUBSCRIPTION & DUNNING ---
+
+export async function fetchHubSubscriptionsOverview(): Promise<{
+  total_mrr: number;
+  active_subscribers: number;
+  delinquent_subscribers: number;
+  tiers_breakdown: Record<string, number>;
+  subscriptions: Array<{
+    vendor_id: string;
+    vendor_name: string;
+    tier: string;
+    tier_name: string;
+    monthly_fee: number;
+    billing_status: string;
+    dunning_stage: number;
+    grace_period_expires_at: string | null;
+    auto_cell_suspension: boolean;
+    renews_at: string | null;
+    pay_as_you_go_rate: number;
+  }>;
+}> {
+  const res = await fetch(`${BASE_URL}/api/v1/hub/subscriptions/overview`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to fetch hub subscriptions overview'));
+  }
+  return res.json();
+}
+
+export async function fetchVendorSubscription(vendorId: string): Promise<{
+  vendor_id: string;
+  vendor_name: string;
+  tier: string;
+  tier_name: string;
+  monthly_fee: number;
+  billing_status: string;
+  dunning_stage: number;
+  grace_period_expires_at: string | null;
+  auto_cell_suspension: boolean;
+  renews_at: string | null;
+  pay_as_you_go_rate: number;
+  is_grace_period_active: boolean;
+}> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${encodeURIComponent(vendorId)}/subscription`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to fetch vendor subscription'));
+  }
+  return res.json();
+}
+
+export async function upgradeVendorSubscription(vendorId: string, planId: string, billingCycle: string = 'monthly'): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${encodeURIComponent(vendorId)}/subscription/upgrade`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ plan_id: planId, billing_cycle: billingCycle })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to update subscription tier'));
+  }
+  return res.json();
+}
+
+export async function switchVendorToPayAsYouGo(vendorId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${encodeURIComponent(vendorId)}/subscription/pay-as-you-go`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to switch to Pay-As-You-Go'));
+  }
+  return res.json();
+}
+
+export async function cancelVendorSubscription(vendorId: string, reason?: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${encodeURIComponent(vendorId)}/subscription/cancel`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ reason: reason || 'Vendor canceled via dashboard' })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to cancel subscription'));
+  }
+  return res.json();
+}
+
+export async function requestVendorAccountDeletion(vendorId: string, reason?: string, confirmDeletion: boolean = true): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${encodeURIComponent(vendorId)}/account/delete-request`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ reason: reason || 'Vendor requested account deletion', confirm_deletion: confirmDeletion })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to request account deletion'));
+  }
+  return res.json();
+}
+
+// --- SOVEREIGN CELL INFRASTRUCTURE CONTROLS ---
+
+export async function stopSovereignCell(vendorId: string, reason?: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/infrastructure/cells/${encodeURIComponent(vendorId)}/stop`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ reason: reason || 'Hub admin paused sovereign cell' })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to stop sovereign cell'));
+  }
+  return res.json();
+}
+
+export async function startSovereignCell(vendorId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/infrastructure/cells/${encodeURIComponent(vendorId)}/start`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to start sovereign cell'));
+  }
+  return res.json();
+}
+
+export async function terminateSovereignCell(vendorId: string, reason?: string, deallocateDatabase: boolean = true): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/infrastructure/cells/${encodeURIComponent(vendorId)}/terminate`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ reason: reason || 'Hub admin terminated cell', deallocate_database: deallocateDatabase })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to terminate sovereign cell'));
+  }
+  return res.json();
+}
+
 
 
 

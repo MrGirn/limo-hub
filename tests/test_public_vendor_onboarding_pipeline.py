@@ -170,3 +170,42 @@ def test_full_onboarding_and_cell_spinup_execution():
     decrypted = vendor_token_encryption_service.decrypt_vendor_token(data["encrypted_token"])
     assert decrypted is not None
     assert decrypted["vendor_id"] == "vendor_miami_prestige_test"
+
+
+def test_minimal_day0_spinup_and_readiness_calculation():
+    """Validates Day 0 minimal spin-up with 5 core fields and progressive 7-milestone readiness tracking."""
+    # 1. Minimal Day-0 Spin-Up (only company name, admin email, phone, city/state)
+    payload = {
+        "name": "Dallas Executive Livery",
+        "city": "Dallas",
+        "state": "TX",
+        "country_code": "US",
+        "contact_phone": "+12145550188",
+        "admin_email": "dave@dallaslivery.com"
+    }
+    res = client.post("/api/v1/vendor-cell/spin-up", json=payload)
+    assert res.status_code == 200
+    config = res.json()
+    assert "dallas" in config["vendor_id"]
+    assert config["vendor_name"] == "Dallas Executive Livery"
+    assert config["city"] == "Dallas"
+    assert config["local_currency"] == "USD"
+    assert config["time_zone"] == "America/Chicago"
+    assert config["local_base_rate_usd"] == 85.0
+
+    # 2. Query Onboarding Readiness Status
+    status_res = client.get(f"/api/v1/vendor-cell/{config['vendor_id']}/onboarding-status")
+    assert status_res.status_code == 200
+    status = status_res.json()
+    assert status["vendor_id"] == config["vendor_id"]
+    assert "readiness_score" in status
+    assert len(status["milestones"]) == 7
+    # Cell is active
+    assert status["milestones"][0]["completed"] is True
+    assert status["current_stage"] == "PHASE_2_PROGRESSIVE_SETUP"
+
+    # 3. Test sending onboarding guidance invite email
+    invite_res = client.post(f"/api/v1/vendor-cell/{config['vendor_id']}/onboarding-invite")
+    assert invite_res.status_code == 200
+    assert invite_res.json()["success"] is True
+

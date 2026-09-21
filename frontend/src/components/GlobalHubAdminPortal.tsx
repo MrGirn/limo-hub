@@ -8,8 +8,12 @@ import {
   Filter, Download, Plus, ShieldCheck, Clock, Radio, BarChart3,
   ExternalLink, Terminal, HardDrive, Share2, CreditCard,
   ChevronDown, ChevronUp, MapPin, Copy, AlertCircle, CheckCircle,
-  FileCode, CheckSquare, Square
+  FileCode, CheckSquare, Square, Pause, Power, Trash2
 } from 'lucide-react';
+import { 
+  stopSovereignCell, startSovereignCell, terminateSovereignCell, 
+  fetchHubSubscriptionsOverview 
+} from '../api';
 
 interface GlobalHubAdminPortalProps {
   onNavigateToGlobalBooking: () => void;
@@ -22,7 +26,9 @@ export const GlobalHubAdminPortal: React.FC<GlobalHubAdminPortalProps> = ({
     'cells' | 'spinup' | 'round_robin' | 'payments' | 'compliance' | 'settings'
   >('cells');
   const [settingsSubTab, setSettingsSubTab] = useState<'fx' | 'ai' | 'graphrag' | 'outbox' | 'clearing'>('fx');
-  const [paymentViewTab, setPaymentViewTab] = useState<'activity' | 'stripe_model'>('activity');
+  const [paymentViewTab, setPaymentViewTab] = useState<'activity' | 'subscriptions' | 'stripe_model'>('activity');
+  const [hubSubscriptions, setHubSubscriptions] = useState<any | null>(null);
+  const [isDunningTesting, setIsDunningTesting] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
@@ -165,7 +171,14 @@ depot:
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
-          const mapped = data.map((c: any) => ({
+          const seen = new Set<string>();
+          const dedupedData = data.filter((c: any) => {
+            const canon = (c.vendor_id || '').replace(/-/g, '_');
+            if (seen.has(canon)) return false;
+            seen.add(canon);
+            return true;
+          });
+          const mapped = dedupedData.map((c: any) => ({
             id: c.vendor_id,
             name: c.vendor_name || c.vendor_id,
             port: c.port || 8001,
@@ -270,6 +283,79 @@ depot:
         }
       })
       .catch(err => console.log('Could not fetch AI model lifecycle:', err));
+
+    // 8. Fetch Global Hub Vendor SaaS Subscriptions Overview
+    fetch('/api/v1/hub/subscriptions/overview')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.subscriptions) {
+          setHubSubscriptions(data);
+        }
+      })
+      .catch(err => console.log('Could not fetch Hub subscriptions:', err));
+  };
+
+  const handleStopCell = async (vendorId: string) => {
+    if (!confirm(`Pause and suspend sovereign cell container for "${vendorId}"? Inbound traffic will receive 503 Maintenance.`)) return;
+    setLoading(true);
+    try {
+      await stopSovereignCell(vendorId, 'Hub administrator paused cell');
+      setActionNotice(`⏸️ Sovereign cell "${vendorId}" has been PAUSED / SUSPENDED.`);
+      loadData();
+    } catch (err: any) {
+      setActionNotice(`⚠️ Failed to stop cell: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStartCell = async (vendorId: string) => {
+    setLoading(true);
+    try {
+      await startSovereignCell(vendorId);
+      setActionNotice(`▶️ Sovereign cell "${vendorId}" has been RESUMED / STARTED.`);
+      loadData();
+    } catch (err: any) {
+      setActionNotice(`⚠️ Failed to start cell: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTerminateCell = async (vendorId: string) => {
+    const confirmation = prompt(`🛑 CAUTION: This will TERMINATE the container, scale replicas to 0, and decommission infrastructure for "${vendorId}".\n\nType "${vendorId}" to confirm decommission:`);
+    if (confirmation !== vendorId) {
+      if (confirmation !== null) alert('Confirmation mismatch. Decommission aborted.');
+      return;
+    }
+    setLoading(true);
+    try {
+      await terminateSovereignCell(vendorId, 'Hub administrator decommissioned cell', true);
+      setActionNotice(`🛑 Sovereign cell "${vendorId}" has been DECOMMISSIONED and TERMINATED.`);
+      loadData();
+    } catch (err: any) {
+      setActionNotice(`⚠️ Failed to terminate cell: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTriggerDunningTest = async (vendorId: string) => {
+    setIsDunningTesting(true);
+    try {
+      const res = await fetch(`/api/v1/hub/subscriptions/${vendorId}/trigger-dunning-test`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setActionNotice(`⚠️ Dunning Test Triggered for "${vendorId}"! Status: ${d.billing_status} (Stage ${d.dunning_stage}). Grace expires: ${d.grace_period_expires_at || 'Immediate'}`);
+        loadData();
+      }
+    } catch (err: any) {
+      setActionNotice(`⚠️ Dunning test failed: ${err.message}`);
+    } finally {
+      setIsDunningTesting(false);
+    }
   };
 
   const handleRunModelLifecycleAudit = async () => {
@@ -1241,11 +1327,11 @@ depot:
 
                           {/* Action Buttons */}
                           <td style={{ padding: '12px 14px', textAlign: 'right' }}>
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
                               <button
                                 onClick={() => openInspectionDrawer(cell)}
                                 style={{
-                                  padding: '4px 8px',
+                                  padding: '4px 7px',
                                   backgroundColor: '#EFF6FF',
                                   color: '#0078D4',
                                   border: '1px solid #BFDBFE',
@@ -1255,18 +1341,101 @@ depot:
                                   cursor: 'pointer',
                                   display: 'inline-flex',
                                   alignItems: 'center',
-                                  gap: '4px'
+                                  gap: '3px'
                                 }}
                                 title="Inspect Infrastructure Blade"
                               >
-                                <Settings size={12} />
+                                <Settings size={11} />
                                 <span>Blade</span>
                               </button>
+
+                              {/* Pause / Resume Controls */}
+                              {cell.status === 'STOPPED' || cell.status === 'SUSPENDED' ? (
+                                <button
+                                  onClick={() => handleStartCell(cell.id)}
+                                  disabled={loading}
+                                  style={{
+                                    padding: '4px 7px',
+                                    backgroundColor: '#DCFCE7',
+                                    color: '#15803D',
+                                    border: '1px solid #86EFAC',
+                                    borderRadius: '4px',
+                                    fontSize: '11px',
+                                    fontWeight: 800,
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px'
+                                  }}
+                                  title="Resume and Start Sovereign Cell Container"
+                                >
+                                  <Play size={11} fill="#15803D" />
+                                  <span>Resume</span>
+                                </button>
+                              ) : cell.status !== 'TERMINATED_DECOMMISSIONED' ? (
+                                <button
+                                  onClick={() => handleStopCell(cell.id)}
+                                  disabled={loading}
+                                  style={{
+                                    padding: '4px 7px',
+                                    backgroundColor: '#FEF3C7',
+                                    color: '#B45309',
+                                    border: '1px solid #FDE68A',
+                                    borderRadius: '4px',
+                                    fontSize: '11px',
+                                    fontWeight: 800,
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px'
+                                  }}
+                                  title="Pause and Suspend Sovereign Cell Container"
+                                >
+                                  <Pause size={11} fill="#B45309" />
+                                  <span>Pause</span>
+                                </button>
+                              ) : null}
+
+                              {/* Terminate Control */}
+                              {cell.status !== 'TERMINATED_DECOMMISSIONED' ? (
+                                <button
+                                  onClick={() => handleTerminateCell(cell.id)}
+                                  disabled={loading}
+                                  style={{
+                                    padding: '4px 7px',
+                                    backgroundColor: '#FEE2E2',
+                                    color: '#DC2626',
+                                    border: '1px solid #FECACA',
+                                    borderRadius: '4px',
+                                    fontSize: '11px',
+                                    fontWeight: 800,
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px'
+                                  }}
+                                  title="Decommission & Terminate Sovereign Cell"
+                                >
+                                  <Trash2 size={11} />
+                                  <span>Terminate</span>
+                                </button>
+                              ) : (
+                                <span style={{
+                                  fontSize: '10px',
+                                  fontWeight: 800,
+                                  backgroundColor: '#F1F5F9',
+                                  color: '#64748B',
+                                  padding: '3px 6px',
+                                  borderRadius: '4px'
+                                }}>
+                                  🛑 Terminated
+                                </span>
+                              )}
 
                               <button
                                 onClick={() => handlePushToAws(cell.id)}
                                 style={{
-                                  padding: '4px 8px',
+                                  padding: '4px 7px',
                                   backgroundColor: '#1E293B',
                                   color: '#FFFFFF',
                                   border: 'none',
@@ -1276,11 +1445,11 @@ depot:
                                   cursor: 'pointer',
                                   display: 'inline-flex',
                                   alignItems: 'center',
-                                  gap: '4px'
+                                  gap: '3px'
                                 }}
                                 title="Push Domain & SSL to AWS"
                               >
-                                <span>☁ Push AWS</span>
+                                <span>☁ AWS</span>
                               </button>
 
                               <a
@@ -1288,7 +1457,7 @@ depot:
                                 target="_blank"
                                 rel="noreferrer"
                                 style={{
-                                  padding: '4px 8px',
+                                  padding: '4px 6px',
                                   backgroundColor: '#FFFFFF',
                                   color: '#475569',
                                   border: '1px solid #CBD5E1',
@@ -1300,6 +1469,7 @@ depot:
                                   alignItems: 'center',
                                   gap: '3px'
                                 }}
+                                title="Open Live Sovereign Cell"
                               >
                                 <ExternalLink size={11} />
                               </a>
@@ -2370,6 +2540,7 @@ depot:
               <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '2px' }}>
                 {[
                   { id: 'activity', label: '⚡ Live Farm-In & Farm-Out Ledger', badge: `${settlements.length} Records` },
+                  { id: 'subscriptions', label: '📊 SaaS Subscriptions & Hub MRR Ledger', badge: `${hubSubscriptions?.active_subscribers ?? 4} Active` },
                   { id: 'stripe_model', label: '💳 Card Multi-Tenant Architecture & Setup Review', badge: 'Global & Vendor Hubs' }
                 ].map((vt) => {
                   const isActive = paymentViewTab === vt.id;
@@ -2899,7 +3070,217 @@ depot:
                 </div>
               )}
 
-              {/* VIEW 2: CARD MULTI-TENANT ARCHITECTURE REVIEW */}
+              {/* VIEW 2: SAAS SUBSCRIPTIONS & HUB MRR BILLING LEDGER */}
+              {paymentViewTab === 'subscriptions' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  
+                  {/* MRR & Billing KPI Cards */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                    <div style={{ backgroundColor: '#FFFFFF', padding: '16px', borderRadius: '8px', border: '1px solid #E2E8F0', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
+                      <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700 }}>TOTAL MONTHLY RECURRING REVENUE (MRR)</div>
+                      <div style={{ fontSize: '24px', fontWeight: 900, color: '#0078D4', marginTop: '4px' }}>
+                        ${(hubSubscriptions?.total_mrr || 348).toFixed(2)} USD
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#16A34A', marginTop: '2px' }}>SaaS Subscription ARR: ${((hubSubscriptions?.total_mrr || 348) * 12).toFixed(2)}</div>
+                    </div>
+
+                    <div style={{ backgroundColor: '#FFFFFF', padding: '16px', borderRadius: '8px', border: '1px solid #E2E8F0', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
+                      <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700 }}>ACTIVE SOVEREIGN SUBSCRIBERS</div>
+                      <div style={{ fontSize: '24px', fontWeight: 900, color: '#15803D', marginTop: '4px' }}>
+                        {hubSubscriptions?.active_subscribers ?? 4} Vendors
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>100% Isolated Cell Tenants</div>
+                    </div>
+
+                    <div style={{ backgroundColor: '#FFFFFF', padding: '16px', borderRadius: '8px', border: '1px solid #E2E8F0', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
+                      <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700 }}>DUNNING & GRACE PERIOD</div>
+                      <div style={{ fontSize: '24px', fontWeight: 900, color: (hubSubscriptions?.delinquent_subscribers || 0) > 0 ? '#DC2626' : '#16A34A', marginTop: '4px' }}>
+                        {hubSubscriptions?.delinquent_subscribers || 0} Delinquent
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>7-Day Auto-Grace Window</div>
+                    </div>
+
+                    <div style={{ backgroundColor: '#FFFFFF', padding: '16px', borderRadius: '8px', border: '1px solid #E2E8F0', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
+                      <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700 }}>ACTIVE TIER DISTRIBUTION</div>
+                      <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <div>• Pro Sovereign: <strong>{hubSubscriptions?.tiers_breakdown?.tier_pro_sovereign || 2}</strong> ($99/mo)</div>
+                        <div>• Starter Free: <strong>{hubSubscriptions?.tiers_breakdown?.tier_starter_free || 1}</strong> ($0/mo)</div>
+                        <div>• Enterprise: <strong>{hubSubscriptions?.tiers_breakdown?.tier_enterprise_cluster || 1}</strong> ($249/mo)</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Subscriptions Table */}
+                  <div style={{ backgroundColor: '#FFFFFF', borderRadius: '8px', overflow: 'hidden', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                    <div style={{ padding: '14px 18px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <span style={{ fontWeight: 800, fontSize: '13px', color: '#0F172A' }}>Vendor SaaS Subscriptions, Dunning Lifecycle & Hub Billing Ledger</span>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#64748B' }}>
+                          Each vendor is billed recurring monthly SaaS fees for dedicated container hosting and receives 7-day grace before automated traffic pause.
+                        </p>
+                      </div>
+                      <button
+                        onClick={loadData}
+                        style={{
+                          padding: '6px 12px',
+                          backgroundColor: '#F1F5F9',
+                          color: '#475569',
+                          border: '1px solid #CBD5E1',
+                          borderRadius: '6px',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <RefreshCw size={12} />
+                        <span>Refresh Subscriptions</span>
+                      </button>
+                    </div>
+
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px' }}>
+                      <thead style={{ backgroundColor: '#F8FAFC', color: '#475569', textTransform: 'uppercase', fontSize: '11px', borderBottom: '1px solid #E2E8F0' }}>
+                        <tr>
+                          <th style={{ padding: '12px 14px' }}>Vendor Cell</th>
+                          <th style={{ padding: '12px 14px' }}>Active Plan Tier</th>
+                          <th style={{ padding: '12px 14px' }}>Base Monthly Fee</th>
+                          <th style={{ padding: '12px 14px' }}>Billing Status</th>
+                          <th style={{ padding: '12px 14px' }}>Dunning & Grace Expiry</th>
+                          <th style={{ padding: '12px 14px' }}>Auto Cell Pause</th>
+                          <th style={{ padding: '12px 14px' }}>Next Renewal</th>
+                          <th style={{ padding: '12px 14px', textAlign: 'right' }}>Admin Dunning Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(!hubSubscriptions?.subscriptions || hubSubscriptions.subscriptions.length === 0) ? (
+                          <tr>
+                            <td colSpan={8} style={{ padding: '24px', textAlign: 'center', color: '#64748B' }}>
+                              Loading active SaaS subscriptions...
+                            </td>
+                          </tr>
+                        ) : (
+                          hubSubscriptions.subscriptions.map((sub: any) => {
+                            const isDelinquent = sub.billing_status === 'PAST_DUE';
+                            const isFree = sub.monthly_fee === 0;
+                            return (
+                              <tr key={sub.vendor_id} style={{ borderBottom: '1px solid #F1F5F9', color: '#0F172A', backgroundColor: isDelinquent ? '#FEF2F2' : 'transparent' }}>
+                                <td style={{ padding: '12px 14px' }}>
+                                  <div style={{ fontWeight: 800, color: '#0F172A' }}>{sub.vendor_name || sub.vendor_id}</div>
+                                  <div style={{ fontSize: '10px', color: '#64748B', fontFamily: 'monospace' }}>{sub.vendor_id}</div>
+                                </td>
+
+                                <td style={{ padding: '12px 14px' }}>
+                                  <span style={{
+                                    padding: '2px 8px',
+                                    borderRadius: '4px',
+                                    fontSize: '11px',
+                                    fontWeight: 800,
+                                    backgroundColor: sub.tier === 'tier_enterprise_cluster' ? '#FAF5FF' : sub.tier === 'tier_pro_sovereign' ? '#EFF6FF' : '#F1F5F9',
+                                    color: sub.tier === 'tier_enterprise_cluster' ? '#7E22CE' : sub.tier === 'tier_pro_sovereign' ? '#0078D4' : '#475569'
+                                  }}>
+                                    {sub.tier_name}
+                                  </span>
+                                </td>
+
+                                <td style={{ padding: '12px 14px' }}>
+                                  <div style={{ fontWeight: 800, fontSize: '13px', color: isFree ? '#64748B' : '#15803D' }}>
+                                    ${sub.monthly_fee.toFixed(2)}/mo
+                                  </div>
+                                  {sub.pay_as_you_go_rate > 0 && (
+                                    <div style={{ fontSize: '10px', color: '#D97706', fontWeight: 600 }}>
+                                      +{(sub.pay_as_you_go_rate * 100).toFixed(0)}% per completed ride
+                                    </div>
+                                  )}
+                                </td>
+
+                                <td style={{ padding: '12px 14px' }}>
+                                  <span style={{
+                                    padding: '2px 8px',
+                                    borderRadius: '12px',
+                                    fontSize: '10px',
+                                    fontWeight: 800,
+                                    backgroundColor: sub.billing_status === 'ACTIVE' ? '#DCFCE7' : sub.billing_status === 'PAST_DUE' ? '#FEE2E2' : '#F1F5F9',
+                                    color: sub.billing_status === 'ACTIVE' ? '#15803D' : sub.billing_status === 'PAST_DUE' ? '#B91C1C' : '#64748B',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                  }}>
+                                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: sub.billing_status === 'ACTIVE' ? '#16A34A' : '#EF4444' }} />
+                                    {sub.billing_status}
+                                  </span>
+                                </td>
+
+                                <td style={{ padding: '12px 14px' }}>
+                                  {sub.grace_period_expires_at ? (
+                                    <div>
+                                      <div style={{ color: '#DC2626', fontWeight: 800, fontSize: '11px' }}>
+                                        ⚠️ Stage {sub.dunning_stage} (Grace Active)
+                                      </div>
+                                      <div style={{ fontSize: '10px', color: '#64748B' }}>
+                                        Expires: {new Date(sub.grace_period_expires_at).toLocaleDateString()}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <span style={{ fontSize: '11px', color: '#16A34A', fontWeight: 600 }}>
+                                      ✓ Account Current (No Grace Required)
+                                    </span>
+                                  )}
+                                </td>
+
+                                <td style={{ padding: '12px 14px' }}>
+                                  <span style={{
+                                    fontSize: '10px',
+                                    padding: '1px 6px',
+                                    borderRadius: '3px',
+                                    backgroundColor: sub.auto_cell_suspension ? '#EFF6FF' : '#F8FAFC',
+                                    color: sub.auto_cell_suspension ? '#0078D4' : '#94A3B8',
+                                    fontWeight: 700
+                                  }}>
+                                    {sub.auto_cell_suspension ? '🛡️ AUTO-SUSPEND ENABLED' : 'MANUAL'}
+                                  </span>
+                                </td>
+
+                                <td style={{ padding: '12px 14px', fontSize: '11px', color: '#475569' }}>
+                                  {sub.renews_at ? new Date(sub.renews_at).toLocaleDateString() : 'N/A (Free Tier)'}
+                                </td>
+
+                                <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                                  <button
+                                    onClick={() => handleTriggerDunningTest(sub.vendor_id)}
+                                    disabled={isDunningTesting}
+                                    style={{
+                                      padding: '4px 8px',
+                                      backgroundColor: '#FEF2F2',
+                                      color: '#DC2626',
+                                      border: '1px solid #FECACA',
+                                      borderRadius: '4px',
+                                      fontSize: '11px',
+                                      fontWeight: 700,
+                                      cursor: isDunningTesting ? 'not-allowed' : 'pointer',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px'
+                                    }}
+                                    title="Simulate Delinquent Payment & Dunning Warning"
+                                  >
+                                    <AlertTriangle size={11} />
+                                    <span>Simulate Dunning</span>
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                </div>
+              )}
+
+              {/* VIEW 3: CARD MULTI-TENANT ARCHITECTURE REVIEW */}
               {paymentViewTab === 'stripe_model' && stripeArchitecture && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   

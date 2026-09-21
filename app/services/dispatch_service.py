@@ -69,8 +69,8 @@ class DispatchService:
                 continue
 
             # Calculate proximity in statute miles
-            d_lat = d.current_lat or vehicle.current_lat or (vendor.office_lat if vendor else pickup_lat)
-            d_lng = d.current_lng or vehicle.current_lng or (vendor.office_lng if vendor else pickup_lng)
+            d_lat = d.current_lat or vehicle.current_lat or (vendor.office_lat if vendor and vendor.office_lat is not None else pickup_lat) or pickup_lat
+            d_lng = d.current_lng or vehicle.current_lng or (vendor.office_lng if vendor and vendor.office_lng is not None else pickup_lng) or pickup_lng
             distance = haversine_miles(d_lat, d_lng, pickup_lat, pickup_lng)
             eta_minutes = max(8, int(distance * 2.5))
 
@@ -144,4 +144,148 @@ class DispatchService:
             description=f"Chauffeur {offer.driver_name} accepted the mission assignment.",
             actor=f"CHAUFFEUR_{offer.driver_name.upper()}"
         ))
+        return trip
+
+    @staticmethod
+    def has_driver_schedule_conflict(driver_id: str, pickup_time_utc: datetime, duration_hours: float = 2.0, exclude_trip_id: Optional[str] = None) -> bool:
+        """Verifies if driver is already committed to an overlapping scheduled/active trip."""
+        trip_start = pickup_time_utc
+        trip_end = pickup_time_utc + timedelta(hours=duration_hours)
+
+        for t in db.trips.values():
+            if t.id == exclude_trip_id or t.driver_id != driver_id:
+                continue
+            if t.status in [TripStatus.CANCELLED, TripStatus.COMPLETED]:
+                continue
+            
+            existing_start = t.pickup_time_utc
+            existing_end = existing_start + timedelta(hours=2.0)
+            # Check overlap: (StartA < EndB) and (EndA > StartB)
+            if (trip_start < existing_end) and (trip_end > existing_start):
+                return True
+        return False
+
+    @staticmethod
+    def get_trips_pending_24h_dispatch(vendor_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Scans all trips and returns 24-Hour Just-In-Time Dispatch Alerts:
+        Identifies unassigned rides scheduled within the next 24 hours and computes real-time candidate drivers.
+        """
+        now = datetime.now(timezone.utc)
+        dispatch_window_end = now + timedelta(hours=24)
+        pending_alerts = []
+
+        for trip in db.trips.values():
+            if trip.status not in [TripStatus.SCHEDULED, TripStatus.OFFER_SENT]:
+                continue
+            if trip.driver_id is not None:
+                continue
+            if vendor_id and trip.vendor_id != vendor_id:
+                continue
+
+            pickup_time = trip.pickup_time_utc
+            hours_until_pickup = (pickup_time - now).total_seconds() / 3600.0
+
+            # Alert if trip is within 24 hours (or overdue)
+            if hours_until_pickup <= 24.0:
+                quote = db.quotes.get(trip.booking_id) or next((q for q in db.quotes.values() if q.pickup_address == trip.pickup_address), None)
+                v_class = getattr(quote, "vehicle_class", VehicleClass.LUXURY_SUV) if quote else VehicleClass.LUXURY_SUV
+                pax_count = 1
+                luggage_count = 2
+
+                # Find candidates close to pickup
+                candidates = DispatchService.find_eligible_resources(
+                    tenant_id=trip.tenant_id,
+                    vendor_id=trip.vendor_id,
+                    vehicle_class=v_class,
+                    passenger_count=pax_count,
+                    luggage_count=luggage_count
+                )
+
+                # Filter out drivers with active schedule conflict
+                available_candidates = [
+                    c for c in candidates 
+                    if not DispatchService.has_driver_schedule_conflict(c["driver"].id, trip.pickup_time_utc, exclude_trip_id=trip.id)
+                ]
+
+                urgency = "CRITICAL" if hours_until_pickup <= 2.0 else ("URGENT" if hours_until_pickup <= 6.0 else "WARNING")
+
+                pending_alerts.append({
+                    "trip_id": trip.id,
+                    "booking_id": trip.booking_id,
+                    "vendor_id": trip.vendor_id,
+                    "pickup_address": trip.pickup_address,
+                    "dropoff_address": trip.dropoff_address,
+                    "pickup_time_utc": pickup_time.isoformat(),
+                    "hours_until_pickup": round(hours_until_pickup, 1),
+                    "urgency": urgency,
+                    "vehicle_class": v_class.value,
+                    "flight_number": trip.flight_number,
+                    "status": "UNASSIGNED_PENDING_24H_DISPATCH",
+                    "recommended_candidates": [
+                        {
+                            "driver_id": c["driver"].id,
+                            "driver_name": f"{c['driver'].first_name} {c['driver'].last_name}",
+                            "driver_phone": c["driver"].phone,
+                            "vehicle_id": c["vehicle"].id,
+                            "vehicle_name": f"{c['vehicle'].make} {c['vehicle'].model}",
+                            "license_plate": c["vehicle"].license_plate,
+                            "distance_miles": c["distance_miles"],
+                            "eta_minutes": c["eta_minutes"],
+                            "rating": float(c["driver"].rating),
+                            "score": c["score"]
+                        }
+                        for c in available_candidates[:3]
+                    ]
+                })
+
+        # Sort by most urgent first
+        pending_alerts.sort(key=lambda x: x["hours_until_pickup"])
+        return pending_alerts
+
+    @staticmethod
+    def assign_best_available_driver_24h(trip_id: str, driver_id: Optional[str] = None, vehicle_id: Optional[str] = None) -> Trip:
+        """
+        Executes 24-hour JIT assignment: assigns specific or best-matched driver based on live proximity and duty status.
+        """
+        trip = db.trips.get(trip_id)
+        if not trip:
+            raise ValueError(f"Trip {trip_id} not found")
+
+        if driver_id:
+            driver = db.drivers.get(driver_id)
+            if not driver:
+                raise ValueError(f"Driver {driver_id} not found")
+            veh_id = vehicle_id or driver.current_vehicle_id
+            vehicle = db.vehicles.get(veh_id) if veh_id else None
+            if not vehicle:
+                raise ValueError("Valid vehicle not assigned to driver")
+        else:
+            # Auto-match nearest eligible driver
+            alerts = DispatchService.get_trips_pending_24h_dispatch(trip.vendor_id)
+            trip_alert = next((a for a in alerts if a["trip_id"] == trip_id), None)
+            if not trip_alert or not trip_alert["recommended_candidates"]:
+                raise ValueError("No available on-duty chauffeurs found matching trip criteria within 24h dispatch window")
+
+            best_cand = trip_alert["recommended_candidates"][0]
+            driver = db.drivers.get(best_cand["driver_id"])
+            vehicle = db.vehicles.get(best_cand["vehicle_id"])
+
+        trip.driver_id = driver.id
+        trip.vehicle_id = vehicle.id
+        trip.status = TripStatus.DRIVER_ACCEPTED
+        trip.events.append(TripEvent(
+            id=f"ev-{uuid.uuid4().hex[:6]}",
+            trip_id=trip.id,
+            event_type="24H_DISPATCH_ASSIGNED",
+            description=f"Chauffeur {driver.first_name} {driver.last_name} assigned in 24-hour dispatch window with vehicle {vehicle.make} {vehicle.model} ({vehicle.license_plate}).",
+            actor="24H_JUST_IN_TIME_DISPATCH_ENGINE"
+        ))
+
+        # Also update corresponding booking
+        for b in db.bookings.values():
+            if b.id == trip.booking_id:
+                b.trip = trip
+                break
+
         return trip

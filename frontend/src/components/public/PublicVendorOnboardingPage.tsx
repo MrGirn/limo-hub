@@ -995,7 +995,7 @@ export const PublicVendorOnboardingPage: React.FC<PublicVendorOnboardingPageProp
             </p>
 
             {/* Quick Credentials & Deployment Dossier */}
-            <div style={{ maxWidth: '650px', margin: '0 auto 28px auto', textAlign: 'left', backgroundColor: '#F8FAFC', borderRadius: '8px', padding: '20px', border: '1px solid #E2E8F0' }}>
+            <div style={{ maxWidth: '650px', margin: '0 auto 24px auto', textAlign: 'left', backgroundColor: '#F8FAFC', borderRadius: '8px', padding: '20px', border: '1px solid #E2E8F0' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px' }}>
                 <div>
                   <span style={{ color: '#64748B', display: 'block', fontSize: '11px', fontWeight: 700 }}>SOVEREIGN VENDOR ID</span>
@@ -1011,6 +1011,63 @@ export const PublicVendorOnboardingPage: React.FC<PublicVendorOnboardingPageProp
                     {deployedResult.dns_instructions?.cname_record} ➔ {deployedResult.dns_instructions?.cname_target}
                   </code>
                 </div>
+              </div>
+            </div>
+
+            {/* STRIPE CONNECT PAYOUT ACTIVATION CALLOUT */}
+            <div style={{
+              maxWidth: '650px',
+              margin: '0 auto 28px auto',
+              textAlign: 'left',
+              backgroundColor: '#EFF6FF',
+              borderRadius: '10px',
+              padding: '20px',
+              border: '1.5px solid #60A5FA',
+              boxShadow: '0 4px 12px rgba(59,130,246,0.1)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                <div style={{ backgroundColor: '#2563EB', color: '#FFFFFF', padding: '6px', borderRadius: '6px', display: 'flex' }}>
+                  <CreditCard size={18} />
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#1E3A8A' }}>
+                    Step 2: Connect Bank Account with Stripe for Escrow Payouts
+                  </h4>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#3B82F6' }}>
+                    Your Stripe Express account <code style={{ backgroundColor: '#DBEAFE', padding: '1px 5px', borderRadius: '3px' }}>{deployedResult.stripe_connect?.account_id || `acct_conn_${deployedResult.vendor_id}`}</code> is provisioned.
+                  </p>
+                </div>
+              </div>
+              <p style={{ fontSize: '13px', color: '#1E293B', lineHeight: '1.5', margin: '0 0 16px 0' }}>
+                Connect your business checking account or debit card via Stripe Express to enable instant 85% farm-in clearing payouts, 10% broker referral bonuses, and direct passenger credit card processing.
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+                {deployedResult.stripe_connect?.onboarding_url && (
+                  <a
+                    href={deployedResult.stripe_connect.onboarding_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      backgroundColor: '#6366F1',
+                      color: '#FFFFFF',
+                      textDecoration: 'none',
+                      padding: '10px 20px',
+                      borderRadius: '6px',
+                      fontWeight: 800,
+                      fontSize: '13px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      boxShadow: '0 2px 4px rgba(99,102,241,0.3)'
+                    }}
+                  >
+                    <span>Connect Bank Account with Stripe (2 Mins)</span>
+                    <ArrowRight size={15} />
+                  </a>
+                )}
+                <span style={{ fontSize: '11px', color: '#64748B' }}>
+                  🔒 Powered by Stripe Connect &bull; Direct FDIC Insured Bank Deposits
+                </span>
               </div>
             </div>
 

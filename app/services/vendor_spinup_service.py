@@ -38,34 +38,38 @@ class VendorBrandingProfile(BaseModel):
     logo_url: str = "/assets/default_logo.png"
 
 
+import re
+
 class VendorSpinUpPayload(BaseModel):
-    vendor_id: str
+    vendor_id: Optional[str] = None
     name: str
+    admin_email: Optional[str] = None
     tier: str = "AUTONOMOUS_T1"
-    region: str = "Metropolitan Area"
-    country: str = "United States"
-    country_code: str = "US"
-    state: str = "PA"
-    city: str = "Philadelphia"
-    currency: str = "USD"
-    currency_symbol: str = "$"
-    time_zone: str = "America/New_York"
-    base_rate_usd: float = 75.00
-    per_km_usd: float = 3.25
-    tax_rate_pct: float = 8.00
-    domain: str = "limo-ops.com"
-    inbound_email: str = "rides@limo-ops.com"
-    contact_phone: str = "+18005550199"
+    region: Optional[str] = None
+    country: Optional[str] = "United States"
+    country_code: Optional[str] = "US"
+    state: Optional[str] = ""
+    city: Optional[str] = ""
+    currency: Optional[str] = None
+    currency_symbol: Optional[str] = None
+    time_zone: Optional[str] = None
+    base_rate_usd: Optional[float] = None
+    per_km_usd: Optional[float] = None
+    tax_rate_pct: Optional[float] = None
+    domain: Optional[str] = None
+    inbound_email: Optional[str] = None
+    contact_phone: Optional[str] = None
     owner: Optional[Dict[str, Any]] = None
     depot: Optional[Dict[str, Any]] = None
     drivers: List[Dict[str, Any]] = Field(default_factory=list)
-    branding: VendorBrandingProfile = Field(default_factory=VendorBrandingProfile)
+    branding: Optional[VendorBrandingProfile] = None
+    pricing_matrix: Optional[Dict[str, Any]] = None
     telecom_compliance: Optional[Dict[str, Any]] = None
     operational_stats: Dict[str, Any] = Field(default_factory=dict)
 
 
 class VendorSpinupService:
-    """Provisions and boots sovereign vendor cells from declarative specs."""
+    """Provisions and boots sovereign vendor cells from declarative specs with progressive 2-phase onboarding."""
 
     def __init__(self):
         self.branding_profiles: Dict[str, VendorBrandingProfile] = {}
@@ -75,8 +79,48 @@ class VendorSpinupService:
 
     def spin_up_vendor(self, payload: VendorSpinUpPayload, db_instance: Any = None) -> VendorCellConfig:
         """
-        Dynamically provisions a sovereign vendor instance.
+        Dynamically provisions a sovereign vendor instance from Phase 1 minimal fields,
+        auto-deriving regional tariffs and defaults.
         """
+        # 0. Auto-derive vendor_id if omitted
+        if not payload.vendor_id:
+            clean_n = re.sub(r'[^a-zA-Z0-9]+', '_', payload.name).strip('_').lower()
+            clean_c = re.sub(r'[^a-zA-Z0-9]+', '_', payload.city).strip('_').lower() if payload.city else "cell"
+            payload.vendor_id = f"vendor_{clean_n}_{clean_c}".strip('_')
+
+        # Auto-derive country / currency / timezone
+        c_code = (payload.country_code or "US").upper()
+        if not payload.currency:
+            payload.currency = "GBP" if c_code in ["GB", "UK"] else ("EUR" if c_code in ["FR", "DE", "IT", "ES", "NL"] else ("JPY" if c_code == "JP" else "USD"))
+        if not payload.currency_symbol:
+            payload.currency_symbol = "£" if payload.currency == "GBP" else ("€" if payload.currency == "EUR" else ("¥" if payload.currency == "JPY" else "$"))
+        if not payload.time_zone:
+            st = (payload.state or "").upper()
+            payload.time_zone = "Europe/London" if c_code in ["GB", "UK"] else ("Asia/Tokyo" if c_code == "JP" else ("America/Los_Angeles" if st in ["CA", "WA", "OR"] else ("America/Chicago" if st in ["IL", "TX", "MN"] else "America/New_York")))
+
+        if payload.base_rate_usd is None:
+            payload.base_rate_usd = 12000.0 if payload.currency == "JPY" else (75.0 if "philly" in payload.vendor_id else 85.0)
+        if payload.per_km_usd is None:
+            payload.per_km_usd = 550.0 if payload.currency == "JPY" else (3.25 if "philly" in payload.vendor_id else 3.50)
+        if payload.tax_rate_pct is None:
+            payload.tax_rate_pct = 8.00
+
+        if not payload.domain:
+            clean_slug = payload.vendor_id.replace("vendor_", "").replace("_", "-")
+            payload.domain = f"{clean_slug}.limo-ops.com"
+        if not payload.inbound_email:
+            payload.inbound_email = f"rides@{payload.domain}"
+        if not payload.contact_phone:
+            payload.contact_phone = "+18005550199"
+
+        if payload.branding is None:
+            payload.branding = VendorBrandingProfile(
+                company_tagline=f"Premier Executive & Airport Chauffeur Service of {payload.city or 'Metropolitan Area'}",
+                domain=payload.domain,
+                contact_phone=payload.contact_phone,
+                office_address=f"100 Executive Boulevard, {payload.city or 'Center City'}, {payload.state or 'PA'}"
+            )
+
         # 1. Register or update cell in registry
         cell = vendor_cell_registry.register_new_vendor_cell(
             vendor_id=payload.vendor_id,
@@ -130,6 +174,8 @@ class VendorSpinupService:
                     default_currency=payload.currency
                 )
 
+            pm_raw = payload.pricing_matrix.dict() if hasattr(payload.pricing_matrix, "dict") else (payload.pricing_matrix if isinstance(payload.pricing_matrix, dict) else {})
+
             # 2a. Instantiate Vendor Domain Model
             v_entity = Vendor(
                 id=payload.vendor_id,
@@ -143,7 +189,14 @@ class VendorSpinupService:
                 office_city=payload.city,
                 office_state=payload.state,
                 country_code=payload.country_code,
-                deadhead_rate_per_mile=Decimal("1.75"),
+                deadhead_rate_per_mile=Decimal(str(pm_raw["deadhead_rate_per_mile_usd"])) if "deadhead_rate_per_mile_usd" in pm_raw else (Decimal(str(pm_raw["deadhead_rate_per_mile"])) if "deadhead_rate_per_mile" in pm_raw else None),
+                deadhead_rate_per_km=Decimal(str(pm_raw["deadhead_rate_per_km_usd"])) if "deadhead_rate_per_km_usd" in pm_raw else (Decimal(str(pm_raw["deadhead_rate_per_km"])) if "deadhead_rate_per_km" in pm_raw else None),
+                deadhead_buffer_miles_outbound=Decimal(str(pm_raw["deadhead_buffer_miles_outbound"])) if "deadhead_buffer_miles_outbound" in pm_raw else None,
+                deadhead_buffer_miles_return=Decimal(str(pm_raw["deadhead_buffer_miles_return"])) if "deadhead_buffer_miles_return" in pm_raw else None,
+                fuel_surcharge_pct=Decimal(str(pm_raw["fuel_surcharge_pct"])) if "fuel_surcharge_pct" in pm_raw else None,
+                service_charge_pct=Decimal(str(pm_raw["service_charge_pct"])) if "service_charge_pct" in pm_raw else None,
+                credit_card_fee_pct=Decimal(str(pm_raw["credit_card_fee_pct"])) if "credit_card_fee_pct" in pm_raw else None,
+                pricing_matrix=pm_raw,
                 operating_currency=payload.currency
             )
             target_db.vendors[payload.vendor_id] = v_entity
@@ -404,6 +457,7 @@ class VendorSpinupService:
                 office_address=branding_data.get("office_address", depot_data.get("address", "Executive Airport Terminal")),
                 logo_url=branding_data.get("logo_url", "/assets/default_logo.png")
             ),
+            pricing_matrix=pricing_data,
             telecom_compliance=telecom_data if telecom_data else None,
             operational_stats=stats_data if stats_data else {}
         )
@@ -411,30 +465,38 @@ class VendorSpinupService:
 
     def load_all_declarative_definitions(self, directory: Optional[str] = None, db_instance: Any = None):
         """Scans directory and spins up all declared vendor instances."""
-        candidate_dirs = [
-            directory,
-            "config/vendor_definitions",
-            "/app/config/vendor_definitions",
-            os.path.join(os.path.dirname(__file__), "../../config/vendor_definitions")
-        ]
-        target_dir = None
-        for d in candidate_dirs:
-            if d and os.path.isdir(d):
-                target_dir = d
-                break
-
-        if not target_dir:
+        if getattr(self, "_is_loading", False):
             return
+        self._is_loading = True
+        try:
+            candidate_dirs = [
+                directory,
+                "config/vendor_definitions",
+                "/app/config/vendor_definitions",
+                os.path.join(os.path.dirname(__file__), "../../config/vendor_definitions")
+            ]
+            target_dir = None
+            for d in candidate_dirs:
+                if d and os.path.isdir(d):
+                    target_dir = d
+                    break
 
-        files = glob.glob(os.path.join(target_dir, "*.yaml")) + glob.glob(os.path.join(target_dir, "*.yml"))
-        for file in files:
-            if "vendor_golden_template" in os.path.basename(file):
-                continue
-            try:
-                self.spin_up_from_yaml_file(file, db_instance=db_instance)
-            except Exception as e:
-                logger.error(f"Error loading vendor spec {file}: {e}")
+            if not target_dir:
+                return
 
+            files = glob.glob(os.path.join(target_dir, "*.yaml")) + glob.glob(os.path.join(target_dir, "*.yml"))
+            for file in files:
+                if "vendor_golden_template" in os.path.basename(file):
+                    continue
+                try:
+                    self.spin_up_from_yaml_file(file, db_instance=db_instance)
+                except Exception as e:
+                    logger.error(f"Error loading vendor spec {file}: {e}")
+        finally:
+            self._is_loading = False
+
+
+    load_all_definitions = load_all_declarative_definitions
 
     def get_portal_branding(self, vendor_id: str) -> Dict[str, Any]:
         """Returns white-label portal branding, public metadata, and encrypted secure cellular URL token."""
@@ -526,6 +588,185 @@ class VendorSpinupService:
         return self.get_portal_branding(default_vid)
 
 
+
+    def calculate_onboarding_readiness(self, vendor_id: str) -> Dict[str, Any]:
+        """
+        Computes 7-milestone progressive onboarding readiness score (0-100%) and setup checklist.
+        """
+        alt_id = vendor_id.replace("_", "-") if "_" in vendor_id else vendor_id.replace("-", "_")
+        from app.database import db
+        vendor_obj = getattr(db, "vendors", {}).get(vendor_id) or getattr(db, "vendors", {}).get(alt_id)
+        cell = vendor_cell_registry.get_cell(vendor_id) or vendor_cell_registry.get_cell(alt_id)
+        branding = self.branding_profiles.get(vendor_id) or self.branding_profiles.get(alt_id)
+        telecom = self.telecom_compliance_profiles.get(vendor_id) or self.telecom_compliance_profiles.get(alt_id)
+        pricing_rules = getattr(db, "vendor_pricing_rules", {}).get(vendor_id) or getattr(db, "vendor_pricing_rules", {}).get(alt_id)
+        
+        # Check active vehicles and drivers
+        vehicles = [v for v in getattr(db, "vehicles", {}).values() if getattr(v, "vendor_id", None) in (vendor_id, alt_id)]
+        drivers = [d for d in getattr(db, "drivers", {}).values() if getattr(d, "vendor_id", None) in (vendor_id, alt_id)]
+
+        v_name = getattr(vendor_obj, "name", None) or (cell.config.vendor_name if cell else vendor_id.replace("_", " ").title())
+
+        # Milestone 1: Sovereign Cell Runtime
+        m1_done = cell is not None and cell.config.circuit_breaker_status == "HEALTHY"
+
+        # Milestone 2: Branding & Logo
+        m2_done = bool(branding and (
+            (branding.logo_url and "default" not in branding.logo_url) or
+            branding.primary_color != "#1E3A8A" or
+            (branding.company_tagline and len(branding.company_tagline) > 10)
+        ))
+
+        # Milestone 3: BYOE Email Gateway
+        eg = self.email_gateways.get(vendor_id) or self.email_gateways.get(alt_id)
+        m3_done = bool(eg and hasattr(eg, "config") and (getattr(eg.config, "smtp_host", None) or getattr(eg.config, "inbound_email", None)))
+
+        # Milestone 4: Fleet & Drivers
+        m4_done = len(vehicles) >= 1 and len(drivers) >= 1
+
+        # Milestone 5: Pricing Matrix
+        m5_done = bool(pricing_rules and len(pricing_rules) >= 1)
+
+        # Milestone 6: A2P 10DLC Telecom Compliance
+        m6_done = bool(telecom and telecom.get("ein_tax_id") and telecom.get("ein_tax_id") != "00-0000000")
+
+        # Milestone 7: Stripe Connect / Payouts
+        payout_connected = getattr(vendor_obj, "stripe_account_id", None) is not None or getattr(vendor_obj, "payout_account_id", None) is not None
+
+        milestones = [
+            {
+                "id": "identity_and_cell",
+                "title": "Sovereign Cell Active",
+                "description": "Dedicated runtime container & private database partition operational.",
+                "weight": 15,
+                "completed": m1_done,
+                "action_label": "View Cell Status",
+                "target_tab": "dashboard"
+            },
+            {
+                "id": "branding",
+                "title": "White-Label Branding & Logo",
+                "description": "Upload high-res company logo, primary & accent brand hex colors, and custom tagline.",
+                "weight": 15,
+                "completed": m2_done,
+                "action_label": "Customize Branding",
+                "target_tab": "branding"
+            },
+            {
+                "id": "email_gateway",
+                "title": "Email Gateway & BYOE",
+                "description": "Connect custom SMTP credentials (SendGrid, AWS SES) and dispatch forwarder alias.",
+                "weight": 15,
+                "completed": m3_done,
+                "action_label": "Configure Email",
+                "target_tab": "email"
+            },
+            {
+                "id": "fleet_drivers",
+                "title": "Fleet Vehicles & Chauffeurs",
+                "description": "Register fleet vehicles and invite active chauffeurs to the mobile app.",
+                "weight": 15,
+                "completed": m4_done,
+                "action_label": "Manage Fleet",
+                "target_tab": "fleet"
+            },
+            {
+                "id": "pricing_matrix",
+                "title": "Rate Card & Pricing Matrix",
+                "description": "Set airport flat rates, mileage/km tariffs, surge rules, and hourly charter minimums.",
+                "weight": 15,
+                "completed": m5_done,
+                "action_label": "Edit Rate Card",
+                "target_tab": "pricing"
+            },
+            {
+                "id": "telecom_compliance",
+                "title": "A2P 10DLC Telecom Compliance",
+                "description": "Submit legal business name & EIN for carrier SMS verification.",
+                "weight": 15,
+                "completed": m6_done,
+                "action_label": "Submit 10DLC",
+                "target_tab": "compliance"
+            },
+            {
+                "id": "stripe_payouts",
+                "title": "Direct Payouts & Banking",
+                "description": "Link bank account or Stripe Express account for automated clearing.",
+                "weight": 10,
+                "completed": payout_connected,
+                "action_label": "Connect Payouts",
+                "target_tab": "payouts"
+            }
+        ]
+
+        total_weight = sum(m["weight"] for m in milestones)
+        completed_weight = sum(m["weight"] for m in milestones if m["completed"])
+        score = int(round((completed_weight / total_weight) * 100)) if total_weight > 0 else 0
+
+        portal_profile = self.get_portal_branding(vendor_id)
+
+        return {
+            "vendor_id": vendor_id,
+            "vendor_name": v_name,
+            "readiness_score": score,
+            "is_fully_ready": score >= 100,
+            "current_stage": "PHASE_2_PROGRESSIVE_SETUP" if score < 100 else "PRODUCTION_OPERATIONAL",
+            "completed_milestones_count": sum(1 for m in milestones if m["completed"]),
+            "total_milestones_count": len(milestones),
+            "portal_url": portal_profile.get("secure_url") if portal_profile else None,
+            "milestones": milestones
+        }
+
+    def send_onboarding_welcome_email(self, vendor_id: str) -> Dict[str, Any]:
+        """Sends setup guide email with direct links to remaining configuration sections."""
+        status = self.calculate_onboarding_readiness(vendor_id)
+        branding = self.get_portal_branding(vendor_id)
+        
+        from app.database import db
+        alt_id = vendor_id.replace("_", "-") if "_" in vendor_id else vendor_id.replace("-", "_")
+        vendor_obj = getattr(db, "vendors", {}).get(vendor_id) or getattr(db, "vendors", {}).get(alt_id)
+        recipient = getattr(vendor_obj, "contact_email", f"owner@{vendor_id}.com")
+
+        checklist_items_html = "".join([
+            f"<li style='margin-bottom:8px;'>{'✅' if m['completed'] else '⏳'} <strong>{m['title']}</strong>: {m['description']}</li>"
+            for m in status["milestones"]
+        ])
+
+        html_body = f"""
+        <div style="font-family:sans-serif; max-width:600px; margin:0 auto; padding:20px; color:#1F2937;">
+            <h2 style="color:#1E3A8A;">Welcome to your Sovereign Limo Fleet Cell! 🚀</h2>
+            <p>Your isolated runtime cell for <strong>{status['vendor_name']}</strong> has been successfully provisioned and is live.</p>
+            
+            <div style="background:#F3F4F6; padding:15px; border-radius:8px; margin:20px 0;">
+                <p style="margin:0 0 10px 0;"><strong>Setup Readiness: {status['readiness_score']}% Complete</strong></p>
+                <div style="background:#E5E7EB; border-radius:4px; height:12px; width:100%; overflow:hidden;">
+                    <div style="background:#1E3A8A; height:100%; width:{status['readiness_score']}%;"></div>
+                </div>
+            </div>
+
+            <h3>Progressive Setup Checklist:</h3>
+            <ul style="padding-left:20px; line-height:1.5;">
+                {checklist_items_html}
+            </ul>
+
+            <div style="margin-top:25px; text-align:center;">
+                <a href="{branding.get('secure_url', '/')}" style="background:#1E3A8A; color:white; padding:12px 24px; text-decoration:none; border-radius:6px; font-weight:bold; display:inline-block;">Open Sovereign Owner Dashboard</a>
+            </div>
+        </div>
+        """
+
+        gw = self.get_email_gateway(vendor_id)
+        msg = gw.dispatch_branded_email(
+            recipient=recipient,
+            subject=f"Welcome to {status['vendor_name']} - Sovereign Cell Setup Guide",
+            html_body=html_body
+        )
+        return {
+            "success": True,
+            "recipient": recipient,
+            "message_id": msg.message_id,
+            "readiness_score": status["readiness_score"]
+        }
 
     def get_email_gateway(self, vendor_id: str) -> VendorEmailGatewayService:
         """Retrieves or creates dedicated email gateway for a vendor cell."""

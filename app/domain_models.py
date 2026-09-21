@@ -120,9 +120,15 @@ class VendorPricingRule(BaseModel):
     minimum_fare_net: Decimal = Decimal("120.00")
     deadhead_rate_per_mile: Decimal = Decimal("1.75")
     deadhead_rate_per_km: Decimal = Decimal("1.09")
+    deadhead_buffer_miles_outbound: Decimal = Decimal("5.00")
+    deadhead_buffer_miles_return: Decimal = Decimal("8.00")
+    fuel_surcharge_pct: Decimal = Decimal("0.00")
+    service_charge_pct: Decimal = Decimal("0.00")
+    credit_card_fee_pct: Decimal = Decimal("0.00")
     airport_surcharge_net: Decimal = Decimal("35.00")
     meet_and_greet_fee_net: Decimal = Decimal("25.00")
     inside_baggage_meet_and_greet_fee_net: Decimal = Decimal("45.00")
+    rush_hour_surcharge_net: Decimal = Decimal("20.00")
     late_night_surcharge_net: Decimal = Decimal("35.00")
     late_night_start_hour: int = 23  # 11:00 PM
     late_night_end_hour: int = 5    # 05:00 AM
@@ -138,16 +144,41 @@ class VendorPricingRule(BaseModel):
 
 class VendorAIDynamicPricingMetrics(BaseModel):
     vendor_id: str
-    acceptance_rate_pct: float = 94.2
-    fleet_utilization_pct: float = 87.5
-    deadhead_recovery_efficiency: float = 91.0
+    acceptance_rate_pct: float = 100.0
+    fleet_utilization_pct: float = 100.0
+    deadhead_recovery_efficiency: float = 100.0
     peak_demand_multiplier: float = 1.0
-    suggested_base_rate: Decimal = Decimal("95.00")
-    suggested_per_mile_rate: Decimal = Decimal("4.25")
-    suggested_per_km_rate: Decimal = Decimal("2.65")
-    historical_trips_analyzed: int = 142
-    ai_optimization_notes: str = "High conversion corridor. Yield curve tuned to maximize return on deadhead positioning."
+    suggested_base_rate: Decimal = Decimal("0.00")
+    suggested_per_mile_rate: Decimal = Decimal("0.00")
+    suggested_per_km_rate: Decimal = Decimal("0.00")
+    historical_trips_analyzed: int = 0
+    ai_optimization_notes: str = "Awaiting initial trip telemetry analysis."
     last_trained_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class AIPricingRecommendationRequest(BaseModel):
+    vendor_id: Optional[str] = None
+    service_type: ServiceType = ServiceType.POINT_TO_POINT
+    vehicle_class: VehicleClass = VehicleClass.LUXURY_SUV
+    pickup_address: str
+    dropoff_address: Optional[str] = None
+    hourly_hours: Optional[int] = None
+    proposed_quote_amount: Optional[Decimal] = None
+    currency: str = "USD"
+
+
+class AIPricingValidationResult(BaseModel):
+    is_validated: bool = True
+    proposed_price: Decimal
+    ai_recommended_price: Decimal
+    market_low: Decimal
+    market_high: Decimal
+    variance_pct: float
+    confidence_score: float = 0.95
+    recommendation_status: str = "OPTIMAL_COMPETITIVE"  # OPTIMAL_COMPETITIVE, UNDERPRICED_MARGIN_RISK, OVERPRICED_CONVERSION_RISK
+    reasoning_and_market_context: str
+    ai_model_used: str = "gemini-3.8-flash"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class VendorCommConfig(BaseModel):
@@ -155,14 +186,14 @@ class VendorCommConfig(BaseModel):
     use_global_aws_ses: bool = True
     aws_ses_region: str = "us-east-1"
     aws_ses_sender_email: str = "confirmations@global-executive-limo.com"
-    custom_smtp_host: Optional[str] = "smtp.mailgun.org"
-    custom_smtp_port: Optional[int] = 587
-    custom_smtp_user: Optional[str] = "dispatch@manhattanprestige.com"
-    custom_smtp_password: Optional[str] = "••••••••••••"
-    custom_sender_email: Optional[str] = "dispatch@manhattanprestige.com"
-    custom_inbound_email: Optional[str] = "bookings@manhattanprestige.com"
-    custom_twilio_phone: Optional[str] = "+12125550188"
-    custom_whatsapp_phone: Optional[str] = "+12125550188"
+    custom_smtp_host: Optional[str] = None
+    custom_smtp_port: Optional[int] = None
+    custom_smtp_user: Optional[str] = None
+    custom_smtp_password: Optional[str] = None
+    custom_sender_email: Optional[str] = None
+    custom_inbound_email: Optional[str] = None
+    custom_twilio_phone: Optional[str] = None
+    custom_whatsapp_phone: Optional[str] = None
     sms_enabled: bool = True
     whatsapp_enabled: bool = True
     voice_hotline_enabled: bool = True
@@ -271,25 +302,35 @@ class Vendor(BaseModel):
     contact_email: str
     contact_phone: str
     country_code: str = "US"
-    office_address: str = "550 W 54th St, New York, NY 10019"
-    office_city: str = "New York"
-    office_state: str = "NY"
-    office_zip: str = "10019"
-    office_lat: float = 40.7675
-    office_lng: float = -73.9912
+    office_address: Optional[str] = None
+    office_city: Optional[str] = None
+    office_state: Optional[str] = None
+    office_zip: Optional[str] = None
+    office_lat: Optional[float] = None
+    office_lng: Optional[float] = None
     service_radius_miles: float = 65.0
     service_radius_km: float = 104.6
     distance_unit: DistanceUnit = DistanceUnit.MILES
-    deadhead_rate_per_mile: Decimal = Decimal("1.75")
-    deadhead_rate_per_km: Decimal = Decimal("1.09")
-    rating: float = 4.98
+    deadhead_rate_per_mile: Optional[Decimal] = None
+    deadhead_rate_per_km: Optional[Decimal] = None
+    deadhead_buffer_miles_outbound: Optional[Decimal] = None
+    deadhead_buffer_miles_return: Optional[Decimal] = None
+    fuel_surcharge_pct: Optional[Decimal] = None
+    service_charge_pct: Optional[Decimal] = None
+    credit_card_fee_pct: Optional[Decimal] = None
+    hourly_minimum_hours: Optional[int] = None
+    rush_hour_surcharge_net: Optional[Decimal] = None
+    late_night_surcharge_net: Optional[Decimal] = None
+    inside_baggage_meet_and_greet_fee_net: Optional[Decimal] = None
+    pricing_matrix: Optional[Dict[str, Any]] = None
+    rating: float = 5.0
     is_verified: bool = True
     network_sharing_enabled: bool = True
     operating_mode: VendorOperatingMode = VendorOperatingMode.GLOBAL_NETWORK_FEDERATED
     operating_currency: str = "USD"
-    voice_hotline_phone: str = "+18005550199"
-    whatsapp_intake_number: str = "+19175550199"
-    inbound_email_intake: str = "dispatch@vendor.com"
+    voice_hotline_phone: Optional[str] = None
+    whatsapp_intake_number: Optional[str] = None
+    inbound_email_intake: Optional[str] = None
     voice_auto_quote_enabled: bool = True
     voice_instant_booking_enabled: bool = True
     frequent_routes: List[VendorFrequentRoute] = Field(default_factory=list)
@@ -849,7 +890,7 @@ class RouteMetrics(BaseModel):
     total_operating_miles: Decimal = Decimal("0.00")       # Sum of all legs
     total_operating_km: Decimal = Decimal("0.00")
     distance_unit: DistanceUnit = DistanceUnit.MILES
-    vendor_depot_address: str = "550 W 54th St, New York, NY 10019"
+    vendor_depot_address: Optional[str] = None
 
 
 # --- N-LEG MULTI-MODAL ITINERARY MODEL ---
@@ -893,11 +934,11 @@ class ItineraryLeg(BaseModel):
     av_details: Optional[AutonomousFulfilmentDetails] = None
     
     # Assignment & Fleet
-    assigned_vendor_id: Optional[str] = "vendor-ny-executive"
-    assigned_vendor_name: Optional[str] = "New York Executive Chauffeur & Fleet LLC"
+    assigned_vendor_id: Optional[str] = None
+    assigned_vendor_name: Optional[str] = None
     assigned_driver_name: Optional[str] = None
     vehicle_class: VehicleClass = VehicleClass.LUXURY_SUV
-    vehicle_model: Optional[str] = "Cadillac Escalade ESV Premium Luxury"
+    vehicle_model: Optional[str] = None
     
     # Financial Itemization for this Leg
     distance_miles: Decimal = Decimal("0.00")
@@ -905,7 +946,7 @@ class ItineraryLeg(BaseModel):
     distance_unit: DistanceUnit = DistanceUnit.MILES
     fare_net: Decimal = Decimal("0.00")
     tolls_and_fees_net: Decimal = Decimal("0.00")
-    tax_rate: Decimal = Decimal("0.08875")
+    tax_rate: Decimal = Decimal("0.00")
     tax_amount: Decimal = Decimal("0.00")
     gratuity_amount: Decimal = Decimal("0.00")
     total_leg_amount: Decimal = Decimal("0.00")
@@ -925,18 +966,18 @@ class ItineraryLeg(BaseModel):
 
 class MasterItinerary(BaseModel):
     itinerary_id: str
-    tenant_id: str = "tenant-us-east"
+    tenant_id: Optional[str] = None
     title: str = "Global Executive Multi-Modal Itinerary"
-    legs: List[ItineraryLeg] = []
+    legs: List[ItineraryLeg] = Field(default_factory=list)
     
     # Aggregate Metrics
-    total_legs_count: int = 1
+    total_legs_count: int = 0
     total_distance_miles: Decimal = Decimal("0.00")
     total_distance_km: Decimal = Decimal("0.00")
     distance_unit: DistanceUnit = DistanceUnit.MILES
     total_duration_minutes: int = 0
-    countries_spanned: List[str] = ["US"]
-    cities_spanned: List[str] = ["New York"]
+    countries_spanned: List[str] = Field(default_factory=list)
+    cities_spanned: List[str] = Field(default_factory=list)
     
     # Financial Summary
     subtotal_net: Decimal = Decimal("0.00")

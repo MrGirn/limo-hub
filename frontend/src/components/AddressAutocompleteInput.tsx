@@ -46,14 +46,6 @@ export const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> =
   const containerRef = useRef<HTMLDivElement>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 4 Close Local Regional Hubs (Philadelphia & NYC Metro)
-  const LOCAL_HUBS: PlacePrediction[] = [
-    { description: 'Philadelphia International Airport (PHL), PA, USA', place_id: 'phl_air', main_text: 'Philadelphia International Airport (PHL)', secondary_text: 'Philadelphia, PA, USA', category: 'AIRPORT', airport_code: 'PHL' },
-    { description: 'John F. Kennedy International Airport (JFK), Queens, NY, USA', place_id: 'jfk_air', main_text: 'John F. Kennedy International Airport (JFK)', secondary_text: 'Queens, NY, USA', category: 'AIRPORT', airport_code: 'JFK' },
-    { description: 'Newark Liberty International Airport (EWR), Newark, NJ, USA', place_id: 'ewr_air', main_text: 'Newark Liberty International Airport (EWR)', secondary_text: 'Newark, NJ, USA', category: 'AIRPORT', airport_code: 'EWR' },
-    { description: 'LaGuardia Airport (LGA), Queens, NY, USA', place_id: 'lga_air', main_text: 'LaGuardia Airport (LGA)', secondary_text: 'Queens, NY, USA', category: 'AIRPORT', airport_code: 'LGA' }
-  ];
-
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -66,8 +58,8 @@ export const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> =
 
   const fetchPredictions = async (query: string) => {
     if (!query || query.trim().length === 0) {
-      setSuggestions(LOCAL_HUBS);
-      setIsOpen(true);
+      setSuggestions([]);
+      setIsOpen(false);
       setIsLoading(false);
       return;
     }
@@ -81,7 +73,7 @@ export const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> =
       const res = await fetch(url);
       if (res.ok) {
         const data: PlacePrediction[] = await res.json();
-        setSuggestions(data.slice(0, 5));
+        setSuggestions(data.slice(0, 8));
         setIsOpen(data.length > 0);
       }
     } catch (err) {
@@ -105,8 +97,8 @@ export const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> =
         fetchPredictions(newVal);
       }, 150);
     } else {
-      setSuggestions(LOCAL_HUBS);
-      setIsOpen(true);
+      setSuggestions([]);
+      setIsOpen(false);
     }
   };
 
@@ -121,10 +113,6 @@ export const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> =
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!isOpen || suggestions.length === 0) {
-      if (e.key === 'ArrowDown') {
-        setSuggestions(LOCAL_HUBS);
-        setIsOpen(true);
-      }
       return;
     }
 
@@ -211,10 +199,7 @@ export const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> =
           value={value}
           onChange={handleInputChange}
           onFocus={() => {
-            if (!value || value.trim().length === 0) {
-              setSuggestions(LOCAL_HUBS);
-              setIsOpen(true);
-            } else {
+            if (value && value.trim().length >= 1) {
               fetchPredictions(value);
             }
           }}
@@ -242,8 +227,8 @@ export const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> =
             type="button"
             onClick={() => {
               onChange('');
-              setSuggestions(LOCAL_HUBS);
-              setIsOpen(true);
+              setSuggestions([]);
+              setIsOpen(false);
             }}
             style={{
               position: 'absolute',

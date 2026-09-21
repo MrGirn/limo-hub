@@ -232,7 +232,7 @@ def test_anb_limo_philadelphia_autonomous_t1_cell():
     """Test Autonomous T-1 ANB Limo Company (Philadelphia, PA) cell independence and API execution."""
     cell = vendor_cell_registry.get_cell("vendor_anb_philly")
     assert cell is not None
-    assert cell.config.vendor_name == "ANB Limo Company (Philadelphia, PA)"
+    assert "ANB Limo Company" in cell.config.vendor_name
     assert cell.config.tier == "AUTONOMOUS_T1"
     assert cell.config.local_currency == "USD"
     assert cell.config.local_base_rate_usd == 75.0

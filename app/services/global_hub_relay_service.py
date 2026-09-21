@@ -184,7 +184,8 @@ class GlobalHubRelayService:
         """
         Multiplexes single live FlightAware stream to all registered vendor cells that have active rides.
         """
-        affected = list(vendor_cell_registry.cells.keys())
+        cells = vendor_cell_registry.list_all_cells()
+        affected = [c.config.vendor_id for c in cells]
         event = FlightRadarBroadcastEvent(
             flight_number=flight_number,
             carrier=carrier,
@@ -201,7 +202,7 @@ class GlobalHubRelayService:
         """
         Computes aggregated economies of scale metrics and cloud cost savings.
         """
-        connected_cells = list(vendor_cell_registry.cells.values())
+        connected_cells = vendor_cell_registry.list_all_cells()
         total_cell_bookings = sum(len(c.local_bookings) for c in connected_cells)
         total_synced_outbox = len(self.processed_outbox_events)
         total_llm_tokens = sum(r.tokens_consumed for r in self.llm_query_history)

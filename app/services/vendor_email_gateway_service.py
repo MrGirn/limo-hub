@@ -516,3 +516,27 @@ class VendorEmailGatewayService:
         )
         self.outbound_history.insert(0, msg)
         return msg
+
+    def dispatch_branded_email(
+        self,
+        recipient: str,
+        subject: str,
+        html_body: str,
+        email_type: str = "ONBOARDING_GUIDE"
+    ) -> OutboundEmailMessage:
+        """Sends arbitrary branded notification or setup email with DKIM headers."""
+        sender = f"{self.config.sender_display_name} <{self.config.from_email}>"
+        dkim_sig = f"v=1; a=rsa-sha256; d={self.domain}; s=limo; bh={uuid.uuid4().hex[:16]}"
+        msg = OutboundEmailMessage(
+            vendor_id=self.vendor_id,
+            recipient_email=recipient,
+            sender_from=sender,
+            subject=subject,
+            html_content=html_body,
+            email_type=email_type,
+            dkim_signature=dkim_sig,
+            spf_record_status=getattr(self.config, "spf_status", "PASS_VERIFIED"),
+            status="DELIVERED"
+        )
+        self.outbound_history.insert(0, msg)
+        return msg

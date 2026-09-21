@@ -84,26 +84,26 @@ class DocumentTemplates:
     <!-- Booking Summary -->
     <tr>
       <td style="padding: 28px 32px;">
-        <h2 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 800; color: #0F172A;">Itinerary Summary (#{booking_data.get('trip_id', 'TRP-88129')})</h2>
+        <h2 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 800; color: #0F172A;">Itinerary Summary (#{booking_data.get('trip_id', '')})</h2>
         
         <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 16px; margin-bottom: 20px;">
           <tr>
             <td style="padding-bottom: 10px;">
               <div style="font-size: 11px; font-weight: 700; color: #64748B;">PASSENGER</div>
-              <div style="font-size: 14px; font-weight: 800; color: #0F172A;">{booking_data.get('passenger_name', 'Sir Arthur Davies')} ({booking_data.get('passenger_phone', '+1 215-555-9000')})</div>
+              <div style="font-size: 14px; font-weight: 800; color: #0F172A;">{booking_data.get('passenger_name', 'Valued Traveler')} {f"({booking_data.get('passenger_phone')})" if booking_data.get('passenger_phone') else ''}</div>
             </td>
           </tr>
           <tr>
             <td style="padding-bottom: 10px; border-top: 1px solid #E2E8F0; padding-top: 10px;">
               <div style="font-size: 11px; font-weight: 700; color: #64748B;">1. PICKUP LOCATION</div>
-              <div style="font-size: 13px; font-weight: 600; color: #0F172A;">{booking_data.get('pickup_address', 'The Ritz-Carlton Philadelphia')}</div>
+              <div style="font-size: 13px; font-weight: 600; color: #0F172A;">{booking_data.get('pickup_address', 'Designated Origin')}</div>
             </td>
           </tr>
           <tr>
             <td style="padding-bottom: 10px; border-top: 1px solid #E2E8F0; padding-top: 10px;">
               <div style="font-size: 11px; font-weight: 700; color: #64748B;">2. DESTINATION (FLIGHT RADAR)</div>
-              <div style="font-size: 13px; font-weight: 600; color: #0F172A;">{booking_data.get('dropoff_address', 'Philadelphia International Airport Terminal A')}</div>
-              <div style="font-size: 12px; color: #D97706; font-weight: 700; margin-top: 4px;">✈ Flight: {booking_data.get('flight_number', 'BA 178 (Touchdown On-Time)')}</div>
+              <div style="font-size: 13px; font-weight: 600; color: #0F172A;">{booking_data.get('dropoff_address', 'Designated Destination')}</div>
+              {f'<div style="font-size: 12px; color: #D97706; font-weight: 700; margin-top: 4px;">✈ Flight: {booking_data.get("flight_number")}</div>' if booking_data.get('flight_number') else ''}
             </td>
           </tr>
         </table>
@@ -120,24 +120,24 @@ class DocumentTemplates:
         <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 16px;">
           <tr>
             <td style="padding: 6px 0; color: #475569; font-size: 13px;">Base Fleet Reservation</td>
-            <td style="padding: 6px 0; text-align: right; color: #0F172A; font-weight: 600; font-size: 13px;">${tax_breakdown.get('base_tariff', 85.00):.2f}</td>
+            <td style="padding: 6px 0; text-align: right; color: #0F172A; font-weight: 600; font-size: 13px;">${tax_breakdown.get('base_tariff', 0.0):.2f}</td>
           </tr>
           <tr>
             <td style="padding: 6px 0; color: #475569; font-size: 13px;">Mileage & Tolls</td>
-            <td style="padding: 6px 0; text-align: right; color: #0F172A; font-weight: 600; font-size: 13px;">${tax_breakdown.get('mileage_fare', 78.63):.2f}</td>
+            <td style="padding: 6px 0; text-align: right; color: #0F172A; font-weight: 600; font-size: 13px;">${tax_breakdown.get('mileage_fare', 0.0):.2f}</td>
           </tr>
           {surcharges_html}
           <tr>
             <td style="padding: 6px 0; color: #475569; font-size: 13px;">{tax_breakdown.get('tax_name', 'Local Sales Tax')}</td>
-            <td style="padding: 6px 0; text-align: right; color: #0F172A; font-weight: 600; font-size: 13px;">${tax_breakdown.get('tax_amount', 15.58):.2f}</td>
+            <td style="padding: 6px 0; text-align: right; color: #0F172A; font-weight: 600; font-size: 13px;">${tax_breakdown.get('tax_amount', 0.0):.2f}</td>
           </tr>
           <tr>
             <td style="padding: 6px 0; color: #475569; font-size: 13px;">20% Chauffeur Gratuity</td>
-            <td style="padding: 6px 0; text-align: right; color: #0F172A; font-weight: 600; font-size: 13px;">${tax_breakdown.get('gratuity_amount', 35.10):.2f}</td>
+            <td style="padding: 6px 0; text-align: right; color: #0F172A; font-weight: 600; font-size: 13px;">${tax_breakdown.get('gratuity_amount', 0.0):.2f}</td>
           </tr>
           <tr style="border-top: 2px solid #0F172A;">
             <td style="padding: 12px 0; color: #0F172A; font-size: 16px; font-weight: 900;">All-Inclusive Total Paid</td>
-            <td style="padding: 12px 0; text-align: right; color: #0F172A; font-size: 18px; font-weight: 900;">${tax_breakdown.get('all_inclusive_total', 226.18):.2f}</td>
+            <td style="padding: 12px 0; text-align: right; color: #0F172A; font-size: 18px; font-weight: 900;">${tax_breakdown.get('all_inclusive_total', 0.0):.2f}</td>
           </tr>
         </table>
 
@@ -151,7 +151,7 @@ class DocumentTemplates:
     <!-- Footer -->
     <tr>
       <td style="padding: 20px 32px; background: #F8FAFC; border-top: 1px solid #E2E8F0; text-align: center; font-size: 11px; color: #64748B;">
-        {vendor_brand.get('company_name', 'ANB Limo')} · 24/7 VIP Concierge: {vendor_brand.get('support_phone', '+1 215-555-0188')} · {vendor_brand.get('support_email', 'dispatch@anblimo-philly.com')}
+        {vendor_brand.get('company_name', 'Executive Dispatch')} · 24/7 VIP Concierge: {vendor_brand.get('support_phone', '')} · {vendor_brand.get('support_email', '')}
       </td>
     </tr>
 

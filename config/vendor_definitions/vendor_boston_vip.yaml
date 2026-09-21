@@ -42,6 +42,10 @@ affiliate_policy:
   enable_federation: true
   auto_accept_affiliate_rides: true
   clearing_split_pct: 85.0
+stripe_connect:
+  account_id: acct_conn_056d789da3c053
+  account_type: EXPRESS_CONNECTED
+  payouts_enabled: true
 telecom_compliance:
   legal_business_name: Boston VIP Chauffeur Group LLC
   ein_tax_id: 12-3456789

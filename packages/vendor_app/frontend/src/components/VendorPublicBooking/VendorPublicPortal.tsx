@@ -66,19 +66,19 @@ export const VendorPublicPortal: React.FC = () => {
   const [activeDomain, setActiveDomain] = useState<string>('book.anblimo-philly.com');
   const [branding, setBranding] = useState<WhiteLabelBrand>(PRESET_DOMAINS['book.anblimo-philly.com']);
   
-  const [pickup, setPickup] = useState('John F. Kennedy International Airport (JFK), Terminal 4 VIP');
-  const [dropoff, setDropoff] = useState('The Plaza Hotel, 768 5th Ave, New York, NY 10019');
-  const [flightNumber, setFlightNumber] = useState('BA 178');
-  const [vehicleClass, setVehicleClass] = useState<VehicleClass>(VehicleClass.LUXURY_SUV);
+  const [pickup, setPickup] = useState('');
+  const [dropoff, setDropoff] = useState('');
+  const [flightNumber, setFlightNumber] = useState('');
+  const [vehicleClass, setVehicleClass] = useState<VehicleClass>(VehicleClass.FIRST_CLASS);
   const [isLateNight, setIsLateNight] = useState(false);
-  const [isMeetAndGreet, setIsMeetAndGreet] = useState(true);
+  const [isMeetAndGreet, setIsMeetAndGreet] = useState(false);
 
   const [quote, setQuote] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'QUOTE' | 'PASSENGER' | 'CONFIRMED'>('QUOTE');
 
-  const [passengerName, setPassengerName] = useState('Arthur Vance');
-  const [passengerPhone, setPassengerPhone] = useState('+1 (212) 555-9000');
+  const [passengerName, setPassengerName] = useState('');
+  const [passengerPhone, setPassengerPhone] = useState('');
 
   const handleSwitchDomain = (domain: string) => {
     setActiveDomain(domain);

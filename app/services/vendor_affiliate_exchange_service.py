@@ -607,9 +607,6 @@ class VendorAffiliateExchangeService:
 
     def get_vendor_affiliate_records(self, vendor_id: str) -> Dict[str, Any]:
         """Returns all farmed-in and farmed-out rides for a specific vendor cell."""
-        if not self.exchange_records:
-            self._seed_demo_clearing_records()
-
         farmed_out = [r for r in self.exchange_records if r.originator_vendor_id == vendor_id]
         farmed_in = [r for r in self.exchange_records if r.performing_vendor_id == vendor_id]
 
@@ -626,56 +623,8 @@ class VendorAffiliateExchangeService:
             "farmed_out_history": farmed_out
         }
 
-    def _seed_demo_clearing_records(self):
-        """Seeds verified cross-cell farmout records for ANB Philly and NY Executive."""
-        r1 = AffiliateExchangeRecord(
-            exchange_id="aff_xch_phl_ny_01",
-            originator_vendor_id="anb-limo-philly",
-            originator_vendor_name="ANB Limo Philadelphia",
-            performing_vendor_id="ny-executive-limo",
-            performing_vendor_name="New York Executive Limousine",
-            passenger_name="Ms. Clara Thorne",
-            passenger_phone="+1-215-555-0199",
-            pickup_address="JFK International Airport Terminal 4 VIP Suite",
-            dropoff_address="50 Hudson Yards, New York, NY 10001",
-            vehicle_class=VehicleClass.LUXURY_SUV,
-            distance_km=32.4,
-            fare_split=AffiliateCommissionSplit(
-                gross_fare_usd=385.00,
-                performing_vendor_net_usd=327.25,  # 85%
-                originating_vendor_commission_usd=38.50,  # 10%
-                hub_clearing_fee_usd=19.25  # 5%
-            ),
-            status="SETTLED",
-            assigned_driver_id="driver-ny-01"
-        )
-        r2 = AffiliateExchangeRecord(
-            exchange_id="aff_xch_ny_phl_02",
-            originator_vendor_id="ny-executive-limo",
-            originator_vendor_name="New York Executive Limousine",
-            performing_vendor_id="anb-limo-philly",
-            performing_vendor_name="ANB Limo Philadelphia",
-            passenger_name="Dr. Arthur Sterling",
-            passenger_phone="+1-215-555-0144",
-            pickup_address="Philadelphia 30th Street Station VIP Ramp",
-            dropoff_address="The Ritz-Carlton Philadelphia, 10 Ave of the Arts",
-            vehicle_class=VehicleClass.FIRST_CLASS,
-            distance_km=4.8,
-            fare_split=AffiliateCommissionSplit(
-                gross_fare_usd=165.00,
-                performing_vendor_net_usd=140.25,  # 85%
-                originating_vendor_commission_usd=16.50,  # 10%
-                hub_clearing_fee_usd=8.25  # 5%
-            ),
-            status="ACCEPTED_DISPATCHED",
-            assigned_driver_id="driver-philly-01"
-        )
-        self.exchange_records = [r1, r2]
-
     def get_exchange_history(self) -> List[AffiliateExchangeRecord]:
         """Returns all affiliate cross-dispatch exchange records."""
-        if not self.exchange_records:
-            self._seed_demo_clearing_records()
         return self.exchange_records
 
 

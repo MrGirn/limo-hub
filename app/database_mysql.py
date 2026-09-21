@@ -53,15 +53,15 @@ class VendorModel(Base):
     tax_id = Column(String(64), nullable=False)
     contact_email = Column(String(255), nullable=False)
     contact_phone = Column(String(64), nullable=False)
-    office_address = Column(String(255), nullable=False, default="550 W 54th St, New York, NY 10019")
-    office_city = Column(String(128), nullable=False, default="New York")
-    office_state = Column(String(32), default="NY")
-    office_zip = Column(String(32), default="10019")
-    office_lat = Column(Float, default=40.7675)
-    office_lng = Column(Float, default=-73.9912)
-    service_radius_miles = Column(Float, default=65.0)
-    deadhead_rate_per_mile = Column(Numeric(10, 2), default=Decimal("1.75"))
-    rating = Column(Float, default=4.97)
+    office_address = Column(String(255), nullable=True, default=None)
+    office_city = Column(String(128), nullable=True, default=None)
+    office_state = Column(String(32), nullable=True, default=None)
+    office_zip = Column(String(32), nullable=True, default=None)
+    office_lat = Column(Float, nullable=True, default=None)
+    office_lng = Column(Float, nullable=True, default=None)
+    service_radius_miles = Column(Float, default=50.0)
+    deadhead_rate_per_mile = Column(Numeric(10, 2), nullable=True, default=None)
+    rating = Column(Float, default=5.0)
     is_verified = Column(Boolean, default=True)
     network_sharing_enabled = Column(Boolean, default=True)
 
@@ -477,14 +477,22 @@ class MySQLManager:
         self.engine = None
         self.SessionLocal = None
         self.is_connected = False
+        self._last_attempt_time = 0.0
 
     def initialize(self, url: Optional[str] = None):
+        import time
+        now = time.time()
+        if now - self._last_attempt_time < 10.0:
+            return
+        self._last_attempt_time = now
+
         connection_url = url or get_mysql_connection_url()
         try:
             self.engine = create_engine(
                 connection_url,
                 pool_pre_ping=True,
                 pool_recycle=3600,
+                connect_args={"connect_timeout": 2},
                 echo=False
             )
             Base.metadata.create_all(bind=self.engine)
@@ -493,7 +501,8 @@ class MySQLManager:
             print("Connected to MySQL and initialized all authoritative tables successfully.")
         except Exception as e:
             self.is_connected = False
-            print(f"MySQL connection status: {e}")
+            # Silent fallback to memory store
+            pass
 
     def get_session(self) -> Optional[Session]:
         if not self.is_connected:

@@ -21,6 +21,7 @@ from app.domain_models import (
     Quote, Booking, Trip, Vehicle, Driver, Incident, Vendor,
     MasterItinerary, VendorRegistrationRequest,
     VendorPricingRule, VendorAIDynamicPricingMetrics,
+    AIPricingValidationResult, AIPricingRecommendationRequest,
     NetworkParticipationMode, VendorCommConfig, VehiclePhoto,
     TransitRadarEvent, PlanUpdateRequest,
     CoverageState, CorridorCoverageRecord, SourcingInquiry,
@@ -80,6 +81,8 @@ class QuoteRequestDTO(BaseModel):
     hourly_hours: Optional[int] = None
     wait_minutes: int = 0
     currency: Optional[str] = None
+    pickup_time_utc: Optional[datetime] = None
+    meet_and_greet_inside: bool = False
 
 
 class BookQuoteRequestDTO(BaseModel):
@@ -111,32 +114,72 @@ class DriverTimeoutSimDTO(BaseModel):
 
 @router.post("/quotes", response_model=Quote)
 def request_quote(dto: QuoteRequestDTO):
-    # Dynamically resolve tenant_id, vendor_id, and currency from request context or sovereign container env
-    resolved_vendor_id = dto.vendor_id or os.getenv("SOVEREIGN_VENDOR_ID") or "vendor_anb_philly"
+    from app.services.vendor_best_quote_engine import VendorBestQuoteEngine
+
     resolved_tenant_id = dto.tenant_id or os.getenv("TENANT_ID") or "tenant-us-east"
     resolved_currency = dto.currency or "USD"
 
-    # Dynamically calculate distance using GoogleMaps / routing engine if not explicitly provided
-    distance = dto.distance_miles
-    if not distance and dto.pickup_address and dto.dropoff_address:
-        computed_dist, _ = GoogleMapsService.calculate_distance_matrix(dto.pickup_address, dto.dropoff_address)
-        if computed_dist and computed_dist > 0:
-            distance = Decimal(str(computed_dist))
+    # If vendor_id is omitted or 'auto', autonomously evaluate candidate vendors for best price & optimal positioning
+    if not dto.vendor_id or dto.vendor_id == "auto":
+        best_quote, comparison = VendorBestQuoteEngine.find_best_quote(
+            tenant_id=resolved_tenant_id,
+            service_type=dto.service_type,
+            vehicle_class=dto.vehicle_class,
+            pickup_address=dto.pickup_address,
+            dropoff_address=dto.dropoff_address,
+            flight_number=dto.flight_number,
+            train_number=dto.train_number,
+            hourly_hours=dto.hourly_hours,
+            wait_minutes=dto.wait_minutes,
+            currency=resolved_currency,
+            pickup_time_utc=dto.pickup_time_utc,
+            meet_and_greet_inside=dto.meet_and_greet_inside
+        )
+        db.quotes[best_quote.id] = best_quote
+        return best_quote
 
+    # Explicit vendor specified
     return BookingService.create_quote(
         tenant_id=resolved_tenant_id,
-        vendor_id=resolved_vendor_id,
+        vendor_id=dto.vendor_id,
         service_type=dto.service_type,
         vehicle_class=dto.vehicle_class,
         pickup_address=dto.pickup_address,
         dropoff_address=dto.dropoff_address,
         flight_number=dto.flight_number,
         train_number=dto.train_number,
-        distance_miles=distance,
+        distance_miles=dto.distance_miles,
         hourly_hours=dto.hourly_hours,
         wait_minutes=dto.wait_minutes,
-        currency=resolved_currency
+        currency=resolved_currency,
+        pickup_time_utc=dto.pickup_time_utc,
+        meet_and_greet_inside=dto.meet_and_greet_inside
     )
+
+
+@router.post("/quotes/compare", response_model=Dict[str, Any])
+def compare_market_quotes(dto: QuoteRequestDTO):
+    from app.services.vendor_best_quote_engine import VendorBestQuoteEngine
+
+    resolved_tenant_id = dto.tenant_id or os.getenv("TENANT_ID") or "tenant-us-east"
+    resolved_currency = dto.currency or "USD"
+
+    best_quote, comparison = VendorBestQuoteEngine.find_best_quote(
+        tenant_id=resolved_tenant_id,
+        service_type=dto.service_type,
+        vehicle_class=dto.vehicle_class,
+        pickup_address=dto.pickup_address,
+        dropoff_address=dto.dropoff_address,
+        flight_number=dto.flight_number,
+        train_number=dto.train_number,
+        hourly_hours=dto.hourly_hours,
+        wait_minutes=dto.wait_minutes,
+        currency=resolved_currency,
+        pickup_time_utc=dto.pickup_time_utc,
+        meet_and_greet_inside=dto.meet_and_greet_inside
+    )
+    db.quotes[best_quote.id] = best_quote
+    return comparison.dict() if comparison else {"primary_quote": best_quote.dict()}
 
 
 @router.post("/quotes/{quote_id}/book", response_model=Booking)
@@ -285,21 +328,40 @@ def list_drivers(tenant_id: Optional[str] = None):
     return drivers
 
 
-@router.get("/dispatch/eligible")
-def get_eligible_dispatch(
-    vehicle_class: VehicleClass = VehicleClass.LUXURY_SUV,
-    pax_count: int = 1,
-    luggage_count: int = 1,
-    tenant_id: str = "tenant-us-east",
-    vendor_id: str = "vendor-ny-executive"
-):
-    return DispatchService.find_eligible_resources(
-        tenant_id=tenant_id,
-        vendor_id=vendor_id,
-        vehicle_class=vehicle_class,
-        passenger_count=pax_count,
-        luggage_count=luggage_count
-    )
+@router.get("/dispatch/pending-24h-alerts")
+def get_pending_24h_dispatch_alerts(vendor_id: Optional[str] = None):
+    """
+    Returns real-time 24-Hour Just-In-Time Dispatch Alerts:
+    Identifies unassigned rides scheduled within 24 hours of pickup with recommended nearest on-duty chauffeurs.
+    """
+    return DispatchService.get_trips_pending_24h_dispatch(vendor_id=vendor_id)
+
+
+class Assign24hDriverRequestDTO(BaseModel):
+    trip_id: str
+    driver_id: Optional[str] = None
+    vehicle_id: Optional[str] = None
+
+
+@router.post("/dispatch/assign-24h-driver")
+def assign_24h_chauffeur(dto: Assign24hDriverRequestDTO):
+    """
+    Assigns recommended or chosen chauffeur to a scheduled trip in the 24-hour dispatch window.
+    """
+    try:
+        updated_trip = DispatchService.assign_best_available_driver_24h(
+            trip_id=dto.trip_id,
+            driver_id=dto.driver_id,
+            vehicle_id=dto.vehicle_id
+        )
+        return {
+            "success": True,
+            "message": "Chauffeur successfully assigned in 24h dispatch window",
+            "trip": updated_trip
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 
 
 # --- DRIVER APP WORKFLOWS ---
@@ -378,7 +440,14 @@ def list_incidents():
 
 @router.get("/vendors", response_model=List[Vendor])
 def list_vendors():
-    return list(db.vendors.values())
+    seen = set()
+    unique_vendors = []
+    for v in db.vendors.values():
+        canon = v.id.replace("-", "_")
+        if canon not in seen:
+            seen.add(canon)
+            unique_vendors.append(v)
+    return unique_vendors
 
 
 @router.get("/system-summary")
@@ -405,7 +474,7 @@ def validate_address(address: str = Query(..., description="Global street, airpo
 def calculate_route_matrix(
     origin: str = Query(..., description="Origin address or airport"),
     destination: str = Query(..., description="Destination address or airport"),
-    vendor_depot: Optional[str] = Query("550 W 54th St, New York, NY 10019")
+    vendor_depot: Optional[str] = Query(None, description="Optional vendor depot location for 3-leg positioning calculations")
 ):
     return GoogleMapsService.calculate_3_leg_route(
         vendor_depot=vendor_depot,
@@ -680,6 +749,21 @@ def train_vendor_ai_yield(vendor_id: str):
 def apply_vendor_ai_yield(vendor_id: str):
     from app.services.vendor_pricing_ai_service import VendorPricingAIService
     return VendorPricingAIService.apply_ai_suggestions_to_rules(vendor_id)
+
+
+@router.post("/quotes/ai-validate-pricing", response_model=AIPricingValidationResult)
+def ai_validate_pricing_quote(req: AIPricingRecommendationRequest):
+    """Leverage Google Gemini / AI Market Intelligence to validate proposed quotes against regional benchmarks."""
+    from app.services.vendor_pricing_ai_service import VendorPricingAIService
+    return VendorPricingAIService.validate_and_recommend_pricing_with_gemini(req)
+
+
+@router.post("/vendors/{vendor_id}/ai-validate-pricing", response_model=AIPricingValidationResult)
+def ai_validate_vendor_pricing(vendor_id: str, req: AIPricingRecommendationRequest):
+    """Leverage Google Gemini / AI Market Intelligence to validate a specific vendor's quote."""
+    from app.services.vendor_pricing_ai_service import VendorPricingAIService
+    req.vendor_id = vendor_id
+    return VendorPricingAIService.validate_and_recommend_pricing_with_gemini(req)
 
 
 # --- VENDOR FLEET INVENTORY & NETWORK PARTICIPATION TOGGLE ---
@@ -1962,7 +2046,24 @@ def validate_vendor_yaml(dto: ValidateVendorYamlDTO):
 @router.post("/vendor-cell/spin-up", response_model=VendorCellConfig)
 def spin_up_vendor_cell(payload: VendorSpinUpPayload):
     """Declaratively spins up an isolated vendor cell with private partition, rate card & branding."""
-    return vendor_spinup_service.spin_up_vendor(payload)
+    config = vendor_spinup_service.spin_up_vendor(payload)
+    try:
+        vendor_spinup_service.send_onboarding_welcome_email(payload.vendor_id or config.vendor_id)
+    except Exception as e:
+        logger.warning(f"Could not send welcome email on spinup: {e}")
+    return config
+
+
+@router.get("/vendor-cell/{vendor_id}/onboarding-status")
+def get_vendor_onboarding_status(vendor_id: str):
+    """Retrieves the 7-milestone progressive onboarding readiness score and setup checklist."""
+    return vendor_spinup_service.calculate_onboarding_readiness(vendor_id)
+
+
+@router.post("/vendor-cell/{vendor_id}/onboarding-invite")
+def send_vendor_onboarding_invite(vendor_id: str):
+    """Dispatches a setup guidance email to the vendor owner with direct links to remaining milestones."""
+    return vendor_spinup_service.send_onboarding_welcome_email(vendor_id)
 
 
 class VendorEmailTestDTO(BaseModel):
@@ -3793,6 +3894,210 @@ def run_ai_model_lifecycle_audit():
     migrates any retiring Gemini models to their next generation successor.
     """
     return AIGovernanceService.run_monthly_sunset_check_and_rollover()
+
+
+# =========================================================================
+# STRIPE CONNECT EXPRESS VENDOR ONBOARDING & PAYOUT LEDGER
+# =========================================================================
+
+class StripeConnectLinkRequestDTO(BaseModel):
+    refresh_url: Optional[str] = None
+    return_url: Optional[str] = None
+
+
+@router.post("/vendors/{vendor_id}/stripe/connect-link")
+def create_vendor_stripe_connect_link(vendor_id: str, dto: Optional[StripeConnectLinkRequestDTO] = None):
+    """
+    Generates a secure, 1-click Stripe-hosted onboarding / KYC / bank verification link for a vendor.
+    """
+    from app.services.stripe_connect_service import StripeConnectService
+    canonical_id = vendor_id.replace('-', '_')
+    vendor = db.vendors.get(canonical_id) or db.vendors.get(vendor_id)
+    
+    stripe_account_id = getattr(vendor, "stripe_account_id", None) if vendor else None
+    if not stripe_account_id:
+        legal_name = getattr(vendor, "name", vendor_id) if vendor else vendor_id
+        email = getattr(vendor, "inbound_email", f"billing@{vendor_id}.com") if vendor else "billing@vendor.com"
+        acc_res = StripeConnectService.create_express_connected_account(
+            vendor_id=canonical_id,
+            legal_business_name=legal_name,
+            email=email
+        )
+        stripe_account_id = acc_res.get("stripe_account_id")
+        if vendor:
+            vendor.stripe_account_id = stripe_account_id
+
+    link_res = StripeConnectService.create_account_onboarding_link(
+        stripe_account_id=stripe_account_id,
+        vendor_id=canonical_id,
+        refresh_url=dto.refresh_url if dto else None,
+        return_url=dto.return_url if dto else None
+    )
+    return {
+        "success": True,
+        "vendor_id": canonical_id,
+        "stripe_account_id": stripe_account_id,
+        "onboarding_url": link_res.get("onboarding_url"),
+        "expires_at": link_res.get("expires_at")
+    }
+
+
+@router.get("/vendors/{vendor_id}/stripe/connect-status")
+def get_vendor_stripe_connect_status(vendor_id: str):
+    """
+    Returns live Stripe Connect verification, payout status, and requirements for a vendor.
+    """
+    from app.services.stripe_connect_service import StripeConnectService
+    canonical_id = vendor_id.replace('-', '_')
+    vendor = db.vendors.get(canonical_id) or db.vendors.get(vendor_id)
+    
+    stripe_account_id = getattr(vendor, "stripe_account_id", None) if vendor else f"acct_conn_{canonical_id}"
+    status_res = StripeConnectService.get_account_status(stripe_account_id)
+    
+    return {
+        "vendor_id": canonical_id,
+        "vendor_name": getattr(vendor, "name", canonical_id) if vendor else canonical_id,
+        "stripe_account_id": stripe_account_id,
+        "payouts_enabled": status_res.get("payouts_enabled", True),
+        "charges_enabled": status_res.get("charges_enabled", True),
+        "status": status_res.get("status", "VERIFIED_ACTIVE"),
+        "default_currency": status_res.get("default_currency", "USD"),
+        "requirements": status_res.get("requirements", [])
+    }
+
+
+@router.post("/vendors/{vendor_id}/stripe/login-link")
+def create_vendor_stripe_login_link(vendor_id: str):
+    """
+    Generates a Single Sign-On link for the vendor to open their Stripe Express Dashboard.
+    """
+    from app.services.stripe_connect_service import StripeConnectService
+    canonical_id = vendor_id.replace('-', '_')
+    vendor = db.vendors.get(canonical_id) or db.vendors.get(vendor_id)
+    
+    stripe_account_id = getattr(vendor, "stripe_account_id", None) if vendor else f"acct_conn_{canonical_id}"
+    login_res = StripeConnectService.create_login_link(stripe_account_id)
+    
+    return {
+        "success": True,
+        "vendor_id": canonical_id,
+        "stripe_account_id": stripe_account_id,
+        "url": login_res.get("url")
+    }
+
+
+# =========================================================================
+# GLOBAL HUB SAAS SUBSCRIPTION & MRR BILLING LEDGER
+# =========================================================================
+
+@router.get("/hub/subscriptions/overview")
+def get_hub_subscriptions_overview():
+    """
+    Returns total Monthly Recurring Revenue (MRR), subscriber metrics, and all vendor subscription statuses.
+    """
+    from app.services.vendor_subscription_service import vendor_subscription_service
+    return vendor_subscription_service.get_hub_overview()
+
+
+@router.get("/vendors/{vendor_id}/subscription")
+def get_vendor_subscription_details(vendor_id: str):
+    """
+    Returns current subscription plan, billing cycle, invoice history, and dunning status for a vendor.
+    """
+    from app.services.vendor_subscription_service import vendor_subscription_service
+    sub = vendor_subscription_service.get_vendor_subscription(vendor_id)
+    return sub.model_dump()
+
+
+class PlanChangeDTO(BaseModel):
+    plan_id: str
+
+
+@router.post("/vendors/{vendor_id}/subscription/upgrade")
+def upgrade_vendor_subscription(vendor_id: str, dto: PlanChangeDTO):
+    """
+    Upgrades or switches the vendor's subscription plan.
+    """
+    from app.services.vendor_subscription_service import vendor_subscription_service
+    return vendor_subscription_service.upgrade_or_switch_plan(vendor_id, dto.plan_id)
+
+
+@router.post("/vendors/{vendor_id}/subscription/pay-as-you-go")
+def switch_vendor_to_pay_as_you_go(vendor_id: str):
+    """
+    Switches the vendor to the Pay-As-You-Go ($0/mo fixed + 5% per ride) model.
+    """
+    from app.services.vendor_subscription_service import vendor_subscription_service
+    return vendor_subscription_service.switch_to_pay_as_you_go(vendor_id)
+
+
+class CancellationDTO(BaseModel):
+    reason: Optional[str] = "Vendor self-cancellation"
+
+
+@router.post("/vendors/{vendor_id}/subscription/cancel")
+def cancel_vendor_subscription(vendor_id: str, dto: Optional[CancellationDTO] = None):
+    """
+    Cancels the vendor's recurring SaaS subscription.
+    """
+    from app.services.vendor_subscription_service import vendor_subscription_service
+    reason = dto.reason if dto else "Vendor self-cancellation"
+    return vendor_subscription_service.cancel_subscription(vendor_id, reason=reason)
+
+
+@router.post("/vendors/{vendor_id}/account/delete-request")
+def request_vendor_account_deletion(vendor_id: str, dto: Optional[CancellationDTO] = None):
+    """
+    Submits a vendor account deletion request, decommission the cell, and halts traffic routing.
+    """
+    from app.services.vendor_subscription_service import vendor_subscription_service
+    reason = dto.reason if dto else "Vendor account deletion request"
+    return vendor_subscription_service.request_account_deletion(vendor_id, reason=reason)
+
+
+@router.post("/hub/subscriptions/{vendor_id}/trigger-dunning-test")
+def trigger_dunning_test_alert(vendor_id: str):
+    """
+    Simulates a delinquent payment event and triggers warning alerts / grace period.
+    """
+    from app.services.vendor_subscription_service import vendor_subscription_service
+    return vendor_subscription_service.trigger_dunning_delinquent_alert(vendor_id)
+
+
+# =========================================================================
+# SOVEREIGN CELL INFRASTRUCTURE LIFECYCLE ACTIONS (START / STOP / TERMINATE)
+# =========================================================================
+
+class CellActionRequestDTO(BaseModel):
+    reason: Optional[str] = "Hub Admin Action"
+
+
+@router.post("/infrastructure/cells/{vendor_id}/stop")
+def stop_sovereign_cell_endpoint(vendor_id: str, dto: Optional[CellActionRequestDTO] = None):
+    """
+    Pauses and stops public traffic routing to the sovereign cell (SUSPENDED / STOPPED).
+    """
+    reason = dto.reason if dto else "Hub Admin Stop Request"
+    return sovereign_cell_infra_service.stop_vendor_cell(vendor_id, reason=reason)
+
+
+@router.post("/infrastructure/cells/{vendor_id}/start")
+def start_sovereign_cell_endpoint(vendor_id: str):
+    """
+    Restarts and re-enables traffic routing to the sovereign cell (ONLINE_HEALTHY).
+    """
+    return sovereign_cell_infra_service.start_vendor_cell(vendor_id)
+
+
+@router.post("/infrastructure/cells/{vendor_id}/terminate")
+def terminate_sovereign_cell_endpoint(vendor_id: str, dto: Optional[CellActionRequestDTO] = None):
+    """
+    Permanently terminates the sovereign cell container, deregisters port, and decommissions cell.
+    """
+    reason = dto.reason if dto else "Hub Admin Decommission"
+    return sovereign_cell_infra_service.terminate_vendor_cell(vendor_id, reason=reason)
+
+
 
 
 

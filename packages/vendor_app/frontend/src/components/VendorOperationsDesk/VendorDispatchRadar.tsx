@@ -27,34 +27,7 @@ export const VendorDispatchRadar: React.FC<VendorDispatchRadarProps> = ({ sessio
   const [payrollSaved, setPayrollSaved] = useState(false);
 
   // Active Trips State
-  const [trips, setTrips] = useState([
-    {
-      trip_id: 'TRP-PHL-881',
-      passenger_name: 'Sir Arthur Davies',
-      phone: '+1 (215) 555-9000',
-      driver_name: 'Marcus Brody',
-      vehicle: 'Cadillac Escalade ESV (Plate: PA-LIMO-01)',
-      status: 'EN_ROUTE_TO_PICKUP',
-      pickup: 'The Ritz-Carlton, Philadelphia',
-      dropoff: 'Philadelphia International Airport (PHL) Terminal A',
-      flight: 'BA 178 (Touchdown On-Time)',
-      fare_usd: 240.00,
-      hours_until_pickup: 18.5
-    },
-    {
-      trip_id: 'TRP-PHL-882',
-      passenger_name: 'Eleanor Roosevelt',
-      phone: '+1 (215) 555-0144',
-      driver_name: 'Marcus Vance',
-      vehicle: 'Mercedes-Benz S 580 (Plate: PA-LIMO-02)',
-      status: 'PASSENGER_ONBOARD',
-      pickup: '30th Street Amtrak Station, Philadelphia',
-      dropoff: 'Comcast Technology Center, Philadelphia',
-      flight: 'Amtrak Acela #2150',
-      fare_usd: 185.00,
-      hours_until_pickup: 0.0
-    }
-  ]);
+  const [trips, setTrips] = useState<any[]>([]);
 
   const [activeActionModal, setActiveActionModal] = useState<any | null>(null);
   const [refundResult, setRefundResult] = useState<any | null>(null);

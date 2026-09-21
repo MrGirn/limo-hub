@@ -20,11 +20,13 @@ import { PublicServicesPage } from './components/public/PublicServicesPage';
 import { PublicPoliciesPage } from './components/public/PublicPoliciesPage';
 import { PublicContactPage } from './components/public/PublicContactPage';
 import { PublicVendorQuotePortal } from './components/PublicVendorQuotePortal';
+import { MultiVendorComparisonStudio } from './components/MultiVendorComparisonStudio';
 import { VendorBrandingProfile, VendorPortalConfig, SystemRuntimeMode } from './types';
 import { fetchVendorPortalConfig, resolveVendorByDomain, fetchSystemRuntimeMode } from './api';
 
 type PortalView = 
   | 'PUBLIC_WEBSITE'
+  | 'MULTI_VENDOR_STUDIO'
   | 'GLOBAL_MARKETPLACE'
   | 'GLOBAL_HUB_ADMIN'
   | 'VENDOR_OWNER_DASHBOARD'
@@ -296,6 +298,37 @@ const MainLayout: React.FC = () => {
       );
     }
 
+    // --- 2b. MULTI-VENDOR REAL-TIME LIVE COMPARISON STUDIO ---
+    if (activeView === 'MULTI_VENDOR_STUDIO') {
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ background: '#0F172A', borderBottom: '1px solid #1E293B', padding: '10px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 800, color: '#38BDF8' }}>⚡ Live Dynamic Pricing & Multi-Vendor Comparison Studio</span>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={() => setActiveView('GLOBAL_MARKETPLACE')}
+                style={{ background: '#1E293B', color: '#E2E8F0', border: '1px solid #334155', borderRadius: '6px', padding: '6px 14px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                🌐 Global Marketplace
+              </button>
+              <button
+                onClick={() => {
+                  setActiveView('PUBLIC_WEBSITE');
+                  setPublicPage('HOME');
+                }}
+                style={{ background: '#0078D4', color: '#FFFFFF', border: 'none', borderRadius: '6px', padding: '6px 14px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                🏠 Return to Storefront
+              </button>
+            </div>
+          </div>
+          <MultiVendorComparisonStudio />
+        </div>
+      );
+    }
+
     // --- 3. GLOBAL HUB WORLDWIDE MARKETPLACE VIEW (Port 8000) ---
     if (isGlobalHub && activeView === 'GLOBAL_MARKETPLACE') {
       return (
@@ -316,11 +349,15 @@ const MainLayout: React.FC = () => {
     }
 
     // --- 5. DEDICATED LOCAL VENDOR OWNER DASHBOARD (Port 8001 / 8002) ---
-    if (activeView === 'VENDOR_OWNER_DASHBOARD' || role === 'ROLE_VENDOR_ADMIN' || role === 'ROLE_DISPATCHER') {
+    if (activeView === 'VENDOR_OWNER_DASHBOARD' || ((role === 'ROLE_VENDOR_ADMIN' || role === 'ROLE_DISPATCHER') && activeView !== 'PUBLIC_WEBSITE')) {
       return (
         <VendorOwnerDashboard
           config={vendorConfig}
-          onNavigateToStorefront={() => setActiveView('PUBLIC_WEBSITE')}
+          onNavigateToStorefront={() => {
+            switchPersona('ROLE_CUSTOMER');
+            setActiveView('PUBLIC_WEBSITE');
+            setPublicPage('HOME');
+          }}
         />
       );
     }

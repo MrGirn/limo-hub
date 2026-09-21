@@ -396,14 +396,24 @@ export interface VendorPricingRule {
   per_km_rate_net: number;
   per_minute_rate_net: number;
   hourly_rate_net: number;
+  hourly_minimum_hours?: number;
   minimum_fare_net: number;
   deadhead_rate_per_mile: number;
   deadhead_rate_per_km: number;
+  deadhead_buffer_miles_outbound?: number;
+  deadhead_buffer_miles_return?: number;
+  fuel_surcharge_pct?: number;
+  service_charge_pct?: number;
+  credit_card_fee_pct?: number;
   airport_surcharge_net: number;
   meet_and_greet_fee_net: number;
+  inside_baggage_meet_and_greet_fee_net?: number;
+  rush_hour_surcharge_net?: number;
+  late_night_surcharge_net?: number;
   free_wait_minutes: number;
   wait_minute_rate_net: number;
   tax_rate: number;
+  include_gratuity_in_billing?: boolean;
   gratuity_rate: number;
   currency: string;
   distance_unit: DistanceUnit;
@@ -926,13 +936,32 @@ export interface VendorAffiliatePolicyRules {
   updated_at: number;
 }
 
-export interface GlobalHubKnowledgeBase {
+export interface CandidateChauffeur {
+  driver_id: string;
+  driver_name: string;
+  driver_phone: string;
+  vehicle_id: string;
+  vehicle_name: string;
+  license_plate: string;
+  distance_miles: number;
+  eta_minutes: number;
+  rating: number;
+  score: number;
+}
+
+export interface Dispatch24hAlert {
+  trip_id: string;
+  booking_id: string;
+  vendor_id: string;
+  pickup_address: string;
+  dropoff_address?: string;
+  pickup_time_utc: string;
+  hours_until_pickup: number;
+  urgency: 'CRITICAL' | 'URGENT' | 'WARNING';
+  vehicle_class: string;
+  flight_number?: string;
   status: string;
-  knowledge_base_version: string;
-  total_registered_vendors: number;
-  active_open_farm_in_vendors: number;
-  supported_global_airports: string[];
-  vendors: any[];
+  recommended_candidates: CandidateChauffeur[];
 }
 
 

@@ -1,0 +1,51 @@
+vendor:
+  id: "vendor_london_royal"
+  name: "Royal Crown Chauffeurs London"
+  tier: "AUTONOMOUS_T0"
+  region: "Greater London & South East England"
+  country: "United Kingdom"
+  country_code: "GB"
+  state: "England"
+  city: "London"
+  currency: "GBP"
+  currency_symbol: "£"
+  time_zone: "Europe/London"
+
+branding:
+  company_tagline: "Sovereign Executive & VIP Airport Chauffeur Service London"
+  primary_color: "#0F172A"
+  accent_color: "#D97706"
+  domain: "royalcrown-london.co.uk"
+  contact_phone: "+442081234567"
+  office_address: "100 Pall Mall, St. James's, London SW1Y 5NQ"
+  logo_url: "/assets/royal_london_logo.png"
+
+pricing_matrix:
+  base_rate_usd: 75.00
+  per_km_usd: 3.65
+  deadhead_rate_per_mile_usd: 2.10
+  deadhead_rate_per_km_usd: 1.30
+  deadhead_buffer_miles_outbound: 0.00
+  deadhead_buffer_miles_return: 0.00
+  tax_rate_pct: 20.00
+  fuel_surcharge_pct: 8.00
+  service_charge_pct: 5.00
+  credit_card_fee_pct: 2.9
+  airport_meet_and_greet_usd: 40.00
+  congestion_charge_usd: 15.00
+
+database:
+  db_type: "mysql_partition"
+  partition_id: "db_partition_london_royal_01"
+
+fleet_drivers:
+  - id: "driver_lon_01"
+    name: "James Sterling"
+    phone: "+442081234501"
+    vehicle: "Mercedes-Benz S-Class (Black)"
+    license_plate: "LDN-VIP01"
+  - id: "driver_lon_02"
+    name: "Oliver Vance"
+    phone: "+442081234502"
+    vehicle: "Range Rover Autobiography (Black)"
+    license_plate: "LDN-VIP02"

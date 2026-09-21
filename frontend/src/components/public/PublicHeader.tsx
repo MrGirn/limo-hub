@@ -26,7 +26,10 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
   config,
   activeTab,
   onSelectTab,
-  onAuthSuccess
+  onAuthSuccess,
+  onOpenOwnerPortal,
+  onOpenDriverApp,
+  isSovereignMode
 }) => {
   const [isAuthDropdownOpen, setIsAuthDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -158,6 +161,30 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
             >
               Book a Ride
             </button>
+
+            {/* Owner Operations Portal Shortcut */}
+            {onOpenOwnerPortal && (
+              <button
+                type="button"
+                onClick={onOpenOwnerPortal}
+                style={{
+                  background: '#0F172A',
+                  color: '#FFFFFF',
+                  border: '1px solid #334155',
+                  borderRadius: '6px',
+                  padding: '7px 12px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}
+                title="Return to Sovereign Vendor Operations & Dispatch Console"
+              >
+                <span>🏢 Owner Console</span>
+              </button>
+            )}
 
             {/* Mobile Menu Toggle Button */}
             <button

@@ -3,7 +3,11 @@ import { useAuth } from '../context/AuthContext';
 import { Shield, User, Car, Building, Globe, KeyRound, CheckCircle2 } from 'lucide-react';
 import { UserRole } from '../types';
 
-export const ActorImpersonationBar: React.FC = () => {
+interface ActorImpersonationBarProps {
+  onOpenComparisonStudio?: () => void;
+}
+
+export const ActorImpersonationBar: React.FC<ActorImpersonationBarProps> = ({ onOpenComparisonStudio }) => {
   const { user, currentPersonaKey, personas, switchPersona, isLoading } = useAuth();
 
   const getRoleIcon = (role: UserRole) => {
@@ -128,6 +132,28 @@ export const ActorImpersonationBar: React.FC = () => {
             </button>
           );
         })}
+
+        {onOpenComparisonStudio && (
+          <button
+            onClick={onOpenComparisonStudio}
+            style={{
+              background: '#0F172A',
+              color: '#38BDF8',
+              border: '1px solid #0284C7',
+              borderRadius: '6px',
+              padding: '4px 10px',
+              fontSize: '11px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              marginLeft: '6px'
+            }}
+          >
+            ⚡ Live Multi-Vendor Studio
+          </button>
+        )}
       </div>
     </div>
   );

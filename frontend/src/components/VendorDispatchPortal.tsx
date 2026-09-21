@@ -4,11 +4,12 @@ import {
   CheckCircle, ArrowUpRight, ShieldAlert, Zap, RefreshCw, Eye, Route, Building2,
   Scale, ShieldCheck, X, Plane, DollarSign, PhoneCall, MessageSquare, Activity
 } from 'lucide-react';
-import { Vehicle, Driver, Booking, SystemSummary, Vendor, ComplianceAlert, AssignmentAuditRecord, WebhookEvent, SplitSettlementRecord } from '../types';
+import { Vehicle, Driver, Booking, SystemSummary, Vendor, ComplianceAlert, AssignmentAuditRecord, WebhookEvent, SplitSettlementRecord, Dispatch24hAlert } from '../types';
 import { 
   fetchFleetVehicles, fetchDrivers, fetchBookings, fetchSystemSummary, fetchVendors, 
   fetchComplianceAlerts, triggerComplianceScan, fetchAssignmentAudit,
-  fetchWebhookEvents, fetchSplitSettlements, simulateWebhookEvent
+  fetchWebhookEvents, fetchSplitSettlements, simulateWebhookEvent,
+  fetchPending24hDispatchAlerts, assign24hChauffeur
 } from '../api';
 import { SourcingConciergeDesk } from './SourcingConciergeDesk';
 
@@ -22,6 +23,10 @@ export const VendorDispatchPortal: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [killSwitchActive, setKillSwitchActive] = useState(false);
   const [selectedVendorId, setSelectedVendorId] = useState<string>('vendor-ny-executive');
+
+  const [pending24hAlerts, setPending24hAlerts] = useState<Dispatch24hAlert[]>([]);
+  const [assigning24hTripId, setAssigning24hTripId] = useState<string | null>(null);
+  const [assignSuccessMessage, setAssignSuccessMessage] = useState<string | null>(null);
 
   const [complianceAlerts, setComplianceAlerts] = useState<ComplianceAlert[]>([]);
   const [scanningCompliance, setScanningCompliance] = useState(false);
@@ -66,6 +71,14 @@ export const VendorDispatchPortal: React.FC = () => {
         // quiet
       }
 
+      // Load 24-hour JIT dispatch alerts
+      try {
+        const alerts = await fetchPending24hDispatchAlerts(selectedVendorId);
+        setPending24hAlerts(alerts || []);
+      } catch (e) {
+        // quiet
+      }
+
       if (b.length > 0 && !selectedBooking) {
         setSelectedBooking(b[0]);
       }
@@ -73,6 +86,20 @@ export const VendorDispatchPortal: React.FC = () => {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAssign24hChauffeur = async (tripId: string, driverId?: string, vehicleId?: string) => {
+    setAssigning24hTripId(tripId);
+    try {
+      const res = await assign24hChauffeur(tripId, driverId, vehicleId);
+      setAssignSuccessMessage(res?.message || 'Chauffeur successfully assigned in 24h window!');
+      await loadData();
+      setTimeout(() => setAssignSuccessMessage(null), 5000);
+    } catch (e: any) {
+      alert(`Assignment failed: ${e.message}`);
+    } finally {
+      setAssigning24hTripId(null);
     }
   };
 
@@ -279,6 +306,255 @@ export const VendorDispatchPortal: React.FC = () => {
           >
             {scanningCompliance ? 'Scanning Fleet...' : '🔄 Run Fleet Compliance Scan'}
           </button>
+        </div>
+      )}
+
+      {/* 24-Hour Just-In-Time Chauffeur Dispatch Alerts Banner */}
+      {assignSuccessMessage && (
+        <div style={{
+          background: '#ECFDF5',
+          border: '1px solid #6EE7B7',
+          borderRadius: '12px',
+          padding: '14px 20px',
+          marginBottom: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          color: '#065F46',
+          fontSize: '13px',
+          fontWeight: 700
+        }}>
+          <CheckCircle size={18} color="#059669" />
+          {assignSuccessMessage}
+        </div>
+      )}
+
+      {pending24hAlerts.length > 0 && (
+        <div style={{
+          background: 'linear-gradient(135deg, #1E1B4B 0%, #0F172A 100%)',
+          border: '1px solid rgba(129, 140, 248, 0.3)',
+          borderRadius: '16px',
+          padding: '24px',
+          marginBottom: '24px',
+          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
+          color: '#FFFFFF'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '10px',
+                background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.4)'
+              }}>
+                <Clock size={22} color="#FFFFFF" />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>
+                    24-Hour Just-In-Time Chauffeur Dispatch Queue
+                  </h3>
+                  <span style={{
+                    background: '#EF4444',
+                    color: '#FFFFFF',
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    fontSize: '11px',
+                    fontWeight: 800
+                  }}>
+                    {pending24hAlerts.length} PENDING ACTION
+                  </span>
+                </div>
+                <p style={{ fontSize: '13px', color: '#94A3B8', margin: '4px 0 0 0' }}>
+                  Trips approaching the 24-hour pickup window without an assigned chauffeur. Proximity & availability matching active.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={loadData}
+              disabled={loading}
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                color: '#FFFFFF',
+                padding: '8px 14px',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <RefreshCw size={14} className={loading ? 'pulse-live' : ''} /> Refresh Queue
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {pending24hAlerts.map((alert) => {
+              const isUrgent = alert.urgency === 'CRITICAL' || alert.urgency === 'URGENT';
+              const urgencyColor = alert.urgency === 'CRITICAL' ? '#EF4444' : (alert.urgency === 'URGENT' ? '#F59E0B' : '#6366F1');
+              const urgencyBg = alert.urgency === 'CRITICAL' ? 'rgba(239,68,68,0.2)' : (alert.urgency === 'URGENT' ? 'rgba(245,158,11,0.2)' : 'rgba(99,102,241,0.2)');
+
+              return (
+                <div key={alert.trip_id} style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: `1px solid ${isUrgent ? urgencyColor : 'rgba(255, 255, 255, 0.1)'}`,
+                  borderRadius: '12px',
+                  padding: '20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{
+                        background: urgencyBg,
+                        border: `1px solid ${urgencyColor}`,
+                        color: urgencyColor,
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: 800,
+                        letterSpacing: '0.05em'
+                      }}>
+                        {alert.urgency} · IN {alert.hours_until_pickup}h
+                      </span>
+                      <span style={{ fontSize: '12px', color: '#94A3B8', fontFamily: 'monospace' }}>
+                        Trip: {alert.trip_id}
+                      </span>
+                      <span style={{
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        padding: '3px 8px',
+                        borderRadius: '4px',
+                        fontSize: '11px',
+                        color: '#E2E8F0',
+                        fontWeight: 600
+                      }}>
+                        {alert.vehicle_class.replace('_', ' ')}
+                      </span>
+                      {alert.flight_number && (
+                        <span style={{
+                          background: 'rgba(59, 130, 246, 0.2)',
+                          border: '1px solid #3B82F6',
+                          color: '#93C5FD',
+                          padding: '3px 8px',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          <Plane size={12} /> {alert.flight_number}
+                        </span>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => handleAssign24hChauffeur(alert.trip_id)}
+                      disabled={assigning24hTripId === alert.trip_id}
+                      style={{
+                        background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                        border: 'none',
+                        color: '#FFFFFF',
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                      }}
+                    >
+                      <Zap size={14} />
+                      {assigning24hTripId === alert.trip_id ? 'Assigning...' : '⚡ Auto-Assign Best Chauffeur'}
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                    <div>
+                      <div style={{ fontSize: '11px', color: '#94A3B8', textTransform: 'uppercase', fontWeight: 700, marginBottom: '6px' }}>
+                        Pickup & Itinerary
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#F1F5F9', marginBottom: '4px' }}>
+                        <MapPin size={14} color="#10B981" />
+                        <span style={{ fontWeight: 600 }}>{alert.pickup_address}</span>
+                      </div>
+                      {alert.dropoff_address && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#94A3B8' }}>
+                          <Route size={14} color="#6366F1" />
+                          <span>{alert.dropoff_address}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <div style={{ fontSize: '11px', color: '#94A3B8', textTransform: 'uppercase', fontWeight: 700, marginBottom: '6px' }}>
+                        Candidate On-Duty Chauffeurs ({alert.recommended_candidates.length})
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {alert.recommended_candidates.length === 0 ? (
+                          <div style={{ fontSize: '12px', color: '#EF4444', fontStyle: 'italic' }}>
+                            ⚠️ No on-duty chauffeurs available in radius. Consider fleet re-assignment or farm-out.
+                          </div>
+                        ) : (
+                          alert.recommended_candidates.map((cand, cIdx) => (
+                            <div key={cand.driver_id} style={{
+                              background: 'rgba(0, 0, 0, 0.25)',
+                              border: '1px solid rgba(255, 255, 255, 0.1)',
+                              borderRadius: '8px',
+                              padding: '10px 12px',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              gap: '12px'
+                            }}>
+                              <div>
+                                <div style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span>{cIdx === 0 ? '🥇' : (cIdx === 1 ? '🥈' : '🥉')}</span>
+                                  {cand.driver_name}
+                                  <span style={{ fontSize: '11px', color: '#FBBF24', fontWeight: 600 }}>★ {cand.rating.toFixed(2)}</span>
+                                </div>
+                                <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>
+                                  {cand.vehicle_name} ({cand.license_plate}) · <span style={{ color: '#38BDF8' }}>{cand.distance_miles} mi away (~{cand.eta_minutes}m ETA)</span>
+                                </div>
+                              </div>
+
+                              <button
+                                onClick={() => handleAssign24hChauffeur(alert.trip_id, cand.driver_id, cand.vehicle_id)}
+                                disabled={assigning24hTripId === alert.trip_id}
+                                style={{
+                                  background: 'rgba(99, 102, 241, 0.2)',
+                                  border: '1px solid #6366F1',
+                                  color: '#A5B4FC',
+                                  padding: '6px 12px',
+                                  borderRadius: '6px',
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  whiteSpace: 'nowrap'
+                                }}
+                              >
+                                {assigning24hTripId === alert.trip_id ? 'Assigning...' : 'Assign'}
+                              </button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

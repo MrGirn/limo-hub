@@ -42,6 +42,10 @@ affiliate_policy:
   enable_federation: true
   auto_accept_affiliate_rides: true
   clearing_split_pct: 85.0
+stripe_connect:
+  account_id: acct_conn_d436e32832555b
+  account_type: EXPRESS_CONNECTED
+  payouts_enabled: true
 telecom_compliance:
   legal_business_name: Miami Prestige Chauffeurs LLC
   ein_tax_id: 65-1092834
