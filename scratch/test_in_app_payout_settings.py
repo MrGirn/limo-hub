@@ -23,9 +23,10 @@ def test_in_app_payout_controls():
     print(">> TESTING IN-APP DYNAMIC PAYOUT & COMMISSION ADJUSTMENTS")
     print("=" * 70)
 
-    test_db_url = "sqlite:///./limo_test_payout_controls.db"
-    if os.path.exists("./limo_test_payout_controls.db"):
-        os.remove("./limo_test_payout_controls.db")
+    import uuid
+    unique_id = uuid.uuid4().hex[:6]
+    test_db_file = f"./limo_test_payout_{unique_id}.db"
+    test_db_url = f"sqlite:///{test_db_file}"
 
     engine = get_db_engine(test_db_url)
     session_factory = create_session_factory(engine)

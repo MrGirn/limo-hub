@@ -21,9 +21,10 @@ from packages.global_hub.backend.services.hub_repository import HubRepository
 
 def test_database_persistence():
     print("=== 1. Testing Schema Binding & Session Creation ===")
-    test_db_url = "sqlite:///./limo_test_persistence.db"
-    if os.path.exists("./limo_test_persistence.db"):
-        os.remove("./limo_test_persistence.db")
+    import uuid
+    unique_id = uuid.uuid4().hex[:6]
+    test_db_file = f"./limo_test_pers_{unique_id}.db"
+    test_db_url = f"sqlite:///{test_db_file}"
 
     engine = get_db_engine(test_db_url)
     session_factory = create_session_factory(engine)
