@@ -70,26 +70,34 @@ class OutboundEmailMessage(BaseModel):
 class VendorEmailGatewayService:
     """Manages dedicated email communications and BYOE configuration for a sovereign vendor."""
 
-    def __init__(self, vendor_id: str, domain: str = "limo-ops.com", sender_name: str = "Chauffeur Dispatch"):
+    def __init__(self, vendor_id: str, domain: Optional[str] = None, sender_name: Optional[str] = None):
         self.vendor_id = vendor_id
-        self.domain = domain
-        self.sender_name = sender_name
         self.inbound_rfqs: List[InboundEmailRFQ] = []
         self.outbound_history: List[OutboundEmailMessage] = []
         
-        # Resolve vendor name dynamically if present in database
+        # Resolve vendor name and domain dynamically if present in database
         vendor_obj = getattr(db, "vendors", {}).get(vendor_id)
-        effective_sender = getattr(vendor_obj, "name", sender_name) if vendor_obj else sender_name
+        effective_sender = sender_name or (getattr(vendor_obj, "name", None) if vendor_obj else None) or f"Chauffeur Dispatch {vendor_id}"
+        effective_domain = domain or (getattr(vendor_obj, "domain", None) if vendor_obj else None) or "limo-ops.com"
         
-        self.config: VendorEmailConfig = VendorEmailConfig(
-            vendor_id=vendor_id,
-            from_email=f"dispatch@{domain}",
-            sender_display_name=effective_sender,
-            reply_to_email=f"dispatch@{domain}",
-            smtp_host="",
-            smtp_port=587,
-            smtp_user=f"dispatch@{domain}"
-        )
+        # Resolve existing email config if present in db
+        existing_cfg = getattr(db, "vendor_email_configs", {}).get(vendor_id)
+        if existing_cfg:
+            self.config = existing_cfg
+            self.domain = existing_cfg.from_email.split("@")[-1] if "@" in existing_cfg.from_email else effective_domain
+            self.sender_name = existing_cfg.sender_display_name
+        else:
+            self.domain = effective_domain
+            self.sender_name = effective_sender
+            self.config = VendorEmailConfig(
+                vendor_id=vendor_id,
+                from_email=f"dispatch@{self.domain}",
+                sender_display_name=self.sender_name,
+                reply_to_email=f"dispatch@{self.domain}",
+                smtp_host="",
+                smtp_port=587,
+                smtp_user=f"dispatch@{self.domain}"
+            )
 
     def get_config(self) -> VendorEmailConfig:
         """Retrieves active BYOE configuration."""
@@ -204,9 +212,18 @@ class VendorEmailGatewayService:
         if "phl" in pickup.lower() or "jfk" in pickup.lower() or "lga" in pickup.lower():
             est_distance = 18.5
 
+        # Resolve dynamic tariff from vendor pricing rules or defaults
+        pricing_rule = None
+        if hasattr(db, "vendor_pricing_rules") and self.vendor_id in db.vendor_pricing_rules:
+            pricing_rule = db.vendor_pricing_rules[self.vendor_id].get(vehicle_class.value)
+
+        effective_base = float(pricing_rule.base_rate_net) if pricing_rule else base_rate
+        effective_per_km = float(pricing_rule.per_km_rate_net) if pricing_rule else per_km
+        effective_tax = float(pricing_rule.tax_rate * 100) if pricing_rule else tax_pct
+
         multiplier = 1.25 if vehicle_class == VehicleClass.LUXURY_SUV else (1.5 if vehicle_class == VehicleClass.BUSINESS_VAN else 1.0)
-        subtotal = base_rate + (est_distance * per_km * multiplier)
-        total_quote = round(subtotal * (1.0 + (tax_pct / 100.0)), 2)
+        subtotal = effective_base + (est_distance * effective_per_km * multiplier)
+        total_quote = round(subtotal * (1.0 + (effective_tax / 100.0)), 2)
 
         rfq = InboundEmailRFQ(
             vendor_id=self.vendor_id,
@@ -276,9 +293,9 @@ class VendorEmailGatewayService:
         party = BookingParty(
             booker_name=rfq.sender_name,
             booker_email=rfq.sender_email,
-            booker_phone=rfq.parsed_passenger_phone or "+1 215 555 0199",
+            booker_phone=rfq.parsed_passenger_phone or "",
             passenger_name=rfq.parsed_passenger_name or rfq.sender_name,
-            passenger_phone=rfq.parsed_passenger_phone or "+1 215 555 0199",
+            passenger_phone=rfq.parsed_passenger_phone or "",
             passenger_count=1,
             luggage_count=2,
             special_instructions=f"Created from Inbound Email RFQ ({rfq.subject})"
