@@ -1,0 +1,53 @@
+vendor:
+  id: vendor_boston_vip
+  name: Boston VIP Chauffeur Group
+  tier: AUTONOMOUS_T1
+  region: Boston Metro Area (MA/US)
+  country: United States
+  country_code: US
+  state: MA
+  city: Boston
+  currency: USD
+  currency_symbol: $
+  time_zone: America/New_York
+branding:
+  company_tagline: Beacon Hill Luxury Executive Chauffeur
+  primary_color: '#0F172A'
+  accent_color: '#3B82F6'
+  domain: bostonvipchauffeur.com
+  contact_phone: '+16175550199'
+  office_address: 100 Federal St, Suite 2100, Boston, MA
+  logo_url: /assets/default_logo.png
+communications:
+  inbound_email: rides@bostonvipchauffeur.com
+  outbound_sender: Boston VIP Chauffeur Group Dispatch <confirmations@bostonvipchauffeur.com>
+  smtp_host: smtp.sendgrid.net
+  twilio_sms_number: '+16175550199'
+pricing_matrix:
+  base_rate_usd: 80.0
+  per_km_usd: 3.5
+  tax_rate_pct: 8.0
+  airport_meet_and_greet_usd: 45.0
+  tolls_bridge_tunnel_usd: 15.0
+database:
+  db_type: mysql_partition
+  partition_id: db_partition_boston_vip_01
+fleet_drivers:
+- id: driver_boston_vip_01
+  name: James O'Connor
+  phone: '+16175550188'
+  vehicle: Cadillac Escalade ESV
+  license_plate: MA-VIP01
+affiliate_policy:
+  enable_federation: true
+  auto_accept_affiliate_rides: true
+  clearing_split_pct: 85.0
+telecom_compliance:
+  legal_business_name: Boston VIP Chauffeur Group LLC
+  ein_tax_id: 12-3456789
+  business_type: LLC
+  vertical: TRANSPORTATION_AND_LOGISTICS
+  physical_address: 100 Federal St, Suite 2100, Boston, MA
+  website_url: https://bostonvipchauffeur.com
+  contact_email: compliance@bostonvipchauffeur.com
+  contact_phone: '+16175550199'

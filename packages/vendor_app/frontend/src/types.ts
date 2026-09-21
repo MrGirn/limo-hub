@@ -1,0 +1,29 @@
+export enum VehicleClass {
+  LUXURY_SUV = "LUXURY_SUV",
+  FIRST_CLASS = "FIRST_CLASS",
+  BUSINESS_VAN = "BUSINESS_VAN",
+  ELECTRIC_VIP = "ELECTRIC_VIP",
+  BUSINESS_SEDAN = "BUSINESS_SEDAN",
+  ULTRA_LUXURY = "ULTRA_LUXURY"
+}
+
+export enum VendorUserRole {
+  ROLE_VENDOR_ADMIN = "ROLE_VENDOR_ADMIN",
+  ROLE_DISPATCHER = "ROLE_DISPATCHER",
+  ROLE_VENDOR_FLEET_SAFETY = "ROLE_VENDOR_FLEET_SAFETY",
+  ROLE_VENDOR_BILLING = "ROLE_VENDOR_BILLING",
+  ROLE_VENDOR_SALES_MANAGER = "ROLE_VENDOR_SALES_MANAGER",
+  ROLE_CHAUFFEUR = "ROLE_CHAUFFEUR",
+  ROLE_CORPORATE_BOOKER = "ROLE_CORPORATE_BOOKER",
+  ROLE_CUSTOMER = "ROLE_CUSTOMER"
+}
+
+export interface UserSession {
+  user_id: string;
+  email: string;
+  full_name: string;
+  role: string;
+  vendor_id?: string;
+  department?: string;
+  permissions: string[];
+}

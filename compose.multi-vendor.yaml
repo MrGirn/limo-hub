@@ -1,0 +1,63 @@
+# Production Multi-Vendor & Multi-Region Global Hub Docker Compose Orchestration
+version: '3.8'
+
+services:
+  # ==========================================
+  # GLOBAL HUB CLEARINGHOUSE (CENTRAL SERVICES)
+  # ==========================================
+  global-hub-us-east:
+    image: limo-global-hub:latest
+    build:
+      context: .
+      dockerfile: packages/global_hub/backend/Dockerfile
+    environment:
+      - HUB_NODE_ID=hub-us-east-prod
+      - GEO_REGION_ID=US_EAST
+      - PORT=8000
+    ports:
+      - "8000:8000"
+
+  # ==========================================
+  # SOVEREIGN VENDOR CELLS (LOCAL OPERATORS)
+  # ==========================================
+  vendor-anb-philly:
+    image: limo-vendor-app:latest
+    build:
+      context: .
+      dockerfile: packages/vendor_app/backend/Dockerfile
+    environment:
+      - VENDOR_ID=vendor_anb_philly
+      - VENDOR_NAME=ANB Limo Executive Chauffeurs
+      - VENDOR_MARKET_CITY=Philadelphia
+      - PRIMARY_GLOBAL_HUB_URL=http://global-hub-us-east:8000
+      - PORT=8001
+    ports:
+      - "8001:8001"
+
+  vendor-manhattan-prestige:
+    image: limo-vendor-app:latest
+    build:
+      context: .
+      dockerfile: packages/vendor_app/backend/Dockerfile
+    environment:
+      - VENDOR_ID=vendor_manhattan_prestige
+      - VENDOR_NAME=Manhattan Prestige Limousine
+      - VENDOR_MARKET_CITY=New York
+      - PRIMARY_GLOBAL_HUB_URL=http://global-hub-us-east:8000
+      - PORT=8002
+    ports:
+      - "8002:8002"
+
+  vendor-mayfair-london:
+    image: limo-vendor-app:latest
+    build:
+      context: .
+      dockerfile: packages/vendor_app/backend/Dockerfile
+    environment:
+      - VENDOR_ID=vendor_mayfair_royal
+      - VENDOR_NAME=Mayfair Royal Chauffeurs UK
+      - VENDOR_MARKET_CITY=London
+      - PRIMARY_GLOBAL_HUB_URL=http://global-hub-us-east:8000
+      - PORT=8003
+    ports:
+      - "8003:8003"

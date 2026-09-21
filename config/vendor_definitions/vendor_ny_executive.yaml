@@ -1,0 +1,65 @@
+vendor:
+  id: "vendor_ny_executive"
+  name: "Empire Executive Chauffeurs NY"
+  tier: "AUTONOMOUS_T0"
+  region: "New York Tri-State Area (NY/NJ/CT)"
+  country: "United States"
+  country_code: "US"
+  state: "NY"
+  city: "New York"
+  currency: "USD"
+  currency_symbol: "$"
+  time_zone: "America/New_York"
+
+branding:
+  company_tagline: "Ultra-Luxury Manhattan, JFK, LGA & EWR Chauffeur Services"
+  primary_color: "#0F172A"
+  accent_color: "#3B82F6"
+  domain: "empirelimo-ny.com"
+  contact_phone: "+12125550199"
+  office_address: "767 5th Ave, Manhattan, NY 10153"
+  logo_url: "/assets/empire_ny_logo.png"
+
+communications:
+  inbound_email: "dispatch@empirelimo-ny.com"
+  outbound_sender: "Empire NY Concierge <vip@empirelimo-ny.com>"
+  smtp_host: "smtp.sendgrid.net"
+  twilio_sms_number: "+12125550199"
+
+pricing_matrix:
+  base_rate_usd: 85.00
+  per_km_usd: 3.80
+  tax_rate_pct: 8.875
+  airport_meet_and_greet_usd: 55.00
+  tolls_bridge_tunnel_usd: 19.50
+
+database:
+  db_type: "mysql_partition"
+  partition_id: "db_partition_ny_exec_01"
+
+fleet_drivers:
+  - id: "driver_ny_01"
+    name: "Dmitri Volkov"
+    phone: "+12125550911"
+    vehicle: "Mercedes-Maybach S680"
+    license_plate: "TLC-NYC101"
+  - id: "driver_ny_02"
+    name: "James Thorne"
+    phone: "+12125550912"
+    vehicle: "Cadillac Escalade ESV"
+    license_plate: "TLC-NYC202"
+
+affiliate_policy:
+  enable_federation: true
+  auto_accept_affiliate_rides: true
+  clearing_split_pct: 85.0
+
+telecom_compliance:
+  legal_business_name: "Empire Executive Chauffeurs NY LLC"
+  ein_tax_id: "13-9823411"
+  business_type: "LLC"
+  vertical: "TRANSPORTATION_AND_LOGISTICS"
+  physical_address: "767 5th Ave, Manhattan, NY 10153"
+  website_url: "https://empirelimo-ny.com"
+  contact_email: "compliance@empirelimo-ny.com"
+  contact_phone: "+12125550199"

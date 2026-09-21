@@ -1,0 +1,53 @@
+vendor:
+  id: vendor_miami_prestige_test
+  name: Miami Prestige Chauffeurs
+  tier: AUTONOMOUS_T1
+  region: Miami Metro Area (FL/US)
+  country: United States
+  country_code: US
+  state: FL
+  city: Miami
+  currency: USD
+  currency_symbol: $
+  time_zone: America/New_York
+branding:
+  company_tagline: South Florida Ultra-Luxury Airport & Yacht Transfers
+  primary_color: '#0F172A'
+  accent_color: '#06B6D4'
+  domain: miamiprestige.com
+  contact_phone: '+13055550144'
+  office_address: 1111 Brickell Ave, Suite 2100, Miami, FL
+  logo_url: /assets/default_logo.png
+communications:
+  inbound_email: dispatch@miamiprestige.com
+  outbound_sender: Miami Prestige Chauffeurs Dispatch <confirmations@miamiprestige.com>
+  smtp_host: smtp.sendgrid.net
+  twilio_sms_number: '+13055550144'
+pricing_matrix:
+  base_rate_usd: 85.0
+  per_km_usd: 3.75
+  tax_rate_pct: 7.0
+  airport_meet_and_greet_usd: 50.0
+  tolls_bridge_tunnel_usd: 10.0
+database:
+  db_type: mysql_partition
+  partition_id: db_partition_miami_prestige_test_01
+fleet_drivers:
+- id: driver_miami_prestige_test_01
+  name: Ricardo Alvarez
+  phone: '+13055550992'
+  vehicle: Cadillac Escalade V (Black)
+  license_plate: FL-MIA99
+affiliate_policy:
+  enable_federation: true
+  auto_accept_affiliate_rides: true
+  clearing_split_pct: 85.0
+telecom_compliance:
+  legal_business_name: Miami Prestige Chauffeurs LLC
+  ein_tax_id: 65-1092834
+  business_type: LLC
+  vertical: TRANSPORTATION_AND_LOGISTICS
+  physical_address: 1111 Brickell Ave, Suite 2100, Miami, FL
+  website_url: https://miamiprestige.com
+  contact_email: compliance@miamiprestige.com
+  contact_phone: '+13055550144'

@@ -1,0 +1,38 @@
+# GCP Cloud Run & Cloud SQL Deployment Profile
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: limo-autonomous-platform
+  annotations:
+    run.googleapis.com/ingress: all
+    run.googleapis.com/vpc-access-connector: projects/skilledclass/locations/us-central1/connectors/limo-vpc
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: '2'
+        autoscaling.knative.dev/maxScale: '20'
+        run.googleapis.com/cloudsql-instances: skilledclass:us-central1:limo-mysql-instance
+    spec:
+      containerConcurrency: 80
+      timeoutSeconds: 300
+      containers:
+        - image: gcr.io/skilledclass/limo-autonomous-platform:latest
+          ports:
+            - containerPort: 8000
+          resources:
+            limits:
+              cpu: '2000m'
+              memory: '2Gi'
+          env:
+            - name: MYSQL_HOST
+              value: '/cloudsql/skilledclass:us-central1:limo-mysql-instance'
+            - name: MYSQL_DATABASE
+              value: 'limo_db'
+            - name: GOOGLE_MAPS_API_KEY
+              value: 'YOUR_GOOGLE_MAPS_API_KEY'
+          startupProbe:
+            httpGet:
+              path: /api/v1/system-summary
+            periodSeconds: 10
+            failureThreshold: 3

@@ -1,0 +1,22 @@
+{
+  "name": "Chauffeur Mobile HUD & Fleet Dispatch",
+  "short_name": "ChauffeurHUD",
+  "description": "Professional Mobile Operating System for Luxury Chauffeurs and Fleet Operations",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B0F19",
+  "theme_color": "#D97706",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/vite.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

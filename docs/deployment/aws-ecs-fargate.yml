@@ -1,0 +1,53 @@
+# AWS ECS Fargate & Aurora Serverless Deployment Manifest
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Production Multi-AZ Architecture for Limo Global Autonomous Operations Platform'
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: production
+  ContainerImage:
+    Type: String
+    Default: '123456789012.dkr.ecr.us-east-1.amazonaws.com/limo-autonomous-platform:latest'
+
+Resources:
+  LimoECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub 'limo-cluster-${EnvironmentName}'
+
+  LimoTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub 'limo-task-${EnvironmentName}'
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: '1024'
+      Memory: '2048'
+      ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt ECSTaskRole.Arn
+      ContainerDefinitions:
+        - Name: limo-app
+          Image: !Ref ContainerImage
+          Essential: true
+          PortMappings:
+            - ContainerPort: 8000
+              Protocol: tcp
+          Environment:
+            - Name: MYSQL_DATABASE
+              Value: limo_db
+            - Name: GOOGLE_MAPS_API_KEY
+              Value: YOUR_GOOGLE_MAPS_API_KEY
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LimoCloudWatchLogGroup
+              awslogs-region: !Ref 'AWS::Region'
+              awslogs-stream-prefix: ecs
+
+  LimoCloudWatchLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/ecs/limo-${EnvironmentName}'
+      RetentionInDays: 30

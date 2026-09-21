@@ -1,0 +1,53 @@
+include:
+  - vendors/vendor-anb-philly/compose.vendor.yaml
+  - vendors/vendor-ny-executive/compose.vendor.yaml
+
+services:
+  # 1. Central Global Federation Hub (Port 8000)
+  limo-global-hub:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: limo-global-hub
+    restart: always
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - HUB_MODE=true
+      - PROD_MODE=false
+      - MYSQL_HOST=limo-mysql
+      - MYSQL_PORT=3306
+    depends_on:
+      limo-mysql:
+        condition: service_healthy
+    networks:
+      - limo-net
+
+  # 2. Authoritative Partitioned Database Tier (Port 3307 -> 3306)
+  limo-mysql:
+    image: mysql:8.0
+    container_name: limo-mysql-db
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=!891Mdsaaf
+      - MYSQL_DATABASE=limo_db
+    ports:
+      - "3307:3306"
+    volumes:
+      - limo_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p!891Mdsaaf"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - limo-net
+
+volumes:
+  limo_mysql_data:
+
+networks:
+  limo-net:
+    driver: bridge

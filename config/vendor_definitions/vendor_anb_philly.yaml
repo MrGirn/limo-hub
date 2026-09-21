@@ -1,0 +1,70 @@
+vendor:
+  id: "vendor_anb_philly"
+  name: "ANB Limo Company (Philadelphia, PA)"
+  tier: "AUTONOMOUS_T1"
+  region: "Philadelphia Metropolitan Area (PA/NJ/DE)"
+  country: "United States"
+  country_code: "US"
+  state: "PA"
+  city: "Philadelphia"
+  currency: "USD"
+  currency_symbol: "$"
+  time_zone: "America/New_York"
+
+branding:
+  company_tagline: "Premier Executive & Airport Chauffeur Service of Greater Philadelphia"
+  primary_color: "#1E3A8A"
+  accent_color: "#F59E0B"
+  domain: "anblimo-philly.com"
+  contact_phone: "+12155550144"
+  office_address: "1500 Market St, Center City, Philadelphia, PA 19102"
+  logo_url: "/assets/anb_philly_logo.png"
+
+communications:
+  inbound_email: "rides@anblimo-philly.com"
+  outbound_sender: "ANB Dispatch <confirmations@anblimo-philly.com>"
+  smtp_host: "smtp.sendgrid.net"
+  twilio_sms_number: "+12155550144"
+
+pricing_matrix:
+  base_rate_usd: 75.00
+  per_km_usd: 3.25
+  tax_rate_pct: 8.00
+  airport_meet_and_greet_usd: 45.00
+  tolls_bridge_tunnel_usd: 12.50
+
+database:
+  db_type: "mysql_partition"
+  partition_id: "db_partition_anb_philly_01"
+
+fleet_drivers:
+  - id: "driver_anb_01"
+    name: "Marcus Brody"
+    phone: "+12155550991"
+    vehicle: "Cadillac Escalade ESV (Black)"
+    license_plate: "PA-LM992"
+  - id: "driver_anb_02"
+    name: "Anthony DeVito"
+    phone: "+12155550992"
+    vehicle: "Lincoln Navigator L (Black)"
+    license_plate: "PA-PHL77"
+  - id: "driver_anb_03"
+    name: "Sarah Jenkins"
+    phone: "+12155550993"
+    vehicle: "Mercedes-Benz S580"
+    license_plate: "PA-VIP01"
+
+affiliate_policy:
+  enable_federation: true
+  auto_accept_affiliate_rides: true
+  clearing_split_pct: 85.0
+
+telecom_compliance:
+  legal_business_name: "ANB Limo Company (Philadelphia, PA) LLC"
+  ein_tax_id: "23-7891240"
+  business_type: "LLC"
+  vertical: "TRANSPORTATION_AND_LOGISTICS"
+  physical_address: "1500 Market St, Center City, Philadelphia, PA 19102"
+  website_url: "https://anblimo-philly.com"
+  contact_email: "compliance@anblimo-philly.com"
+  contact_phone: "+12155550144"

@@ -1,0 +1,11 @@
+{
+  "version": "illustrative-2026-09-15-v1",
+  "currency": "EUR",
+  "base_fare": "40.00",
+  "per_km": "2.00",
+  "included_wait_minutes": "30",
+  "per_wait_minute": "1.00",
+  "included_trip_km": "50",
+  "extra_trip_km_surcharge": "0.50",
+  "demo_tax_rate": "0.00"
+}

@@ -1,0 +1,60 @@
+# Global AntiGravity Autonomous Executive Platform Configuration
+# Example configuration override
+WORKFLOW_POLICIES:
+  human_in_the_loop: false
+  auto_approve_threshold: "always"
+  default_action: "SUBMIT_AND_APPROVE"
+
+GLOBAL_PLATFORM:
+  environment: "production"
+  default_tenant_id: "tenant-us-east"
+  brand_name: "Global Executive Chauffeur & Multi-Modal Network"
+  supported_currencies: ["USD", "EUR", "GBP", "AED", "JPY", "CAD", "CHF"]
+  supported_distance_units: ["MILES", "KILOMETERS"]
+
+WORKFLOW_POLICIES:
+  human_in_the_loop: false
+  auto_approve_threshold: "always"
+  default_action: "SUBMIT_AND_APPROVE"
+  autonomous_dispatch_countdown_seconds: 180
+  kill_switch_enabled: false
+
+AWS_SES_CONFIG:
+  enabled: true
+  primary_region: "us-east-1"
+  backup_region: "eu-west-1"
+  default_sender_email: "confirmations@global-executive-limo.com"
+  default_support_email: "concierge@global-executive-limo.com"
+  transactional_templates:
+    booking_confirmed: "template_booking_confirmation_v2"
+    itinerary_rescheduled: "template_flight_delay_reschedule_v2"
+    quote_proposal: "template_instant_quote_v2"
+  vendor_custom_smtp_allowed: true
+
+FLIGHTAWARE_RADAR_CONFIG:
+  enabled: true
+  radar_poll_interval_seconds: 60
+  auto_reschedule_on_delay: true
+  touchdown_free_waiting_minutes: 60
+  supported_radar_modes:
+    - "FLIGHTAWARE_ADS_B"
+    - "FLIGHTSTATS_GLOBAL"
+    - "AMTRAK_HIGH_SPEED_TRACKER"
+    - "EUROSTAR_RAIL_RADAR"
+
+TWILIO_OMNICHANNEL_CONFIG:
+  voice_ai_enabled: true
+  whatsapp_business_enabled: true
+  sms_telemetry_enabled: true
+  default_dispatch_hotline: "+18005550199"
+  default_whatsapp_intake: "+19175550199"
+
+VENDOR_AUTONOMY_POLICIES:
+  custom_pricing_rules_enabled: true
+  ai_dynamic_yield_learning_enabled: true
+  default_driver_payout_share_pct: 75.0
+  inter_vendor_clearing_fee_usd: 5.00
+  fleet_inventory_network_partitioning:
+    modes:
+      - "GLOBAL_NETWORK_CONNECTED"  # Available for network & cross-border legs
+      - "LOCAL_PRIVATE_ONLY"        # Dedicated solely to vendor's private business

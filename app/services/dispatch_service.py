@@ -1,0 +1,147 @@
+"""
+Dispatch and Fleet Allocation Engine for US & Multi-Region Operations.
+Evaluates hard constraints (passenger capacity, luggage capacity, vehicle class, driver on-duty state),
+computes proximity in statute miles from current GPS and vendor depot,
+creates Driver Offers with 180s countdown timers, and manages lifecycle.
+"""
+
+import math
+import uuid
+from decimal import Decimal
+from datetime import datetime, timezone, timedelta
+from typing import Optional, List, Dict, Any, Tuple
+from app.domain_models import (
+    Vehicle, Driver, VehicleClass, Trip, TripEvent, TripStatus,
+    DriverOffer, DriverOfferStatus, NetworkParticipationMode
+)
+from app.database import db
+
+
+def haversine_miles(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Calculate the great circle distance between two points in statute miles."""
+    R = 3958.8  # Earth radius in miles
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = (math.sin(dlat / 2) ** 2 +
+         math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) *
+         math.sin(dlon / 2) ** 2)
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
+
+
+class DispatchService:
+    @staticmethod
+    def find_eligible_resources(
+        tenant_id: str,
+        vendor_id: str,
+        vehicle_class: VehicleClass,
+        passenger_count: int,
+        luggage_count: int,
+        pickup_lat: float = 40.6413,  # default JFK Airport
+        pickup_lng: float = -73.7781,
+        require_global_network: bool = False
+    ) -> List[Dict[str, Any]]:
+        """
+        Finds on-duty drivers and active vehicles that satisfy all capacity and class constraints,
+        filtered by NetworkParticipationMode (Global Network vs Local Private Only) and ranked by proximity.
+        """
+        eligible = []
+        vendor = db.vendors.get(vendor_id)
+        
+        for d in db.drivers.values():
+            if d.tenant_id != tenant_id or d.vendor_id != vendor_id or not d.is_on_duty:
+                continue
+
+            vehicle = db.vehicles.get(d.current_vehicle_id) if d.current_vehicle_id else None
+            if not vehicle or not vehicle.is_active:
+                continue
+
+            # Network Mode Filter: If ride is part of Global Network, vehicle must be connected
+            if require_global_network and vehicle.network_mode != NetworkParticipationMode.GLOBAL_NETWORK_CONNECTED:
+                continue
+
+            # Capacity and Class Checks
+            if vehicle.vehicle_class != vehicle_class and vehicle_class != VehicleClass.BUSINESS_SEDAN:
+                if vehicle.vehicle_class != vehicle_class:
+                    continue
+
+            if vehicle.passenger_capacity < passenger_count or vehicle.luggage_capacity < luggage_count:
+                continue
+
+            # Calculate proximity in statute miles
+            d_lat = d.current_lat or vehicle.current_lat or (vendor.office_lat if vendor else pickup_lat)
+            d_lng = d.current_lng or vehicle.current_lng or (vendor.office_lng if vendor else pickup_lng)
+            distance = haversine_miles(d_lat, d_lng, pickup_lat, pickup_lng)
+            eta_minutes = max(8, int(distance * 2.5))
+
+            eligible.append({
+                "driver": d,
+                "vehicle": vehicle,
+                "distance_miles": round(distance, 1),
+                "eta_minutes": eta_minutes,
+                "score": 100 - min(50, int(distance * 2)) + int(d.rating * 10)
+            })
+
+        # Rank by score descending (closest & highest rated)
+        eligible.sort(key=lambda x: x["score"], reverse=True)
+        return eligible
+
+    @staticmethod
+    def create_and_dispatch_offer(trip: Trip, driver_id: str, vehicle_id: str, payout_net: Decimal) -> DriverOffer:
+        driver = db.drivers.get(driver_id)
+        vehicle = db.vehicles.get(vehicle_id)
+        if not driver or not vehicle:
+            raise ValueError("Driver or vehicle not found")
+
+        offer_id = f"off-{uuid.uuid4().hex[:8]}"
+        offer = DriverOffer(
+            id=offer_id,
+            booking_id=trip.booking_id,
+            trip_id=trip.id,
+            driver_id=driver.id,
+            driver_name=f"{driver.first_name} {driver.last_name}",
+            driver_phone=driver.phone,
+            vehicle_id=vehicle.id,
+            vehicle_details=f"{vehicle.make} {vehicle.model} ({vehicle.license_plate})",
+            offered_payout_net=payout_net,
+            status=DriverOfferStatus.PENDING,
+            timeout_seconds=180
+        )
+        db.driver_offers[offer.id] = offer
+        trip.active_offer = offer
+        trip.status = TripStatus.OFFER_SENT
+        trip.events.append(TripEvent(
+            id=f"ev-{uuid.uuid4().hex[:6]}",
+            trip_id=trip.id,
+            event_type="OFFER_DISPATCHED",
+            description=f"Autonomous offer dispatched to Chauffeur {offer.driver_name} with 180s countdown.",
+            actor="AUTONOMOUS_DISPATCH_ENGINE"
+        ))
+        return offer
+
+    @staticmethod
+    def accept_driver_offer(offer_id: str) -> Trip:
+        offer = db.driver_offers.get(offer_id)
+        if not offer:
+            raise ValueError("Offer not found")
+        if offer.status != DriverOfferStatus.PENDING:
+            raise ValueError(f"Offer is in state {offer.status}")
+
+        offer.status = DriverOfferStatus.ACCEPTED
+        offer.responded_at = datetime.now(timezone.utc)
+
+        trip = db.trips.get(offer.trip_id)
+        if not trip:
+            raise ValueError("Trip not found")
+
+        trip.driver_id = offer.driver_id
+        trip.vehicle_id = offer.vehicle_id
+        trip.status = TripStatus.DRIVER_ACCEPTED
+        trip.events.append(TripEvent(
+            id=f"ev-{uuid.uuid4().hex[:6]}",
+            trip_id=trip.id,
+            event_type="DRIVER_ACCEPTED",
+            description=f"Chauffeur {offer.driver_name} accepted the mission assignment.",
+            actor=f"CHAUFFEUR_{offer.driver_name.upper()}"
+        ))
+        return trip

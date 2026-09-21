@@ -1,0 +1,77 @@
+# =========================================================================
+# GOLDEN MASTER TEMPLATE: SOVEREIGN VENDOR CELL DEFINITION
+# Authoritative Baseline Architecture & Standard Default Parameters
+# Used to backfill unprovided fields during customer onboarding & generate Gap Analysis
+# =========================================================================
+
+vendor:
+  id: "vendor_template_default"
+  name: "Standard Executive Chauffeur Service"
+  tier: "AUTONOMOUS_T1"
+  region: "Metropolitan Area"
+  country: "United States"
+  country_code: "US"
+  state: "PA"
+  city: "Philadelphia"
+  currency: "USD"
+  currency_symbol: "$"
+  time_zone: "America/New_York"
+
+branding:
+  company_tagline: "Premier Executive & Corporate Chauffeur Service"
+  primary_color: "#1E3A8A"
+  accent_color: "#F59E0B"
+  domain: "limo-ops.com"
+  contact_phone: "+18005550199"
+  office_address: "100 Executive Boulevard, Suite 500"
+  logo_url: "/assets/default_vendor_logo.png"
+
+communications:
+  inbound_email: "dispatch@limo-ops.com"
+  outbound_sender: "Executive Dispatch <concierge@limo-ops.com>"
+  smtp_host: "email-smtp.us-east-1.amazonaws.com"
+  twilio_sms_number: "+18005550199"
+
+pricing_matrix:
+  base_rate_usd: 75.00
+  per_km_usd: 3.25
+  per_mile_usd: 4.85
+  tax_rate_pct: 8.00
+  airport_terminal_fee_usd: 15.00
+  airport_meet_and_greet_usd: 45.00
+  tolls_bridge_tunnel_usd: 15.00
+  midnight_surge_multiplier: 1.25
+  minimum_charter_hours: 3
+  hourly_rate_usd: 110.00
+  free_wait_minutes: 60
+  wait_minute_rate_usd: 1.50
+  gratuity_rate_pct: 20.0
+
+database:
+  db_type: "mysql_partition"
+  partition_id: "db_partition_default"
+
+fleet_drivers:
+  - id: "driver_default_01"
+    name: "Certified Executive Chauffeur"
+    phone: "+18005550199"
+    vehicle: "Cadillac Escalade ESV"
+    license_plate: "EXEC-01"
+    vehicle_class: "LUXURY_SUV"
+    passenger_capacity: 6
+    luggage_capacity: 6
+
+affiliate_policy:
+  enable_federation: true
+  auto_accept_affiliate_rides: true
+  clearing_split_pct: 85.0
+
+telecom_compliance:
+  legal_business_name: "Executive Chauffeur Service LLC"
+  ein_tax_id: "00-0000000"
+  business_type: "LLC"
+  vertical: "TRANSPORTATION_AND_LOGISTICS"
+  physical_address: "100 Executive Boulevard, Suite 500"
+  website_url: "https://limo-ops.com"
+  contact_email: "compliance@limo-ops.com"
+  contact_phone: "+18005550199"
