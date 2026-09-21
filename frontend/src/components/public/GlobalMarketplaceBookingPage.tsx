@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Globe, Car, MapPin, Clock, Shield, Award, CheckCircle2, 
   ArrowRight, DollarSign, Sparkles, Building2, User, Phone, 
@@ -25,68 +25,14 @@ interface MarketCity {
   currency: string;
 }
 
-const SUPPORTED_GLOBAL_MARKETS: MarketCity[] = [
-  {
-    id: 'philly',
-    name: 'Philadelphia, PA',
-    country: 'United States',
-    airport_code: 'PHL',
-    default_pickup: 'Philadelphia International Airport (PHL) - Terminal A',
-    default_dropoff: 'The Ritz-Carlton Philadelphia, 10 Avenue of the Arts',
-    matched_vendor_id: 'vendor_anb_philly',
-    matched_vendor_name: 'ANB Limo Company (Sovereign Cell 1)',
-    base_rate: 75.0,
-    per_km: 3.25,
-    currency: 'USD'
-  },
-  {
-    id: 'nyc',
-    name: 'New York, NY',
-    country: 'United States',
-    airport_code: 'JFK / LGA',
-    default_pickup: 'John F. Kennedy International Airport (JFK) - Terminal 4 VIP',
-    default_dropoff: 'The Plaza Hotel, 767 5th Ave, Manhattan',
-    matched_vendor_id: 'vendor_ny_executive',
-    matched_vendor_name: 'New York Executive Limousine (Sovereign Cell 2)',
-    base_rate: 95.0,
-    per_km: 4.10,
-    currency: 'USD'
-  },
-  {
-    id: 'miami',
-    name: 'Miami, FL',
-    country: 'United States',
-    airport_code: 'MIA / FLL',
-    default_pickup: 'Miami International Airport (MIA) - Executive Terminal',
-    default_dropoff: 'Faena Hotel Miami Beach, 3201 Collins Ave',
-    matched_vendor_id: 'vendor_miami_sobe',
-    matched_vendor_name: 'South Beach Sovereign Chauffeurs (Miami)',
-    base_rate: 85.0,
-    per_km: 3.75,
-    currency: 'USD'
-  },
-  {
-    id: 'london',
-    name: 'London',
-    country: 'United Kingdom',
-    airport_code: 'LHR',
-    default_pickup: 'London Heathrow Airport (LHR) - Windsor VIP Suite',
-    default_dropoff: 'The Connaught Hotel, Carlos Place, Mayfair',
-    matched_vendor_id: 'vendor_london_royal',
-    matched_vendor_name: 'Royal Crown Chauffeurs London',
-    base_rate: 90.0,
-    per_km: 3.90,
-    currency: 'GBP'
-  }
-];
-
 export const GlobalMarketplaceBookingPage: React.FC<GlobalMarketplaceBookingPageProps> = ({
   onOpenAdminPortal,
   onOpenOperatorOnboarding
 }) => {
-  const [selectedCityId, setSelectedCityId] = useState<string>('philly');
-  const [pickupAddress, setPickupAddress] = useState<string>('Philadelphia International Airport (PHL) - Terminal A');
-  const [dropoffAddress, setDropoffAddress] = useState<string>('The Ritz-Carlton Philadelphia, 10 Avenue of the Arts');
+  const [markets, setMarkets] = useState<MarketCity[]>([]);
+  const [selectedCityId, setSelectedCityId] = useState<string>('');
+  const [pickupAddress, setPickupAddress] = useState<string>('');
+  const [dropoffAddress, setDropoffAddress] = useState<string>('');
   const [selectedClass, setSelectedClass] = useState<VehicleClass>('FIRST_CLASS');
   const [passengerName, setPassengerName] = useState<string>('');
   const [passengerPhone, setPassengerPhone] = useState<string>('');
@@ -94,21 +40,75 @@ export const GlobalMarketplaceBookingPage: React.FC<GlobalMarketplaceBookingPage
   const [isBookingSuccess, setIsBookingSuccess] = useState<boolean>(false);
   const [lastDispatchedBooking, setLastDispatchedBooking] = useState<any>(null);
 
-  // Dynamic Corridor & Market Detection from pickup address string
+  // Dynamically load active registered markets from Global Hub registry
+  useEffect(() => {
+    const loadMarkets = async () => {
+      try {
+        const res = await fetch('/api/v1/vendor-cell/all-cells');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            const dynamicMarkets: MarketCity[] = data.map((c: any) => {
+              const cfg = c.config || c;
+              const cityName = cfg.city || cfg.state || cfg.vendor_name || 'Metropolitan';
+              return {
+                id: cfg.vendor_id,
+                name: `${cityName}${cfg.state ? `, ${cfg.state}` : ''}`,
+                country: cfg.country || 'United States',
+                airport_code: `${cityName.slice(0, 3).toUpperCase()}`,
+                default_pickup: `${cityName} International Airport - Executive Terminal`,
+                default_dropoff: `Downtown ${cityName} Luxury Suites`,
+                matched_vendor_id: cfg.vendor_id,
+                matched_vendor_name: cfg.vendor_name || cfg.vendor_id,
+                base_rate: cfg.local_base_rate_usd || 75.0,
+                per_km: cfg.local_per_km_rate_usd || 3.25,
+                currency: cfg.local_currency || 'USD'
+              };
+            });
+            setMarkets(dynamicMarkets);
+            if (dynamicMarkets.length > 0) {
+              setSelectedCityId(dynamicMarkets[0].id);
+              setPickupAddress(dynamicMarkets[0].default_pickup);
+              setDropoffAddress(dynamicMarkets[0].default_dropoff);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Could not load dynamic markets:', err);
+      }
+    };
+    loadMarkets();
+  }, []);
+
+  // Dynamic Corridor & Market Detection from pickup address string against registered markets
   const handlePickupChange = (addr: string) => {
     const low = addr.toLowerCase();
-    if (low.includes('phl') || low.includes('phila') || low.includes('pa') || low.includes('penn')) {
-      setSelectedCityId('philly');
-    } else if (low.includes('jfk') || low.includes('lga') || low.includes('ewr') || low.includes('ny') || low.includes('new york') || low.includes('manhattan') || low.includes('brooklyn')) {
-      setSelectedCityId('nyc');
-    } else if (low.includes('mia') || low.includes('fll') || low.includes('miami') || low.includes('florida') || low.includes('sobe') || low.includes('beach')) {
-      setSelectedCityId('miami');
-    } else if (low.includes('lhr') || low.includes('lgw') || low.includes('london') || low.includes('uk') || low.includes('heathrow') || low.includes('mayfair')) {
-      setSelectedCityId('london');
+    for (const m of markets) {
+      const cityToken = m.name.toLowerCase().split(',')[0].trim();
+      if (cityToken && low.includes(cityToken)) {
+        setSelectedCityId(m.id);
+        return;
+      }
+      if (m.matched_vendor_name && low.includes(m.matched_vendor_name.toLowerCase())) {
+        setSelectedCityId(m.id);
+        return;
+      }
     }
   };
 
-  const currentCity = SUPPORTED_GLOBAL_MARKETS.find(c => c.id === selectedCityId) || SUPPORTED_GLOBAL_MARKETS[0];
+  const currentCity = markets.find(c => c.id === selectedCityId) || markets[0] || {
+    id: 'default',
+    name: 'Metropolitan Fleet',
+    country: 'United States',
+    airport_code: 'AIRPORT',
+    default_pickup: 'Executive Airport Terminal',
+    default_dropoff: 'Downtown Luxury Hotel',
+    matched_vendor_id: 'vendor_sovereign',
+    matched_vendor_name: 'Premier Sovereign Chauffeur Fleet',
+    base_rate: 75.0,
+    per_km: 3.25,
+    currency: 'USD'
+  };
 
   // Calculate fare & 85/15 commission split
   const estDistanceKm = 18.5;

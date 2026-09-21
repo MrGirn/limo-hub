@@ -24,107 +24,68 @@ from app.services.pricing_service import resolve_transit_info, US_CLASS_TARIFFS
 
 logger = logging.getLogger("ItineraryEngine")
 
-# Global City to Local Preferred In-Network Vendor Registry
-GLOBAL_VENDOR_HUBS = {
-    "new york": {
-        "vendor_id": "vendor-ny-executive",
-        "vendor_name": "New York Executive Chauffeur & Fleet LLC",
-        "country": "US",
-        "currency": "USD",
-        "depot_address": "550 W 54th St, New York, NY 10019",
-        "tax_rate": Decimal("0.08875"),
-        "include_gratuity_in_billing": False,
-        "gratuity_rate": Decimal("0.00"),
-        "is_available": True
-    },
-    "los angeles": {
-        "vendor_id": "vendor-la-premier",
-        "vendor_name": "Los Angeles Premier VIP Fleet LLC",
-        "country": "US",
-        "currency": "USD",
-        "depot_address": "9800 Airport Blvd, Los Angeles, CA 90045",
-        "tax_rate": Decimal("0.09500"),
-        "include_gratuity_in_billing": False,
-        "gratuity_rate": Decimal("0.00"),
-        "is_available": True
-    },
-    "miami": {
-        "vendor_id": "vendor-mia-elite",
-        "vendor_name": "Miami South Beach Luxury Chauffeur Group",
-        "country": "US",
-        "currency": "USD",
-        "depot_address": "1100 Lincoln Rd, Miami Beach, FL 33139",
-        "tax_rate": Decimal("0.07000"),
-        "include_gratuity_in_billing": False,
-        "gratuity_rate": Decimal("0.00"),
-        "is_available": True
-    },
-    "philadelphia": {
-        "vendor_id": "anb-limo-philly",
-        "vendor_name": "ANB Limo Philadelphia",
-        "country": "US",
-        "currency": "USD",
-        "depot_address": "30th St Station Corridor, Philadelphia, PA",
-        "tax_rate": Decimal("0.08000"),
-        "include_gratuity_in_billing": False,
-        "gratuity_rate": Decimal("0.00"),
-        "is_available": True
-    },
-    "london": {
-        "vendor_id": "vendor-lon-imperial",
-        "vendor_name": "London Imperial Chauffeur & Royal Fleet Ltd",
-        "country": "UK",
-        "currency": "GBP",
-        "depot_address": "Park Lane, Mayfair, London W1K 1PN",
-        "tax_rate": Decimal("0.20000"),
-        "include_gratuity_in_billing": False,
-        "gratuity_rate": Decimal("0.00"),
-        "is_available": True
-    },
-    "paris": {
-        "vendor_id": "vendor-par-prestige",
-        "vendor_name": "Paris Prestige Limousines & Grande Remise SAS",
-        "country": "FR",
-        "currency": "EUR",
-        "depot_address": "Avenue Montaigne, 75008 Paris, France",
-        "tax_rate": Decimal("0.20000"),
-        "include_gratuity_in_billing": False,
-        "gratuity_rate": Decimal("0.00"),
-        "is_available": True
-    },
-    "tokyo": {
-        "vendor_id": "vendor-tyo-nihon",
-        "vendor_name": "Tokyo Nihon VIP Chauffeur Co., Ltd.",
-        "country": "JP",
-        "currency": "JPY",
-        "depot_address": "Ginza 6-Chome, Chuo-ku, Tokyo 104-0061",
-        "tax_rate": Decimal("0.10000"),
-        "include_gratuity_in_billing": False,
-        "gratuity_rate": Decimal("0.00"),
-        "is_available": True
-    },
-    "dubai": {
-        "vendor_id": "dubai-emirates-prestige",
-        "vendor_name": "Dubai Emirates Prestige Chauffeurs",
-        "country": "AE",
-        "currency": "AED",
-        "depot_address": "Downtown Dubai, UAE",
-        "tax_rate": Decimal("0.05000"),
-        "include_gratuity_in_billing": False,
-        "gratuity_rate": Decimal("0.00"),
-        "is_available": True
-    }
-}
-
 
 class ItineraryEngine:
     @classmethod
     def resolve_hub_for_city(cls, city_or_addr: str) -> Optional[Dict[str, Any]]:
-        """Finds matching registered in-network vendor hub for city or address."""
-        lower = city_or_addr.lower()
-        for city, hub in GLOBAL_VENDOR_HUBS.items():
-            if city in lower:
-                return hub
+        """
+        Dynamically finds matching registered in-network vendor hub from
+        the authoritative database partition & cellular vendor registry.
+        Zero hardcoding - any vendor registered in the database or spun up
+        via YAML is dynamically resolved.
+        """
+        lower = (city_or_addr or "").lower()
+
+        # 1. Check active cellular vendor registry
+        try:
+            from app.services.vendor_cell_engine import vendor_cell_registry
+            from app.services.vendor_spinup_service import vendor_spinup_service
+            for cell in vendor_cell_registry.list_all_cells():
+                c_city = (cell.config.city or "").lower()
+                c_state = (cell.config.state or "").lower()
+                c_name = (cell.config.vendor_name or "").lower()
+                c_id = cell.config.vendor_id.lower()
+
+                if (c_city and c_city in lower) or (c_state and f" {c_state}" in lower) or (c_name and c_name in lower) or (c_id in lower):
+                    branding = vendor_spinup_service.get_portal_branding(cell.config.vendor_id) or {}
+                    b_obj = branding.get("branding") or {}
+                    tax_pct = cell.config.local_tax_rate_pct or 8.0
+                    return {
+                        "vendor_id": cell.config.vendor_id,
+                        "vendor_name": cell.config.vendor_name,
+                        "country": cell.config.country_code or "US",
+                        "currency": cell.config.local_currency or "USD",
+                        "depot_address": b_obj.get("office_address") or f"{cell.config.city}, {cell.config.state}",
+                        "tax_rate": Decimal(str(round(tax_pct / 100.0, 5))),
+                        "include_gratuity_in_billing": False,
+                        "gratuity_rate": Decimal("0.00"),
+                        "is_available": True
+                    }
+        except Exception as e:
+            logger.warning(f"Cell registry dynamic hub lookup failed: {e}")
+
+        # 2. Check Database Vendors
+        try:
+            import app.database
+            target_db = getattr(app.database, "db", None)
+            if target_db is not None and getattr(target_db, "vendors", None):
+                for v_id, vendor in target_db.vendors.items():
+                    v_name = getattr(vendor, "name", "").lower()
+                    if v_name and (v_name in lower or v_id.lower() in lower):
+                        return {
+                            "vendor_id": v_id,
+                            "vendor_name": getattr(vendor, "name", v_id),
+                            "country": "US",
+                            "currency": "USD",
+                            "depot_address": getattr(vendor, "depot_address", "Executive Depot"),
+                            "tax_rate": Decimal("0.08875"),
+                            "include_gratuity_in_billing": False,
+                            "gratuity_rate": Decimal("0.00"),
+                            "is_available": getattr(vendor, "is_active", True)
+                        }
+        except Exception as e:
+            logger.warning(f"Database dynamic hub lookup failed: {e}")
+
         return None
 
     @classmethod
@@ -136,7 +97,7 @@ class ItineraryEngine:
     ) -> MasterItinerary:
         """
         Processes arbitrary N-leg multi-modal itinerary inputs:
-        - Evaluates in-network coverage vs out-of-market locations.
+        - Evaluates in-network coverage vs out-of-market locations dynamically.
         - Decomposes into locked confirmed rates and autonomous sourcing inquiry legs.
         - Dynamically applies each operating vendor's independent tariffs and gratuity policy.
         """
@@ -176,15 +137,44 @@ class ItineraryEngine:
 
             tariffs = US_CLASS_TARIFFS.get(leg_vc, default_tariffs)
 
-            origin = leg_input.get("origin_address", "John F. Kennedy International Airport (JFK)")
-            dest = leg_input.get("destination_address", "The Plaza Hotel, New York, NY")
-            orig_city = leg_input.get("origin_city", "New York")
+            origin = leg_input.get("origin_address", "Executive Airport Terminal")
+            dest = leg_input.get("destination_address", "Downtown Luxury Hotel")
+            orig_city = leg_input.get("origin_city", "Metropolitan")
             dest_city = leg_input.get("destination_city", orig_city)
             
             hub = cls.resolve_hub_for_city(f"{origin} {orig_city}")
             is_in_network = hub is not None and hub.get("is_available", True)
             
-            effective_hub = hub or GLOBAL_VENDOR_HUBS["new york"]
+            if hub is not None:
+                effective_hub = hub
+            else:
+                from app.services.vendor_cell_engine import vendor_cell_registry
+                all_cells = vendor_cell_registry.list_all_cells()
+                if all_cells:
+                    first = all_cells[0]
+                    effective_hub = {
+                        "vendor_id": first.config.vendor_id,
+                        "vendor_name": first.config.vendor_name,
+                        "country": first.config.country_code or "US",
+                        "currency": first.config.local_currency or "USD",
+                        "depot_address": f"{first.config.city}, {first.config.state}",
+                        "tax_rate": Decimal(str(round((first.config.local_tax_rate_pct or 8.0) / 100.0, 5))),
+                        "include_gratuity_in_billing": False,
+                        "gratuity_rate": Decimal("0.00"),
+                        "is_available": True
+                    }
+                else:
+                    effective_hub = {
+                        "vendor_id": "vendor-network-default",
+                        "vendor_name": "Executive Chauffeur Alliance",
+                        "country": "US",
+                        "currency": "USD",
+                        "depot_address": "Executive Operations Hub",
+                        "tax_rate": Decimal("0.08000"),
+                        "include_gratuity_in_billing": False,
+                        "gratuity_rate": Decimal("0.00"),
+                        "is_available": True
+                    }
             countries_set.add(effective_hub["country"])
             cities_set.add(orig_city)
             cities_set.add(dest_city)

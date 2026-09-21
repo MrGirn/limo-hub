@@ -59,6 +59,7 @@ class DispatchedJobTicket(BaseModel):
 class GlobalHubDispatchRouter:
     """
     Autonomous multi-vendor round-robin and capacity load-balancing orchestrator.
+    Dynamically discovers registered vendor cells from the cellular registry.
     """
 
     def __init__(self):
@@ -66,33 +67,84 @@ class GlobalHubDispatchRouter:
         self.city_allocation_counters: Dict[str, int] = {}
         # Active dispatch tickets with live 180s SLAs
         self.active_dispatch_tickets: Dict[str, DispatchedJobTicket] = {}
-        # City to Vendor Mapping
-        self.city_vendor_pools: Dict[str, List[str]] = {
-            "nyc": ["vendor_ny_executive", "vendor_manhattan_vip", "vendor_brooklyn_black"],
-            "philly": ["vendor_anb_philly", "vendor_liberty_sedan"],
-            "miami": ["vendor_miami_sobe", "vendor_biscayne_prestige"],
-            "london": ["vendor_london_royal", "vendor_mayfair_chauffeurs"]
-        }
+
+    def get_registered_vendor_cells(self) -> List[Any]:
+        """Dynamically retrieves all registered vendor cells."""
+        return vendor_cell_registry.list_all_cells()
+
+    def get_city_vendor_pools(self) -> Dict[str, List[str]]:
+        """
+        Dynamically builds city-to-vendor mapping from all registered vendor cells.
+        No hardcoding - newly provisioned vendor cells automatically join their market pool.
+        """
+        pools: Dict[str, List[str]] = {}
+        cells = self.get_registered_vendor_cells()
+        for cell in cells:
+            v_id = cell.config.vendor_id
+            city = (cell.config.city or "").lower().strip()
+            state = (cell.config.state or "").lower().strip()
+
+            city_key = city if city else (state if state else v_id)
+            if city_key:
+                if city_key not in pools:
+                    pools[city_key] = []
+                if v_id not in pools[city_key]:
+                    pools[city_key].append(v_id)
+
+            if state and state != city_key:
+                if state not in pools:
+                    pools[state] = []
+                if v_id not in pools[state]:
+                    pools[state].append(v_id)
+
+        return pools
 
     def detect_city_key(self, address_or_text: str) -> str:
-        """Parses city key from input address string."""
+        """
+        Dynamically parses city key from input address string by matching
+        against all active registered vendor locations and regions.
+        """
         low = (address_or_text or "").lower()
-        if any(w in low for w in ["phl", "phila", "pennsylvania", " 191", "rittenhouse", "center city", "conshohocken"]):
-            return "philly"
-        elif any(w in low for w in ["jfk", "lga", "ewr", "new york", "nyc", "manhattan", "brooklyn", "queens", "wall st", "plaza hotel"]):
-            return "nyc"
-        elif any(w in low for w in ["mia", "fll", "miami", "florida", "sobe", "south beach", "brickell", "collins"]):
-            return "miami"
-        elif any(w in low for w in ["lhr", "lgw", "london", "heathrow", "mayfair", "westminster", "kensington", "united kingdom"]):
-            return "london"
-        return "nyc"  # Default global fallback market
+        cells = self.get_registered_vendor_cells()
+
+        # 1. Match against registered vendor cities and states
+        for cell in cells:
+            c_city = (cell.config.city or "").lower().strip()
+            c_state = (cell.config.state or "").lower().strip()
+            c_name = (cell.config.vendor_name or "").lower().strip()
+            c_region = (cell.config.region or "").lower().strip()
+
+            if c_city and c_city in low:
+                return c_city
+            if c_state and (f" {c_state}" in low or f", {c_state}" in low or f",{c_state}" in low or f" {c_state} " in low):
+                return c_city or c_state
+            if c_region and any(term in low for term in c_region.split() if len(term) > 3):
+                return c_city or c_state
+            if c_name and any(term in low for term in c_name.split() if len(term) > 3):
+                return c_city or c_state
+
+        # 2. Return the first active registered cell's city, or normalized first word
+        if cells:
+            return (cells[0].config.city or cells[0].config.vendor_id).lower()
+        return "metropolitan"
 
     def get_city_active_vendors(self, city_key: str, db_instance: Any = None) -> List[CityVendorWeight]:
         """
-        Gathers live capacity metrics for all verified vendors in a city.
+        Gathers live capacity metrics for all verified vendors in a city dynamically.
         """
-        registered_ids = self.city_vendor_pools.get(city_key, ["vendor_anb_philly", "vendor_ny_executive"])
-        
+        pools = self.get_city_vendor_pools()
+        registered_ids = pools.get(city_key.lower())
+
+        if not registered_ids:
+            for k, v_ids in pools.items():
+                if k in city_key.lower() or city_key.lower() in k:
+                    registered_ids = v_ids
+                    break
+
+        if not registered_ids:
+            all_cells = self.get_registered_vendor_cells()
+            registered_ids = [c.config.vendor_id for c in all_cells] if all_cells else []
+
         target_db = db_instance
         if target_db is None:
             try:
@@ -103,7 +155,6 @@ class GlobalHubDispatchRouter:
 
         vendor_weights = []
         for v_id in registered_ids:
-            # Check cell registry or db
             cell = vendor_cell_registry.get_cell(v_id) or vendor_cell_registry.get_cell(v_id.replace("_", "-"))
             vendor_name = cell.config.vendor_name if cell else v_id.replace("_", " ").title()
 
@@ -112,8 +163,8 @@ class GlobalHubDispatchRouter:
             rating = 4.96
 
             if target_db is not None:
-                d_list = [d for d in target_db.drivers.values() if getattr(d, "vendor_id", "") == v_id and d.is_on_duty]
-                v_list = [v for v in target_db.vehicles.values() if getattr(v, "vendor_id", "") == v_id and v.is_active]
+                d_list = [d for d in target_db.drivers.values() if getattr(d, "vendor_id", "") == v_id and getattr(d, "is_on_duty", True)]
+                v_list = [v for v in target_db.vehicles.values() if getattr(v, "vendor_id", "") == v_id and getattr(v, "is_active", True)]
                 drivers_count = max(1, len(d_list) or 3)
                 vehicles_count = max(1, len(v_list) or 4)
                 v_obj = target_db.vendors.get(v_id)
@@ -153,9 +204,9 @@ class GlobalHubDispatchRouter:
         vendor_weights = self.get_city_active_vendors(city_key, db_instance=db_instance)
 
         if not vendor_weights:
-            # Fallback
-            selected_vendor_id = "vendor_anb_philly" if city_key == "philly" else "vendor_ny_executive"
-            selected_vendor_name = "Premier Sovereign Fleet"
+            all_cells = self.get_registered_vendor_cells()
+            selected_vendor_id = all_cells[0].config.vendor_id if all_cells else "vendor_unassigned"
+            selected_vendor_name = all_cells[0].config.vendor_name if all_cells else "Premier Sovereign Fleet"
         else:
             # Sort by least allocated jobs, then highest capacity weight
             vendor_weights.sort(key=lambda w: (w.allocated_jobs_count, -w.capacity_weight))
@@ -213,6 +264,7 @@ class GlobalHubDispatchRouter:
         """
         now = time.time()
         actions_taken = []
+        pools = self.get_city_vendor_pools()
 
         for t_id, ticket in list(self.active_dispatch_tickets.items()):
             if ticket.status == "OFFERED_TO_VENDOR":
@@ -224,12 +276,15 @@ class GlobalHubDispatchRouter:
                     # SLA Timeout: Auto-roll to next vendor
                     if ticket.rollover_attempt < ticket.max_rollover_attempts:
                         # Find alternative vendor in same city
-                        vendors = self.city_vendor_pools.get(ticket.city_key, [])
+                        vendors = pools.get(ticket.city_key.lower(), [])
                         alt_vendors = [v for v in vendors if v != ticket.assigned_vendor_id]
                         next_v_id = alt_vendors[0] if alt_vendors else ticket.assigned_vendor_id
 
+                        cell = vendor_cell_registry.get_cell(next_v_id)
+                        next_v_name = cell.config.vendor_name if cell else next_v_id.replace("_", " ").title()
+
                         ticket.assigned_vendor_id = next_v_id
-                        ticket.assigned_vendor_name = next_v_id.replace("_", " ").title()
+                        ticket.assigned_vendor_name = next_v_name
                         ticket.rollover_attempt += 1
                         ticket.offer_issued_at = now
                         ticket.sla_remaining_seconds = 180
@@ -261,7 +316,7 @@ class GlobalHubDispatchRouter:
             "active_tickets_count": len(tickets),
             "allocation_counters": self.city_allocation_counters,
             "tickets": [t.model_dump() for t in tickets[-20:]],
-            "city_pools": self.city_vendor_pools
+            "city_pools": self.get_city_vendor_pools()
         }
 
 
