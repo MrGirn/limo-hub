@@ -103,6 +103,9 @@ export const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> =
   };
 
   const handleSelect = (place: PlacePrediction) => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
     onChange(place.description);
     setIsOpen(false);
     setSuggestions([]);
@@ -129,6 +132,7 @@ export const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> =
       }
     } else if (e.key === 'Escape') {
       setIsOpen(false);
+      setSuggestions([]);
     }
   };
 
@@ -198,11 +202,6 @@ export const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> =
           type="text"
           value={value}
           onChange={handleInputChange}
-          onFocus={() => {
-            if (value && value.trim().length >= 1) {
-              fetchPredictions(value);
-            }
-          }}
           onKeyDown={handleKeyDown}
           disabled={disabled}
           placeholder={placeholder}

@@ -58,7 +58,7 @@ export const PublicAboutPage: React.FC<PublicAboutPageProps> = ({
       </div>
 
       {/* 2. PILLARS GRID */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+      <div className="public-about-grid">
         <div style={{ 
           background: '#FFFFFF', 
           border: '1px solid #E5E8ED', 

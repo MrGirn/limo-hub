@@ -81,7 +81,7 @@ export const PublicPoliciesPage: React.FC<PublicPoliciesPageProps> = ({
       </div>
 
       {/* 2. POLICY HIGHLIGHTS GRID */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+      <div className="public-policies-grid">
         <div style={{ 
           background: '#FFFFFF', 
           border: '1px solid #E5E8ED', 

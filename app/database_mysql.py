@@ -62,6 +62,8 @@ class VendorModel(Base):
     service_radius_miles = Column(Float, default=50.0)
     deadhead_rate_per_mile = Column(Numeric(10, 2), nullable=True, default=None)
     rating = Column(Float, default=5.0)
+    currency = Column(String(8), default="USD", nullable=False)
+    settlement_currency = Column(String(8), default="USD", nullable=False)
     is_verified = Column(Boolean, default=True)
     network_sharing_enabled = Column(Boolean, default=True)
 

@@ -100,18 +100,7 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div style={{
-        backgroundColor: '#FFFFFF',
-        borderRadius: '16px',
-        width: '100%',
-        maxWidth: '780px',
-        maxHeight: '90vh',
-        display: 'flex',
-        flexDirection: 'column',
-        boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-        border: '1px solid #EAE6DF',
-        overflow: 'hidden'
-      }}>
+      <div className="lookup-modal-content">
         
         {/* Modal Header */}
         <div style={{
@@ -340,7 +329,7 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
                     </div>
 
                     {/* Route Details */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+                    <div className="mission-pickup-dest-grid" style={{ marginBottom: '14px' }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                         <MapPin size={16} color="#0A192F" style={{ marginTop: '2px', flexShrink: 0 }} />
                         <div>

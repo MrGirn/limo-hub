@@ -149,6 +149,15 @@ US_CLASS_TARIFFS = {
 }
 
 
+def get_class_tariff(vehicle_class: Any) -> Dict[str, Any]:
+    vc_val = vehicle_class.value if hasattr(vehicle_class, "value") else str(vehicle_class)
+    for k, v in US_CLASS_TARIFFS.items():
+        if (hasattr(k, "value") and k.value == vc_val) or str(k) == vc_val or k == vehicle_class:
+            return v
+    return US_CLASS_TARIFFS[VehicleClass.LUXURY_SUV]
+
+
+
 # Global Airline IATA Registry for Dynamic Flight Carrier Resolution
 GLOBAL_AIRLINE_IATA_REGISTRY: Dict[str, str] = {
     "BA": "British Airways", "AA": "American Airlines", "DL": "Delta Air Lines",
@@ -301,7 +310,7 @@ class PricingService:
             inside_meet_greet_fee_net = round_cur(Decimal(str(getattr(custom_rule, "inside_baggage_meet_and_greet_fee_net", custom_rule.airport_surcharge_net))) * fx_multiplier)
             airport_fee_net = round_cur(custom_rule.airport_surcharge_net * fx_multiplier)
         else:
-            tariffs = US_CLASS_TARIFFS.get(vehicle_class, US_CLASS_TARIFFS[VehicleClass.LUXURY_SUV])
+            tariffs = get_class_tariff(vehicle_class)
             base_fee = round_cur(tariffs["base_fee"] * fx_multiplier)
             per_mile_rate = round_cur(tariffs["per_mile_rate"] * fx_multiplier)
             per_hour_rate = round_cur(tariffs["per_hour_rate"] * fx_multiplier)
@@ -663,7 +672,7 @@ class PricingService:
             hourly_hours=hourly_hours,
             wait_minutes=wait_minutes,
             currency=target_currency,
-            base_net=base_fee,
+            base_net=hourly_total_net if service_type == ServiceType.HOURLY_AS_DIRECTED else base_fee,
             passenger_distance_net=passenger_distance_net,
             outbound_positioning_net=outbound_positioning_net,
             return_deadhead_net=return_deadhead_net,
@@ -685,3 +694,68 @@ class PricingService:
             expires_at=now + timedelta(hours=2),
             created_at=now
         )
+
+    @staticmethod
+    def calculate_quote_matrix(
+        tenant_id: str,
+        vendor_id: str,
+        service_type: ServiceType,
+        pickup_address: str,
+        dropoff_address: Optional[str] = None,
+        flight_number: Optional[str] = None,
+        train_number: Optional[str] = None,
+        distance_miles: Optional[Decimal] = None,
+        hourly_hours: Optional[int] = None,
+        wait_minutes: int = 0,
+        currency: str = "USD",
+        pickup_time_utc: Optional[datetime] = None,
+        meet_and_greet_inside: bool = False
+    ) -> Dict[str, Quote]:
+        """
+        High-Speed Single-Pass Multi-Class Pricing Matrix Calculator (< 50ms):
+        Computes 3-leg journey route metrics and corridor tolls ONCE,
+        then evaluates tariffs for all certified vehicle classes in CPU memory.
+        """
+        vendor = db.vendors.get(vendor_id)
+        vendor_depot_address = getattr(vendor, "office_address", None) or "1500 Market St, Philadelphia, PA 19102"
+        ref_time = pickup_time_utc or datetime.now(timezone.utc)
+        
+        # 1. 3-Leg Route Metrics calculated ONCE
+        maps_calc = GoogleMapsService.calculate_3_leg_route(
+            vendor_depot=vendor_depot_address,
+            pickup=pickup_address,
+            dropoff=dropoff_address,
+            departure_time_utc=ref_time
+        )
+        
+        resolved_distance = distance_miles or maps_calc["passenger_trip_miles"]
+
+        matrix: Dict[str, Quote] = {}
+        all_classes = [
+            VehicleClass.BUSINESS_SEDAN,
+            VehicleClass.FIRST_CLASS,
+            VehicleClass.LUXURY_SUV,
+            VehicleClass.BUSINESS_VAN,
+            VehicleClass.ELECTRIC_VIP
+        ]
+
+        for vc in all_classes:
+            q = PricingService.calculate_quote(
+                tenant_id=tenant_id,
+                vendor_id=vendor_id,
+                service_type=service_type,
+                vehicle_class=vc,
+                pickup_address=pickup_address,
+                dropoff_address=dropoff_address,
+                flight_number=flight_number,
+                train_number=train_number,
+                distance_miles=resolved_distance,
+                hourly_hours=hourly_hours,
+                wait_minutes=wait_minutes,
+                currency=currency,
+                pickup_time_utc=pickup_time_utc,
+                meet_and_greet_inside=meet_and_greet_inside
+            )
+            matrix[vc.value] = q
+
+        return matrix

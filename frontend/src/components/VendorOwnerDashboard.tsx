@@ -8,7 +8,7 @@ import {
   Layers, ChevronDown, Bell, Terminal, Server, MessageSquare,
   Send, Volume2, Globe, Key, CheckCircle, ExternalLink, Sparkles, Download, Zap,
   CreditCard, Percent, Banknote, Receipt, ArrowDownRight, UserCheck, Lock, Unlock, UserPlus,
-  Copy, Inbox, AtSign, BookOpen, Settings, Trash2, HelpCircle
+  Copy, Inbox, AtSign, BookOpen, Settings, Trash2, HelpCircle, Edit3, Camera
 } from 'lucide-react';
 import { 
   VendorPortalConfig, TeamMember, RoleMatrixResponse, CertifiedAffiliatePartner, 
@@ -20,12 +20,20 @@ import {
   deleteVendorTeamMember, generateTeamMemberImpersonateToken, fetchVendorRolesMatrix,
   fetchGlobalAffiliateDirectory, fetchAffiliateRecommendations, farmOutAffiliateRide, fetchVendorAffiliateRecords,
   fetchVendorAffiliatePolicy, updateVendorAffiliatePolicy, fetchGlobalHubKnowledgeBase,
-  createVendorVehicle, toggleVehicleNetwork, getAuthHeaders,
+  createVendorVehicle, updateVendorVehicle, deleteVendorVehicle, toggleVehicleNetwork, toggleVehicleActive, getAuthHeaders, uploadVehiclePhotoToS3,
   fetchVendorOnboardingStatus, sendVendorOnboardingInvite,
   fetchVendorStripeStatus, createVendorStripeConnectLink, createVendorStripeLoginLink,
+  fetchVendorPayoutsLedger, VendorPayoutLedgerRecord,
   fetchVendorSubscription, upgradeVendorSubscription, switchVendorToPayAsYouGo,
   cancelVendorSubscription, requestVendorAccountDeletion
 } from '../api';
+import { 
+  compressStudioImage, toggleAiStudioLighting, formatBytes, ProcessedStudioImage 
+} from '../utils/imageStudioCompressor';
+import { 
+  ALL_LUXURY_AMENITIES_LIBRARY, matchVehicleProfile, LUXURY_VEHICLE_PROFILES, generateAiTaglines 
+} from '../utils/vehicleKnowledgeBase';
+import { isSelfVendor, vendorIdentityLearner } from '../utils/vendorIdentityMatcher';
 
 interface VendorOwnerDashboardProps {
   config: VendorPortalConfig;
@@ -35,20 +43,51 @@ interface VendorOwnerDashboardProps {
 type AutonomyLevel = 'L5_FULL_AUTONOMY' | 'L3_SHADOW_ASSIST' | 'L0_MANUAL_KILL_SWITCH';
 
 interface NavItem {
-  id: 'overview' | 'dispatch' | 'fleet' | 'drivers' | 'corporate' | 'pricing' | 'email_rfq' | 'team' | 'affiliates' | 'voice_ai' | 'omnichannel' | 'subscription';
+  id: 'overview' | 'dispatch' | 'fleet' | 'drivers' | 'corporate' | 'pricing' | 'payouts' | 'email_rfq' | 'team' | 'affiliates' | 'voice_ai' | 'omnichannel' | 'subscription';
   label: string;
   icon: React.ReactNode;
   category: string;
   badge?: string;
 }
 
+
+export const getVendorLocaleSpecs = (config?: VendorPortalConfig) => {
+  const country = (config?.country || config?.country_code || '').toUpperCase();
+  const currency = (config?.currency || 'USD').toUpperCase();
+  const isMilesCountry = country === 'US' || country === 'USA' || country === 'UNITED STATES' || country === 'GB' || country === 'UK' || country === 'UNITED KINGDOM' || country === 'GREAT BRITAIN' || currency === 'USD' || currency === 'GBP';
+  
+  const defaultUnit: 'MILES' | 'KM' = isMilesCountry ? 'MILES' : 'KM';
+  
+  let currencySymbol = config?.currency_symbol || '$';
+  if (!config?.currency_symbol) {
+    if (currency === 'GBP') currencySymbol = '£';
+    else if (currency === 'EUR') currencySymbol = '€';
+    else if (currency === 'JPY') currencySymbol = '¥';
+    else if (currency === 'CAD') currencySymbol = 'CA$';
+    else if (currency === 'CHF') currencySymbol = 'CHF ';
+    else if (currency === 'AUD') currencySymbol = 'A$';
+    else currencySymbol = '$';
+  }
+  
+  const countryDisplayName = config?.country || (currency === 'GBP' ? 'United Kingdom' : currency === 'EUR' ? 'European Union' : currency === 'JPY' ? 'Japan' : 'United States');
+  
+  return {
+    defaultUnit,
+    currencySymbol,
+    currencyCode: currency,
+    countryName: countryDisplayName,
+    isMilesCountry
+  };
+};
+
 export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
   config,
   onNavigateToStorefront
 }) => {
   const { switchPersona, role: currentAuthRole } = useAuth();
+  const localeSpecs = getVendorLocaleSpecs(config);
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'dispatch' | 'fleet' | 'drivers' | 'corporate' | 'pricing' | 'email_rfq' | 'team' | 'affiliates' | 'voice_ai' | 'omnichannel' | 'subscription'
+    'overview' | 'dispatch' | 'fleet' | 'drivers' | 'corporate' | 'pricing' | 'payouts' | 'email_rfq' | 'team' | 'affiliates' | 'voice_ai' | 'omnichannel' | 'subscription'
   >('overview');
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -154,6 +193,8 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
   });
 
   const [affiliateJobs, setAffiliateJobs] = useState<any[]>([]);
+  const [isFarmInOpen, setIsFarmInOpen] = useState(false);
+  const [isFarmOutOpen, setIsFarmOutOpen] = useState(false);
 
   // Local KPI Metrics
   const [metrics, setMetrics] = useState({
@@ -173,20 +214,75 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
   // Local Fleet
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [showAddVehicleModal, setShowAddVehicleModal] = useState(false);
-  const [newVehicleForm, setNewVehicleForm] = useState({
-    make: '',
-    model: '',
-    year: new Date().getFullYear(),
-    vehicle_class: 'FIRST_CLASS',
-    license_plate: '',
+  const [newVehicleForm, setNewVehicleForm] = useState<{
+    make: string;
+    model: string;
+    year: number;
+    vehicle_class: string;
+    license_plate: string;
+    vin: string;
+    capacity_passengers: number;
+    capacity_luggage: number;
+    exterior_color: string;
+    interior_color: string;
+    tagline: string;
+    description: string;
+    hourly_rate_usd: number;
+    per_km_usd: number;
+    per_distance_rate: number;
+    distance_unit: 'MILES' | 'KM';
+    is_network_shared: boolean;
+    amenities: string[];
+    uploaded_photos: ProcessedStudioImage[];
+  }>({
+    make: 'Cadillac',
+    model: 'Escalade ESV Sport Platinum',
+    year: 2025,
+    vehicle_class: 'LUXURY_SUV',
+    license_plate: 'PA-EXEC01',
     vin: '',
-    capacity_passengers: 3,
-    capacity_luggage: 3,
-    hourly_rate_usd: 125.0,
-    per_km_usd: 3.85,
+    capacity_passengers: 6,
+    capacity_luggage: 6,
+    exterior_color: 'Obsidian Black Metallic',
+    interior_color: 'Jet Black Semi-Aniline Leather with Diamond Stitching',
+    tagline: 'The Undisputed American Executive Standard in Chauffeur Luxury',
+    description: 'Extended wheelbase delivering presidential stature, 142.8 cubic feet of cargo capacity for oversized luggage, AKG Studio Reference 36-speaker sound, and tri-zone climate comfort.',
+    hourly_rate_usd: 145.0,
+    per_km_usd: 3.95,
+    per_distance_rate: localeSpecs.defaultUnit === 'MILES' ? 4.85 : 3.95,
+    distance_unit: localeSpecs.defaultUnit,
     is_network_shared: true,
-    image_url: ''
+    amenities: [
+      '⚡ Ultra-Fast 5G Wi-Fi Hotspot',
+      '🛄 Massive Dedicated Cargo Bay (6+ Suitcases)',
+      '📺 Dual 4K Rear OLED Entertainment Displays',
+      '💺 Heated, Ventilated & Massaging Seats',
+      '🥤 Complimentary Chilled Fiji Artesian Water & Mints',
+      '🚪 Power Retractable Illuminated Boarding Steps',
+      '🔌 Dual 110V AC Power Inverters & 100W USB-C PD',
+      '🔇 Whisper-Quiet Acoustic Laminated Privacy Glass'
+    ],
+    uploaded_photos: []
   });
+  const [customAmenityInput, setCustomAmenityInput] = useState('');
+  const [isCompressingPhotos, setIsCompressingPhotos] = useState(false);
+  const [isUploadingToS3, setIsUploadingToS3] = useState(false);
+  const [aiVehicleQuery, setAiVehicleQuery] = useState('');
+
+  // Vehicle Edit & Delete CRUD State
+  const [editingVehicle, setEditingVehicle] = useState<any | null>(null);
+  const [editVehicleForm, setEditVehicleForm] = useState<any | null>(null);
+  const [vehicleToDelete, setVehicleToDelete] = useState<any | null>(null);
+  const [isDeletingVehicle, setIsDeletingVehicle] = useState(false);
+  const [isUpdatingVehicle, setIsUpdatingVehicle] = useState(false);
+  const [editCustomAmenity, setEditCustomAmenity] = useState('');
+  const [editIsCompressingPhotos, setEditIsCompressingPhotos] = useState(false);
+
+  // AI Tagline Assistant State
+  const [newVehicleAiTaglines, setNewVehicleAiTaglines] = useState<string[]>([]);
+  const [showNewAiTaglines, setShowNewAiTaglines] = useState<boolean>(true);
+  const [editVehicleAiTaglines, setEditVehicleAiTaglines] = useState<string[]>([]);
+  const [showEditAiTaglines, setShowEditAiTaglines] = useState<boolean>(true);
 
   // Local Chauffeurs with Compensation Models
   const [chauffeurs, setChauffeurs] = useState<any[]>([]);
@@ -217,6 +313,8 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
   const [instantPayoutRecords, setInstantPayoutRecords] = useState<any[]>([]);
   const [stripeConnectStatus, setStripeConnectStatus] = useState<any>(null);
   const [isLoadingStripe, setIsLoadingStripe] = useState<boolean>(false);
+  const [payoutLedgerRecords, setPayoutLedgerRecords] = useState<VendorPayoutLedgerRecord[]>([]);
+  const [isLoadingLedger, setIsLoadingLedger] = useState<boolean>(false);
 
   // Vendor SaaS Subscription & Hub Billing State
   const [subscriptionData, setSubscriptionData] = useState<any | null>(null);
@@ -352,6 +450,7 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
     { id: 'drivers', label: 'Chauffeurs & Payroll', icon: <Users size={16} />, category: 'Fleet' },
     { id: 'corporate', label: 'Corporate B2B Accounts', icon: <Building2 size={16} />, category: 'Commercial' },
     { id: 'pricing', label: 'Dynamic Tariff Matrix', icon: <Sliders size={16} />, category: 'Commercial' },
+    { id: 'payouts', label: 'Direct Payouts & Banking', icon: <Banknote size={16} />, category: 'Commercial', badge: stripeConnectStatus?.payouts_enabled ? 'Active' : '⚠️ Setup' },
     { id: 'email_rfq', label: 'Email Gateway & BYOE', icon: <Mail size={16} />, category: 'Intelligence', badge: emailInbox.filter(e => e.status === 'PARSED_AWAITING_CONVERSION').length > 0 ? `${emailInbox.filter(e => e.status === 'PARSED_AWAITING_CONVERSION').length}` : undefined },
     { id: 'team', label: 'Team & RBAC Access', icon: <ShieldCheck size={16} />, category: 'Administration', badge: `${teamMembers.length} Staff` },
     { id: 'subscription', label: 'Subscription & Hub Billing', icon: <CreditCard size={16} />, category: 'Administration', badge: subscriptionData?.billing_status === 'PAST_DUE' ? '⚠️ Due' : subscriptionData?.tier_name ? subscriptionData.tier_name.split(' ')[0] : 'SaaS' },
@@ -364,6 +463,30 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
   const [showOnboardingBanner, setShowOnboardingBanner] = useState(true);
   const [isSendingInvite, setIsSendingInvite] = useState(false);
   const [inviteSuccessMsg, setInviteSuccessMsg] = useState<string | null>(null);
+
+  const loadStripeStatus = () => {
+    if (config?.vendor_id) {
+      setIsLoadingStripe(true);
+      fetchVendorStripeStatus(config.vendor_id)
+        .then(status => setStripeConnectStatus(status))
+        .catch(err => console.log('Stripe status load notice:', err))
+        .finally(() => setIsLoadingStripe(false));
+    }
+  };
+
+  const loadPayoutLedger = () => {
+    if (config?.vendor_id) {
+      setIsLoadingLedger(true);
+      fetchVendorPayoutsLedger(config.vendor_id)
+        .then(res => {
+          if (res && Array.isArray(res.records)) {
+            setPayoutLedgerRecords(res.records);
+          }
+        })
+        .catch(err => console.log('Payout ledger load notice:', err))
+        .finally(() => setIsLoadingLedger(false));
+    }
+  };
 
   const loadOnboardingStatus = () => {
     if (config?.vendor_id) {
@@ -459,9 +582,15 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
   React.useEffect(() => {
     loadOnboardingStatus();
     loadSubscription();
+    loadStripeStatus();
+    loadPayoutLedger();
   }, [config?.vendor_id]);
 
   React.useEffect(() => {
+    if (config) {
+      vendorIdentityLearner.learnFromContext(config);
+    }
+
     // 1. Fetch Fleet Vehicles for THIS specific vendor
     fetch(`/api/v1/vendors/${config.vendor_id}/fleet-inventory`, { headers: getAuthHeaders() })
       .then(res => res.json())
@@ -470,14 +599,26 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
           const mapped = data.map((v: any) => ({
             id: v.id,
             make_model: `${v.make || ''} ${v.model || ''}`.trim() || 'Executive Vehicle',
+            make: v.make,
+            model: v.model,
             plate: v.license_plate || '—',
             vin: v.vin || '—',
             year: v.year || 2025,
             class: v.vehicle_class || 'FIRST_CLASS',
-            status: v.status || 'AVAILABLE',
+            status: v.status || (v.is_active !== false ? 'AVAILABLE' : 'MAINTENANCE'),
+            is_active: v.is_active !== undefined ? v.is_active : (v.status !== 'MAINTENANCE' && v.status !== 'DISABLED'),
+            passenger_capacity: v.passenger_capacity || 3,
+            luggage_capacity: v.luggage_capacity || 3,
+            exterior_color: v.exterior_color || 'Obsidian Black',
+            interior_color: v.interior_color || 'Jet Black Nappa Leather',
+            tagline: v.tagline || '',
+            hourly_rate_usd: v.hourly_rate_usd || 125.0,
+            per_km_usd: v.per_km_usd || 3.85,
             inspection_due: '2027-04-15',
             insurance_valid: true,
-            is_network_shared: v.is_network_shared
+            is_network_shared: v.is_network_shared,
+            amenities: v.amenities || [],
+            photos: v.photos || []
           }));
           setVehicles(mapped);
         }
@@ -655,7 +796,7 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
     fetchAffiliateRecommendations(config.vendor_id, 'New York JFK Airport')
       .then(recs => {
         if (recs && Array.isArray(recs)) {
-          setAffiliateRecommendations(recs);
+          setAffiliateRecommendations(recs.filter(r => !isSelfVendor(r.partner, config)));
         }
       })
       .catch(err => console.log('Recommendations load notice:', err));
@@ -690,7 +831,7 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
     setMatcherLoading(true);
     try {
       const recs = await fetchAffiliateRecommendations(config.vendor_id, destinationQuery);
-      setAffiliateRecommendations(recs);
+      setAffiliateRecommendations((recs || []).filter(r => !isSelfVendor(r.partner, config)));
     } catch (err) {
       console.error('Error matching affiliates:', err);
     } finally {
@@ -710,11 +851,246 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
     setShowFarmOutModal(true);
   };
 
+  const handleAiAutoFillSpecs = (customQuery?: string) => {
+    const q = customQuery || aiVehicleQuery || `${newVehicleForm.make} ${newVehicleForm.model}`;
+    const profile = matchVehicleProfile(q);
+    const dynamicTaglines = generateAiTaglines(profile.make, profile.model, profile.vehicleClass, profile.recommendedAmenities);
+    setNewVehicleAiTaglines(dynamicTaglines);
+    setShowNewAiTaglines(true);
+    
+    setNewVehicleForm(prev => {
+      const activeUnit = prev.distance_unit || localeSpecs.defaultUnit;
+      const rateForUnit = activeUnit === 'MILES' ? profile.perMileRateUsd : profile.perKmRateUsd;
+
+      return {
+        ...prev,
+        make: profile.make,
+        model: profile.model,
+        vehicle_class: profile.vehicleClass,
+        capacity_passengers: profile.passengerCapacity,
+        capacity_luggage: profile.luggageCapacity,
+        hourly_rate_usd: profile.hourlyRateUsd,
+        per_distance_rate: rateForUnit,
+        per_km_usd: profile.perKmRateUsd,
+        distance_unit: activeUnit,
+        exterior_color: profile.exteriorColor,
+        interior_color: profile.interiorColor,
+        tagline: profile.tagline,
+        description: profile.description,
+        amenities: profile.recommendedAmenities,
+        uploaded_photos: prev.uploaded_photos
+      };
+    });
+
+    const activeUnit = newVehicleForm.distance_unit || localeSpecs.defaultUnit;
+    setActionNotice(`✨ AI Assistant auto-populated specs, ${activeUnit === 'MILES' ? 'per-mile' : 'per-km'} tariffs & luxury extras for ${profile.make} ${profile.model}!`);
+  };
+
+  const handleGenerateNewVehicleTaglines = () => {
+    const suggestions = generateAiTaglines(
+      newVehicleForm.make,
+      newVehicleForm.model,
+      newVehicleForm.vehicle_class,
+      newVehicleForm.amenities
+    );
+    setNewVehicleAiTaglines(suggestions);
+    setShowNewAiTaglines(true);
+    setActionNotice(`✨ AI Assistant generated ${suggestions.length} showroom marketing headlines for ${newVehicleForm.make} ${newVehicleForm.model}!`);
+  };
+
+  const handleGenerateEditVehicleTaglines = () => {
+    if (!editVehicleForm) return;
+    const suggestions = generateAiTaglines(
+      editVehicleForm.make,
+      editVehicleForm.model,
+      editVehicleForm.vehicle_class,
+      editVehicleForm.amenities
+    );
+    setEditVehicleAiTaglines(suggestions);
+    setShowEditAiTaglines(true);
+    setActionNotice(`✨ AI Assistant generated ${suggestions.length} showroom marketing headlines for ${editVehicleForm.make} ${editVehicleForm.model}!`);
+  };
+
+  const handleToggleDistanceUnit = (unit: 'MILES' | 'KM') => {
+    setNewVehicleForm(prev => {
+      if (prev.distance_unit === unit) return prev;
+      let newRate = prev.per_distance_rate;
+      if (unit === 'KM' && prev.distance_unit === 'MILES') {
+        newRate = Math.round((prev.per_distance_rate / 1.609) * 100) / 100;
+      } else if (unit === 'MILES' && prev.distance_unit === 'KM') {
+        newRate = Math.round((prev.per_distance_rate * 1.609) * 100) / 100;
+      }
+      return {
+        ...prev,
+        distance_unit: unit,
+        per_distance_rate: newRate,
+        per_km_usd: unit === 'KM' ? newRate : Math.round((newRate / 1.609) * 100) / 100
+      };
+    });
+  };
+
+  const handlePhotosSelected = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setIsCompressingPhotos(true);
+    try {
+      const processed: ProcessedStudioImage[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        // Auto-assign photo type sequence if multiple (Exterior -> Cabin -> Cockpit -> Trunk)
+        let defaultType: 'EXTERIOR' | 'CABIN' | 'COCKPIT' | 'TRUNK' | 'AMENITY' = 'EXTERIOR';
+        if (i === 1) defaultType = 'CABIN';
+        else if (i === 2) defaultType = 'COCKPIT';
+        else if (i >= 3) defaultType = 'TRUNK';
+
+        const comp = await compressStudioImage(file, {
+          applyAiLighting: true,
+          photoType: defaultType,
+          isPrimary: newVehicleForm.uploaded_photos.length === 0 && i === 0
+        });
+        processed.push(comp);
+      }
+      setNewVehicleForm(prev => ({
+        ...prev,
+        uploaded_photos: [...prev.uploaded_photos, ...processed]
+      }));
+      setActionNotice(`📸 Successfully compressed ${processed.length} photo(s) using in-browser studio engine!`);
+    } catch (err: any) {
+      console.error('Error compressing photos:', err);
+      setActionNotice(`⚠️ Image compression notice: ${err.message}`);
+    } finally {
+      setIsCompressingPhotos(false);
+    }
+  };
+
+  const handleTogglePhotoAiLighting = async (index: number) => {
+    const target = newVehicleForm.uploaded_photos[index];
+    if (!target) return;
+    try {
+      const nextEnhanced = !target.isAiEnhanced;
+      const updated = await toggleAiStudioLighting(target, nextEnhanced);
+      setNewVehicleForm(prev => ({
+        ...prev,
+        uploaded_photos: prev.uploaded_photos.map((p, i) => i === index ? updated : p)
+      }));
+    } catch (err) {
+      console.error('AI lighting toggle failed:', err);
+    }
+  };
+
+  const handleSetPrimaryPhoto = (index: number) => {
+    setNewVehicleForm(prev => ({
+      ...prev,
+      uploaded_photos: prev.uploaded_photos.map((p, i) => ({
+        ...p,
+        isPrimary: i === index
+      }))
+    }));
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    setNewVehicleForm(prev => {
+      const remaining = prev.uploaded_photos.filter((_, i) => i !== index);
+      if (remaining.length > 0 && !remaining.some(p => p.isPrimary)) {
+        remaining[0].isPrimary = true;
+      }
+      return { ...prev, uploaded_photos: remaining };
+    });
+  };
+
+  const handleToggleAmenity = (amenity: string) => {
+    setNewVehicleForm(prev => {
+      const exists = prev.amenities.includes(amenity);
+      return {
+        ...prev,
+        amenities: exists
+          ? prev.amenities.filter(a => a !== amenity)
+          : [...prev.amenities, amenity]
+      };
+    });
+  };
+
+  const handleAddCustomAmenity = () => {
+    if (!customAmenityInput.trim()) return;
+    const clean = customAmenityInput.trim();
+    if (!newVehicleForm.amenities.includes(clean)) {
+      setNewVehicleForm(prev => ({
+        ...prev,
+        amenities: [...prev.amenities, clean]
+      }));
+    }
+    setCustomAmenityInput('');
+  };
+
   const handleAddVehicleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setLoading(true);
-      const newVeh = await createVendorVehicle(config.vendor_id, newVehicleForm);
+      setIsUploadingToS3(true);
+
+      // 1. Upload compressed studio photos to S3
+      const s3PhotoPayloads = [];
+      if (newVehicleForm.uploaded_photos.length > 0) {
+        for (let i = 0; i < newVehicleForm.uploaded_photos.length; i++) {
+          const p = newVehicleForm.uploaded_photos[i];
+          try {
+            if (p.dataUrl.startsWith('data:image/')) {
+              const s3Res = await uploadVehiclePhotoToS3(config.vendor_id, {
+                base64_data: p.dataUrl,
+                photo_type: p.photoType,
+                caption: p.caption,
+                is_primary: p.isPrimary,
+                display_order: i + 1,
+                ai_enhanced: p.isAiEnhanced
+              });
+              s3PhotoPayloads.push({
+                photo_id: s3Res.photo_id,
+                url: s3Res.url,
+                caption: s3Res.caption,
+                photo_type: s3Res.photo_type,
+                is_primary: s3Res.is_primary,
+                display_order: s3Res.display_order
+              });
+            } else {
+              // Existing hosted stock URL
+              s3PhotoPayloads.push({
+                photo_id: `vimg_${i + 1}`,
+                url: p.dataUrl,
+                caption: p.caption,
+                photo_type: p.photoType,
+                is_primary: p.isPrimary,
+                display_order: i + 1
+              });
+            }
+          } catch (uploadErr) {
+            console.warn('S3 upload notice for photo:', uploadErr);
+          }
+        }
+      }
+
+      const rateKm = newVehicleForm.distance_unit === 'KM'
+        ? newVehicleForm.per_distance_rate
+        : Math.round((newVehicleForm.per_distance_rate / 1.609) * 100) / 100;
+
+      // 2. Register vehicle in backend fleet inventory
+      const newVeh = await createVendorVehicle(config.vendor_id, {
+        make: newVehicleForm.make,
+        model: newVehicleForm.model,
+        year: newVehicleForm.year,
+        license_plate: newVehicleForm.license_plate,
+        vin: newVehicleForm.vin,
+        vehicle_class: newVehicleForm.vehicle_class,
+        passenger_capacity: newVehicleForm.capacity_passengers,
+        luggage_capacity: newVehicleForm.capacity_luggage,
+        exterior_color: newVehicleForm.exterior_color,
+        interior_color: newVehicleForm.interior_color,
+        tagline: newVehicleForm.tagline,
+        hourly_rate_usd: newVehicleForm.hourly_rate_usd,
+        per_km_usd: rateKm,
+        network_mode: newVehicleForm.is_network_shared ? 'GLOBAL_NETWORK_CONNECTED' : 'LOCAL_PRIVATE_ONLY',
+        amenities: newVehicleForm.amenities,
+        photos: s3PhotoPayloads
+      });
+
       setVehicles(prev => [...prev, {
         id: newVeh.id,
         make_model: `${newVeh.make || ''} ${newVeh.model || ''}`.trim() || 'Luxury Executive Vehicle',
@@ -723,16 +1099,37 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
         year: newVeh.year || newVehicleForm.year,
         class: newVeh.vehicle_class || newVehicleForm.vehicle_class,
         status: newVeh.status || 'AVAILABLE',
+        is_active: true,
+        passenger_capacity: newVeh.passenger_capacity || newVehicleForm.capacity_passengers,
+        luggage_capacity: newVeh.luggage_capacity || newVehicleForm.capacity_luggage,
         inspection_due: '2027-09-18',
         insurance_valid: true,
+        photos: s3PhotoPayloads,
+        amenities: newVehicleForm.amenities,
         is_network_shared: Boolean(newVeh.is_network_shared ?? newVehicleForm.is_network_shared)
       }]);
+
       setShowAddVehicleModal(false);
-      setActionNotice(`✨ Added ${newVehicleForm.year} ${newVehicleForm.make} ${newVehicleForm.model} to Showroom & Live Fleet!`);
+      setActionNotice(`✨ Added ${newVehicleForm.year} ${newVehicleForm.make} ${newVehicleForm.model} to Showroom & Live Fleet with ${s3PhotoPayloads.length} S3 photos!`);
     } catch (err: any) {
       setActionNotice(`⚠️ Failed to add vehicle: ${err.message}`);
     } finally {
       setLoading(false);
+      setIsUploadingToS3(false);
+    }
+  };
+
+  const handleSetVehicleActiveStatus = async (vehicleId: string, nextActive: boolean, plateOrName?: string) => {
+    try {
+      await toggleVehicleActive(config.vendor_id, vehicleId, nextActive);
+      setVehicles(prev => prev.map(v => v.id === vehicleId ? { ...v, is_active: nextActive, status: nextActive ? 'AVAILABLE' : 'MAINTENANCE' } : v));
+      setActionNotice(
+        nextActive
+          ? `🟢 Vehicle ${plateOrName || vehicleId} is now Active & In Service (Visible to customers in storefront showroom & rentals).`
+          : `🛠️ Vehicle ${plateOrName || vehicleId} is now Under Maintenance / Repair (Hidden from customer showroom & rental options).`
+      );
+    } catch (err: any) {
+      setActionNotice(`⚠️ Failed to update vehicle status: ${err.message}`);
     }
   };
 
@@ -744,6 +1141,261 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
       setActionNotice(`🌐 Vehicle network sharing set to ${nextShared ? 'Active (Open for Global Hub farm-in)' : 'Private Local Only'}.`);
     } catch (err: any) {
       setActionNotice(`⚠️ Network toggle error: ${err.message}`);
+    }
+  };
+
+  const handleOpenEditVehicleModal = (v: any) => {
+    setEditingVehicle(v);
+    const vMake = v.make || v.make_model?.split(' ')[0] || 'Cadillac';
+    const vModel = v.model || v.make_model?.split(' ').slice(1).join(' ') || 'Fleet Vehicle';
+    const hourlyRate = v.hourly_rate_usd || 125.0;
+    const perKmRate = v.per_km_usd || 3.85;
+    const defaultUnit = localeSpecs.defaultUnit;
+    const perDistRate = defaultUnit === 'MILES' ? Math.round(perKmRate * 1.609 * 100) / 100 : perKmRate;
+
+    const currentPhotos: ProcessedStudioImage[] = (v.photos || []).map((p: any, idx: number) => ({
+      originalName: `vehicle_photo_${idx + 1}.webp`,
+      originalSizeBytes: 180000,
+      compressedSizeBytes: 180000,
+      compressionRatioPct: 80,
+      width: 1920,
+      height: 1080,
+      dataUrl: p.url || p.photo_url || p.dataUrl,
+      photoType: p.photo_type || 'EXTERIOR',
+      caption: p.caption || p.label || `${vMake} ${vModel}`,
+      isPrimary: Boolean(p.is_primary ?? (idx === 0)),
+      isAiEnhanced: true
+    }));
+
+    setEditVehicleForm({
+      id: v.id,
+      name: v.name || `${vMake} ${vModel}`,
+      make: vMake,
+      model: vModel,
+      year: v.year || 2025,
+      vehicle_class: v.class || v.vehicle_class || 'FIRST_CLASS',
+      license_plate: v.plate || v.license_plate || '',
+      vin: v.vin || '',
+      capacity_passengers: v.passenger_capacity || 3,
+      capacity_luggage: v.luggage_capacity || 3,
+      exterior_color: v.exterior_color || 'Obsidian Black',
+      interior_color: v.interior_color || 'Jet Black Nappa Leather',
+      tagline: v.tagline || '',
+      description: v.description || '',
+      hourly_rate_usd: hourlyRate,
+      per_km_usd: perKmRate,
+      per_distance_rate: perDistRate,
+      distance_unit: defaultUnit,
+      is_network_shared: v.is_network_shared !== false,
+      is_active: v.is_active !== false && v.status !== 'MAINTENANCE',
+      amenities: v.amenities || [],
+      uploaded_photos: currentPhotos
+    });
+
+    const editTaglines = generateAiTaglines(vMake, vModel, v.class || v.vehicle_class, v.amenities || []);
+    setEditVehicleAiTaglines(editTaglines);
+    setShowEditAiTaglines(true);
+  };
+
+  const handleToggleEditAmenity = (amenity: string) => {
+    if (!editVehicleForm) return;
+    setEditVehicleForm((prev: any) => {
+      const exists = prev.amenities.includes(amenity);
+      return {
+        ...prev,
+        amenities: exists ? prev.amenities.filter((a: string) => a !== amenity) : [...prev.amenities, amenity]
+      };
+    });
+  };
+
+  const handleAddEditCustomAmenity = () => {
+    if (!editCustomAmenity.trim() || !editVehicleForm) return;
+    const val = editCustomAmenity.trim();
+    if (!editVehicleForm.amenities.includes(val)) {
+      setEditVehicleForm((prev: any) => ({
+        ...prev,
+        amenities: [...prev.amenities, val]
+      }));
+    }
+    setEditCustomAmenity('');
+  };
+
+  const handleEditPhotosSelected = async (files: FileList | null) => {
+    if (!files || files.length === 0 || !editVehicleForm) return;
+    setEditIsCompressingPhotos(true);
+    try {
+      const processed: ProcessedStudioImage[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const res = await compressStudioImage(file, {
+          maxWidth: 2048,
+          maxHeight: 1365,
+          quality: 0.82,
+          applyAiLighting: true
+        });
+        processed.push(res);
+      }
+      setEditVehicleForm((prev: any) => ({
+        ...prev,
+        uploaded_photos: [...prev.uploaded_photos, ...processed]
+      }));
+    } catch (err: any) {
+      setActionNotice(`⚠️ Image processing error: ${err.message}`);
+    } finally {
+      setEditIsCompressingPhotos(false);
+    }
+  };
+
+  const handleToggleEditPhotoAiLighting = async (pIdx: number) => {
+    if (!editVehicleForm) return;
+    const target = editVehicleForm.uploaded_photos[pIdx];
+    if (!target) return;
+    try {
+      const nextEnhanced = !target.isAiEnhanced;
+      const updated = await toggleAiStudioLighting(target, nextEnhanced);
+      setEditVehicleForm((prev: any) => ({
+        ...prev,
+        uploaded_photos: prev.uploaded_photos.map((p: ProcessedStudioImage, i: number) =>
+          i === pIdx ? updated : p
+        )
+      }));
+    } catch (err) {
+      console.error('AI lighting toggle failed:', err);
+    }
+  };
+
+  const handleRemoveEditPhoto = (pIdx: number) => {
+    if (!editVehicleForm) return;
+    setEditVehicleForm((prev: any) => {
+      const filtered = prev.uploaded_photos.filter((_: any, i: number) => i !== pIdx);
+      if (filtered.length > 0 && !filtered.some((p: any) => p.isPrimary)) {
+        filtered[0].isPrimary = true;
+      }
+      return { ...prev, uploaded_photos: filtered };
+    });
+  };
+
+  const handleSetEditPrimaryPhoto = (pIdx: number) => {
+    if (!editVehicleForm) return;
+    setEditVehicleForm((prev: any) => ({
+      ...prev,
+      uploaded_photos: prev.uploaded_photos.map((p: ProcessedStudioImage, i: number) => ({
+        ...p,
+        isPrimary: i === pIdx
+      }))
+    }));
+  };
+
+  const handleUpdateVehicleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editVehicleForm || !editingVehicle) return;
+    setIsUpdatingVehicle(true);
+    try {
+      const photoPayloads = [];
+      for (let idx = 0; idx < editVehicleForm.uploaded_photos.length; idx++) {
+        const photo = editVehicleForm.uploaded_photos[idx];
+        if (photo.dataUrl.startsWith('data:image/')) {
+          const s3Res = await uploadVehiclePhotoToS3(config.vendor_id, {
+            base64_data: photo.dataUrl,
+            photo_type: photo.photoType,
+            caption: photo.caption,
+            is_primary: photo.isPrimary,
+            display_order: idx + 1,
+            ai_enhanced: photo.isAiEnhanced
+          });
+          photoPayloads.push({
+            photo_id: s3Res.photo_id,
+            url: s3Res.url,
+            caption: s3Res.caption,
+            photo_type: s3Res.photo_type,
+            is_primary: s3Res.is_primary,
+            display_order: s3Res.display_order
+          });
+        } else {
+          photoPayloads.push({
+            photo_id: `vimg_${idx + 1}`,
+            url: photo.dataUrl,
+            caption: photo.caption,
+            photo_type: photo.photoType,
+            is_primary: photo.isPrimary,
+            display_order: idx + 1
+          });
+        }
+      }
+
+      const calculatedPerKm = editVehicleForm.distance_unit === 'MILES'
+        ? Math.round((editVehicleForm.per_distance_rate / 1.609) * 100) / 100
+        : editVehicleForm.per_distance_rate;
+
+      const payload = {
+        name: `${editVehicleForm.make} ${editVehicleForm.model}`,
+        make: editVehicleForm.make,
+        model: editVehicleForm.model,
+        year: editVehicleForm.year,
+        vehicle_class: editVehicleForm.vehicle_class,
+        license_plate: editVehicleForm.license_plate,
+        vin: editVehicleForm.vin,
+        passenger_capacity: editVehicleForm.capacity_passengers,
+        luggage_capacity: editVehicleForm.capacity_luggage,
+        exterior_color: editVehicleForm.exterior_color,
+        interior_color: editVehicleForm.interior_color,
+        tagline: editVehicleForm.tagline,
+        description: editVehicleForm.description,
+        hourly_rate_usd: editVehicleForm.hourly_rate_usd,
+        per_km_usd: calculatedPerKm,
+        is_active: editVehicleForm.is_active,
+        participate_in_network: editVehicleForm.is_network_shared,
+        amenities: editVehicleForm.amenities,
+        photos: photoPayloads
+      };
+
+      const updated: any = await updateVendorVehicle(config.vendor_id, editingVehicle.id, payload);
+
+      setVehicles(prev => prev.map(v => v.id === editingVehicle.id ? {
+        ...v,
+        make_model: `${updated.make} ${updated.model}`,
+        make: updated.make,
+        model: updated.model,
+        year: updated.year,
+        plate: updated.license_plate,
+        vin: updated.vin,
+        class: updated.vehicle_class,
+        status: updated.status,
+        is_active: updated.is_active,
+        passenger_capacity: updated.passenger_capacity,
+        luggage_capacity: updated.luggage_capacity,
+        exterior_color: updated.exterior_color,
+        interior_color: updated.interior_color,
+        tagline: updated.tagline,
+        hourly_rate_usd: updated.hourly_rate_usd,
+        per_km_usd: updated.per_km_usd,
+        is_network_shared: updated.is_network_shared,
+        amenities: updated.amenities,
+        photos: updated.photos
+      } : v));
+
+      setEditingVehicle(null);
+      setEditVehicleForm(null);
+      setActionNotice(`✨ Successfully updated ${updated.year} ${updated.make} ${updated.model} (${updated.license_plate}) specifications in fleet & showroom!`);
+    } catch (err: any) {
+      setActionNotice(`⚠️ Failed to update vehicle: ${err.message}`);
+    } finally {
+      setIsUpdatingVehicle(false);
+    }
+  };
+
+  const handleDeleteVehicleConfirm = async () => {
+    if (!vehicleToDelete) return;
+    setIsDeletingVehicle(true);
+    try {
+      await deleteVendorVehicle(config.vendor_id, vehicleToDelete.id);
+      setVehicles(prev => prev.filter(v => v.id !== vehicleToDelete.id));
+      setActionNotice(`🗑️ Successfully removed ${vehicleToDelete.year || ''} ${vehicleToDelete.make_model || 'Vehicle'} (${vehicleToDelete.plate || ''}) from fleet.`);
+      setVehicleToDelete(null);
+    } catch (err: any) {
+      setActionNotice(`⚠️ Failed to delete vehicle: ${err.message}`);
+    } finally {
+      setIsDeletingVehicle(false);
     }
   };
 
@@ -1730,128 +2382,136 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
               </div>
             )}
 
-            {/* Progressive Onboarding & Setup Readiness Checklist Banner */}
+            {/* Progressive Onboarding & Setup Readiness Compact Alert Bar */}
             {showOnboardingBanner && onboardingStatus && (
-              <div style={{
-                backgroundColor: '#FFFFFF',
-                border: '1px solid #E5E7EB',
-                borderLeft: `5px solid ${onboardingStatus.readiness_score >= 100 ? '#16A34A' : '#0078D4'}`,
-                borderRadius: '10px',
-                padding: '16px 20px',
-                marginBottom: '24px',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.04)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
-                  <div>
+              (() => {
+                const pendingMilestones = onboardingStatus.milestones?.filter((m: any) => !m.completed) || [];
+                const isFullyComplete = onboardingStatus.readiness_score >= 100 || pendingMilestones.length === 0;
+
+                return (
+                  <div style={{
+                    backgroundColor: isFullyComplete ? '#F0FDF4' : '#FFFFFF',
+                    border: `1px solid ${isFullyComplete ? '#BBF7D0' : '#E2E8F0'}`,
+                    borderLeft: `4px solid ${isFullyComplete ? '#16A34A' : '#0078D4'}`,
+                    borderRadius: '8px',
+                    padding: '8px 14px',
+                    marginBottom: '16px',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '10px'
+                  }}>
+                    {/* Left: Score Badge & Status */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontSize: '18px' }}>{onboardingStatus.readiness_score >= 100 ? '🎉' : '🚀'}</span>
-                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0F172A' }}>
-                        Sovereign Cell Setup Readiness: {onboardingStatus.readiness_score}% Complete
-                      </h3>
                       <span style={{
                         fontSize: '11px',
                         fontWeight: 800,
-                        padding: '2px 8px',
+                        padding: '3px 8px',
                         borderRadius: '4px',
-                        backgroundColor: onboardingStatus.readiness_score >= 100 ? '#DCFCE7' : '#EFF6FF',
-                        color: onboardingStatus.readiness_score >= 100 ? '#15803D' : '#0078D4'
-                      }}>
-                        {onboardingStatus.completed_milestones_count} of {onboardingStatus.total_milestones_count} Milestones Configured
-                      </span>
-                    </div>
-                    <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#6B7280' }}>
-                      Your isolated cell is running in <strong>{config.tier || 'AUTONOMOUS_T1'}</strong> mode. Complete the checklist below to activate full custom branding, BYOE email routing, fleet permits, and direct carrier SMS.
-                    </p>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <button
-                      onClick={handleSendInviteEmail}
-                      disabled={isSendingInvite}
-                      style={{
-                        padding: '6px 12px',
-                        backgroundColor: '#F3F4F6',
-                        color: '#1F2937',
-                        border: '1px solid #D1D5DB',
-                        borderRadius: '6px',
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
+                        backgroundColor: isFullyComplete ? '#DCFCE7' : '#EFF6FF',
+                        color: isFullyComplete ? '#15803D' : '#0078D4',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '4px'
-                      }}
-                    >
-                      <Mail size={12} /> {isSendingInvite ? 'Sending...' : 'Email Setup Guide'}
-                    </button>
-                    <button
-                      onClick={() => setShowOnboardingBanner(false)}
-                      style={{ background: 'transparent', border: 'none', color: '#9CA3AF', cursor: 'pointer', padding: '4px' }}
-                      title="Dismiss banner"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                </div>
+                      }}>
+                        {isFullyComplete ? '✅ 100% Ready' : `🚀 ${onboardingStatus.readiness_score}% Setup`}
+                      </span>
 
-                {inviteSuccessMsg && (
-                  <div style={{ marginTop: '10px', fontSize: '12px', color: '#15803D', backgroundColor: '#DCFCE7', padding: '6px 12px', borderRadius: '4px', fontWeight: 600 }}>
-                    ✓ {inviteSuccessMsg}
-                  </div>
-                )}
-
-                {/* Progress Bar */}
-                <div style={{ marginTop: '12px', background: '#F3F4F6', borderRadius: '6px', height: '8px', overflow: 'hidden' }}>
-                  <div style={{
-                    background: onboardingStatus.readiness_score >= 100 ? '#16A34A' : '#0078D4',
-                    height: '100%',
-                    width: `${onboardingStatus.readiness_score}%`,
-                    transition: 'width 0.4s ease'
-                  }} />
-                </div>
-
-                {/* 7 Milestones Quick Chips */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px', marginTop: '14px' }}>
-                  {onboardingStatus.milestones?.map((m: any) => (
-                    <div
-                      key={m.id}
-                      onClick={() => {
-                        if (m.target_tab === 'fleet') setActiveTab('fleet');
-                        else if (m.target_tab === 'email') setActiveTab('email_rfq');
-                        else if (m.target_tab === 'pricing') setActiveTab('pricing');
-                        else if (m.target_tab === 'compliance') setActiveTab('omnichannel');
-                        else if (m.target_tab === 'branding') setActiveTab('omnichannel');
-                        else if (m.target_tab === 'payouts') setActiveTab('drivers');
-                        else setActiveTab('overview');
-                      }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '8px 12px',
-                        borderRadius: '6px',
-                        backgroundColor: m.completed ? '#F0FDF4' : '#F9FAFB',
-                        border: `1px solid ${m.completed ? '#BBF7D0' : '#E5E7EB'}`,
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '13px' }}>{m.completed ? '✅' : '⏳'}</span>
-                        <div>
-                          <div style={{ fontSize: '11px', fontWeight: 700, color: m.completed ? '#166534' : '#1F2937' }}>
-                            {m.title}
-                          </div>
-                          <div style={{ fontSize: '10px', color: '#6B7280' }}>
-                            {m.completed ? 'Completed' : m.action_label}
-                          </div>
-                        </div>
-                      </div>
-                      <ChevronRight size={12} color={m.completed ? '#166534' : '#9CA3AF'} />
+                      <span style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        {isFullyComplete
+                          ? 'All sovereign cell milestones are configured and active.'
+                          : `${pendingMilestones.length} pending item${pendingMilestones.length > 1 ? 's' : ''} to complete setup:`}
+                      </span>
                     </div>
-                  ))}
-                </div>
-              </div>
+
+                    {/* Middle: ONLY Pending Milestone Action Pills */}
+                    {!isFullyComplete && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        {pendingMilestones.map((m: any) => (
+                          <button
+                            key={m.id}
+                            onClick={() => {
+                              if (m.id === 'stripe_payouts' || m.target_tab === 'payouts' || m.target_tab === 'banking') {
+                                setActiveTab('payouts');
+                                loadStripeStatus();
+                                loadPayoutLedger();
+                              } else if (m.id === 'fleet_active' || m.target_tab === 'fleet') {
+                                setActiveTab('fleet');
+                              } else if (m.id === 'email_gateway' || m.target_tab === 'email' || m.target_tab === 'email_rfq') {
+                                setActiveTab('email_rfq');
+                              } else if (m.id === 'dynamic_pricing' || m.target_tab === 'pricing') {
+                                setActiveTab('pricing');
+                              } else if (m.id === 'telecom_compliance' || m.target_tab === 'compliance') {
+                                setActiveTab('omnichannel');
+                                setOmniSubTab('10dlc');
+                              } else if (m.id === 'branding_profile' || m.target_tab === 'branding') {
+                                setActiveTab('omnichannel');
+                                setOmniSubTab('seo');
+                              } else if (m.target_tab) {
+                                setActiveTab(m.target_tab as any);
+                              } else {
+                                setActiveTab('overview');
+                              }
+                            }}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '4px 10px',
+                              borderRadius: '6px',
+                              backgroundColor: '#FEF3C7',
+                              border: '1px solid #FDE68A',
+                              color: '#92400E',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease'
+                            }}
+                            title={`Click to resolve: ${m.title}`}
+                          >
+                            <span>⏳</span>
+                            <span>{m.title}</span>
+                            <span style={{ opacity: 0.75 }}>({m.action_label || 'Configure'})</span>
+                            <ChevronRight size={12} />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Right: Quick actions and dismiss */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <button
+                        onClick={handleSendInviteEmail}
+                        disabled={isSendingInvite}
+                        style={{
+                          padding: '4px 10px',
+                          backgroundColor: '#F8FAFC',
+                          color: '#475569',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: '6px',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <Mail size={12} /> {isSendingInvite ? 'Sending...' : 'Email Guide'}
+                      </button>
+                      <button
+                        onClick={() => setShowOnboardingBanner(false)}
+                        style={{ background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '4px', display: 'flex' }}
+                        title="Dismiss bar"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()
             )}
             
             {/* TAB 1: EXECUTIVE OVERVIEW */}
@@ -2422,219 +3082,1534 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                 {showAddVehicleModal && (
                   <div style={{
                     backgroundColor: '#FFFFFF',
-                    borderRadius: '12px',
-                    padding: '24px',
-                    border: '1px solid #0078D4',
-                    boxShadow: '0 10px 25px -5px rgba(0, 120, 212, 0.15)'
+                    borderRadius: '16px',
+                    padding: '28px',
+                    border: '2px solid #0078D4',
+                    boxShadow: '0 20px 40px -10px rgba(0, 120, 212, 0.25)',
+                    marginBottom: '24px'
                   }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', borderBottom: '1px solid #E5E7EB', paddingBottom: '12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Sparkles size={18} color="#0078D4" />
-                        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>
-                          Add Vehicle to Fleet & Showroom
-                        </h3>
+                    {/* Modal Header */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #E2E8F0', paddingBottom: '16px' }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ backgroundColor: '#EFF6FF', color: '#0078D4', padding: '6px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Car size={22} />
+                          </span>
+                          <div>
+                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: '#0F172A' }}>
+                              Add Vehicle to Fleet & Showroom Customizer
+                            </h3>
+                            <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748B' }}>
+                              AI-assisted onboarding with real S3 multi-photo upload studio, luxury amenities engine, and storefront synchronization.
+                            </p>
+                          </div>
+                        </div>
                       </div>
                       <button
                         onClick={() => setShowAddVehicleModal(false)}
-                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6B7280' }}
+                        style={{ background: '#F1F5F9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748B' }}
                       >
                         <X size={18} />
                       </button>
                     </div>
 
-                    <form onSubmit={handleAddVehicleSubmit}>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#374151', marginBottom: '4px' }}>Make</label>
-                          <input
-                            type="text"
-                            required
-                            value={newVehicleForm.make}
-                            onChange={(e) => setNewVehicleForm({ ...newVehicleForm, make: e.target.value })}
-                            style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '13px' }}
-                          />
+                    {/* 1. AI QUICK-ONBOARDING ASSISTANT BAR (LIGHT PRESTIGE DESIGN) */}
+                    <div style={{
+                      background: 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 50%, #EFF6FF 100%)',
+                      borderRadius: '12px',
+                      padding: '16px 20px',
+                      color: '#0F172A',
+                      marginBottom: '22px',
+                      border: '1px solid #CBD5E1',
+                      boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: '#DBEAFE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Sparkles size={18} color="#0078D4" />
+                          </div>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontSize: '13px', fontWeight: 900, letterSpacing: '0.3px', color: '#0F172A' }}>
+                                AI FLEET ONBOARDING ASSISTANT
+                              </span>
+                              <span style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', fontSize: '10px', fontWeight: 800, padding: '2px 8px', borderRadius: '12px' }}>
+                                AUTONOMOUS SPECS &amp; TARIFFS
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
+                              Country Locale: <strong>{localeSpecs.countryName}</strong> · Standard Unit: <strong>{newVehicleForm.distance_unit === 'MILES' ? 'Miles (Imperial)' : 'Kilometers (Metric)'}</strong> · Currency: <strong>{localeSpecs.currencySymbol} ({localeSpecs.currencyCode})</strong>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#374151', marginBottom: '4px' }}>Model</label>
-                          <input
-                            type="text"
-                            required
-                            value={newVehicleForm.model}
-                            onChange={(e) => setNewVehicleForm({ ...newVehicleForm, model: e.target.value })}
-                            style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '13px' }}
-                          />
-                        </div>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#374151', marginBottom: '4px' }}>Year</label>
-                          <input
-                            type="number"
-                            required
-                            value={newVehicleForm.year}
-                            onChange={(e) => setNewVehicleForm({ ...newVehicleForm, year: parseInt(e.target.value) || 2026 })}
-                            style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '13px' }}
-                          />
-                        </div>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#374151', marginBottom: '4px' }}>Class</label>
-                          <select
-                            value={newVehicleForm.vehicle_class}
-                            onChange={(e) => setNewVehicleForm({ ...newVehicleForm, vehicle_class: e.target.value })}
-                            style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '13px', background: '#FFFFFF' }}
+
+                        <button
+                          type="button"
+                          onClick={() => handleAiAutoFillSpecs()}
+                          style={{
+                            background: 'linear-gradient(135deg, #0078D4 0%, #0284C7 100%)',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '9px 20px',
+                            fontSize: '12px',
+                            fontWeight: 800,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 2px 8px rgba(0, 120, 212, 0.25)',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <Sparkles size={14} /> ✨ Auto-Populate Specs &amp; Luxury Extras
+                        </button>
+                      </div>
+
+                      {/* Quick Presets for Instant 1-Click Fill */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', paddingTop: '10px', borderTop: '1px solid #E2E8F0' }}>
+                        <span style={{ fontSize: '11px', color: '#475569', fontWeight: 700 }}>Quick Luxury Presets:</span>
+                        {[
+                          { label: 'Cadillac Escalade ESV', q: 'Cadillac Escalade ESV Sport Platinum' },
+                          { label: 'Mercedes-Benz S-Class (S580)', q: 'Mercedes-Benz S580 4MATIC' },
+                          { label: 'Mercedes-Maybach S680', q: 'Mercedes-Maybach S680 V12' },
+                          { label: 'Lincoln Navigator L', q: 'Lincoln Navigator L Black Label' },
+                          { label: 'BMW i7 Electric Flagship', q: 'BMW i7 xDrive60' },
+                          { label: 'Mercedes Sprinter VIP JetVan', q: 'Mercedes-Benz Sprinter 3500 VIP JetVan' },
+                          { label: 'Mercedes E-Class', q: 'Mercedes-Benz E350 Business' }
+                        ].map(preset => (
+                          <button
+                            key={preset.label}
+                            type="button"
+                            onClick={() => {
+                              setAiVehicleQuery(preset.q);
+                              handleAiAutoFillSpecs(preset.q);
+                            }}
+                            style={{
+                              padding: '5px 12px',
+                              backgroundColor: '#FFFFFF',
+                              color: '#1E293B',
+                              border: '1px solid #CBD5E1',
+                              borderRadius: '16px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                              transition: 'all 0.15s ease'
+                            }}
                           >
-                            <option value="FIRST_CLASS">First Class (S-Class, 7-Series)</option>
-                            <option value="LUXURY_SUV">Luxury SUV (Escalade, Navigator)</option>
-                            <option value="ELECTRIC_VIP">Electric VIP (Lucid Air, Taycan)</option>
-                            <option value="BUSINESS_SEDAN">Business Sedan (E-Class, 5-Series)</option>
-                            <option value="BUSINESS_VAN">Executive Sprinter VIP</option>
-                            <option value="ULTRA_LUXURY">Ultra Luxury (Rolls-Royce Ghost)</option>
-                          </select>
+                            + {preset.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <form onSubmit={handleAddVehicleSubmit}>
+                      {/* 2. CORE VEHICLE IDENTIFIERS & TECHNICAL SPECS */}
+                      <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '10px', border: '1px solid #E2E8F0', marginBottom: '20px' }}>
+                        <h4 style={{ margin: '0 0 14px 0', fontSize: '13px', fontWeight: 800, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Building2 size={16} color="#0078D4" /> 1. Vehicle Make, Model, Chassis &amp; Physical Capacities
+                        </h4>
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '14px' }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>Make</label>
+                            <input
+                              type="text"
+                              required
+                              value={newVehicleForm.make}
+                              onChange={(e) => setNewVehicleForm({ ...newVehicleForm, make: e.target.value })}
+                              style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '13px', backgroundColor: '#FFFFFF' }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>Model</label>
+                            <input
+                              type="text"
+                              required
+                              value={newVehicleForm.model}
+                              onChange={(e) => setNewVehicleForm({ ...newVehicleForm, model: e.target.value })}
+                              style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '13px', backgroundColor: '#FFFFFF' }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>Year</label>
+                            <input
+                              type="number"
+                              required
+                              value={newVehicleForm.year}
+                              onChange={(e) => setNewVehicleForm({ ...newVehicleForm, year: parseInt(e.target.value) || 2026 })}
+                              style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '13px', backgroundColor: '#FFFFFF' }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>Vehicle Class Tier</label>
+                            <select
+                              value={newVehicleForm.vehicle_class}
+                              onChange={(e) => setNewVehicleForm({ ...newVehicleForm, vehicle_class: e.target.value })}
+                              style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '13px', backgroundColor: '#FFFFFF', fontWeight: 700 }}
+                            >
+                              <option value="FIRST_CLASS">First Class (S-Class, 7-Series)</option>
+                              <option value="LUXURY_SUV">Luxury SUV (Escalade, Navigator)</option>
+                              <option value="ULTRA_LUXURY">Ultra Luxury (Maybach, Rolls-Royce)</option>
+                              <option value="ELECTRIC_VIP">Electric VIP (Lucid Air, BMW i7)</option>
+                              <option value="BUSINESS_VAN">Executive Sprinter VIP</option>
+                              <option value="BUSINESS_SEDAN">Business Sedan (E-Class, 5-Series)</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>License Plate</label>
+                            <input
+                              type="text"
+                              required
+                              value={newVehicleForm.license_plate}
+                              onChange={(e) => setNewVehicleForm({ ...newVehicleForm, license_plate: e.target.value })}
+                              style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '13px', backgroundColor: '#FFFFFF', fontWeight: 700 }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>VIN Number</label>
+                            <input
+                              type="text"
+                              value={newVehicleForm.vin}
+                              placeholder="e.g. 1GYS4HK78R0198..."
+                              onChange={(e) => setNewVehicleForm({ ...newVehicleForm, vin: e.target.value })}
+                              style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '13px', backgroundColor: '#FFFFFF' }}
+                            />
+                          </div>
                         </div>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#374151', marginBottom: '4px' }}>License Plate</label>
+
+                        {/* Capacities, Colors & Tariffs */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '14px' }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                              👥 Passenger Capacity
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              max="30"
+                              value={newVehicleForm.capacity_passengers}
+                              onChange={(e) => setNewVehicleForm({ ...newVehicleForm, capacity_passengers: parseInt(e.target.value) || 3 })}
+                              style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '13px', backgroundColor: '#FFFFFF', fontWeight: 800 }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                              🧳 Luggage Capacity (Suitcases)
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="30"
+                              value={newVehicleForm.capacity_luggage}
+                              onChange={(e) => setNewVehicleForm({ ...newVehicleForm, capacity_luggage: parseInt(e.target.value) || 3 })}
+                              style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '13px', backgroundColor: '#FFFFFF', fontWeight: 800 }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                              🎨 Exterior Paint Color
+                            </label>
+                            <input
+                              type="text"
+                              value={newVehicleForm.exterior_color}
+                              onChange={(e) => setNewVehicleForm({ ...newVehicleForm, exterior_color: e.target.value })}
+                              placeholder="e.g. Obsidian Black Metallic"
+                              style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '13px', backgroundColor: '#FFFFFF' }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                              🛋️ Interior Trim &amp; Leather
+                            </label>
+                            <input
+                              type="text"
+                              value={newVehicleForm.interior_color}
+                              onChange={(e) => setNewVehicleForm({ ...newVehicleForm, interior_color: e.target.value })}
+                              placeholder="e.g. Jet Black Nappa Leather"
+                              style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '13px', backgroundColor: '#FFFFFF' }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                              ⏱️ Hourly Rate ({localeSpecs.currencySymbol})
+                            </label>
+                            <input
+                              type="number"
+                              value={newVehicleForm.hourly_rate_usd}
+                              onChange={(e) => setNewVehicleForm({ ...newVehicleForm, hourly_rate_usd: parseFloat(e.target.value) || 125.0 })}
+                              style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '13px', backgroundColor: '#FFFFFF', fontWeight: 800 }}
+                            />
+                          </div>
+                          <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                              <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>
+                                📏 Per {newVehicleForm.distance_unit === 'MILES' ? 'Mile' : 'KM'} Rate ({localeSpecs.currencySymbol})
+                              </label>
+                              {/* Country-Aware Distance Unit Switcher Toggle */}
+                              <div style={{ display: 'inline-flex', borderRadius: '4px', border: '1px solid #CBD5E1', overflow: 'hidden' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleDistanceUnit('MILES')}
+                                  style={{
+                                    padding: '2px 7px',
+                                    fontSize: '10px',
+                                    fontWeight: 700,
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    backgroundColor: newVehicleForm.distance_unit === 'MILES' ? '#0078D4' : '#F1F5F9',
+                                    color: newVehicleForm.distance_unit === 'MILES' ? '#FFFFFF' : '#475569'
+                                  }}
+                                >
+                                  Miles
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleDistanceUnit('KM')}
+                                  style={{
+                                    padding: '2px 7px',
+                                    fontSize: '10px',
+                                    fontWeight: 700,
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    backgroundColor: newVehicleForm.distance_unit === 'KM' ? '#0078D4' : '#F1F5F9',
+                                    color: newVehicleForm.distance_unit === 'KM' ? '#FFFFFF' : '#475569'
+                                  }}
+                                >
+                                  KM
+                                </button>
+                              </div>
+                            </div>
+                            <input
+                              type="number"
+                              step="0.05"
+                              value={newVehicleForm.per_distance_rate}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value) || 0;
+                                setNewVehicleForm({
+                                  ...newVehicleForm,
+                                  per_distance_rate: val,
+                                  per_km_usd: newVehicleForm.distance_unit === 'KM' ? val : Math.round((val / 1.609) * 100) / 100
+                                });
+                              }}
+                              style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '13px', backgroundColor: '#FFFFFF', fontWeight: 800 }}
+                            />
+                            <div style={{ fontSize: '10px', color: '#64748B', marginTop: '3px' }}>
+                              Auto-detected for {localeSpecs.countryName}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Customer Showroom Headline & AI Tagline Assistant */}
+                        <div style={{ marginTop: '16px', backgroundColor: '#FFFFFF', padding: '16px', borderRadius: '10px', border: '1px solid #CBD5E1', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 800, color: '#1E293B', margin: 0 }}>
+                              <Sparkles size={15} color="#0078D4" /> Customer Showroom Headline / AI Marketing Tagline
+                            </label>
+                            <button
+                              type="button"
+                              onClick={handleGenerateNewVehicleTaglines}
+                              style={{
+                                padding: '5px 12px',
+                                background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
+                                color: '#1D4ED8',
+                                border: '1px solid #BFDBFE',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: 800,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                boxShadow: '0 1px 2px rgba(29, 78, 216, 0.08)',
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              <Sparkles size={13} color="#0078D4" /> ✨ AI Assistant: Generate Taglines
+                            </button>
+                          </div>
+
                           <input
                             type="text"
-                            required
-                            value={newVehicleForm.license_plate}
-                            onChange={(e) => setNewVehicleForm({ ...newVehicleForm, license_plate: e.target.value })}
-                            style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '13px' }}
+                            value={newVehicleForm.tagline}
+                            onChange={(e) => setNewVehicleForm({ ...newVehicleForm, tagline: e.target.value })}
+                            placeholder="e.g. The Undisputed American Executive Standard in Chauffeur Luxury"
+                            style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1.5px solid #CBD5E1', fontSize: '13px', backgroundColor: '#FFFFFF', fontWeight: 600, color: '#0F172A', marginBottom: '10px' }}
                           />
-                        </div>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#374151', marginBottom: '4px' }}>VIN Number</label>
-                          <input
-                            type="text"
-                            required
-                            value={newVehicleForm.vin}
-                            onChange={(e) => setNewVehicleForm({ ...newVehicleForm, vin: e.target.value })}
-                            style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '13px' }}
-                          />
+
+                          {/* AI Tagline Suggestion Pills */}
+                          {showNewAiTaglines && (
+                            <div style={{ background: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px dashed #BFDBFE' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
+                                <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                  💡 <strong>AI Suggested Marketing Headlines</strong> (Click any to apply instantly):
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={handleGenerateNewVehicleTaglines}
+                                  style={{ background: 'none', border: 'none', color: '#0078D4', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                >
+                                  <RefreshCw size={11} /> Regenerate Ideas
+                                </button>
+                              </div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                {(newVehicleAiTaglines.length > 0 ? newVehicleAiTaglines : generateAiTaglines(newVehicleForm.make, newVehicleForm.model, newVehicleForm.vehicle_class, newVehicleForm.amenities)).map((sug, sIdx) => {
+                                  const isSelected = newVehicleForm.tagline === sug;
+                                  return (
+                                    <button
+                                      key={sIdx}
+                                      type="button"
+                                      onClick={() => setNewVehicleForm({ ...newVehicleForm, tagline: sug })}
+                                      style={{
+                                        padding: '6px 11px',
+                                        fontSize: '11px',
+                                        fontWeight: isSelected ? 800 : 600,
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        textAlign: 'left',
+                                        transition: 'all 0.15s ease',
+                                        backgroundColor: isSelected ? '#EFF6FF' : '#FFFFFF',
+                                        color: isSelected ? '#1D4ED8' : '#334155',
+                                        border: isSelected ? '1.5px solid #3B82F6' : '1px solid #CBD5E1',
+                                        boxShadow: isSelected ? '0 1px 4px rgba(59, 130, 246, 0.2)' : '0 1px 2px rgba(0,0,0,0.02)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px'
+                                      }}
+                                    >
+                                      {isSelected ? <Check size={13} color="#1D4ED8" /> : <span>✨</span>}
+                                      <span>{sug}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#374151', marginBottom: '4px' }}>Hourly Charter Rate ($)</label>
-                          <input
-                            type="number"
-                            value={newVehicleForm.hourly_rate_usd}
-                            onChange={(e) => setNewVehicleForm({ ...newVehicleForm, hourly_rate_usd: parseFloat(e.target.value) || 125.0 })}
-                            style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '13px' }}
-                          />
+                      {/* 3. MULTI-PHOTO S3 UPLOAD & AI SHOWROOM IMAGE STUDIO */}
+                      <div style={{ backgroundColor: '#FFFFFF', padding: '18px', borderRadius: '12px', border: '2px dashed #0078D4', marginBottom: '20px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
+                          <div>
+                            <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 900, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              📸 2. Real S3 Multi-Photo Upload & AI Showroom Image Studio
+                            </h4>
+                            <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748B' }}>
+                              Upload multiple smartphone or camera raw photos. In-browser canvas automatically compresses files (&lt;250KB) and optimizes lighting before S3 storage.
+                            </p>
+                          </div>
+                          
+                          <label style={{
+                            padding: '8px 18px',
+                            backgroundColor: '#0078D4',
+                            color: '#FFFFFF',
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                            fontWeight: 800,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 2px 6px rgba(0, 120, 212, 0.25)'
+                          }}>
+                            <Plus size={16} /> Select Photos from Device
+                            <input
+                              type="file"
+                              multiple
+                              accept="image/jpeg,image/png,image/webp,image/heic"
+                              onChange={(e) => handlePhotosSelected(e.target.files)}
+                              style={{ display: 'none' }}
+                            />
+                          </label>
                         </div>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#374151', marginBottom: '4px' }}>Per KM Rate ($)</label>
-                          <input
-                            type="number"
-                            value={newVehicleForm.per_km_usd}
-                            onChange={(e) => setNewVehicleForm({ ...newVehicleForm, per_km_usd: parseFloat(e.target.value) || 3.85 })}
-                            style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '13px' }}
-                          />
+
+                        {/* Compression Status Alert */}
+                        {isCompressingPhotos && (
+                          <div style={{ padding: '10px 14px', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '8px', color: '#1E40AF', fontSize: '12px', fontWeight: 700, marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <RefreshCw size={16} className="animate-spin" /> In-browser studio engine is compressing and enhancing selected photos...
+                          </div>
+                        )}
+
+                        {/* Photos Gallery Grid */}
+                        {newVehicleForm.uploaded_photos.length === 0 ? (
+                          <div style={{ textAlign: 'center', padding: '24px 16px', color: '#94A3B8' }}>
+                            <Car size={36} color="#CBD5E1" style={{ margin: '0 auto 8px auto' }} />
+                            <div style={{ fontSize: '13px', fontWeight: 700, color: '#64748B' }}>No showroom photos uploaded yet</div>
+                            <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>
+                              Click "+ Select Photos from Device" above to upload your actual vehicle exterior and cabin photos.
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '14px' }}>
+                            {newVehicleForm.uploaded_photos.map((photo, pIdx) => (
+                              <div
+                                key={pIdx}
+                                style={{
+                                  backgroundColor: '#F8FAFC',
+                                  borderRadius: '10px',
+                                  overflow: 'hidden',
+                                  border: photo.isPrimary ? '2px solid #0078D4' : '1px solid #E2E8F0',
+                                  boxShadow: photo.isPrimary ? '0 4px 12px rgba(0, 120, 212, 0.15)' : 'none',
+                                  position: 'relative'
+                                }}
+                              >
+                                {photo.isPrimary && (
+                                  <div style={{ position: 'absolute', top: '8px', left: '8px', backgroundColor: '#0078D4', color: '#FFFFFF', padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 800, zIndex: 2 }}>
+                                    ★ COVER PHOTO
+                                  </div>
+                                )}
+
+                                <div style={{ height: '140px', width: '100%', overflow: 'hidden', backgroundColor: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <img
+                                    src={photo.dataUrl}
+                                    alt={photo.caption}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  />
+                                </div>
+
+                                <div style={{ padding: '10px' }}>
+                                  {/* Photo Tag Selector */}
+                                  <div style={{ marginBottom: '6px' }}>
+                                    <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: '#64748B', marginBottom: '2px' }}>CATEGORY</label>
+                                    <select
+                                      value={photo.photoType}
+                                      onChange={(e) => {
+                                        const nextType = e.target.value as any;
+                                        setNewVehicleForm(prev => ({
+                                          ...prev,
+                                          uploaded_photos: prev.uploaded_photos.map((p, i) => i === pIdx ? { ...p, photoType: nextType } : p)
+                                        }));
+                                      }}
+                                      style={{ width: '100%', padding: '4px 8px', borderRadius: '4px', border: '1px solid #CBD5E1', fontSize: '11px', fontWeight: 700 }}
+                                    >
+                                      <option value="EXTERIOR">Hero Exterior Profile</option>
+                                      <option value="CABIN">Rear Executive Cabin Lounge</option>
+                                      <option value="COCKPIT">Chauffeur Cockpit / Dashboard</option>
+                                      <option value="TRUNK">Luggage Trunk Cargo Bay</option>
+                                      <option value="AMENITY">Bar & Luxury Amenities</option>
+                                    </select>
+                                  </div>
+
+                                  {/* AI Studio Lighting Toggle */}
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleTogglePhotoAiLighting(pIdx)}
+                                      style={{
+                                        padding: '4px 8px',
+                                        backgroundColor: photo.isAiEnhanced ? '#DCFCE7' : '#F1F5F9',
+                                        color: photo.isAiEnhanced ? '#15803D' : '#475569',
+                                        border: photo.isAiEnhanced ? '1px solid #86EFAC' : '1px solid #CBD5E1',
+                                        borderRadius: '4px',
+                                        fontSize: '10px',
+                                        fontWeight: 800,
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px'
+                                      }}
+                                    >
+                                      <Sparkles size={12} /> {photo.isAiEnhanced ? '✨ AI Lighting: ON' : 'Standard'}
+                                    </button>
+
+                                    <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 600 }}>
+                                      {formatBytes(photo.compressedSizeBytes)}
+                                    </span>
+                                  </div>
+
+                                  {/* Controls */}
+                                  <div style={{ display: 'flex', gap: '6px' }}>
+                                    {!photo.isPrimary && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleSetPrimaryPhoto(pIdx)}
+                                        style={{ flex: 1, padding: '4px', backgroundColor: '#EFF6FF', color: '#0078D4', border: '1px solid #BFDBFE', borderRadius: '4px', fontSize: '10px', fontWeight: 800, cursor: 'pointer' }}
+                                      >
+                                        Set Cover
+                                      </button>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemovePhoto(pIdx)}
+                                      style={{ padding: '4px 8px', backgroundColor: '#FEE2E2', color: '#DC2626', border: '1px solid #FECACA', borderRadius: '4px', fontSize: '10px', fontWeight: 800, cursor: 'pointer' }}
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 4. LUXURY AMENITIES & ONBOARD EXTRAS CUSTOMIZER */}
+                      <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '10px', border: '1px solid #E2E8F0', marginBottom: '20px' }}>
+                        <h4 style={{ margin: '0 0 4px 0', fontSize: '13px', fontWeight: 800, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Award size={16} color="#0078D4" /> 3. Select Luxury Amenities & Onboard Extras (Shown to Customers in Showroom)
+                        </h4>
+                        <p style={{ margin: '0 0 12px 0', fontSize: '11px', color: '#64748B' }}>
+                          Click any pill to toggle on/off. Selected amenities are highlighted in gold & blue on the customer storefront.
+                        </p>
+
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
+                          {ALL_LUXURY_AMENITIES_LIBRARY.map((amenity) => {
+                            const isSelected = newVehicleForm.amenities.includes(amenity);
+                            return (
+                              <button
+                                key={amenity}
+                                type="button"
+                                onClick={() => handleToggleAmenity(amenity)}
+                                style={{
+                                  padding: '6px 12px',
+                                  backgroundColor: isSelected ? '#0078D4' : '#FFFFFF',
+                                  color: isSelected ? '#FFFFFF' : '#334155',
+                                  border: isSelected ? '1px solid #0078D4' : '1px solid #CBD5E1',
+                                  borderRadius: '20px',
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  boxShadow: isSelected ? '0 2px 6px rgba(0, 120, 212, 0.2)' : 'none',
+                                  transition: 'all 0.1s ease'
+                                }}
+                              >
+                                {isSelected ? '✓ ' : '+ '} {amenity}
+                              </button>
+                            );
+                          })}
                         </div>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#374151', marginBottom: '4px' }}>Showroom Photo URL</label>
+
+                        {/* Add Custom Amenity */}
+                        <div style={{ display: 'flex', gap: '8px', maxWidth: '480px' }}>
                           <input
-                            type="url"
-                            value={newVehicleForm.image_url}
-                            onChange={(e) => setNewVehicleForm({ ...newVehicleForm, image_url: e.target.value })}
-                            style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '13px' }}
+                            type="text"
+                            placeholder="Add custom amenity (e.g. 🎧 Noise Cancelling Bang & Olufsen)..."
+                            value={customAmenityInput}
+                            onChange={(e) => setCustomAmenityInput(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomAmenity(); } }}
+                            style={{ flex: 1, padding: '6px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px' }}
                           />
+                          <button
+                            type="button"
+                            onClick={handleAddCustomAmenity}
+                            style={{ padding: '6px 14px', backgroundColor: '#334155', color: '#FFFFFF', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                          >
+                            + Add Custom
+                          </button>
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', padding: '12px', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                      {/* 5. GLOBAL HUB SHARING CHECKBOX */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '22px', padding: '14px 18px', background: '#EFF6FF', borderRadius: '10px', border: '1px solid #BFDBFE' }}>
                         <input
                           type="checkbox"
                           id="chk_network_sharing"
                           checked={newVehicleForm.is_network_shared}
                           onChange={(e) => setNewVehicleForm({ ...newVehicleForm, is_network_shared: e.target.checked })}
-                          style={{ width: '16px', height: '16px', accentColor: '#0078D4' }}
+                          style={{ width: '18px', height: '18px', accentColor: '#0078D4', cursor: 'pointer' }}
                         />
-                        <label htmlFor="chk_network_sharing" style={{ fontSize: '13px', fontWeight: 600, color: '#0F172A', cursor: 'pointer' }}>
-                          Enable Global Hub Affiliate Sharing (Receive 85% net farmed-in jobs from worldwide marketplace)
+                        <label htmlFor="chk_network_sharing" style={{ fontSize: '13px', fontWeight: 700, color: '#1E3A8A', cursor: 'pointer' }}>
+                          🌐 Enable Global Hub Affiliate Network Sharing (Earn 85% net payout on cross-market farm-in jobs)
                         </label>
                       </div>
 
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                      {/* Modal Action Buttons */}
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #E2E8F0', paddingTop: '16px' }}>
                         <button
                           type="button"
                           onClick={() => setShowAddVehicleModal(false)}
-                          style={{ padding: '8px 16px', background: '#F3F4F6', border: '1px solid #D1D5DB', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                          style={{ padding: '10px 20px', background: '#F1F5F9', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', color: '#475569' }}
                         >
                           Cancel
                         </button>
                         <button
                           type="submit"
-                          disabled={loading}
-                          style={{ padding: '8px 20px', background: '#0078D4', color: '#FFFFFF', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                          disabled={loading || isUploadingToS3}
+                          style={{
+                            padding: '10px 26px',
+                            background: 'linear-gradient(135deg, #0078D4 0%, #1D4ED8 100%)',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '13px',
+                            fontWeight: 900,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            boxShadow: '0 4px 12px rgba(0, 120, 212, 0.3)'
+                          }}
                         >
-                          Save to Fleet & Showroom
+                          {isUploadingToS3 ? (
+                            <>
+                              <RefreshCw size={16} className="animate-spin" /> Uploading to S3 & Publishing...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 size={16} /> 🚀 Save to Live Fleet & Showroom
+                            </>
+                          )}
                         </button>
                       </div>
                     </form>
                   </div>
                 )}
 
+                {/* Live Fleet Operational Status Counters */}
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <div style={{ padding: '8px 14px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '12px', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Car size={15} color="#0078D4" /> Total Fleet: <strong>{vehicles.length} Vehicles</strong>
+                  </div>
+                  <div style={{ padding: '8px 14px', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '8px', fontSize: '12px', fontWeight: 700, color: '#15803D', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#16A34A', display: 'inline-block' }}></span>
+                    Active &amp; Rentable: <strong>{vehicles.filter(v => v.is_active !== false && v.status !== 'MAINTENANCE').length}</strong>
+                  </div>
+                  <div style={{ padding: '8px 14px', backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '8px', fontSize: '12px', fontWeight: 700, color: '#B45309', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <AlertTriangle size={14} color="#D97706" />
+                    Under Maintenance / Repair (Hidden): <strong>{vehicles.filter(v => v.is_active === false || v.status === 'MAINTENANCE').length}</strong>
+                  </div>
+                </div>
+
                 <div style={{ backgroundColor: '#FFFFFF', borderRadius: '10px', overflow: 'hidden', border: '1px solid #E5E7EB', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px' }}>
                     <thead style={{ backgroundColor: '#F9FAFB', color: '#6B7280', textTransform: 'uppercase', fontSize: '11px' }}>
                       <tr>
-                        <th style={{ padding: '14px 16px' }}>Vehicle</th>
-                        <th style={{ padding: '14px 16px' }}>License Plate</th>
-                        <th style={{ padding: '14px 16px' }}>VIN Number</th>
-                        <th style={{ padding: '14px 16px' }}>Class</th>
-                        <th style={{ padding: '14px 16px' }}>Status</th>
-                        <th style={{ padding: '14px 16px' }}>Network Sharing</th>
-                        <th style={{ padding: '14px 16px' }}>Inspection Due</th>
+                        <th style={{ padding: '14px 16px' }}>Showroom Vehicle</th>
+                        <th style={{ padding: '14px 16px' }}>License Plate &amp; VIN</th>
+                        <th style={{ padding: '14px 16px' }}>Class &amp; Capacities</th>
+                        <th style={{ padding: '14px 16px' }}>S3 Media &amp; Amenities</th>
+                        <th style={{ padding: '14px 16px' }}>Showroom &amp; Rental Status</th>
+                        <th style={{ padding: '14px 16px' }}>Global Network Sharing</th>
                         <th style={{ padding: '14px 16px' }}>$5M Insurance</th>
+                        <th style={{ padding: '14px 16px', textAlign: 'right' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {vehicles.map((v) => (
-                        <tr key={v.id} style={{ borderTop: '1px solid #E5E7EB', color: '#0F172A' }}>
-                          <td style={{ padding: '14px 16px', fontWeight: 700 }}>{v.year} {v.make_model}</td>
-                          <td style={{ padding: '14px 16px', color: '#0078D4', fontWeight: 700 }}>{v.plate}</td>
-                          <td style={{ padding: '14px 16px', fontFamily: 'monospace', color: '#6B7280' }}>{v.vin}</td>
-                          <td style={{ padding: '14px 16px' }}>{v.class}</td>
-                          <td style={{ padding: '14px 16px' }}>
-                            <span style={{
-                              padding: '3px 8px',
-                              borderRadius: '4px',
-                              fontSize: '10px',
-                              fontWeight: 800,
-                              backgroundColor: v.status === 'AVAILABLE' ? '#DCFCE7' : '#EFF6FF',
-                              color: v.status === 'AVAILABLE' ? '#15803D' : '#1D4ED8'
-                            }}>
-                              {v.status}
-                            </span>
-                          </td>
-                          <td style={{ padding: '14px 16px' }}>
-                            <button
-                              onClick={() => handleToggleVehicleNetwork(v.id, Boolean(v.is_network_shared))}
-                              style={{
-                                padding: '3px 8px',
-                                borderRadius: '12px',
-                                fontSize: '10px',
-                                fontWeight: 800,
-                                border: '1px solid',
-                                cursor: 'pointer',
-                                backgroundColor: v.is_network_shared !== false ? '#F0FDF4' : '#F1F5F9',
-                                color: v.is_network_shared !== false ? '#15803D' : '#64748B',
-                                borderColor: v.is_network_shared !== false ? '#86EFAC' : '#CBD5E1'
-                              }}
-                            >
-                              {v.is_network_shared !== false ? '🌐 Network Active' : '🔒 Local Only'}
-                            </button>
-                          </td>
-                          <td style={{ padding: '14px 16px', color: '#4B5563' }}>{v.inspection_due || '2027-04-15'}</td>
-                          <td style={{ padding: '14px 16px', color: '#16A34A', fontWeight: 700 }}>
-                            <CheckCircle2 size={14} style={{ display: 'inline', marginRight: '4px' }} />
-                            Active
-                          </td>
-                        </tr>
-                      ))}
+                      {vehicles.map((v) => {
+                        const coverPhoto = (v.photos && v.photos.length > 0)
+                          ? (v.photos.find((p: any) => p.is_primary) || v.photos[0])?.url
+                          : null;
+                        const isRentable = v.is_active !== false && v.status !== 'MAINTENANCE';
+
+                        return (
+                          <tr key={v.id} style={{ borderTop: '1px solid #E5E7EB', color: '#0F172A', backgroundColor: isRentable ? '#FFFFFF' : '#FFFDF5' }}>
+                            <td style={{ padding: '14px 16px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ width: '54px', height: '36px', borderRadius: '6px', overflow: 'hidden', backgroundColor: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid #CBD5E1' }}>
+                                  {coverPhoto ? (
+                                    <img src={coverPhoto} alt={v.make_model} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                  ) : (
+                                    <Car size={18} color="#94A3B8" />
+                                  )}
+                                </div>
+                                <div>
+                                  <div style={{ fontWeight: 800, fontSize: '13px', color: '#0F172A' }}>
+                                    {v.year} {v.make_model}
+                                  </div>
+                                  {v.tagline && (
+                                    <div style={{ fontSize: '11px', color: '#64748B', maxWidth: '240px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                      {v.tagline}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td style={{ padding: '14px 16px' }}>
+                              <div style={{ color: '#0078D4', fontWeight: 800 }}>{v.plate}</div>
+                              <div style={{ fontFamily: 'monospace', color: '#94A3B8', fontSize: '11px' }}>{v.vin}</div>
+                            </td>
+                            <td style={{ padding: '14px 16px' }}>
+                              <div style={{ fontWeight: 700, color: '#334155' }}>{v.class}</div>
+                              <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
+                                👥 {v.passenger_capacity || 3} Seats · 🧳 {v.luggage_capacity || 3} Bags
+                              </div>
+                            </td>
+                            <td style={{ padding: '14px 16px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                <span style={{ backgroundColor: '#EFF6FF', color: '#0078D4', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>
+                                  📸 {v.photos?.length || 0} S3 Photos
+                                </span>
+                                {v.amenities && v.amenities.length > 0 && (
+                                  <span style={{ backgroundColor: '#F1F5F9', color: '#475569', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700 }}>
+                                    ✨ {v.amenities.length} Extras
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td style={{ padding: '14px 16px' }}>
+                              <select
+                                value={isRentable ? 'AVAILABLE' : 'MAINTENANCE'}
+                                onChange={(e) => {
+                                  const nextActive = e.target.value === 'AVAILABLE';
+                                  handleSetVehicleActiveStatus(v.id, nextActive, v.plate || v.make_model);
+                                }}
+                                style={{
+                                  padding: '7px 12px',
+                                  borderRadius: '8px',
+                                  fontSize: '12px',
+                                  fontWeight: 800,
+                                  cursor: 'pointer',
+                                  border: isRentable ? '1.5px solid #86EFAC' : '1.5px solid #FCD34D',
+                                  backgroundColor: isRentable ? '#F0FDF4' : '#FFFBEB',
+                                  color: isRentable ? '#15803D' : '#B45309',
+                                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                                  outline: 'none',
+                                  transition: 'all 0.15s ease'
+                                }}
+                              >
+                                <option value="AVAILABLE" style={{ backgroundColor: '#FFFFFF', color: '#15803D', fontWeight: 700 }}>
+                                  🟢 Active &amp; Rentable
+                                </option>
+                                <option value="MAINTENANCE" style={{ backgroundColor: '#FFFFFF', color: '#B45309', fontWeight: 700 }}>
+                                  🛠️ Under Maintenance (Hidden)
+                                </option>
+                              </select>
+                            </td>
+                            <td style={{ padding: '14px 16px' }}>
+                              <button
+                                onClick={() => handleToggleVehicleNetwork(v.id, Boolean(v.is_network_shared))}
+                                style={{
+                                  padding: '4px 10px',
+                                  borderRadius: '12px',
+                                  fontSize: '11px',
+                                  fontWeight: 800,
+                                  border: '1px solid',
+                                  cursor: 'pointer',
+                                  backgroundColor: v.is_network_shared !== false ? '#F0FDF4' : '#F1F5F9',
+                                  color: v.is_network_shared !== false ? '#15803D' : '#64748B',
+                                  borderColor: v.is_network_shared !== false ? '#86EFAC' : '#CBD5E1'
+                                }}
+                              >
+                                {v.is_network_shared !== false ? '🌐 Network Active' : '🔒 Local Only'}
+                              </button>
+                            </td>
+                            <td style={{ padding: '14px 16px', color: '#16A34A', fontWeight: 700 }}>
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <ShieldCheck size={15} /> Active
+                              </span>
+                            </td>
+                            <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEditVehicleModal(v)}
+                                  style={{
+                                    padding: '6px 12px',
+                                    backgroundColor: '#EFF6FF',
+                                    color: '#0078D4',
+                                    border: '1px solid #BFDBFE',
+                                    borderRadius: '6px',
+                                    fontSize: '11px',
+                                    fontWeight: 800,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    boxShadow: '0 1px 2px rgba(0, 120, 212, 0.1)'
+                                  }}
+                                  title="Edit vehicle specifications, tariffs, amenities and media"
+                                >
+                                  <Edit3 size={12} /> Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setVehicleToDelete(v)}
+                                  style={{
+                                    padding: '6px 10px',
+                                    backgroundColor: '#FEF2F2',
+                                    color: '#DC2626',
+                                    border: '1px solid #FECACA',
+                                    borderRadius: '6px',
+                                    fontSize: '11px',
+                                    fontWeight: 800,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                  }}
+                                  title="Remove vehicle from fleet inventory"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
+
+                {/* EDIT VEHICLE FULL SHOWROOM MODAL */}
+                {editingVehicle && editVehicleForm && (
+                  <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                    padding: '20px',
+                    overflowY: 'auto'
+                  }}>
+                    <div style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '16px',
+                      padding: '28px',
+                      maxWidth: '960px',
+                      width: '100%',
+                      maxHeight: '90vh',
+                      overflowY: 'auto',
+                      boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                      border: '2px solid #0078D4'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #E2E8F0', paddingBottom: '16px' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={{ backgroundColor: '#EFF6FF', color: '#0078D4', padding: '6px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Edit3 size={20} />
+                            </span>
+                            <div>
+                              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: '#0F172A' }}>
+                                Edit Vehicle Specifications &amp; Showroom Profile
+                              </h3>
+                              <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748B' }}>
+                                Updating <strong>{editVehicleForm.year} {editVehicleForm.make} {editVehicleForm.model}</strong> ({editVehicleForm.license_plate})
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => { setEditingVehicle(null); setEditVehicleForm(null); }}
+                          style={{ background: '#F1F5F9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748B' }}
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+
+                      <form onSubmit={handleUpdateVehicleSubmit}>
+                        {/* Section 1: Specs & Identifiers */}
+                        <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '10px', border: '1px solid #E2E8F0', marginBottom: '18px' }}>
+                          <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: 800, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Car size={16} color="#0078D4" /> 1. Vehicle Make, Model, Chassis &amp; Physical Capacities
+                          </h4>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '12px', marginBottom: '12px' }}>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>Make</label>
+                              <input
+                                type="text"
+                                value={editVehicleForm.make}
+                                onChange={(e) => setEditVehicleForm({ ...editVehicleForm, make: e.target.value })}
+                                required
+                                style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', fontWeight: 700 }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>Model</label>
+                              <input
+                                type="text"
+                                value={editVehicleForm.model}
+                                onChange={(e) => setEditVehicleForm({ ...editVehicleForm, model: e.target.value })}
+                                required
+                                style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', fontWeight: 700 }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>Year</label>
+                              <input
+                                type="number"
+                                value={editVehicleForm.year}
+                                onChange={(e) => setEditVehicleForm({ ...editVehicleForm, year: parseInt(e.target.value) || 2026 })}
+                                style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', fontWeight: 700 }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>Vehicle Class Tier</label>
+                              <select
+                                value={editVehicleForm.vehicle_class}
+                                onChange={(e) => setEditVehicleForm({ ...editVehicleForm, vehicle_class: e.target.value })}
+                                style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', fontWeight: 700 }}
+                              >
+                                <option value="FIRST_CLASS">First Class (S-Class, 7-Series)</option>
+                                <option value="BUSINESS_SEDAN">Business Class Sedan (E-Class, 5-Series)</option>
+                                <option value="LUXURY_SUV">Luxury SUV (Escalade, Navigator)</option>
+                                <option value="PRESTIGE_VAN">Executive VIP Sprinter JetVan</option>
+                                <option value="ELECTRIC_FLAGSHIP">Electric Flagship (BMW i7, EQS)</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>License Plate</label>
+                              <input
+                                type="text"
+                                value={editVehicleForm.license_plate}
+                                onChange={(e) => setEditVehicleForm({ ...editVehicleForm, license_plate: e.target.value })}
+                                required
+                                style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', fontWeight: 700 }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>VIN Number</label>
+                              <input
+                                type="text"
+                                value={editVehicleForm.vin}
+                                onChange={(e) => setEditVehicleForm({ ...editVehicleForm, vin: e.target.value })}
+                                style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px' }}
+                              />
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '12px' }}>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>👥 Passenger Capacity</label>
+                              <input
+                                type="number"
+                                min={1}
+                                max={20}
+                                value={editVehicleForm.capacity_passengers}
+                                onChange={(e) => setEditVehicleForm({ ...editVehicleForm, capacity_passengers: parseInt(e.target.value) || 3 })}
+                                style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', fontWeight: 700 }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>🧳 Luggage Capacity (Suitcases)</label>
+                              <input
+                                type="number"
+                                min={1}
+                                max={20}
+                                value={editVehicleForm.capacity_luggage}
+                                onChange={(e) => setEditVehicleForm({ ...editVehicleForm, capacity_luggage: parseInt(e.target.value) || 3 })}
+                                style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', fontWeight: 700 }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>🎨 Exterior Paint Color</label>
+                              <input
+                                type="text"
+                                value={editVehicleForm.exterior_color}
+                                onChange={(e) => setEditVehicleForm({ ...editVehicleForm, exterior_color: e.target.value })}
+                                style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px' }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>🛋️ Interior Trim &amp; Leather</label>
+                              <input
+                                type="text"
+                                value={editVehicleForm.interior_color}
+                                onChange={(e) => setEditVehicleForm({ ...editVehicleForm, interior_color: e.target.value })}
+                                style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px' }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>⏱️ Hourly Rate ({localeSpecs.currencySymbol})</label>
+                              <input
+                                type="number"
+                                step="0.5"
+                                value={editVehicleForm.hourly_rate_usd}
+                                onChange={(e) => setEditVehicleForm({ ...editVehicleForm, hourly_rate_usd: parseFloat(e.target.value) || 125.0 })}
+                                style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', fontWeight: 700 }}
+                              />
+                            </div>
+                            <div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>
+                                  📏 Per {editVehicleForm.distance_unit === 'MILES' ? 'Mile' : 'KM'} Rate ({localeSpecs.currencySymbol})
+                                </label>
+                                <div style={{ display: 'flex', backgroundColor: '#E2E8F0', borderRadius: '4px', padding: '1px' }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (editVehicleForm.distance_unit !== 'MILES') {
+                                        const newRate = Math.round((editVehicleForm.per_distance_rate * 1.609) * 100) / 100;
+                                        setEditVehicleForm({ ...editVehicleForm, distance_unit: 'MILES', per_distance_rate: newRate });
+                                      }
+                                    }}
+                                    style={{
+                                      padding: '2px 5px',
+                                      fontSize: '9px',
+                                      fontWeight: 800,
+                                      border: 'none',
+                                      borderRadius: '3px',
+                                      cursor: 'pointer',
+                                      backgroundColor: editVehicleForm.distance_unit === 'MILES' ? '#0078D4' : 'transparent',
+                                      color: editVehicleForm.distance_unit === 'MILES' ? '#FFFFFF' : '#475569'
+                                    }}
+                                  >
+                                    MILES
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (editVehicleForm.distance_unit !== 'KM') {
+                                        const newRate = Math.round((editVehicleForm.per_distance_rate / 1.609) * 100) / 100;
+                                        setEditVehicleForm({ ...editVehicleForm, distance_unit: 'KM', per_distance_rate: newRate });
+                                      }
+                                    }}
+                                    style={{
+                                      padding: '2px 5px',
+                                      fontSize: '9px',
+                                      fontWeight: 800,
+                                      border: 'none',
+                                      borderRadius: '3px',
+                                      cursor: 'pointer',
+                                      backgroundColor: editVehicleForm.distance_unit === 'KM' ? '#0078D4' : 'transparent',
+                                      color: editVehicleForm.distance_unit === 'KM' ? '#FFFFFF' : '#475569'
+                                    }}
+                                  >
+                                    KM
+                                  </button>
+                                </div>
+                              </div>
+                              <input
+                                type="number"
+                                step="0.05"
+                                value={editVehicleForm.per_distance_rate}
+                                onChange={(e) => setEditVehicleForm({ ...editVehicleForm, per_distance_rate: parseFloat(e.target.value) || 3.85 })}
+                                style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', fontWeight: 700 }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Section 2: Showroom Tagline & Description with AI Assistant */}
+                        <div style={{ backgroundColor: '#FFFFFF', padding: '16px', borderRadius: '10px', border: '1px solid #CBD5E1', marginBottom: '18px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+                          <div style={{ marginBottom: '14px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
+                              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 800, color: '#1E293B', margin: 0 }}>
+                                <Sparkles size={15} color="#0078D4" /> Customer Showroom Headline / AI Marketing Tagline
+                              </label>
+                              <button
+                                type="button"
+                                onClick={handleGenerateEditVehicleTaglines}
+                                style={{
+                                  padding: '5px 12px',
+                                  background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
+                                  color: '#1D4ED8',
+                                  border: '1px solid #BFDBFE',
+                                  borderRadius: '6px',
+                                  fontSize: '11px',
+                                  fontWeight: 800,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  boxShadow: '0 1px 2px rgba(29, 78, 216, 0.08)',
+                                  transition: 'all 0.15s ease'
+                                }}
+                              >
+                                <Sparkles size={13} color="#0078D4" /> ✨ AI Assistant: Generate Taglines
+                              </button>
+                            </div>
+
+                            <input
+                              type="text"
+                              value={editVehicleForm.tagline}
+                              onChange={(e) => setEditVehicleForm({ ...editVehicleForm, tagline: e.target.value })}
+                              style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1.5px solid #CBD5E1', fontSize: '12px', fontWeight: 700, color: '#0F172A', marginBottom: '10px' }}
+                            />
+
+                            {/* AI Tagline Suggestion Pills */}
+                            {showEditAiTaglines && (
+                              <div style={{ background: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px dashed #BFDBFE' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
+                                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    💡 <strong>AI Suggested Marketing Headlines</strong> (Click any to apply instantly):
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={handleGenerateEditVehicleTaglines}
+                                    style={{ background: 'none', border: 'none', color: '#0078D4', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                  >
+                                    <RefreshCw size={11} /> Regenerate Ideas
+                                  </button>
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                  {(editVehicleAiTaglines.length > 0 ? editVehicleAiTaglines : generateAiTaglines(editVehicleForm.make, editVehicleForm.model, editVehicleForm.vehicle_class, editVehicleForm.amenities)).map((sug, sIdx) => {
+                                    const isSelected = editVehicleForm.tagline === sug;
+                                    return (
+                                      <button
+                                        key={sIdx}
+                                        type="button"
+                                        onClick={() => setEditVehicleForm({ ...editVehicleForm, tagline: sug })}
+                                        style={{
+                                          padding: '6px 11px',
+                                          fontSize: '11px',
+                                          fontWeight: isSelected ? 800 : 600,
+                                          borderRadius: '6px',
+                                          cursor: 'pointer',
+                                          textAlign: 'left',
+                                          transition: 'all 0.15s ease',
+                                          backgroundColor: isSelected ? '#EFF6FF' : '#FFFFFF',
+                                          color: isSelected ? '#1D4ED8' : '#334155',
+                                          border: isSelected ? '1.5px solid #3B82F6' : '1px solid #CBD5E1',
+                                          boxShadow: isSelected ? '0 1px 4px rgba(59, 130, 246, 0.2)' : '0 1px 2px rgba(0,0,0,0.02)',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: '6px'
+                                        }}
+                                      >
+                                        {isSelected ? <Check size={13} color="#1D4ED8" /> : <span>✨</span>}
+                                        <span>{sug}</span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                              📝 Luxury Vehicle Description &amp; Passenger Comfort Narrative
+                            </label>
+                            <textarea
+                              rows={2}
+                              value={editVehicleForm.description}
+                              onChange={(e) => setEditVehicleForm({ ...editVehicleForm, description: e.target.value })}
+                              style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px' }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Section 3: Photo Studio & Media Management */}
+                        <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '10px', border: '1px solid #E2E8F0', marginBottom: '18px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                            <div>
+                              <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <Camera size={16} color="#0078D4" /> 2. Showroom Photo Gallery &amp; S3 Media Management
+                              </h4>
+                              <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#64748B' }}>
+                                Manage uploaded photos, designate the cover image, and add more high-res photos.
+                              </p>
+                            </div>
+                            <label style={{
+                              padding: '6px 14px',
+                              backgroundColor: '#0078D4',
+                              color: '#FFFFFF',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}>
+                              <Plus size={14} /> + Add More Photos
+                              <input
+                                type="file"
+                                multiple
+                                accept="image/jpeg,image/png,image/webp,image/heic"
+                                onChange={(e) => handleEditPhotosSelected(e.target.files)}
+                                style={{ display: 'none' }}
+                              />
+                            </label>
+                          </div>
+
+                          {editIsCompressingPhotos && (
+                            <div style={{ padding: '8px 12px', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '6px', color: '#1E40AF', fontSize: '11px', fontWeight: 700, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <RefreshCw size={14} className="animate-spin" /> Processing and enhancing selected photos...
+                            </div>
+                          )}
+
+                          {editVehicleForm.uploaded_photos.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '20px', color: '#94A3B8' }}>
+                              <Car size={32} color="#CBD5E1" style={{ margin: '0 auto 6px auto' }} />
+                              <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748B' }}>No photos attached to this vehicle</div>
+                              <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>
+                                Click "+ Add More Photos" above to upload photos from your device.
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: '12px' }}>
+                              {editVehicleForm.uploaded_photos.map((photo: any, pIdx: number) => (
+                                <div
+                                  key={pIdx}
+                                  style={{
+                                    backgroundColor: '#FFFFFF',
+                                    borderRadius: '8px',
+                                    overflow: 'hidden',
+                                    border: photo.isPrimary ? '2px solid #0078D4' : '1px solid #E2E8F0',
+                                    position: 'relative'
+                                  }}
+                                >
+                                  {photo.isPrimary && (
+                                    <div style={{ position: 'absolute', top: '6px', left: '6px', backgroundColor: '#0078D4', color: '#FFFFFF', padding: '2px 6px', borderRadius: '8px', fontSize: '9px', fontWeight: 800, zIndex: 2 }}>
+                                      ★ COVER PHOTO
+                                    </div>
+                                  )}
+                                  <div style={{ height: '110px', width: '100%', overflow: 'hidden', backgroundColor: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <img src={photo.dataUrl} alt={photo.caption} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                  </div>
+                                  <div style={{ padding: '8px' }}>
+                                    <select
+                                      value={photo.photoType}
+                                      onChange={(e) => {
+                                        const nextType = e.target.value;
+                                        setEditVehicleForm((prev: any) => ({
+                                          ...prev,
+                                          uploaded_photos: prev.uploaded_photos.map((p: any, i: number) => i === pIdx ? { ...p, photoType: nextType } : p)
+                                        }));
+                                      }}
+                                      style={{ width: '100%', padding: '3px 6px', borderRadius: '4px', border: '1px solid #CBD5E1', fontSize: '10px', fontWeight: 700, marginBottom: '6px' }}
+                                    >
+                                      <option value="EXTERIOR">Hero Exterior Profile</option>
+                                      <option value="CABIN">Rear Executive Cabin Lounge</option>
+                                      <option value="COCKPIT">Chauffeur Cockpit / Dashboard</option>
+                                      <option value="TRUNK">Luggage Trunk Cargo Bay</option>
+                                      <option value="AMENITY">Bar &amp; Luxury Amenities</option>
+                                    </select>
+                                    <div style={{ display: 'flex', gap: '6px' }}>
+                                      {!photo.isPrimary && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleSetEditPrimaryPhoto(pIdx)}
+                                          style={{ flex: 1, padding: '3px', backgroundColor: '#EFF6FF', color: '#0078D4', border: '1px solid #BFDBFE', borderRadius: '4px', fontSize: '10px', fontWeight: 800, cursor: 'pointer' }}
+                                        >
+                                          Set Cover
+                                        </button>
+                                      )}
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveEditPhoto(pIdx)}
+                                        style={{ flex: 1, padding: '3px', backgroundColor: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', borderRadius: '4px', fontSize: '10px', fontWeight: 800, cursor: 'pointer' }}
+                                      >
+                                        Remove
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Section 4: Amenities Customizer */}
+                        <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '10px', border: '1px solid #E2E8F0', marginBottom: '18px' }}>
+                          <h4 style={{ margin: '0 0 4px 0', fontSize: '13px', fontWeight: 800, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Award size={16} color="#0078D4" /> 3. Luxury Amenities &amp; Onboard Extras
+                          </h4>
+                          <p style={{ margin: '0 0 10px 0', fontSize: '11px', color: '#64748B' }}>
+                            Click any pill to toggle on/off.
+                          </p>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+                            {ALL_LUXURY_AMENITIES_LIBRARY.map((amenity) => {
+                              const isSelected = editVehicleForm.amenities.includes(amenity);
+                              return (
+                                <button
+                                  key={amenity}
+                                  type="button"
+                                  onClick={() => handleToggleEditAmenity(amenity)}
+                                  style={{
+                                    padding: '5px 10px',
+                                    backgroundColor: isSelected ? '#0078D4' : '#FFFFFF',
+                                    color: isSelected ? '#FFFFFF' : '#334155',
+                                    border: isSelected ? '1px solid #0078D4' : '1px solid #CBD5E1',
+                                    borderRadius: '16px',
+                                    fontSize: '10px',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                  }}
+                                >
+                                  {isSelected ? '✓ ' : '+ '} {amenity}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div style={{ display: 'flex', gap: '6px', maxWidth: '420px' }}>
+                            <input
+                              type="text"
+                              placeholder="Add custom amenity..."
+                              value={editCustomAmenity}
+                              onChange={(e) => setEditCustomAmenity(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddEditCustomAmenity(); } }}
+                              style={{ flex: 1, padding: '5px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '11px' }}
+                            />
+                            <button
+                              type="button"
+                              onClick={handleAddEditCustomAmenity}
+                              style={{ padding: '5px 12px', backgroundColor: '#334155', color: '#FFFFFF', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                            >
+                              + Add
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Section 5: Operational Status & Network Sharing */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+                          <div style={{ padding: '12px 14px', backgroundColor: editVehicleForm.is_active ? '#F0FDF4' : '#FFFBEB', border: editVehicleForm.is_active ? '1px solid #BBF7D0' : '1px solid #FDE68A', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <input
+                              type="checkbox"
+                              id="chk_edit_is_active"
+                              checked={editVehicleForm.is_active}
+                              onChange={(e) => setEditVehicleForm({ ...editVehicleForm, is_active: e.target.checked })}
+                              style={{ width: '18px', height: '18px', accentColor: '#16A34A', cursor: 'pointer' }}
+                            />
+                            <div>
+                              <label htmlFor="chk_edit_is_active" style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: editVehicleForm.is_active ? '#15803D' : '#B45309', cursor: 'pointer' }}>
+                                {editVehicleForm.is_active ? '🟢 In Service & Rentable' : '🛠️ Under Repair / Maintenance (Disabled)'}
+                              </label>
+                              <div style={{ fontSize: '10px', color: '#64748B' }}>
+                                {editVehicleForm.is_active ? 'Visible to customers in showroom & rental lists.' : 'Hidden from customer storefront rental options.'}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style={{ padding: '12px 14px', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <input
+                              type="checkbox"
+                              id="chk_edit_network_sharing"
+                              checked={editVehicleForm.is_network_shared}
+                              onChange={(e) => setEditVehicleForm({ ...editVehicleForm, is_network_shared: e.target.checked })}
+                              style={{ width: '18px', height: '18px', accentColor: '#0078D4', cursor: 'pointer' }}
+                            />
+                            <div>
+                              <label htmlFor="chk_edit_network_sharing" style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#1E3A8A', cursor: 'pointer' }}>
+                                🌐 Global Hub Network Sharing
+                              </label>
+                              <div style={{ fontSize: '10px', color: '#64748B' }}>
+                                Earn 85% net payout on cross-market farm-in rides.
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Modal Action Buttons */}
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #E2E8F0', paddingTop: '16px' }}>
+                          <button
+                            type="button"
+                            onClick={() => { setEditingVehicle(null); setEditVehicleForm(null); }}
+                            style={{ padding: '10px 20px', background: '#F1F5F9', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', color: '#475569' }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={isUpdatingVehicle}
+                            style={{
+                              padding: '10px 26px',
+                              background: 'linear-gradient(135deg, #0078D4 0%, #1D4ED8 100%)',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              borderRadius: '8px',
+                              fontSize: '13px',
+                              fontWeight: 900,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              boxShadow: '0 4px 12px rgba(0, 120, 212, 0.3)'
+                            }}
+                          >
+                            {isUpdatingVehicle ? (
+                              <>
+                                <RefreshCw size={16} className="animate-spin" /> Saving Changes &amp; Syncing S3...
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle2 size={16} /> 💾 Save Changes to Live Fleet
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                )}
+
+                {/* DELETE VEHICLE CONFIRMATION MODAL */}
+                {vehicleToDelete && (
+                  <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                    padding: '20px'
+                  }}>
+                    <div style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '14px',
+                      padding: '24px',
+                      maxWidth: '460px',
+                      width: '100%',
+                      boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                      border: '2px solid #EF4444'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+                        <div style={{ width: '42px', height: '42px', borderRadius: '50%', backgroundColor: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <Trash2 size={22} color="#DC2626" />
+                        </div>
+                        <div>
+                          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 900, color: '#0F172A' }}>
+                            Decommission Vehicle from Fleet?
+                          </h3>
+                          <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748B' }}>
+                            Permanent fleet inventory action
+                          </p>
+                        </div>
+                      </div>
+
+                      <p style={{ fontSize: '13px', color: '#334155', lineHeight: 1.5, marginBottom: '20px' }}>
+                        Are you sure you want to remove <strong>{vehicleToDelete.year || ''} {vehicleToDelete.make_model || 'Vehicle'}</strong> (Plate: <strong>{vehicleToDelete.plate || '—'}</strong>) from your fleet inventory? This vehicle will be deleted from the showroom and dispatch console.
+                      </p>
+
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                        <button
+                          type="button"
+                          onClick={() => setVehicleToDelete(null)}
+                          style={{ padding: '8px 16px', background: '#F1F5F9', border: '1px solid #CBD5E1', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', color: '#475569' }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isDeletingVehicle}
+                          onClick={handleDeleteVehicleConfirm}
+                          style={{
+                            padding: '8px 18px',
+                            background: '#DC2626',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: 800,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 2px 6px rgba(220, 38, 38, 0.3)'
+                          }}
+                        >
+                          {isDeletingVehicle ? (
+                            <>
+                              <RefreshCw size={14} className="animate-spin" /> Deleting...
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 size={14} /> Confirm Decommission
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -5627,373 +7602,437 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                       </div>
 
                       {/* Policy Cards Grid: Farm-In (Taking Work) vs Farm-Out (Sending Work) */}
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '18px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '14px' }}>
                         
                         {/* 1. FARM-IN POLICY (TAKING JOBS FROM OTHER VENDORS) */}
-                        <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '10px', padding: '18px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid #F1F5F9', paddingBottom: '10px' }}>
-                            <div style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              📥 Farm-In Policy (Receiving Work from Hub)
+                        <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '10px', padding: '14px 18px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                          <div
+                            onClick={() => setIsFarmInOpen(!isFarmInOpen)}
+                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                📥 Farm-In Policy (Receiving Work from Hub)
+                              </div>
+                              <span style={{ fontSize: '11px', fontWeight: 700, color: vendorAffiliatePolicy.farm_in_policy.open_for_farm_in ? '#15803D' : '#94A3B8', background: vendorAffiliatePolicy.farm_in_policy.open_for_farm_in ? '#DCFCE7' : '#F1F5F9', padding: '2px 8px', borderRadius: '12px' }}>
+                                {vendorAffiliatePolicy.farm_in_policy.open_for_farm_in ? '🟢 Open for Farm-In' : '🔴 Closed'}
+                              </span>
+                              <span style={{ fontSize: '11px', color: '#64748B' }}>
+                                Min Net Payout: <strong>${vendorAffiliatePolicy.farm_in_policy.min_net_payout_usd}</strong> • Max Deadhead: <strong>{vendorAffiliatePolicy.farm_in_policy.max_deadhead_from_depot_km} km</strong>
+                              </span>
                             </div>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 800, color: vendorAffiliatePolicy.farm_in_policy.open_for_farm_in ? '#15803D' : '#94A3B8', cursor: 'pointer' }}>
-                              <input
-                                type="checkbox"
-                                checked={vendorAffiliatePolicy.farm_in_policy.open_for_farm_in}
-                                onChange={e => setVendorAffiliatePolicy({
-                                  ...vendorAffiliatePolicy,
-                                  farm_in_policy: {
-                                    ...vendorAffiliatePolicy.farm_in_policy,
-                                    open_for_farm_in: e.target.checked
-                                  }
-                                })}
-                              />
-                              {vendorAffiliatePolicy.farm_in_policy.open_for_farm_in ? '🟢 Open for Farm-In' : '🔴 Closed'}
-                            </label>
+
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setIsFarmInOpen(!isFarmInOpen); }}
+                              style={{
+                                padding: '4px 10px',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                backgroundColor: isFarmInOpen ? '#EFF6FF' : '#F8FAFC',
+                                color: isFarmInOpen ? '#0078D4' : '#475569',
+                                border: '1px solid #CBD5E1',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              {isFarmInOpen ? '▲ Collapse' : '▼ Configure Rules'}
+                            </button>
                           </div>
 
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            
-                            {/* AI Agent Natural Language Directive */}
-                            <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '8px', padding: '12px' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                                <label style={{ fontSize: '11px', fontWeight: 800, color: '#166534', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                  🤖 AI Agent Prompt Directive (Plain English Rules)
-                                </label>
-                                <span style={{ fontSize: '10px', color: '#15803D', fontWeight: 700 }}>Autonomous Matching</span>
-                              </div>
-                              <textarea
-                                rows={3}
-                                value={vendorAffiliatePolicy.farm_in_policy.ai_natural_language_prompt || ''}
-                                onChange={e => setVendorAffiliatePolicy({
-                                  ...vendorAffiliatePolicy,
-                                  farm_in_policy: {
-                                    ...vendorAffiliatePolicy.farm_in_policy,
-                                    ai_natural_language_prompt: e.target.value
-                                  }
-                                })}
-                                placeholder="Write in plain English what jobs your fleet accepts..."
-                                style={{ width: '100%', padding: '8px 10px', fontSize: '12px', border: '1px solid #86EFAC', borderRadius: '6px', backgroundColor: '#FFFFFF', resize: 'vertical' }}
-                              />
-
-                              {/* Quick Presets for Farm-In */}
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
-                                <span style={{ fontSize: '10px', color: '#166534', fontWeight: 700, alignSelf: 'center' }}>Presets:</span>
-                                {[
-                                  { label: '✈️ Airport & VIP ($90+)', text: 'Open to receive corporate and airport transfer rides in our home metro area. Require minimum $90 net payout. Only accept First Class and Luxury SUV classes with 45m+ lead time.' },
-                                  { label: '🏙️ All Classes Open', text: 'Open for all corporate, airport, and city transfers. Accept First Class, Luxury SUV, and Business Sedan. Min payout $70, lead time 30m.' },
-                                  { label: '💎 Ultra-VIP Escalade Only', text: 'Only accept Luxury SUV and First Class airport charters for verified corporate executives. Minimum $120 net cut.' }
-                                ].map((preset, pIdx) => (
-                                  <button
-                                    key={pIdx}
-                                    type="button"
-                                    onClick={() => setVendorAffiliatePolicy({
+                          {isFarmInOpen && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px', borderTop: '1px solid #F1F5F9', paddingTop: '14px' }}>
+                              {/* Open for Farm-In Checkbox */}
+                              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 800, color: vendorAffiliatePolicy.farm_in_policy.open_for_farm_in ? '#15803D' : '#94A3B8', cursor: 'pointer' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={vendorAffiliatePolicy.farm_in_policy.open_for_farm_in}
+                                    onChange={e => setVendorAffiliatePolicy({
                                       ...vendorAffiliatePolicy,
                                       farm_in_policy: {
                                         ...vendorAffiliatePolicy.farm_in_policy,
-                                        ai_natural_language_prompt: preset.text
+                                        open_for_farm_in: e.target.checked
                                       }
                                     })}
-                                    style={{ fontSize: '10px', padding: '2px 6px', background: '#DCFCE7', border: '1px solid #86EFAC', borderRadius: '4px', cursor: 'pointer', color: '#14532D', fontWeight: 600 }}
-                                  >
-                                    {preset.label}
-                                  </button>
-                                ))}
+                                  />
+                                  {vendorAffiliatePolicy.farm_in_policy.open_for_farm_in ? '🟢 Open for Farm-In' : '🔴 Closed'}
+                                </label>
                               </div>
-                            </div>
 
-                            {/* Decision Mode */}
-                            <div>
-                              <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>AI Matchmaker Consensus Mode</label>
-                              <select
-                                value={vendorAffiliatePolicy.farm_in_policy.ai_decision_mode || 'AI_AGENT_AUTONOMOUS'}
-                                onChange={e => setVendorAffiliatePolicy({
-                                  ...vendorAffiliatePolicy,
-                                  farm_in_policy: {
-                                    ...vendorAffiliatePolicy.farm_in_policy,
-                                    ai_decision_mode: e.target.value as any
-                                  }
-                                })}
-                                style={{ width: '100%', padding: '6px 10px', fontSize: '12px', border: '1px solid #CBD5E1', borderRadius: '6px', marginTop: '4px' }}
-                              >
-                                <option value="AI_AGENT_AUTONOMOUS">🤖 AI Agent Autonomous (Prompt + Context Ranking)</option>
-                                <option value="HYBRID">⚡ Hybrid (AI Prompt + Strict Hard Bounds)</option>
-                                <option value="STRICT_DETERMINISTIC">⚙️ Strict Deterministic (Hard Rules Only)</option>
-                              </select>
-                            </div>
-
-                            <div>
-                              <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>
-                                Minimum Net Payout Per Trip ($ USD)
-                              </label>
-                              <input
-                                type="number"
-                                value={vendorAffiliatePolicy.farm_in_policy.min_net_payout_usd}
-                                onChange={e => setVendorAffiliatePolicy({
-                                  ...vendorAffiliatePolicy,
-                                  farm_in_policy: {
-                                    ...vendorAffiliatePolicy.farm_in_policy,
-                                    min_net_payout_usd: parseFloat(e.target.value) || 0
-                                  }
-                                })}
-                                style={{ width: '100%', padding: '8px 10px', fontSize: '12px', border: '1px solid #CBD5E1', borderRadius: '6px', marginTop: '4px' }}
-                              />
-                              <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>
-                                Reject any incoming farm-in request where your 85% net cut is less than this threshold.
-                              </div>
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                              <div>
-                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>Min Lead Time (Minutes)</label>
-                                <input
-                                  type="number"
-                                  value={vendorAffiliatePolicy.farm_in_policy.min_lead_time_minutes}
-                                  onChange={e => setVendorAffiliatePolicy({
-                                    ...vendorAffiliatePolicy,
-                                    farm_in_policy: {
-                                      ...vendorAffiliatePolicy.farm_in_policy,
-                                      min_lead_time_minutes: parseInt(e.target.value) || 0
-                                    }
-                                  })}
-                                  style={{ width: '100%', padding: '8px 10px', fontSize: '12px', border: '1px solid #CBD5E1', borderRadius: '6px', marginTop: '4px' }}
-                                />
-                              </div>
-                              <div>
-                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>Max Deadhead (KM)</label>
-                                <input
-                                  type="number"
-                                  value={vendorAffiliatePolicy.farm_in_policy.max_deadhead_from_depot_km}
-                                  onChange={e => setVendorAffiliatePolicy({
-                                    ...vendorAffiliatePolicy,
-                                    farm_in_policy: {
-                                      ...vendorAffiliatePolicy.farm_in_policy,
-                                      max_deadhead_from_depot_km: parseFloat(e.target.value) || 0
-                                    }
-                                  })}
-                                  style={{ width: '100%', padding: '8px 10px', fontSize: '12px', border: '1px solid #CBD5E1', borderRadius: '6px', marginTop: '4px' }}
-                                />
-                              </div>
-                            </div>
-
-                            <div>
-                              <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>Accepted Luxury Fleet Categories</label>
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
-                                {[
-                                  { id: 'FIRST_CLASS', label: 'First Class (S-Class / 7-Series)' },
-                                  { id: 'LUXURY_SUV', label: 'Luxury SUV (Escalade / Navigator)' },
-                                  { id: 'BUSINESS_SEDAN', label: 'Business Sedan (E-Class / 5-Series)' }
-                                ].map(v => (
-                                  <label key={v.id} style={{ fontSize: '11px', background: '#F8FAFC', border: '1px solid #E2E8F0', padding: '4px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                                    <input
-                                      type="checkbox"
-                                      checked={vendorAffiliatePolicy.farm_in_policy.allowed_vehicle_classes.includes(v.id)}
-                                      onChange={e => {
-                                        const cur = vendorAffiliatePolicy.farm_in_policy.allowed_vehicle_classes;
-                                        const next = e.target.checked ? [...cur, v.id] : cur.filter(x => x !== v.id);
-                                        setVendorAffiliatePolicy({
-                                          ...vendorAffiliatePolicy,
-                                          farm_in_policy: {
-                                            ...vendorAffiliatePolicy.farm_in_policy,
-                                            allowed_vehicle_classes: next
-                                          }
-                                        });
-                                      }}
-                                    />
-                                    {v.label}
+                              {/* AI Agent Natural Language Directive */}
+                              <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '8px', padding: '12px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#166534', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    🤖 AI Agent Prompt Directive (Plain English Rules)
                                   </label>
-                                ))}
+                                  <span style={{ fontSize: '10px', color: '#15803D', fontWeight: 700 }}>Autonomous Matching</span>
+                                </div>
+                                <textarea
+                                  rows={3}
+                                  value={vendorAffiliatePolicy.farm_in_policy.ai_natural_language_prompt || ''}
+                                  onChange={e => setVendorAffiliatePolicy({
+                                    ...vendorAffiliatePolicy,
+                                    farm_in_policy: {
+                                      ...vendorAffiliatePolicy.farm_in_policy,
+                                      ai_natural_language_prompt: e.target.value
+                                    }
+                                  })}
+                                  placeholder="Write in plain English what jobs your fleet accepts..."
+                                  style={{ width: '100%', padding: '8px 10px', fontSize: '12px', border: '1px solid #86EFAC', borderRadius: '6px', backgroundColor: '#FFFFFF', resize: 'vertical' }}
+                                />
+
+                                {/* Quick Presets for Farm-In */}
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+                                  <span style={{ fontSize: '10px', color: '#166534', fontWeight: 700, alignSelf: 'center' }}>Presets:</span>
+                                  {[
+                                    { label: '✈️ Airport & VIP ($90+)', text: 'Open to receive corporate and airport transfer rides in our home metro area. Require minimum $90 net payout. Only accept First Class and Luxury SUV classes with 45m+ lead time.' },
+                                    { label: '🏙️ All Classes Open', text: 'Open for all corporate, airport, and city transfers. Accept First Class, Luxury SUV, and Business Sedan. Min payout $70, lead time 30m.' },
+                                    { label: '💎 Ultra-VIP Escalade Only', text: 'Only accept Luxury SUV and First Class airport charters for verified corporate executives. Minimum $120 net cut.' }
+                                  ].map((preset, pIdx) => (
+                                    <button
+                                      key={pIdx}
+                                      type="button"
+                                      onClick={() => setVendorAffiliatePolicy({
+                                        ...vendorAffiliatePolicy,
+                                        farm_in_policy: {
+                                          ...vendorAffiliatePolicy.farm_in_policy,
+                                          ai_natural_language_prompt: preset.text
+                                        }
+                                      })}
+                                      style={{ fontSize: '10px', padding: '2px 6px', background: '#DCFCE7', border: '1px solid #86EFAC', borderRadius: '4px', cursor: 'pointer', color: '#14532D', fontWeight: 600 }}
+                                    >
+                                      {preset.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Decision Mode */}
+                              <div>
+                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>AI Matchmaker Consensus Mode</label>
+                                <select
+                                  value={vendorAffiliatePolicy.farm_in_policy.ai_decision_mode || 'AI_AGENT_AUTONOMOUS'}
+                                  onChange={e => setVendorAffiliatePolicy({
+                                    ...vendorAffiliatePolicy,
+                                    farm_in_policy: {
+                                      ...vendorAffiliatePolicy.farm_in_policy,
+                                      ai_decision_mode: e.target.value as any
+                                    }
+                                  })}
+                                  style={{ width: '100%', padding: '6px 10px', fontSize: '12px', border: '1px solid #CBD5E1', borderRadius: '6px', marginTop: '4px' }}
+                                >
+                                  <option value="AI_AGENT_AUTONOMOUS">🤖 AI Agent Autonomous (Prompt + Context Ranking)</option>
+                                  <option value="HYBRID">⚡ Hybrid (AI Prompt + Strict Hard Bounds)</option>
+                                  <option value="STRICT_DETERMINISTIC">⚙️ Strict Deterministic (Hard Rules Only)</option>
+                                </select>
+                              </div>
+
+                              <div>
+                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>
+                                  Minimum Net Payout Per Trip ($ USD)
+                                </label>
+                                <input
+                                  type="number"
+                                  value={vendorAffiliatePolicy.farm_in_policy.min_net_payout_usd}
+                                  onChange={e => setVendorAffiliatePolicy({
+                                    ...vendorAffiliatePolicy,
+                                    farm_in_policy: {
+                                      ...vendorAffiliatePolicy.farm_in_policy,
+                                      min_net_payout_usd: parseFloat(e.target.value) || 0
+                                    }
+                                  })}
+                                  style={{ width: '100%', padding: '8px 10px', fontSize: '12px', border: '1px solid #CBD5E1', borderRadius: '6px', marginTop: '4px' }}
+                                />
+                                <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>
+                                  Reject any incoming farm-in request where your 85% net cut is less than this threshold.
+                                </div>
+                              </div>
+
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                <div>
+                                  <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>Min Lead Time (Minutes)</label>
+                                  <input
+                                    type="number"
+                                    value={vendorAffiliatePolicy.farm_in_policy.min_lead_time_minutes}
+                                    onChange={e => setVendorAffiliatePolicy({
+                                      ...vendorAffiliatePolicy,
+                                      farm_in_policy: {
+                                        ...vendorAffiliatePolicy.farm_in_policy,
+                                        min_lead_time_minutes: parseInt(e.target.value) || 0
+                                      }
+                                    })}
+                                    style={{ width: '100%', padding: '8px 10px', fontSize: '12px', border: '1px solid #CBD5E1', borderRadius: '6px', marginTop: '4px' }}
+                                  />
+                                </div>
+                                <div>
+                                  <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>Max Deadhead (KM)</label>
+                                  <input
+                                    type="number"
+                                    value={vendorAffiliatePolicy.farm_in_policy.max_deadhead_from_depot_km}
+                                    onChange={e => setVendorAffiliatePolicy({
+                                      ...vendorAffiliatePolicy,
+                                      farm_in_policy: {
+                                        ...vendorAffiliatePolicy.farm_in_policy,
+                                        max_deadhead_from_depot_km: parseFloat(e.target.value) || 0
+                                      }
+                                    })}
+                                    style={{ width: '100%', padding: '8px 10px', fontSize: '12px', border: '1px solid #CBD5E1', borderRadius: '6px', marginTop: '4px' }}
+                                  />
+                                </div>
+                              </div>
+
+                              <div>
+                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>Accepted Luxury Fleet Categories</label>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
+                                  {[
+                                    { id: 'FIRST_CLASS', label: 'First Class (S-Class / 7-Series)' },
+                                    { id: 'LUXURY_SUV', label: 'Luxury SUV (Escalade / Navigator)' },
+                                    { id: 'BUSINESS_SEDAN', label: 'Business Sedan (E-Class / 5-Series)' }
+                                  ].map(v => (
+                                    <label key={v.id} style={{ fontSize: '11px', background: '#F8FAFC', border: '1px solid #E2E8F0', padding: '4px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                                      <input
+                                        type="checkbox"
+                                        checked={vendorAffiliatePolicy.farm_in_policy.allowed_vehicle_classes.includes(v.id)}
+                                        onChange={e => {
+                                          const cur = vendorAffiliatePolicy.farm_in_policy.allowed_vehicle_classes;
+                                          const next = e.target.checked ? [...cur, v.id] : cur.filter(x => x !== v.id);
+                                          setVendorAffiliatePolicy({
+                                            ...vendorAffiliatePolicy,
+                                            farm_in_policy: {
+                                              ...vendorAffiliatePolicy.farm_in_policy,
+                                              allowed_vehicle_classes: next
+                                            }
+                                          });
+                                        }}
+                                      />
+                                      {v.label}
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+
+                              <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '6px', padding: '10px', fontSize: '11px', color: '#166534' }}>
+                                ⚡ <strong>Auto-Accept Whitelisted Partners:</strong> Rides from preferred partners (e.g. NY Executive, London Royal) will be automatically accepted & locked in escrow.
                               </div>
                             </div>
-
-                            <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '6px', padding: '10px', fontSize: '11px', color: '#166534' }}>
-                              ⚡ <strong>Auto-Accept Whitelisted Partners:</strong> Rides from preferred partners (e.g. NY Executive, London Royal) will be automatically accepted & locked in escrow.
-                            </div>
-                          </div>
+                          )}
                         </div>
 
                         {/* 2. FARM-OUT POLICY (FARMING WORK TO OTHER OPERATORS) */}
-                        <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '10px', padding: '18px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid #F1F5F9', paddingBottom: '10px' }}>
-                            <div style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              📤 Farm-Out Policy (Sending Work to Affiliates)
+                        <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '10px', padding: '14px 18px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                          <div
+                            onClick={() => setIsFarmOutOpen(!isFarmOutOpen)}
+                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                📤 Farm-Out Policy (Sending Work to Affiliates)
+                              </div>
+                              <span style={{ fontSize: '11px', fontWeight: 700, color: '#0078D4', background: '#EFF6FF', padding: '2px 8px', borderRadius: '12px' }}>
+                                {vendorAffiliatePolicy.farm_out_policy.min_referral_commission_pct}% Referral Cut
+                              </span>
+                              <span style={{ fontSize: '11px', color: '#64748B' }}>
+                                Min Partner Rating: <strong>{vendorAffiliatePolicy.farm_out_policy.min_partner_rating}★</strong> • Radius: <strong>{vendorAffiliatePolicy.farm_out_policy.local_service_radius_km} km</strong>
+                              </span>
                             </div>
-                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#0078D4', background: '#EFF6FF', padding: '2px 8px', borderRadius: '12px' }}>
-                              Originator Policy (10% Referral Cut)
-                            </span>
+
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setIsFarmOutOpen(!isFarmOutOpen); }}
+                              style={{
+                                padding: '4px 10px',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                backgroundColor: isFarmOutOpen ? '#EFF6FF' : '#F8FAFC',
+                                color: isFarmOutOpen ? '#0078D4' : '#475569',
+                                border: '1px solid #CBD5E1',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              {isFarmOutOpen ? '▲ Collapse' : '▼ Configure Rules'}
+                            </button>
                           </div>
 
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            
-                            {/* AI Agent Natural Language Directive for Farm-Out */}
-                            <div style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '8px', padding: '12px' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                                <label style={{ fontSize: '11px', fontWeight: 800, color: '#1E40AF', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                  🤖 AI Agent Prompt Directive (Plain English Partner Selection)
-                                </label>
-                                <span style={{ fontSize: '10px', color: '#2563EB', fontWeight: 700 }}>Global Matcher</span>
-                              </div>
-                              <textarea
-                                rows={3}
-                                value={vendorAffiliatePolicy.farm_out_policy.ai_natural_language_prompt || ''}
-                                onChange={e => setVendorAffiliatePolicy({
-                                  ...vendorAffiliatePolicy,
-                                  farm_out_policy: {
-                                    ...vendorAffiliatePolicy.farm_out_policy,
-                                    ai_natural_language_prompt: e.target.value
-                                  }
-                                })}
-                                placeholder="Write plain English rules for choosing affiliate partners in other cities..."
-                                style={{ width: '100%', padding: '8px 10px', fontSize: '12px', border: '1px solid #93C5FD', borderRadius: '6px', backgroundColor: '#FFFFFF', resize: 'vertical' }}
-                              />
+                          {isFarmOutOpen && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px', borderTop: '1px solid #F1F5F9', paddingTop: '14px' }}>
+                              {/* AI Agent Natural Language Directive for Farm-Out */}
+                              <div style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '8px', padding: '12px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#1E40AF', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    🤖 AI Agent Prompt Directive (Plain English Partner Selection)
+                                  </label>
+                                  <span style={{ fontSize: '10px', color: '#2563EB', fontWeight: 700 }}>Global Matcher</span>
+                                </div>
+                                <textarea
+                                  rows={3}
+                                  value={vendorAffiliatePolicy.farm_out_policy.ai_natural_language_prompt || ''}
+                                  onChange={e => setVendorAffiliatePolicy({
+                                    ...vendorAffiliatePolicy,
+                                    farm_out_policy: {
+                                      ...vendorAffiliatePolicy.farm_out_policy,
+                                      ai_natural_language_prompt: e.target.value
+                                    }
+                                  })}
+                                  placeholder="Write plain English rules for choosing affiliate partners in other cities..."
+                                  style={{ width: '100%', padding: '8px 10px', fontSize: '12px', border: '1px solid #93C5FD', borderRadius: '6px', backgroundColor: '#FFFFFF', resize: 'vertical' }}
+                                />
 
-                              {/* Quick Presets for Farm-Out */}
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
-                                <span style={{ fontSize: '10px', color: '#1E40AF', fontWeight: 700, alignSelf: 'center' }}>Presets:</span>
-                                {[
-                                  { label: '🌟 5-Star VIP (NYC/London/Paris)', text: 'When farming out trips in out-of-market cities (NYC, London, Paris, Miami, Dubai, LA), only assign to certified 5-star operators (>=4.90 rating) with 2024+ luxury sedans/SUVs. Require minimum 10% referral cut and verified livery insurance.' },
-                                  { label: '🚀 Rapid Dispatch Any Partner', text: 'Match with the closest available certified affiliate with rating >= 4.70 to ensure shortest ETA and instant fulfillment.' },
-                                  { label: '🛡️ Airport Tarmac & FBO Verified Only', text: 'Only route to affiliates holding active airport authority and FBO tarmac security badges (TLC, PPA, TfL, Paris Aeroport).' }
-                                ].map((preset, pIdx) => (
-                                  <button
-                                    key={pIdx}
-                                    type="button"
-                                    onClick={() => setVendorAffiliatePolicy({
+                                {/* Quick Presets for Farm-Out */}
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+                                  <span style={{ fontSize: '10px', color: '#1E40AF', fontWeight: 700, alignSelf: 'center' }}>Presets:</span>
+                                  {[
+                                    { label: '🌟 5-Star VIP (NYC/London/Paris)', text: 'When farming out trips in out-of-market cities (NYC, London, Paris, Miami, Dubai, LA), only assign to certified 5-star operators (>=4.90 rating) with 2024+ luxury sedans/SUVs. Require minimum 10% referral cut and verified livery insurance.' },
+                                    { label: '🚀 Rapid Dispatch Any Partner', text: 'Match with the closest available certified affiliate with rating >= 4.70 to ensure shortest ETA and instant fulfillment.' },
+                                    { label: '🛡️ Airport Tarmac & FBO Verified Only', text: 'Only route to affiliates holding active airport authority and FBO tarmac security badges (TLC, PPA, TfL, Paris Aeroport).' }
+                                  ].map((preset, pIdx) => (
+                                    <button
+                                      key={pIdx}
+                                      type="button"
+                                      onClick={() => setVendorAffiliatePolicy({
+                                        ...vendorAffiliatePolicy,
+                                        farm_out_policy: {
+                                          ...vendorAffiliatePolicy.farm_out_policy,
+                                          ai_natural_language_prompt: preset.text
+                                        }
+                                      })}
+                                      style={{ fontSize: '10px', padding: '2px 6px', background: '#DBEAFE', border: '1px solid #93C5FD', borderRadius: '4px', cursor: 'pointer', color: '#1E40AF', fontWeight: 600 }}
+                                    >
+                                      {preset.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                <div>
+                                  <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>
+                                    Min Partner Rating (★ Stars)
+                                  </label>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    min="4.50"
+                                    max="5.00"
+                                    value={vendorAffiliatePolicy.farm_out_policy.min_partner_rating}
+                                    onChange={e => setVendorAffiliatePolicy({
                                       ...vendorAffiliatePolicy,
                                       farm_out_policy: {
                                         ...vendorAffiliatePolicy.farm_out_policy,
-                                        ai_natural_language_prompt: preset.text
+                                        min_partner_rating: parseFloat(e.target.value) || 4.90
                                       }
                                     })}
-                                    style={{ fontSize: '10px', padding: '2px 6px', background: '#DBEAFE', border: '1px solid #93C5FD', borderRadius: '4px', cursor: 'pointer', color: '#1E40AF', fontWeight: 600 }}
-                                  >
-                                    {preset.label}
-                                  </button>
-                                ))}
+                                    style={{ width: '100%', padding: '8px 10px', fontSize: '12px', border: '1px solid #CBD5E1', borderRadius: '6px', marginTop: '4px' }}
+                                  />
+                                </div>
+                                <div>
+                                  <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>Max Vehicle Age (Years)</label>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    max="5"
+                                    value={vendorAffiliatePolicy.farm_out_policy.max_vehicle_age_years}
+                                    onChange={e => setVendorAffiliatePolicy({
+                                      ...vendorAffiliatePolicy,
+                                      farm_out_policy: {
+                                        ...vendorAffiliatePolicy.farm_out_policy,
+                                        max_vehicle_age_years: parseInt(e.target.value) || 3
+                                      }
+                                    })}
+                                    style={{ width: '100%', padding: '8px 10px', fontSize: '12px', border: '1px solid #CBD5E1', borderRadius: '6px', marginTop: '4px' }}
+                                  />
+                                </div>
                               </div>
-                            </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                              <div>
-                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>
-                                  Min Partner Rating (★ Stars)
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                <div>
+                                  <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>Min Referral Cut (%)</label>
+                                  <input
+                                    type="number"
+                                    value={vendorAffiliatePolicy.farm_out_policy.min_referral_commission_pct}
+                                    onChange={e => setVendorAffiliatePolicy({
+                                      ...vendorAffiliatePolicy,
+                                      farm_out_policy: {
+                                        ...vendorAffiliatePolicy.farm_out_policy,
+                                        min_referral_commission_pct: parseFloat(e.target.value) || 10.0
+                                      }
+                                    })}
+                                    style={{ width: '100%', padding: '8px 10px', fontSize: '12px', border: '1px solid #CBD5E1', borderRadius: '6px', marginTop: '4px' }}
+                                  />
+                                </div>
+                                <div>
+                                  <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>Local Service Radius (KM)</label>
+                                  <input
+                                    type="number"
+                                    value={vendorAffiliatePolicy.farm_out_policy.local_service_radius_km}
+                                    onChange={e => setVendorAffiliatePolicy({
+                                      ...vendorAffiliatePolicy,
+                                      farm_out_policy: {
+                                        ...vendorAffiliatePolicy.farm_out_policy,
+                                        local_service_radius_km: parseFloat(e.target.value) || 75.0
+                                      }
+                                    })}
+                                    style={{ width: '100%', padding: '8px 10px', fontSize: '12px', border: '1px solid #CBD5E1', borderRadius: '6px', marginTop: '4px' }}
+                                  />
+                                </div>
+                              </div>
+
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#334155', cursor: 'pointer' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={vendorAffiliatePolicy.farm_out_policy.require_commercial_insurance}
+                                    onChange={e => setVendorAffiliatePolicy({
+                                      ...vendorAffiliatePolicy,
+                                      farm_out_policy: {
+                                        ...vendorAffiliatePolicy.farm_out_policy,
+                                        require_commercial_insurance: e.target.checked
+                                      }
+                                    })}
+                                  />
+                                  🛡️ Require Verified $5M Commercial Livery Insurance Certificate
                                 </label>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  min="4.50"
-                                  max="5.00"
-                                  value={vendorAffiliatePolicy.farm_out_policy.min_partner_rating}
-                                  onChange={e => setVendorAffiliatePolicy({
-                                    ...vendorAffiliatePolicy,
-                                    farm_out_policy: {
-                                      ...vendorAffiliatePolicy.farm_out_policy,
-                                      min_partner_rating: parseFloat(e.target.value) || 4.90
-                                    }
-                                  })}
-                                  style={{ width: '100%', padding: '8px 10px', fontSize: '12px', border: '1px solid #CBD5E1', borderRadius: '6px', marginTop: '4px' }}
-                                />
-                              </div>
-                              <div>
-                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>Max Vehicle Age (Years)</label>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  max="5"
-                                  value={vendorAffiliatePolicy.farm_out_policy.max_vehicle_age_years}
-                                  onChange={e => setVendorAffiliatePolicy({
-                                    ...vendorAffiliatePolicy,
-                                    farm_out_policy: {
-                                      ...vendorAffiliatePolicy.farm_out_policy,
-                                      max_vehicle_age_years: parseInt(e.target.value) || 3
-                                    }
-                                  })}
-                                  style={{ width: '100%', padding: '8px 10px', fontSize: '12px', border: '1px solid #CBD5E1', borderRadius: '6px', marginTop: '4px' }}
-                                />
+
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#334155', cursor: 'pointer' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={vendorAffiliatePolicy.farm_out_policy.require_airport_fbo_permit}
+                                    onChange={e => setVendorAffiliatePolicy({
+                                      ...vendorAffiliatePolicy,
+                                      farm_out_policy: {
+                                        ...vendorAffiliatePolicy.farm_out_policy,
+                                        require_airport_fbo_permit: e.target.checked
+                                      }
+                                    })}
+                                  />
+                                  ✈️ Require Airport FBO & Commercial Authority Permit (TLC / PPA / TfL)
+                                </label>
+
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#334155', cursor: 'pointer' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={vendorAffiliatePolicy.farm_out_policy.auto_farmout_out_of_market}
+                                    onChange={e => setVendorAffiliatePolicy({
+                                      ...vendorAffiliatePolicy,
+                                      farm_out_policy: {
+                                        ...vendorAffiliatePolicy.farm_out_policy,
+                                        auto_farmout_out_of_market: e.target.checked
+                                      }
+                                    })}
+                                  />
+                                  🌐 Auto-Suggest Certified Affiliates for Out-of-Market Pickups (&gt; {vendorAffiliatePolicy.farm_out_policy.local_service_radius_km} km)
+                                </label>
                               </div>
                             </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                              <div>
-                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>Min Referral Cut (%)</label>
-                                <input
-                                  type="number"
-                                  value={vendorAffiliatePolicy.farm_out_policy.min_referral_commission_pct}
-                                  onChange={e => setVendorAffiliatePolicy({
-                                    ...vendorAffiliatePolicy,
-                                    farm_out_policy: {
-                                      ...vendorAffiliatePolicy.farm_out_policy,
-                                      min_referral_commission_pct: parseFloat(e.target.value) || 10.0
-                                    }
-                                  })}
-                                  style={{ width: '100%', padding: '8px 10px', fontSize: '12px', border: '1px solid #CBD5E1', borderRadius: '6px', marginTop: '4px' }}
-                                />
-                              </div>
-                              <div>
-                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>Local Service Radius (KM)</label>
-                                <input
-                                  type="number"
-                                  value={vendorAffiliatePolicy.farm_out_policy.local_service_radius_km}
-                                  onChange={e => setVendorAffiliatePolicy({
-                                    ...vendorAffiliatePolicy,
-                                    farm_out_policy: {
-                                      ...vendorAffiliatePolicy.farm_out_policy,
-                                      local_service_radius_km: parseFloat(e.target.value) || 75.0
-                                    }
-                                  })}
-                                  style={{ width: '100%', padding: '8px 10px', fontSize: '12px', border: '1px solid #CBD5E1', borderRadius: '6px', marginTop: '4px' }}
-                                />
-                              </div>
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
-                              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#334155', cursor: 'pointer' }}>
-                                <input
-                                  type="checkbox"
-                                  checked={vendorAffiliatePolicy.farm_out_policy.require_commercial_insurance}
-                                  onChange={e => setVendorAffiliatePolicy({
-                                    ...vendorAffiliatePolicy,
-                                    farm_out_policy: {
-                                      ...vendorAffiliatePolicy.farm_out_policy,
-                                      require_commercial_insurance: e.target.checked
-                                    }
-                                  })}
-                                />
-                                🛡️ Require Verified $5M Commercial Livery Insurance Certificate
-                              </label>
-
-                              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#334155', cursor: 'pointer' }}>
-                                <input
-                                  type="checkbox"
-                                  checked={vendorAffiliatePolicy.farm_out_policy.require_airport_fbo_permit}
-                                  onChange={e => setVendorAffiliatePolicy({
-                                    ...vendorAffiliatePolicy,
-                                    farm_out_policy: {
-                                      ...vendorAffiliatePolicy.farm_out_policy,
-                                      require_airport_fbo_permit: e.target.checked
-                                    }
-                                  })}
-                                />
-                                ✈️ Require Airport FBO & Commercial Authority Permit (TLC / PPA / TfL)
-                              </label>
-
-                              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#334155', cursor: 'pointer' }}>
-                                <input
-                                  type="checkbox"
-                                  checked={vendorAffiliatePolicy.farm_out_policy.auto_farmout_out_of_market}
-                                  onChange={e => setVendorAffiliatePolicy({
-                                    ...vendorAffiliatePolicy,
-                                    farm_out_policy: {
-                                      ...vendorAffiliatePolicy.farm_out_policy,
-                                      auto_farmout_out_of_market: e.target.checked
-                                    }
-                                  })}
-                                />
-                                🌐 Auto-Suggest Certified Affiliates for Out-of-Market Pickups (&gt; {vendorAffiliatePolicy.farm_out_policy.local_service_radius_km} km)
-                              </label>
-                            </div>
-                          </div>
+                          )}
                         </div>
-
                       </div>
 
                       {/* 3. CERTIFIED GLOBAL AFFILIATE DIRECTORY IN GLOBAL HUB KNOWLEDGE BASE */}
@@ -6899,14 +8938,34 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                   </div>
 
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '4px', backgroundColor: '#DCFCE7', color: '#15803D', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <ShieldCheck size={14} /> TCR 10DLC VERIFIED (94/100)
+                    <span style={{
+                      fontSize: '11px',
+                      padding: '4px 10px',
+                      borderRadius: '4px',
+                      backgroundColor: tcrBrandForm.ein_tax_id ? '#DCFCE7' : '#FEF3C7',
+                      color: tcrBrandForm.ein_tax_id ? '#15803D' : '#92400E',
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      <ShieldCheck size={14} /> {tcrBrandForm.ein_tax_id ? 'TCR 10DLC CONFIGURED' : 'STANDARD CARRIER ROUTE'}
                     </span>
-                    <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '4px', backgroundColor: '#EFF6FF', color: '#0078D4', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <CheckCircle size={14} /> STIR/SHAKEN LEVEL A
+                    <span style={{
+                      fontSize: '11px',
+                      padding: '4px 10px',
+                      borderRadius: '4px',
+                      backgroundColor: tcrBrandForm.contact_phone ? '#EFF6FF' : '#F1F5F9',
+                      color: tcrBrandForm.contact_phone ? '#0078D4' : '#64748B',
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      <CheckCircle size={14} /> {tcrBrandForm.contact_phone ? 'CALLER ID ACTIVE' : 'CALLER ID UNCONFIGURED'}
                     </span>
                     <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '4px', backgroundColor: '#F3E8FF', color: '#7E22CE', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Key size={14} /> DUAL-TIER FAILOVER ACTIVE
+                      <Key size={14} /> {byokMode === 'BYOK_CUSTOM' ? 'BYOK CUSTOM GATEWAY' : 'GLOBAL HUB TELECOM'}
                     </span>
                   </div>
                 </div>
@@ -6955,31 +9014,38 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                           <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>
                             A2P 10DLC Brand & TCR Registration
                           </h3>
-                          <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '4px', backgroundColor: '#DCFCE7', color: '#15803D', fontWeight: 800 }}>
-                            VERIFIED (94/100)
+                          <span style={{
+                            fontSize: '10px',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            backgroundColor: tcrBrandForm.ein_tax_id ? '#DCFCE7' : '#FEF3C7',
+                            color: tcrBrandForm.ein_tax_id ? '#15803D' : '#92400E',
+                            fontWeight: 800
+                          }}>
+                            {tcrBrandForm.ein_tax_id ? 'PROFILE CONFIGURED' : 'UNREGISTERED (Standard Route)'}
                           </span>
                         </div>
                         
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #F3F4F6', paddingBottom: '6px' }}>
                             <span style={{ color: '#6B7280' }}>Legal Entity Name:</span>
-                            <span style={{ fontWeight: 700, color: '#0F172A' }}>{tcrBrandForm.legal_name}</span>
+                            <span style={{ fontWeight: 700, color: '#0F172A' }}>{config.vendor_name || tcrBrandForm.legal_name || 'Not Configured'}</span>
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #F3F4F6', paddingBottom: '6px' }}>
                             <span style={{ color: '#6B7280' }}>EIN Tax ID:</span>
-                            <span style={{ fontWeight: 700, color: '#0F172A' }}>{tcrBrandForm.ein_tax_id} (IRS Verified)</span>
+                            <span style={{ fontWeight: 700, color: '#0F172A' }}>{tcrBrandForm.ein_tax_id ? `${tcrBrandForm.ein_tax_id}` : 'Pending Registration'}</span>
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #F3F4F6', paddingBottom: '6px' }}>
-                            <span style={{ color: '#6B7280' }}>The Campaign Registry Trust Score:</span>
-                            <span style={{ fontWeight: 800, color: '#16A34A' }}>94 / 100 (Tier Top)</span>
+                            <span style={{ color: '#6B7280' }}>Dispatch SMS Phone:</span>
+                            <span style={{ fontWeight: 700, color: '#0F172A' }}>{tcrBrandForm.contact_phone || config.branding?.contact_phone || 'Global Hub Gateway'}</span>
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #F3F4F6', paddingBottom: '6px' }}>
-                            <span style={{ color: '#6B7280' }}>Carrier Throughput:</span>
-                            <span style={{ fontWeight: 700, color: '#0F172A' }}>75 msgs / sec (AT&T, Verizon, T-Mobile)</span>
+                            <span style={{ color: '#6B7280' }}>Carrier Route:</span>
+                            <span style={{ fontWeight: 700, color: '#0F172A' }}>{tcrBrandForm.contact_phone ? 'Dedicated Twilio Trunk' : 'Shared Hub Relay'}</span>
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span style={{ color: '#6B7280' }}>Spam Filter Blocking Risk:</span>
-                            <span style={{ fontWeight: 800, color: '#16A34A' }}>0.01% (Protected)</span>
+                            <span style={{ color: '#6B7280' }}>Registration Status:</span>
+                            <span style={{ fontWeight: 700, color: '#334155' }}>{tcrBrandForm.ein_tax_id ? 'Ready for TCR Submission' : 'Draft / Unregistered'}</span>
                           </div>
                         </div>
 
@@ -7033,14 +9099,21 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                           <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>
                             STIR/SHAKEN & TCPA Policy Tester
                           </h3>
-                          <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '4px', backgroundColor: '#EFF6FF', color: '#0078D4', fontWeight: 800 }}>
-                            ATTESTATION A
+                          <span style={{
+                            fontSize: '10px',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            backgroundColor: tcrBrandForm.contact_phone ? '#EFF6FF' : '#F1F5F9',
+                            color: tcrBrandForm.contact_phone ? '#0078D4' : '#64748B',
+                            fontWeight: 800
+                          }}>
+                            {tcrBrandForm.contact_phone ? 'CNAM ACTIVE' : 'STANDARD CALLER ID'}
                           </span>
                         </div>
 
                         <div style={{ padding: '10px', backgroundColor: '#F8FAFC', borderRadius: '6px', border: '1px solid #E2E8F0', fontSize: '11px', color: '#475569' }}>
-                          <div>Caller ID Name (CNAM): <strong>{(config.vendor_name || 'ANB LIMO').toUpperCase().slice(0, 15)}</strong></div>
-                          <div>Outbound Robocall Mitigation: <strong>Active (Zero "Spam Likely" labeling)</strong></div>
+                          <div>Caller ID Name (CNAM): <strong>{((config.vendor_name || 'LIMO FLEET').toUpperCase()).slice(0, 15)}</strong></div>
+                          <div>Carrier Routing: <strong>{tcrBrandForm.contact_phone ? `Dedicated (${tcrBrandForm.contact_phone})` : 'Shared Platform Gateway'}</strong></div>
                         </div>
 
                         <div>
@@ -7054,9 +9127,9 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                             />
                             <button
                               onClick={() => {
-                                const vName = config.vendor_name || 'ANB Limo Company';
-                                const vPhone = config.branding?.contact_phone || '+1 (215) 555-0144';
-                                const vDomain = config.branding?.domain || 'anblimo-philly.com';
+                                const vName = config.vendor_name || 'Limo Company';
+                                const vPhone = config.branding?.contact_phone || tcrBrandForm.contact_phone || '+1 (215) 555-0144';
+                                const vDomain = config.branding?.domain || 'limo-mesh.net';
                                 if (tcpaTestKeyword === 'STOP') {
                                   setTcpaTestResponse(`✅ TCPA OPT-OUT RECORDED: "${vName}: You have been unsubscribed and will receive no further SMS. Reply START to rejoin."`);
                                 } else if (tcpaTestKeyword === 'HELP') {
@@ -7790,9 +9863,322 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
               </div>
             )}
 
+            {/* TAB: DIRECT PAYOUTS & BANKING (STRIPE CONNECT EXPRESS) */}
+            {/* TAB: DIRECT PAYOUTS, BANKING & ESCROW CLEARING */}
+            {activeTab === 'payouts' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
+                {/* Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+                  <div>
+                    <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Banknote size={22} color="#0078D4" />
+                      Direct Payouts &amp; Banking
+                    </h2>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#6B7280' }}>
+                      Automated 24h Stripe Connect Express bank deposits, merchant verification, and direct ledger settlements.
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <button
+                      onClick={() => {
+                        loadStripeStatus();
+                        loadPayoutLedger();
+                      }}
+                      disabled={isLoadingStripe || isLoadingLedger}
+                      style={{
+                        padding: '6px 14px',
+                        backgroundColor: '#FFFFFF',
+                        color: '#374151',
+                        border: '1px solid #D1D5DB',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+                      }}
+                    >
+                      <RefreshCw size={13} className={(isLoadingStripe || isLoadingLedger) ? 'animate-spin' : ''} />
+                      <span>Refresh</span>
+                    </button>
+
+                    <button
+                      onClick={handleOpenStripeLogin}
+                      disabled={isLoadingStripe}
+                      style={{
+                        padding: '6px 14px',
+                        backgroundColor: '#0078D4',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 1px 3px rgba(0, 120, 212, 0.3)'
+                      }}
+                    >
+                      <ExternalLink size={13} />
+                      <span>Stripe Express Portal</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Unified Stripe Connect & Bank Settlement Card */}
+                <div style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '10px',
+                  border: '1px solid #E2E8F0',
+                  padding: '18px 20px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '14px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div style={{
+                        width: '42px',
+                        height: '42px',
+                        borderRadius: '8px',
+                        backgroundColor: stripeConnectStatus?.payouts_enabled !== false ? '#EFF6FF' : '#FEF3C7',
+                        color: stripeConnectStatus?.payouts_enabled !== false ? '#0078D4' : '#D97706',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: '1px solid #E2E8F0',
+                        flexShrink: 0
+                      }}>
+                        <CreditCard size={20} />
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>
+                            Stripe Connect Express Direct Payouts
+                          </h3>
+                          <span style={{
+                            fontSize: '10.5px',
+                            fontWeight: 800,
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            backgroundColor: stripeConnectStatus?.payouts_enabled !== false ? '#DCFCE7' : '#FEF3C7',
+                            color: stripeConnectStatus?.payouts_enabled !== false ? '#15803D' : '#B45309',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}>
+                            {stripeConnectStatus?.payouts_enabled !== false ? '● ACTIVE & VERIFIED' : '▲ SETUP REQUIRED'}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+                          {stripeConnectStatus?.payouts_enabled !== false
+                            ? `Automated 24-hour direct deposit is active for ${config.vendor_name}. Net passenger fares clear automatically to your bank account.`
+                            : `Link your sovereign business bank account to receive automated direct deposits for customer bookings.`
+                          }
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      {stripeConnectStatus?.payouts_enabled !== false ? (
+                        <button
+                          onClick={handleOpenStripeLogin}
+                          style={{
+                            padding: '7px 14px',
+                            backgroundColor: '#FFFFFF',
+                            color: '#0078D4',
+                            border: '1px solid #0078D4',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 1px 2px rgba(0, 120, 212, 0.08)'
+                          }}
+                        >
+                          <CheckCircle2 size={13} color="#0078D4" /> Manage Bank Account &amp; Tax Documents ↗
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleOpenStripeConnect}
+                          style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#0078D4',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 2px 6px rgba(0, 120, 212, 0.25)'
+                          }}
+                        >
+                          <Zap size={13} /> Connect Bank Account &amp; Enable Payouts ↗
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Compact Telemetry & Verification Grid */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                    gap: '10px',
+                    padding: '12px 14px',
+                    backgroundColor: '#F8FAFC',
+                    borderRadius: '8px',
+                    border: '1px solid #E2E8F0',
+                    fontSize: '11.5px'
+                  }}>
+                    <div>
+                      <div style={{ color: '#64748B', fontWeight: 600, fontSize: '10px', textTransform: 'uppercase' }}>LINKED BANK ACCOUNT</div>
+                      <div style={{ fontWeight: 800, color: (stripeConnectStatus?.bank_name || stripeConnectStatus?.bank_last4) ? '#0F172A' : '#D97706', marginTop: '2px' }}>
+                        {(stripeConnectStatus?.bank_name && stripeConnectStatus?.bank_last4)
+                          ? `🏦 ${stripeConnectStatus.bank_name} (•••• ${stripeConnectStatus.bank_last4})`
+                          : (stripeConnectStatus?.bank_name 
+                              ? `🏦 ${stripeConnectStatus.bank_name}` 
+                              : '⚠️ No Bank Account Linked')}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={{ color: '#64748B', fontWeight: 600, fontSize: '10px', textTransform: 'uppercase' }}>PAYOUT FREQUENCY</div>
+                      <div style={{ fontWeight: 800, color: '#16A34A', marginTop: '2px' }}>
+                        ⚡ {stripeConnectStatus?.payout_frequency || `Direct Net Settlement (${localeSpecs.currencyCode})`}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={{ color: '#64748B', fontWeight: 600, fontSize: '10px', textTransform: 'uppercase' }}>SETTLEMENT CURRENCY</div>
+                      <div style={{ fontWeight: 800, color: '#0078D4', marginTop: '2px' }}>
+                        {stripeConnectStatus?.default_currency || localeSpecs.currencyCode} ({localeSpecs.currencySymbol}) · {localeSpecs.countryName}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={{ color: '#64748B', fontWeight: 600, fontSize: '10px', textTransform: 'uppercase' }}>LEGAL ENTITY &amp; EIN</div>
+                      <div style={{ fontWeight: 800, color: (stripeConnectStatus?.ein_tax_id || config.telecom_compliance?.ein_tax_id) ? '#0F172A' : '#64748B', marginTop: '2px' }}>
+                        {(stripeConnectStatus?.ein_tax_id || config.telecom_compliance?.ein_tax_id) 
+                          ? `✓ ${stripeConnectStatus?.ein_tax_id || config.telecom_compliance?.ein_tax_id}` 
+                          : '⚠️ Tax ID / EIN Not on File'}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={{ color: '#64748B', fontWeight: 600, fontSize: '10px', textTransform: 'uppercase' }}>SURETY &amp; COMPLIANCE</div>
+                      <div style={{ fontWeight: 800, color: '#16A34A', marginTop: '2px' }}>
+                        ✓ {stripeConnectStatus?.surety_policy || 'Commercial Livery Policy'}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={{ color: '#64748B', fontWeight: 600, fontSize: '10px', textTransform: 'uppercase' }}>STRIPE ACCOUNT ID</div>
+                      <div style={{ fontWeight: 800, color: stripeConnectStatus?.stripe_account_id ? '#475569' : '#94A3B8', marginTop: '2px', fontFamily: 'monospace', fontSize: '11px' }}>
+                        {stripeConnectStatus?.stripe_account_id || 'Not Connected'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recent Escrow Transfers & Payout Ledger */}
+                <div style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '10px',
+                  border: '1px solid #E2E8F0',
+                  overflow: 'hidden',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+                }}>
+                  <div style={{ padding: '14px 18px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>
+                        Recent Cleared Payouts &amp; Bank Transfers
+                      </h3>
+                      <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748B' }}>
+                        Live immutable clearing records settled via Stripe Connect Express.
+                      </p>
+                    </div>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#15803D', backgroundColor: '#DCFCE7', padding: '3px 8px', borderRadius: '12px' }}>
+                      ● 100% On-Time Settlement
+                    </span>
+                  </div>
+
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#F8FAFC', color: '#64748B', borderBottom: '1px solid #E2E8F0', fontSize: '10.5px', textTransform: 'uppercase' }}>
+                        <th style={{ padding: '10px 16px', fontWeight: 700 }}>TRANSFER ID</th>
+                        <th style={{ padding: '10px 16px', fontWeight: 700 }}>TRIP / SOURCE</th>
+                        <th style={{ padding: '10px 16px', fontWeight: 700 }}>GROSS FARE</th>
+                        <th style={{ padding: '10px 16px', fontWeight: 700 }}>NET DEPOSIT</th>
+                        <th style={{ padding: '10px 16px', fontWeight: 700 }}>DESTINATION</th>
+                        <th style={{ padding: '10px 16px', fontWeight: 700 }}>STATUS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {isLoadingLedger ? (
+                        <tr>
+                          <td colSpan={6} style={{ padding: '32px', textAlign: 'center', color: '#64748B' }}>
+                            <RefreshCw size={20} className="animate-spin" style={{ margin: '0 auto 8px auto', display: 'block', color: '#0078D4' }} />
+                            Loading live clearing records...
+                          </td>
+                        </tr>
+                      ) : payoutLedgerRecords.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} style={{ padding: '32px', textAlign: 'center', color: '#64748B' }}>
+                            <div style={{ fontWeight: 700, color: '#334155', fontSize: '13px' }}>No Cleared Payout Records Yet</div>
+                            <div style={{ fontSize: '12px', marginTop: '4px' }}>
+                              Completed storefront passenger bookings and affiliate network settlements will clear automatically to your linked bank account.
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        payoutLedgerRecords.map((tx) => (
+                          <tr key={tx.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                            <td style={{ padding: '12px 16px', fontWeight: 800, fontFamily: 'monospace', color: '#0078D4' }}>{tx.id}</td>
+                            <td style={{ padding: '12px 16px', color: '#0F172A', fontWeight: 600 }}>
+                              {tx.desc}
+                              <div style={{ fontSize: '10.5px', color: '#64748B' }}>{tx.date}</div>
+                            </td>
+                            <td style={{ padding: '12px 16px', color: '#64748B', fontWeight: 600 }}>
+                              {localeSpecs.currencySymbol}{tx.gross.toFixed(2)}
+                            </td>
+                            <td style={{ padding: '12px 16px', color: '#15803D', fontWeight: 800, fontSize: '13px' }}>
+                              +{localeSpecs.currencySymbol}{tx.net.toFixed(2)}
+                            </td>
+                            <td style={{ padding: '12px 16px', color: '#334155' }}>{tx.bank}</td>
+                            <td style={{ padding: '12px 16px' }}>
+                              <span style={{
+                                fontSize: '11px',
+                                fontWeight: 800,
+                                color: tx.status === 'CLEARED' ? '#15803D' : '#D97706',
+                                backgroundColor: tx.status === 'CLEARED' ? '#DCFCE7' : '#FEF3C7',
+                                padding: '2px 8px',
+                                borderRadius: '10px'
+                              }}>
+                                ✓ {tx.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
             {/* TAB 10: VENDOR SAAS SUBSCRIPTION & HUB BILLING */}
             {activeTab === 'subscription' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '1000px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
                 
                 {/* Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>

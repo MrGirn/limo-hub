@@ -75,3 +75,11 @@ telecom_compliance:
   website_url: "https://limo-ops.com"
   contact_email: "compliance@limo-ops.com"
   contact_phone: "+18005550199"
+
+insurance_compliance:
+  has_valid_insurance: true
+  policy_amount: "$5M"
+  show_policy_amount: true
+  insurer_name: "Commercial Auto Fleet Underwriters"
+  policy_number: "POL-00000000"
+  expiration_date: "2027-12-31"

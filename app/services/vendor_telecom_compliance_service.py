@@ -19,25 +19,25 @@ logger = logging.getLogger("VendorTelecomCompliance")
 
 
 class A2PBrandRegistration(BaseModel):
-    brand_sid: str = Field(default_factory=lambda: f"BN_{uuid.uuid4().hex[:12]}")
+    brand_sid: Optional[str] = None
     vendor_id: str
     legal_business_name: str
-    ein_tax_id: str  # Employer Identification Number (9-digit)
-    business_type: str = "LLC"  # LLC, Corporation, Partnership, Sole Proprietorship
+    ein_tax_id: Optional[str] = None
+    business_type: str = "LLC"
     vertical: str = "TRANSPORTATION_AND_LOGISTICS"
-    physical_address: str
-    website_url: str
-    contact_email: str
-    contact_phone: str
-    status: str = "VERIFIED"  # UNREGISTERED, PENDING_REVIEW, VERIFIED, REJECTED
-    trust_score: int = 94  # TCR Trust Score (0-100)
+    physical_address: Optional[str] = None
+    website_url: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+    status: str = "UNREGISTERED"  # UNREGISTERED, PENDING_REVIEW, VERIFIED, REJECTED
+    trust_score: Optional[int] = None
     created_at: float = Field(default_factory=time.time)
-    verified_at: Optional[float] = Field(default_factory=time.time)
+    verified_at: Optional[float] = None
 
 
 class A2PCampaignRegistration(BaseModel):
-    campaign_sid: str = Field(default_factory=lambda: f"CP_{uuid.uuid4().hex[:12]}")
-    brand_sid: str
+    campaign_sid: Optional[str] = None
+    brand_sid: Optional[str] = None
     vendor_id: str
     use_case: str = "CUSTOMER_CARE_AND_DISPATCH"
     description: str = (
@@ -45,31 +45,29 @@ class A2PCampaignRegistration(BaseModel):
         "live chauffeur GPS arrival updates, flight delay adjustments, and digital receipts."
     )
     sample_message_1: str = (
-        "ANB Limo: Your chauffeur Marcus is en route in a Cadillac Escalade (PA-LM992). "
-        "Track live: https://limo.link/r/abc1234. Reply STOP to cancel or HELP for assistance."
+        "Your chauffeur is en route. Reply STOP to cancel or HELP for assistance."
     )
     sample_message_2: str = (
-        "ANB Limo: Your reservation #RES-8921 is confirmed for pickup at PHL Airport on Sep 18, 08:30 AM. "
-        "Reply HELP for support, STOP to opt out."
+        "Your reservation is confirmed. Reply HELP for support, STOP to opt out."
     )
     opt_in_keywords: List[str] = ["START", "UNSTOP", "YES"]
     opt_out_keywords: List[str] = ["STOP", "UNSUBSCRIBE", "CANCEL", "END", "QUIT"]
     help_keywords: List[str] = ["HELP", "INFO", "SUPPORT"]
     opt_in_workflow_description: str = (
-        "Passengers opt in during the online or phone reservation checkout by entering their mobile number "
-        "and agreeing to the SMS Terms of Service disclosure."
+        "Passengers opt in during reservation checkout by entering their mobile number "
+        "and agreeing to SMS alerts."
     )
-    carrier_throughput_tps: int = 75  # Transactions per second across AT&T / T-Mobile / Verizon
-    status: str = "APPROVED"  # DRAFT, IN_REVIEW, APPROVED, REJECTED
-    approved_at: Optional[float] = Field(default_factory=time.time)
+    carrier_throughput_tps: int = 1  # 1 TPS standard P2P / unverified
+    status: str = "UNREGISTERED"  # UNREGISTERED, DRAFT, IN_REVIEW, APPROVED, REJECTED
+    approved_at: Optional[float] = None
 
 
 class StirShakenVerification(BaseModel):
     vendor_id: str
     phone_number: str
-    attestation_level: str = "A"  # Level A (Full Attestation - Caller owns number and authorized caller ID)
-    cnam_caller_name: str  # Caller Name (max 15 chars e.g. "ANB LIMO PHILLY")
-    status: str = "VERIFIED_ACTIVE"
+    attestation_level: str = "STANDARD"  # STANDARD, LEVEL_B, LEVEL_A (when verified with carrier)
+    cnam_caller_name: str
+    status: str = "CONFIGURED"
     spam_likely_mitigation: bool = True
     verified_at: float = Field(default_factory=time.time)
 
@@ -94,7 +92,7 @@ class VendorTelecomComplianceService:
     def __init__(
         self,
         vendor_id: str,
-        company_name: str = "ANB Limo Company",
+        company_name: str = "Limo Company",
         phone_number: str = "+12155550144",
         telecom_config: Optional[Dict[str, Any]] = None
     ):
@@ -104,35 +102,39 @@ class VendorTelecomComplianceService:
         self.opt_out_registry: set[str] = set()
 
         cfg = telecom_config or {}
-        # Initialize Brand from Vendor Configuration
+        has_brand = bool(cfg.get("brand_sid"))
+        # Initialize Brand from real Vendor Configuration
         self.brand = A2PBrandRegistration(
+            brand_sid=cfg.get("brand_sid"),
             vendor_id=vendor_id,
-            legal_business_name=cfg.get("legal_business_name", f"{company_name} LLC"),
-            ein_tax_id=cfg.get("ein_tax_id", "23-7891240"),
+            legal_business_name=cfg.get("legal_business_name", company_name),
+            ein_tax_id=cfg.get("ein_tax_id"),
             business_type=cfg.get("business_type", "LLC"),
             vertical=cfg.get("vertical", "TRANSPORTATION_AND_LOGISTICS"),
-            physical_address=cfg.get("physical_address", "1500 Market St, Suite 1200, Philadelphia, PA 19102"),
-            website_url=cfg.get("website_url", f"https://{vendor_id.replace('_', '-')}.limo-ops.com"),
-            contact_email=cfg.get("contact_email", f"compliance@{vendor_id.replace('_', '-')}.com"),
+            physical_address=cfg.get("physical_address"),
+            website_url=cfg.get("website_url"),
+            contact_email=cfg.get("contact_email"),
             contact_phone=cfg.get("contact_phone", phone_number),
-            status=cfg.get("status", "VERIFIED"),
-            trust_score=cfg.get("trust_score", 94)
+            status=cfg.get("status", "VERIFIED" if has_brand else "UNREGISTERED"),
+            trust_score=cfg.get("trust_score")
         )
 
+        has_campaign = bool(cfg.get("campaign_sid"))
         self.campaign = A2PCampaignRegistration(
+            campaign_sid=cfg.get("campaign_sid"),
             brand_sid=self.brand.brand_sid,
             vendor_id=vendor_id,
-            status="APPROVED",
-            carrier_throughput_tps=75
+            status="APPROVED" if has_campaign else "UNREGISTERED",
+            carrier_throughput_tps=75 if has_campaign else 1
         )
 
         cnam_clean = (company_name.upper()[:15]).strip()
         self.stir_shaken = StirShakenVerification(
             vendor_id=vendor_id,
             phone_number=phone_number,
-            attestation_level="A",
+            attestation_level="LEVEL_A" if has_brand else "STANDARD",
             cnam_caller_name=cnam_clean,
-            status="VERIFIED_ACTIVE",
+            status="ACTIVE",
             spam_likely_mitigation=True
         )
 
@@ -153,11 +155,10 @@ class VendorTelecomComplianceService:
                 "brand": self.brand.model_dump(),
                 "campaign": self.campaign.model_dump(),
                 "carrier_approval_summary": {
-                    "att": "APPROVED_HIGH_THROUGHPUT",
-                    "tmobile": "APPROVED_TIER_TOP",
-                    "verizon": "APPROVED_UNRESTRICTED",
+                    "route": "DEDICATED_A2P_10DLC" if self.brand.brand_sid else "SHARED_HUB_RELAY",
+                    "status": "APPROVED" if self.campaign.campaign_sid else "UNREGISTERED",
                     "throughput": f"{self.campaign.carrier_throughput_tps} msg/sec",
-                    "spam_filter_risk": "VERY_LOW (0.01%)"
+                    "compliance_level": "REGISTERED_10DLC" if self.brand.brand_sid else "STANDARD_P2P"
                 }
             },
             "stir_shaken": self.stir_shaken.model_dump(),

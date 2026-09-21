@@ -101,22 +101,26 @@ class VendorPricingAIService:
             if "inside_baggage_meet_and_greet_fee_net" in pm:
                 meet_greet_fee = round(Decimal(str(pm["inside_baggage_meet_and_greet_fee_net"])) * fx_multiplier, 2)
 
-        # Class Multipliers
+        # Class Multipliers based on luxury tier
         class_base = base_rate
         class_mile = per_mile
         
-        if vehicle_class == VehicleClass.FIRST_CLASS:
+        vc_val = vehicle_class.value if hasattr(vehicle_class, "value") else str(vehicle_class)
+        if vc_val in ("FIRST_CLASS", "VehicleClass.FIRST_CLASS"):
             class_base = Decimal(str(round(float(base_rate) * 1.25, 2)))
             class_mile = Decimal(str(round(float(per_mile) * 1.20, 2)))
-        elif vehicle_class == VehicleClass.BUSINESS_VAN:
+        elif vc_val in ("BUSINESS_VAN", "VehicleClass.BUSINESS_VAN"):
             class_base = Decimal(str(round(float(base_rate) * 1.60, 2)))
             class_mile = Decimal(str(round(float(per_mile) * 1.50, 2)))
-        elif vehicle_class == VehicleClass.ELECTRIC_VIP:
+        elif vc_val in ("ELECTRIC_VIP", "VehicleClass.ELECTRIC_VIP"):
             class_base = Decimal(str(round(float(base_rate) * 1.15, 2)))
             class_mile = Decimal(str(round(float(per_mile) * 1.10, 2)))
-        elif vehicle_class == VehicleClass.BUSINESS_SEDAN:
+        elif vc_val in ("BUSINESS_SEDAN", "VehicleClass.BUSINESS_SEDAN"):
             class_base = Decimal(str(round(float(base_rate) * 0.85, 2)))
             class_mile = Decimal(str(round(float(per_mile) * 0.85, 2)))
+        elif vc_val in ("LUXURY_SUV", "VehicleClass.LUXURY_SUV"):
+            class_base = base_rate
+            class_mile = per_mile
 
         per_km_rate = Decimal(str(round(float(class_mile) / 1.60934, 2)))
 

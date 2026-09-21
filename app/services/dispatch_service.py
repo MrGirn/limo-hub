@@ -53,7 +53,7 @@ class DispatchService:
                 continue
 
             vehicle = db.vehicles.get(d.current_vehicle_id) if d.current_vehicle_id else None
-            if not vehicle or not vehicle.is_active:
+            if not vehicle or not vehicle.is_active or getattr(vehicle, "status", "AVAILABLE") in ("MAINTENANCE", "DISABLED", "UNDER_REPAIR"):
                 continue
 
             # Network Mode Filter: If ride is part of Global Network, vehicle must be connected
@@ -92,6 +92,8 @@ class DispatchService:
         vehicle = db.vehicles.get(vehicle_id)
         if not driver or not vehicle:
             raise ValueError("Driver or vehicle not found")
+        if not vehicle.is_active or getattr(vehicle, "status", "AVAILABLE") in ("MAINTENANCE", "DISABLED", "UNDER_REPAIR"):
+            raise ValueError(f"Vehicle {vehicle.id} ({getattr(vehicle, 'license_plate', '')}) is currently under maintenance / disabled and cannot be booked or dispatched.")
 
         offer_id = f"off-{uuid.uuid4().hex[:8]}"
         offer = DriverOffer(

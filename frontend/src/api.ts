@@ -180,6 +180,37 @@ export async function requestQuote(params: {
   return res.json();
 }
 
+export async function requestQuoteMatrix(params: {
+  service_type: ServiceType;
+  pickup_address: string;
+  dropoff_address?: string;
+  vendor_id?: string;
+  tenant_id?: string;
+  flight_number?: string;
+  train_number?: string;
+  distance_miles?: number;
+  hourly_hours?: number;
+  wait_minutes?: number;
+  currency?: string;
+  pickup_time_utc?: string;
+  meet_and_greet_inside?: boolean;
+}): Promise<Record<string, Quote>> {
+  const res = await fetch(`${BASE_URL}/api/v1/quotes/matrix`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      tenant_id: params.tenant_id || 'tenant-us-east',
+      vendor_id: params.vendor_id || undefined,
+      ...params
+    })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to compute quotes matrix'));
+  }
+  return res.json();
+}
+
 export async function compareQuotes(params: {
   service_type: ServiceType;
   vehicle_class: VehicleClass;
@@ -485,6 +516,19 @@ export async function quoteMasterItinerary(title: string, legs: any[], vehicleCl
     })
   });
   if (!res.ok) throw new Error('Failed to quote multi-modal itinerary');
+  return res.json();
+}
+
+export async function quoteMasterItineraryMatrix(title: string, legs: any[]): Promise<Record<string, any>> {
+  const res = await fetch(`${BASE_URL}/api/v1/itineraries/quote-matrix`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      title,
+      legs
+    })
+  });
+  if (!res.ok) throw new Error('Failed to quote multi-modal itinerary matrix');
   return res.json();
 }
 
@@ -1228,6 +1272,27 @@ export async function fetchAllDrivers(): Promise<Driver[]> {
   return res.json();
 }
 
+export async function uploadVehiclePhotoToS3(vendorId: string, payload: {
+  base64_data: string;
+  photo_type?: string;
+  caption?: string;
+  is_primary?: boolean;
+  display_order?: number;
+  ai_enhanced?: boolean;
+  vehicle_id?: string;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/media/upload-s3`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to upload photo to S3');
+  }
+  return res.json();
+}
+
 export async function createVendorVehicle(vendorId: string, payload: any): Promise<Vehicle> {
   const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/fleet-inventory`, {
     method: 'POST',
@@ -1249,6 +1314,19 @@ export async function toggleVehicleNetwork(vendorId: string, vehicleId: string, 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(extractErrorMessage(err, 'Failed to toggle network participation'));
+  }
+  return res.json();
+}
+
+export async function toggleVehicleActive(vendorId: string, vehicleId: string, isActive: boolean, reason?: string): Promise<any> {
+  const query = reason ? `?is_active=${isActive}&reason=${encodeURIComponent(reason)}` : `?is_active=${isActive}`;
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/fleet-inventory/${vehicleId}/toggle-active${query}`, {
+    method: 'PATCH',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to update vehicle operational status'));
   }
   return res.json();
 }
@@ -1295,9 +1373,7 @@ export async function assign24hChauffeur(tripId: string, driverId?: string, vehi
   return res.json();
 }
 
-// --- STRIPE CONNECT EXPRESS VENDOR ONBOARDING & PAYOUTS ---
-
-export async function fetchVendorStripeStatus(vendorId: string): Promise<{
+export interface VendorStripeConnectStatus {
   vendor_id: string;
   vendor_name: string;
   stripe_account_id: string;
@@ -1305,14 +1381,56 @@ export async function fetchVendorStripeStatus(vendorId: string): Promise<{
   charges_enabled: boolean;
   status: string;
   default_currency: string;
+  bank_name?: string;
+  bank_last4?: string;
+  payout_frequency?: string;
+  settlement_network?: string;
+  legal_business_name?: string;
+  ein_tax_id?: string;
+  surety_policy?: string;
   requirements: string[];
-}> {
+}
+
+export interface VendorPayoutLedgerRecord {
+  id: string;
+  desc: string;
+  gross: number;
+  net: number;
+  bank: string;
+  date: string;
+  status: string;
+  type: 'STOREFRONT' | 'FARM_IN' | 'FARM_OUT';
+  timestamp?: number;
+}
+
+export interface VendorPayoutLedgerResponse {
+  vendor_id: string;
+  bank_name: string;
+  bank_last4: string;
+  currency: string;
+  total_cleared_payouts_count: number;
+  total_cleared_payouts_net: number;
+  records: VendorPayoutLedgerRecord[];
+}
+
+export async function fetchVendorStripeStatus(vendorId: string): Promise<VendorStripeConnectStatus> {
   const res = await fetch(`${BASE_URL}/api/v1/vendors/${encodeURIComponent(vendorId)}/stripe/connect-status`, {
     headers: getAuthHeaders()
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(extractErrorMessage(err, 'Failed to fetch Stripe connect status'));
+  }
+  return res.json();
+}
+
+export async function fetchVendorPayoutsLedger(vendorId: string): Promise<VendorPayoutLedgerResponse> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${encodeURIComponent(vendorId)}/payouts/ledger`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to fetch vendor payouts ledger'));
   }
   return res.json();
 }

@@ -55,3 +55,11 @@ telecom_compliance:
   website_url: https://miamiprestige.com
   contact_email: compliance@miamiprestige.com
   contact_phone: '+13055550144'
+
+insurance_compliance:
+  has_valid_insurance: true
+  policy_amount: "$3M"
+  show_policy_amount: true
+  insurer_name: "Liberty Mutual Commercial Fleet"
+  policy_number: "LBM-992011-FL"
+  expiration_date: "2026-12-31"

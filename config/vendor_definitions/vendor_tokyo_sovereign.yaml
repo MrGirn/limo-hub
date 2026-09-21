@@ -43,3 +43,21 @@ fleet_drivers:
     phone: "+81355550101"
     vehicle: "Toyota Century / Lexus LM (Black)"
     license_plate: "TYO-VIP01"
+
+telecom_compliance:
+  legal_business_name: "Tokyo Sovereign Chauffeurs KK"
+  ein_tax_id: "JP 1010001099231 (Corporate Number)"
+  business_type: "Kabushiki Kaisha"
+  vertical: "TRANSPORTATION_AND_LOGISTICS"
+  physical_address: "1-1 Marunouchi, Chiyoda-ku, Tokyo 100-0005"
+  website_url: "https://tokyo-sovereign.jp"
+  contact_email: "compliance@tokyo-sovereign.jp"
+  contact_phone: "+81355550188"
+
+insurance_compliance:
+  has_valid_insurance: true
+  policy_amount: "¥500M"
+  show_policy_amount: false
+  carrier_name: "Tokio Marine Nichido Livery"
+  policy_number: "TMN-TYO-882310"
+

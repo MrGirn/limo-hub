@@ -76,7 +76,7 @@ export const PublicServicesPage: React.FC<PublicServicesPageProps> = ({ branding
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
+      <div className="public-services-grid">
         {services.map((svc) => (
           <div 
             key={svc.id}

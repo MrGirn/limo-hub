@@ -6,14 +6,16 @@ import {
   Plus, Trash2, Globe, Shield, Wifi, Droplets, VolumeX, Baby,
   Calendar, Edit3, ChevronDown, ChevronUp, User, X, Check,
   Award, Star, HeartHandshake, Phone, ArrowUpRight, HelpCircle,
-  Snowflake, Zap, Layers, Info, Download
+  Snowflake, Zap, Layers, Info, Download, Loader2
 } from 'lucide-react';
 import { ServiceType, VehicleClass, Quote, Booking, BookingParty, MasterItinerary, LegMode, FulfilmentType } from '../types';
 import { 
   requestQuote, 
+  requestQuoteMatrix,
   bookQuote, 
   bookItinerary, 
   quoteMasterItinerary, 
+  quoteMasterItineraryMatrix,
   getBookingCalendarIcsUrl, 
   generateGoogleCalendarUrl, 
   generateOutlookCalendarUrl 
@@ -31,7 +33,7 @@ const US_VEHICLE_OPTIONS = [
     luggage: 6,
     features: ['Spacious leather interior', 'Climate control'],
     badge: 'Most Popular',
-    photoUrl: 'https://images.dealer.com/autodata/us/colorized/2023/USC30CHS141A0/black.png',
+    photoUrl: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=400&q=80',
     fallbackIcon: 'SUV'
   },
   {
@@ -43,7 +45,7 @@ const US_VEHICLE_OPTIONS = [
     luggage: 3,
     features: ['Executive legroom', 'Active air suspension'],
     badge: 'Flagship Luxury',
-    photoUrl: 'https://pngimg.com/d/mercedes_PNG80135.png',
+    photoUrl: 'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&w=400&q=80',
     fallbackIcon: 'SEDAN'
   },
   {
@@ -55,7 +57,7 @@ const US_VEHICLE_OPTIONS = [
     luggage: 3,
     features: ['Zero emissions', 'Whisper quiet cabin'],
     badge: 'Zero Emission',
-    photoUrl: 'https://pngimg.com/d/tesla_car_PNG25.png',
+    photoUrl: 'https://images.unsplash.com/photo-1560958089-b8a1929cea89?auto=format&fit=crop&w=400&q=80',
     fallbackIcon: 'EV'
   },
   {
@@ -67,7 +69,7 @@ const US_VEHICLE_OPTIONS = [
     luggage: 14,
     features: ['High-roof walk-in', 'Conference seating'],
     badge: 'Group & Delegation',
-    photoUrl: 'https://pngimg.com/d/mercedes_sprinter_PNG10.png',
+    photoUrl: 'https://images.unsplash.com/photo-1570125909232-eb263c188f7e?auto=format&fit=crop&w=400&q=80',
     fallbackIcon: 'VAN'
   },
   {
@@ -79,7 +81,7 @@ const US_VEHICLE_OPTIONS = [
     luggage: 3,
     features: ['Corporate reliability', 'Clean interior'],
     badge: 'Corporate Standard',
-    photoUrl: 'https://pngimg.com/d/toyota_camry_PNG27.png',
+    photoUrl: 'https://images.unsplash.com/photo-1550355291-bbee04a92027?auto=format&fit=crop&w=400&q=80',
     fallbackIcon: 'SEDAN'
   }
 ];
@@ -95,7 +97,41 @@ const TIME_SLOTS = [
   '09:00 PM', '09:30 PM', '10:00 PM', '10:30 PM', '11:00 PM', '11:30 PM'
 ];
 
-export const CustomerPortal: React.FC = () => {
+const getDynamicUpcomingTimeSlot = (hoursAhead = 2): string => {
+  const d = new Date();
+  d.setHours(d.getHours() + hoursAhead);
+  const m = d.getMinutes();
+  const roundedM = m < 30 ? (m === 0 ? 0 : 30) : 0;
+  if (m >= 30) d.setHours(d.getHours() + 1);
+  d.setMinutes(roundedM);
+  
+  let h = d.getHours();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12;
+  if (h === 0) h = 12;
+  const hStr = String(h).padStart(2, '0');
+  const mStr = String(roundedM).padStart(2, '0');
+  return `${hStr}:${mStr} ${ampm}`;
+};
+
+const getDynamicTodayDate = (): string => {
+  return new Date().toISOString().split('T')[0];
+};
+
+const extractCityFromAddress = (address?: string): string => {
+  if (!address || !address.trim()) return '';
+  const parts = address.split(',').map(p => p.trim());
+  if (parts.length >= 2) {
+    return parts[1] || parts[0];
+  }
+  return parts[0] || '';
+};
+
+export interface CustomerPortalProps {
+  config?: any;
+}
+
+export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config }) => {
   // Booking Mode: 'ITINERARY_PLANNER' (Option 3 Multi-Leg) vs 'GUIDED_SINGLE' (Option 1)
   const [bookingMode, setBookingMode] = useState<'GUIDED_SINGLE' | 'ITINERARY_PLANNER'>('ITINERARY_PLANNER');
 
@@ -108,16 +144,16 @@ export const CustomerPortal: React.FC = () => {
   // Single Leg Inputs
   const [pickupAddress, setPickupAddress] = useState('');
   const [dropoffAddress, setDropoffAddress] = useState('');
-  const [tripDate, setTripDate] = useState('');
-  const [tripTime, setTripTime] = useState('10:00 AM');
+  const [tripDate, setTripDate] = useState(() => getDynamicTodayDate());
+  const [tripTime, setTripTime] = useState(() => getDynamicUpcomingTimeSlot(2));
   const [passengersCount, setPassengersCount] = useState(1);
   const [bagsCount, setBagsCount] = useState(1);
   const [flightNumber, setFlightNumber] = useState('');
   const [vehicleClass, setVehicleClass] = useState<VehicleClass>('LUXURY_SUV');
   const [hourlyHours, setHourlyHours] = useState(3);
   const [hasReturnTrip, setHasReturnTrip] = useState(false);
-  const [returnDate, setReturnDate] = useState('');
-  const [returnTime, setReturnTime] = useState('03:00 PM');
+  const [returnDate, setReturnDate] = useState(() => getDynamicTodayDate());
+  const [returnTime, setReturnTime] = useState(() => getDynamicUpcomingTimeSlot(6));
 
   // Multi-Leg Itinerary Planner Legs (Option 3)
   const [itineraryLegs, setItineraryLegs] = useState<any[]>([
@@ -129,8 +165,8 @@ export const CustomerPortal: React.FC = () => {
       origin_city: '',
       destination_address: '',
       destination_city: '',
-      date: '',
-      time: '10:00 AM',
+      date: getDynamicTodayDate(),
+      time: getDynamicUpcomingTimeSlot(2),
       passengers: 1,
       bags: 1,
       flight_number: '',
@@ -192,6 +228,29 @@ export const CustomerPortal: React.FC = () => {
 
   const [isBookerDifferentFromPassenger, setIsBookerDifferentFromPassenger] = useState(false);
   const [showLookupModal, setShowLookupModal] = useState(false);
+  const [activeFleetClasses, setActiveFleetClasses] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    // Fetch active fleet inventory to determine vehicle availability and maintenance status
+    fetch('/api/v1/vendors/vendor_anb_philly/fleet-inventory')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          const avail: Record<string, boolean> = {};
+          data.forEach((v: any) => {
+            const vCls = v.vehicle_class || 'FIRST_CLASS';
+            const isRentable = v.is_active !== false && v.status !== 'MAINTENANCE' && v.status !== 'DISABLED';
+            if (isRentable) {
+              avail[vCls] = true;
+            } else if (avail[vCls] === undefined) {
+              avail[vCls] = false;
+            }
+          });
+          setActiveFleetClasses(avail);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Formatter utilities for 4-char card input and MM / YY expiry
   const formatCardNumber = (value: string) => {
@@ -221,6 +280,81 @@ export const CustomerPortal: React.FC = () => {
     return null;
   };
 
+  const parseTimeTo24Hour = (timeStr?: string): string => {
+    if (!timeStr || !timeStr.trim()) {
+      const now = new Date();
+      return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:00`;
+    }
+    const clean = timeStr.trim();
+    const isPM = clean.toUpperCase().includes('PM');
+    const isAM = clean.toUpperCase().includes('AM');
+    const numbersOnly = clean.replace(/[^0-9:]/g, '').trim();
+    const parts = numbersOnly.split(':');
+    let h = parseInt(parts[0] || '0', 10);
+    const m = parseInt(parts[1] || '0', 10);
+    if (isPM && h < 12) h += 12;
+    if (isAM && h === 12) h = 0;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
+  };
+
+  const safeFormatIsoDateTime = (dateStr?: string, timeStr?: string): string | undefined => {
+    if (!dateStr || !dateStr.trim()) return undefined;
+    try {
+      const time24 = parseTimeTo24Hour(timeStr);
+      const d = new Date(`${dateStr.trim()}T${time24}Z`);
+      if (isNaN(d.getTime())) return undefined;
+      return d.toISOString();
+    } catch (_) {
+      return undefined;
+    }
+  };
+
+  const getGoogleMapsEmbedUrl = (): string | null => {
+    let origin = pickupAddress?.trim();
+    let destination = dropoffAddress?.trim();
+
+    if (bookingMode === 'ITINERARY_PLANNER' && itineraryLegs.length > 0) {
+      origin = itineraryLegs[0]?.origin_address?.trim() || origin;
+      destination = itineraryLegs[itineraryLegs.length - 1]?.destination_address?.trim() || destination;
+    }
+
+    if (selectedRideType !== 'HOURLY') {
+      // 2-address category: require both origin and destination to be entered
+      if (origin && destination && origin.length >= 3 && destination.length >= 3) {
+        return `https://maps.google.com/maps?saddr=${encodeURIComponent(origin)}&daddr=${encodeURIComponent(destination)}&output=embed`;
+      }
+      return null;
+    } else {
+      // 1-address category (Hourly): require origin
+      if (origin && origin.length >= 3) {
+        return `https://maps.google.com/maps?q=${encodeURIComponent(origin)}&output=embed`;
+      }
+      return null;
+    }
+  };
+
+  const getGoogleMapsDirectionsUrl = (): string | null => {
+    let origin = pickupAddress?.trim();
+    let destination = dropoffAddress?.trim();
+
+    if (bookingMode === 'ITINERARY_PLANNER' && itineraryLegs.length > 0) {
+      origin = itineraryLegs[0]?.origin_address?.trim() || origin;
+      destination = itineraryLegs[itineraryLegs.length - 1]?.destination_address?.trim() || destination;
+    }
+
+    if (selectedRideType !== 'HOURLY') {
+      if (origin && destination && origin.length >= 3 && destination.length >= 3) {
+        return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`;
+      }
+      return null;
+    } else {
+      if (origin && origin.length >= 3) {
+        return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(origin)}`;
+      }
+      return null;
+    }
+  };
+
   const handleAddItineraryLeg = () => {
     const newLegNumber = itineraryLegs.length + 1;
     setItineraryLegs([
@@ -233,8 +367,8 @@ export const CustomerPortal: React.FC = () => {
         origin_city: '',
         destination_address: '',
         destination_city: '',
-        date: '',
-        time: '10:00 AM',
+        date: getDynamicTodayDate(),
+        time: getDynamicUpcomingTimeSlot(2),
         passengers: 1,
         bags: 1,
         flight_number: '',
@@ -258,10 +392,19 @@ export const CustomerPortal: React.FC = () => {
     setItineraryLegs(updated);
   };
 
-  // Real-time automatic quote calculation with live recalculation on any field change
+  // On-demand quote calculation triggered exclusively upon proceeding to vehicles
   const calculateLiveQuotes = async (advanceStep = false) => {
-    const effPickup = pickupAddress || itineraryLegs[0]?.origin_address || 'Philadelphia International Airport (PHL)';
-    const effDropoff = dropoffAddress || itineraryLegs[0]?.destination_address || 'The Ritz-Carlton Philadelphia';
+    const effPickup = pickupAddress.trim() || (bookingMode === 'ITINERARY_PLANNER' ? itineraryLegs[0]?.origin_address?.trim() : '');
+    const effDropoff = dropoffAddress.trim() || (bookingMode === 'ITINERARY_PLANNER' ? itineraryLegs[0]?.destination_address?.trim() : '');
+
+    if (!effPickup && bookingMode !== 'ITINERARY_PLANNER') {
+      setQuoteError("Please enter your pickup location.");
+      return;
+    }
+    if (selectedRideType !== 'HOURLY' && !effDropoff && bookingMode !== 'ITINERARY_PLANNER') {
+      setQuoteError("Please enter your destination location.");
+      return;
+    }
 
     setLoadingQuote(true);
     setQuoteError(null);
@@ -276,16 +419,16 @@ export const CustomerPortal: React.FC = () => {
             leg_mode: l.flight_number ? 'FLIGHT' : 'CHAUFFEUR_RIDE',
             title: l.title,
             origin_address: l.origin_address || effPickup,
-            origin_city: l.origin_city || (effPickup.toLowerCase().includes('phl') ? 'Philadelphia' : 'New York'),
+            origin_city: l.origin_city || extractCityFromAddress(l.origin_address || effPickup),
             destination_address: l.destination_address || effDropoff,
-            destination_city: l.destination_city || (effDropoff.toLowerCase().includes('jfk') ? 'New York' : 'Philadelphia'),
+            destination_city: l.destination_city || extractCityFromAddress(l.destination_address || effDropoff),
             vehicle_class: l.vehicle_class || vehicleClass,
             flight_number: l.flight_number || undefined
           }));
         } else {
-          // Roundtrip Mode: Outbound Leg (PHL -> JFK) + Return Leg (JFK -> PHL)
-          const origCity = effPickup.toLowerCase().includes('philadelphia') || effPickup.toLowerCase().includes('phl') ? 'Philadelphia' : 'New York';
-          const destCity = effDropoff.toLowerCase().includes('new york') || effDropoff.toLowerCase().includes('jfk') || effDropoff.toLowerCase().includes('lga') || effDropoff.toLowerCase().includes('ewr') ? 'New York' : 'Philadelphia';
+          // Roundtrip Mode: Outbound Leg + Return Leg
+          const origCity = extractCityFromAddress(effPickup);
+          const destCity = extractCityFromAddress(effDropoff);
 
           legsToQuote = [
             {
@@ -311,42 +454,78 @@ export const CustomerPortal: React.FC = () => {
           ];
         }
 
-        const qMap: Record<string, any> = {};
-        await Promise.all(classes.map(async (vc) => {
-          try {
-            const itin = await quoteMasterItinerary(hasReturnTrip ? "Executive Round-Trip Itinerary" : "Executive Multi-City Itinerary", legsToQuote, vc);
-            qMap[vc] = itin;
-            if (vc === vehicleClass) setMasterItinerary(itin);
-          } catch (e) {
-            console.error(`Error quoting ${vc}:`, e);
+        try {
+          const itinMatrix = await quoteMasterItineraryMatrix(
+            hasReturnTrip ? "Executive Round-Trip Itinerary" : "Executive Multi-City Itinerary",
+            legsToQuote
+          );
+          setVehicleQuotes(itinMatrix);
+          if (itinMatrix[vehicleClass]) {
+            setMasterItinerary(itinMatrix[vehicleClass]);
           }
-        }));
-        setVehicleQuotes(qMap);
+        } catch (itinErr) {
+          console.error('Itinerary matrix quote error, fallback to single:', itinErr);
+          const qMap: Record<string, any> = {};
+          await Promise.all(classes.map(async (vc) => {
+            try {
+              const mappedLegs = legsToQuote.map(l => ({
+                ...l,
+                vehicle_class: vc
+              }));
+              const itin = await quoteMasterItinerary(hasReturnTrip ? "Executive Round-Trip Itinerary" : "Executive Multi-City Itinerary", mappedLegs, vc);
+              qMap[vc] = itin;
+              if (vc === vehicleClass) setMasterItinerary(itin);
+            } catch (e) {
+              console.error(`Error quoting ${vc}:`, e);
+            }
+          }));
+          setVehicleQuotes(qMap);
+        }
       } else {
-        const qMap: Record<string, any> = {};
-        const combinedIso = tripDate ? new Date(`${tripDate}T${tripTime || '10:00'}:00Z`).toISOString() : undefined;
-        await Promise.all(classes.map(async (vc) => {
-          try {
-            const q = await requestQuote({
-              service_type: selectedRideType === 'AIRPORT' ? 'AIRPORT_TRANSFER' : selectedRideType === 'HOURLY' ? 'HOURLY_AS_DIRECTED' : 'POINT_TO_POINT',
-              vehicle_class: vc,
-              pickup_address: effPickup,
-              dropoff_address: selectedRideType === 'HOURLY' ? undefined : effDropoff,
-              flight_number: selectedRideType === 'AIRPORT' ? flightNumber : undefined,
-              hourly_hours: selectedRideType === 'HOURLY' ? hourlyHours : undefined,
-              pickup_time_utc: combinedIso,
-              wait_minutes: 0
-            });
-            qMap[vc] = q;
-            if (vc === vehicleClass) setQuote(q);
-          } catch (e) {
-            console.error(`Error quoting ${vc}:`, e);
+        const combinedIso = safeFormatIsoDateTime(tripDate, tripTime);
+        try {
+          // Lightning-Fast Single-Pass Multi-Class Matrix (<50ms)
+          const matrix = await requestQuoteMatrix({
+            service_type: selectedRideType === 'AIRPORT' ? 'AIRPORT_TRANSFER' : selectedRideType === 'HOURLY' ? 'HOURLY_AS_DIRECTED' : 'POINT_TO_POINT',
+            pickup_address: effPickup,
+            dropoff_address: selectedRideType === 'HOURLY' ? undefined : effDropoff,
+            vendor_id: config?.vendor_id || undefined,
+            flight_number: selectedRideType === 'AIRPORT' ? flightNumber : undefined,
+            hourly_hours: selectedRideType === 'HOURLY' ? hourlyHours : undefined,
+            pickup_time_utc: combinedIso,
+            wait_minutes: 0
+          });
+          setVehicleQuotes(matrix);
+          if (matrix[vehicleClass]) {
+            setQuote(matrix[vehicleClass]);
           }
-        }));
-        setVehicleQuotes(qMap);
+        } catch (matrixErr) {
+          console.error('Matrix quote error, fallback to individual:', matrixErr);
+          const qMap: Record<string, any> = {};
+          await Promise.all(classes.map(async (vc) => {
+            try {
+              const q = await requestQuote({
+                service_type: selectedRideType === 'AIRPORT' ? 'AIRPORT_TRANSFER' : selectedRideType === 'HOURLY' ? 'HOURLY_AS_DIRECTED' : 'POINT_TO_POINT',
+                vehicle_class: vc,
+                pickup_address: effPickup,
+                dropoff_address: selectedRideType === 'HOURLY' ? undefined : effDropoff,
+                vendor_id: config?.vendor_id || undefined,
+                flight_number: selectedRideType === 'AIRPORT' ? flightNumber : undefined,
+                hourly_hours: selectedRideType === 'HOURLY' ? hourlyHours : undefined,
+                pickup_time_utc: combinedIso,
+                wait_minutes: 0
+              });
+              qMap[vc] = q;
+              if (vc === vehicleClass) setQuote(q);
+            } catch (e) {
+              console.error(`Error quoting ${vc}:`, e);
+            }
+          }));
+          setVehicleQuotes(qMap);
+        }
       }
 
-      // For Multi-City itineraries where vehicles are configured per-leg, proceed directly to Extras
+      // Advance step once guaranteed fares have successfully computed
       if (advanceStep) {
         if (bookingMode === 'ITINERARY_PLANNER' && !hasReturnTrip) {
           setWizardStep(3);
@@ -361,34 +540,32 @@ export const CustomerPortal: React.FC = () => {
     }
   };
 
-  // Debounced auto-recalculate live quote whenever any booking field or preference changes
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      calculateLiveQuotes(false);
-    }, 350);
-    return () => clearTimeout(timer);
-  }, [
-    pickupAddress, 
-    dropoffAddress, 
-    selectedRideType, 
-    vehicleClass, 
-    hourlyHours, 
-    flightNumber, 
-    hasReturnTrip, 
-    returnDate, 
-    returnTime, 
-    tripDate, 
-    tripTime, 
-    bookingMode, 
-    itineraryLegs, 
-    amenities, 
-    childSeats, 
-    isWavNeeded, 
-    fulfilmentType
-  ]);
+  const handleProceedToVehicles = async () => {
+    setQuoteError(null);
+    if (bookingMode === 'ITINERARY_PLANNER') {
+      for (let i = 0; i < itineraryLegs.length; i++) {
+        const leg = itineraryLegs[i];
+        if (!leg.origin_address?.trim()) {
+          setQuoteError(`Please enter a pickup location for Leg ${i + 1}.`);
+          return;
+        }
+        if (!leg.destination_address?.trim()) {
+          setQuoteError(`Please enter a destination location for Leg ${i + 1}.`);
+          return;
+        }
+      }
+    } else {
+      if (!pickupAddress.trim()) {
+        setQuoteError("Please enter your pickup address or airport location.");
+        return;
+      }
+      if (selectedRideType !== 'HOURLY' && !dropoffAddress.trim()) {
+        setQuoteError("Please enter your destination address.");
+        return;
+      }
+    }
 
-  const handleProceedToVehicles = () => {
-    calculateLiveQuotes(true);
+    await calculateLiveQuotes(true);
   };
 
   const handleSelectVehicleClass = (vc: VehicleClass) => {
@@ -459,7 +636,8 @@ export const CustomerPortal: React.FC = () => {
           payment: { card_last4: last4 }
         });
       } else if (quote) {
-        const pickupTime = new Date(`${tripDate || new Date().toISOString().split('T')[0]}T10:30:00Z`).toISOString();
+        const pickupDateResolved = tripDate || new Date().toISOString().split('T')[0];
+        const pickupTime = safeFormatIsoDateTime(pickupDateResolved, tripTime) || new Date().toISOString();
         const b = await bookQuote(quote.id, resolvedParty, pickupTime);
         setBooking(b);
       }
@@ -510,8 +688,8 @@ export const CustomerPortal: React.FC = () => {
     <div style={{ backgroundColor: '#FBF9F5', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       
       {/* 1. STEP PROGRESS WIZARD BAR */}
-      <div style={{ maxWidth: '1320px', margin: '0 auto', padding: '16px 24px 24px 24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', maxWidth: '640px' }}>
+      <div className="wizard-progress-bar-wrapper">
+        <div className="wizard-steps-container">
           
           {/* Step 1 */}
           <div 
@@ -528,11 +706,12 @@ export const CustomerPortal: React.FC = () => {
               alignItems: 'center', 
               justifyContent: 'center',
               fontSize: '12px',
-              fontWeight: 800
+              fontWeight: 800,
+              flexShrink: 0
             }}>
               1
             </div>
-            <span style={{ fontSize: '13px', fontWeight: wizardStep === 1 ? 800 : 600, color: wizardStep === 1 ? '#0A192F' : '#64748B' }}>
+            <span className="wizard-step-label" style={{ fontSize: '13px', fontWeight: wizardStep === 1 ? 800 : 600, color: wizardStep === 1 ? '#0A192F' : '#64748B', whiteSpace: 'nowrap' }}>
               Trip details
             </span>
           </div>
@@ -555,11 +734,12 @@ export const CustomerPortal: React.FC = () => {
               alignItems: 'center', 
               justifyContent: 'center',
               fontSize: '12px',
-              fontWeight: 800
+              fontWeight: 800,
+              flexShrink: 0
             }}>
               2
             </div>
-            <span style={{ fontSize: '13px', fontWeight: wizardStep === 2 ? 800 : 600, color: wizardStep === 2 ? '#0A192F' : '#94A3B8' }}>
+            <span className="wizard-step-label" style={{ fontSize: '13px', fontWeight: wizardStep === 2 ? 800 : 600, color: wizardStep === 2 ? '#0A192F' : '#94A3B8', whiteSpace: 'nowrap' }}>
               Vehicle
             </span>
           </div>
@@ -582,11 +762,12 @@ export const CustomerPortal: React.FC = () => {
               alignItems: 'center', 
               justifyContent: 'center',
               fontSize: '12px',
-              fontWeight: 800
+              fontWeight: 800,
+              flexShrink: 0
             }}>
               3
             </div>
-            <span style={{ fontSize: '13px', fontWeight: wizardStep === 3 ? 800 : 600, color: wizardStep === 3 ? '#0A192F' : '#94A3B8' }}>
+            <span className="wizard-step-label" style={{ fontSize: '13px', fontWeight: wizardStep === 3 ? 800 : 600, color: wizardStep === 3 ? '#0A192F' : '#94A3B8', whiteSpace: 'nowrap' }}>
               Extras
             </span>
           </div>
@@ -609,11 +790,12 @@ export const CustomerPortal: React.FC = () => {
               alignItems: 'center', 
               justifyContent: 'center',
               fontSize: '12px',
-              fontWeight: 800
+              fontWeight: 800,
+              flexShrink: 0
             }}>
               4
             </div>
-            <span style={{ fontSize: '13px', fontWeight: wizardStep === 4 ? 800 : 600, color: wizardStep === 4 ? '#0A192F' : '#94A3B8' }}>
+            <span className="wizard-step-label" style={{ fontSize: '13px', fontWeight: wizardStep === 4 ? 800 : 600, color: wizardStep === 4 ? '#0A192F' : '#94A3B8', whiteSpace: 'nowrap' }}>
               Review
             </span>
           </div>
@@ -622,7 +804,7 @@ export const CustomerPortal: React.FC = () => {
       </div>
 
       {/* 4. MAIN CONTENT CONTAINER (2-COLUMN LUXURY GRID) */}
-      <div style={{ maxWidth: '1320px', margin: '0 auto', padding: '0 24px 60px 24px' }}>
+      <div className="customer-portal-main-container">
         
         {wizardStep === 5 && booking ? (
           /* STEP 5: CONFIRMED CARD ESCROW MISSION WITH CALENDAR & DUAL NOTIFICATION */
@@ -655,29 +837,29 @@ export const CustomerPortal: React.FC = () => {
 
             {/* ITINERARY & SUMMARY CARD */}
             <div style={{ backgroundColor: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '24px', textAlign: 'left', marginBottom: '24px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div className="mission-pickup-dest-grid" style={{ gap: '20px' }}>
                 <div>
-                  <div style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>PICKUP LOCATION</div>
+                  <div style={{ fontSize: '11px', fontWeight: 800, color: '#9A7B4F', textTransform: 'uppercase', letterSpacing: '0.05em' }}>PICKUP LOCATION</div>
                   <div style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A', marginTop: '4px' }}>{booking.pickup_address}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>DESTINATION</div>
+                  <div style={{ fontSize: '11px', fontWeight: 800, color: '#9A7B4F', textTransform: 'uppercase', letterSpacing: '0.05em' }}>DESTINATION</div>
                   <div style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A', marginTop: '4px' }}>{booking.dropoff_address}</div>
                 </div>
               </div>
 
-              <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #E2E8F0', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', alignItems: 'center' }}>
+              <div className="mission-details-3col" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #E2E8F0', gap: '16px', alignItems: 'center' }}>
                 <div>
                   <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>PASSENGER</div>
                   <div style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>{booking.party?.passenger_name}</div>
-                  <div style={{ fontSize: '11px', color: '#94A3B8' }}>{booking.party?.passenger_phone}</div>
+                  <div style={{ fontSize: '11px', color: '#9A7B4F' }}>{booking.party?.passenger_phone}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>SCHEDULED PICKUP</div>
                   <div style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>
                     {booking.pickup_time_utc ? new Date(booking.pickup_time_utc).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Scheduled'}
                   </div>
-                  <div style={{ fontSize: '11px', color: '#94A3B8' }}>60-min complimentary wait</div>
+                  <div style={{ fontSize: '11px', color: '#9A7B4F' }}>60-min complimentary wait</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>GUARANTEED ESCROW</div>
@@ -743,11 +925,11 @@ export const CustomerPortal: React.FC = () => {
                     transition: 'all 0.15s'
                   }}
                 >
-                  <Download size={15} color="#0078D4" />
-                  Apple / iCal (.ics)
+                  <Download size={15} color="#0A192F" />
+                  Apple / Outlook .ICS
                 </a>
 
-                {/* Outlook 365 Deeplink */}
+                {/* Office 365 Web Calendar */}
                 <a
                   href={generateOutlookCalendarUrl(booking)}
                   target="_blank"
@@ -775,7 +957,7 @@ export const CustomerPortal: React.FC = () => {
             </div>
 
             {/* DUAL NOTIFICATION DISPATCH STATUS */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '32px', textAlign: 'left' }}>
+            <div className="mission-pickup-dest-grid" style={{ gap: '14px', marginBottom: '32px', textAlign: 'left' }}>
               {/* Booker Notification */}
               <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
@@ -843,7 +1025,7 @@ export const CustomerPortal: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 390px', gap: '32px', alignItems: 'start' }}>
+          <div className="customer-portal-grid">
             
             {/* ========================================================================= */}
             {/* LEFT COLUMN: GUIDED TRIP DETAILS & MULTI-LEG BUILDER                       */}
@@ -870,10 +1052,11 @@ export const CustomerPortal: React.FC = () => {
                       )}
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                    <div className="ride-type-selector-grid">
                       
                       {/* Card 1: Airport transfer */}
                       <div 
+                        className="ride-type-card"
                         onClick={() => { setSelectedRideType('AIRPORT'); setBookingMode('GUIDED_SINGLE'); }}
                         style={{
                           padding: '16px 14px',
@@ -901,6 +1084,7 @@ export const CustomerPortal: React.FC = () => {
 
                       {/* Card 2: Point to point */}
                       <div 
+                        className="ride-type-card"
                         onClick={() => { setSelectedRideType('POINT_TO_POINT'); setBookingMode('GUIDED_SINGLE'); }}
                         style={{
                           padding: '16px 14px',
@@ -928,6 +1112,7 @@ export const CustomerPortal: React.FC = () => {
 
                       {/* Card 3: Hourly service */}
                       <div 
+                        className="ride-type-card"
                         onClick={() => { setSelectedRideType('HOURLY'); setBookingMode('GUIDED_SINGLE'); }}
                         style={{
                           padding: '16px 14px',
@@ -955,6 +1140,7 @@ export const CustomerPortal: React.FC = () => {
 
                       {/* Card 4: Multi-city / Itinerary Planner */}
                       <div 
+                        className="ride-type-card"
                         onClick={() => { setSelectedRideType('MULTI_CITY'); setBookingMode('ITINERARY_PLANNER'); }}
                         style={{
                           padding: '16px 14px',
@@ -991,7 +1177,7 @@ export const CustomerPortal: React.FC = () => {
                       </h3>
 
                       {/* 1. Pickup & Destination / Duration 2-Column Row with Google Autocomplete */}
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                      <div className="trip-datetime-grid">
                         <div>
                           <AddressAutocompleteInput
                             label={selectedRideType === 'AIRPORT' ? 'Pickup location (Airport or Address)' : 'Pickup location'}
@@ -1049,7 +1235,7 @@ export const CustomerPortal: React.FC = () => {
                       </div>
 
                       {/* 2. Date & Time 2-Column Row */}
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                      <div className="trip-datetime-grid">
                         <div>
                           <label htmlFor="trip-date-input" style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
                             Date
@@ -1123,7 +1309,7 @@ export const CustomerPortal: React.FC = () => {
                       </div>
 
                       {/* 3. Passengers, Bags & Context 3-Column Row */}
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.4fr', gap: '16px', marginBottom: '20px' }}>
+                      <div className="pax-bags-notes-grid" style={{ marginBottom: '20px' }}>
                         <div>
                           <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
                             Passengers
@@ -1166,7 +1352,7 @@ export const CustomerPortal: React.FC = () => {
                           </div>
                         </div>
 
-                        <div>
+                        <div className="pax-notes-col">
                           <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
                             {selectedRideType === 'AIRPORT' ? 'Flight number (optional)' : selectedRideType === 'HOURLY' ? 'Service Area / Itinerary note' : 'Trip notes (optional)'}
                           </label>
@@ -1193,128 +1379,162 @@ export const CustomerPortal: React.FC = () => {
                       </div>
 
                       {/* Return Trip Link & Form */}
-                      <div style={{ marginBottom: '24px' }}>
-                        <button
-                          type="button"
-                          onClick={() => setHasReturnTrip(!hasReturnTrip)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: '#9A7B4F',
-                            fontSize: '13px',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: 0
-                          }}
-                        >
-                          <Plus size={15} />
-                          <span>{hasReturnTrip ? 'Remove return trip' : 'Add a return trip'}</span>
-                        </button>
+                      {selectedRideType !== 'HOURLY' && (
+                        <div style={{ marginBottom: '24px' }}>
+                          <button
+                            type="button"
+                            onClick={() => setHasReturnTrip(!hasReturnTrip)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#9A7B4F',
+                              fontSize: '13px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: 0
+                            }}
+                          >
+                            <Plus size={15} />
+                            <span>{hasReturnTrip ? 'Remove return trip' : 'Add a return trip'}</span>
+                          </button>
 
-                        {hasReturnTrip && (
-                          <div style={{ marginTop: '12px', padding: '16px', backgroundColor: '#FDFBF7', border: '1px solid #EAE6DF', borderRadius: '8px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                            <div>
-                              <label htmlFor="return-date-input" style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
-                                Return Date
-                              </label>
-                              <div 
-                                onClick={() => {
-                                  const el = document.getElementById('return-date-input') as HTMLInputElement | null;
-                                  try { el?.showPicker?.(); el?.focus(); } catch (_) {}
-                                }}
-                                style={{ position: 'relative', display: 'flex', alignItems: 'center', cursor: 'pointer' }}
-                              >
-                                <Calendar size={16} style={{ position: 'absolute', left: '12px', color: '#64748B', pointerEvents: 'none' }} />
-                                <input
-                                  id="return-date-input"
-                                  type="date"
-                                  value={returnDate}
-                                  min={tripDate || new Date().toISOString().split('T')[0]}
-                                  onChange={e => setReturnDate(e.target.value)}
-                                  onFocus={(e) => {
-                                    try {
-                                      (e.currentTarget as any).showPicker?.();
-                                    } catch (_) {}
+                          {hasReturnTrip && (
+                            <div className="return-trip-grid" style={{ marginTop: '12px', padding: '16px', backgroundColor: '#FDFBF7', border: '1px solid #EAE6DF', borderRadius: '8px' }}>
+                              <div>
+                                <label htmlFor="return-date-input" style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                                  Return Date
+                                </label>
+                                <div 
+                                  onClick={() => {
+                                    const el = document.getElementById('return-date-input') as HTMLInputElement | null;
+                                    try { el?.showPicker?.(); el?.focus(); } catch (_) {}
                                   }}
-                                  onClick={(e) => {
-                                    try {
-                                      (e.currentTarget as any).showPicker?.();
-                                    } catch (_) {}
-                                  }}
-                                  style={{
-                                    width: '100%',
-                                    padding: '10px 12px 10px 36px',
-                                    borderRadius: '6px',
-                                    border: '1px solid #CBD5E1',
-                                    fontSize: '13px',
-                                    color: '#0F172A',
-                                    outline: 'none',
-                                    backgroundColor: '#FFFFFF',
-                                    cursor: 'pointer'
-                                  }}
-                                />
-                              </div>
-                            </div>
-
-                            <div>
-                              <label htmlFor="return-time-select" style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
-                                Return Time
-                              </label>
-                              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                                <Clock size={16} style={{ position: 'absolute', left: '12px', color: '#64748B', pointerEvents: 'none' }} />
-                                <select
-                                  id="return-time-select"
-                                  value={returnTime}
-                                  onChange={e => setReturnTime(e.target.value)}
-                                  style={{
-                                    width: '100%',
-                                    padding: '10px 12px 10px 36px',
-                                    borderRadius: '6px',
-                                    border: '1px solid #CBD5E1',
-                                    fontSize: '13px',
-                                    color: '#0F172A',
-                                    outline: 'none',
-                                    backgroundColor: '#FFFFFF',
-                                    cursor: 'pointer'
-                                  }}
+                                  style={{ position: 'relative', display: 'flex', alignItems: 'center', cursor: 'pointer' }}
                                 >
-                                  {TIME_SLOTS.map(t => (
-                                    <option key={t} value={t}>{t}</option>
-                                  ))}
-                                </select>
+                                  <Calendar size={16} style={{ position: 'absolute', left: '12px', color: '#64748B', pointerEvents: 'none' }} />
+                                  <input
+                                    id="return-date-input"
+                                    type="date"
+                                    value={returnDate}
+                                    min={tripDate || new Date().toISOString().split('T')[0]}
+                                    onChange={e => setReturnDate(e.target.value)}
+                                    onFocus={(e) => {
+                                      try {
+                                        (e.currentTarget as any).showPicker?.();
+                                      } catch (_) {}
+                                    }}
+                                    onClick={(e) => {
+                                      try {
+                                        (e.currentTarget as any).showPicker?.();
+                                      } catch (_) {}
+                                    }}
+                                    style={{
+                                      width: '100%',
+                                      padding: '10px 12px 10px 36px',
+                                      borderRadius: '6px',
+                                      border: '1px solid #CBD5E1',
+                                      fontSize: '13px',
+                                      color: '#0F172A',
+                                      outline: 'none',
+                                      backgroundColor: '#FFFFFF',
+                                      cursor: 'pointer'
+                                    }}
+                                  />
+                                </div>
+                              </div>
+
+                              <div>
+                                <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                                  Return Time
+                                </label>
+                                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                  <Clock size={16} style={{ position: 'absolute', left: '12px', color: '#64748B', pointerEvents: 'none' }} />
+                                  <select
+                                    value={returnTime}
+                                    onChange={e => setReturnTime(e.target.value)}
+                                    style={{
+                                      width: '100%',
+                                      padding: '10px 12px 10px 36px',
+                                      borderRadius: '6px',
+                                      border: '1px solid #CBD5E1',
+                                      fontSize: '13px',
+                                      color: '#0F172A',
+                                      outline: 'none',
+                                      backgroundColor: '#FFFFFF',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    {TIME_SLOTS.map(t => (
+                                      <option key={t} value={t}>{t}</option>
+                                    ))}
+                                  </select>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        )}
-                      </div>
+                          )}
+                        </div>
+                      )}
+
+                      {quoteError && (
+                        <div style={{
+                          backgroundColor: '#FEF2F2',
+                          border: '1px solid #FECACA',
+                          borderRadius: '8px',
+                          padding: '12px 14px',
+                          color: '#DC2626',
+                          fontSize: '12.5px',
+                          fontWeight: 600,
+                          marginBottom: '16px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px'
+                        }}>
+                          <AlertCircle size={18} color="#DC2626" style={{ flexShrink: 0 }} />
+                          <span>{quoteError}</span>
+                        </div>
+                      )}
 
                       {/* Primary Gold CTA Button */}
                       <button
+                        type="button"
                         onClick={handleProceedToVehicles}
                         disabled={loadingQuote}
                         style={{
                           width: '100%',
                           padding: '14px 20px',
-                          backgroundColor: '#9A7B4F',
+                          backgroundColor: loadingQuote ? '#8C6D3F' : '#9A7B4F',
+                          backgroundImage: loadingQuote 
+                            ? 'linear-gradient(135deg, #8C6D3F 0%, #6E532E 100%)' 
+                            : 'linear-gradient(135deg, #9A7B4F 0%, #7D5E30 100%)',
                           color: '#FFFFFF',
-                          border: 'none',
-                          borderRadius: '6px',
-                          fontSize: '14px',
+                          border: '1px solid #7D5E30',
+                          borderRadius: '8px',
+                          fontSize: '14.5px',
                           fontWeight: 800,
-                          cursor: 'pointer',
+                          cursor: loadingQuote ? 'wait' : 'pointer',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: '8px',
-                          boxShadow: '0 2px 8px rgba(154, 123, 79, 0.3)',
-                          transition: 'background-color 0.2s'
+                          gap: '10px',
+                          boxShadow: '0 4px 14px rgba(154, 123, 79, 0.4)',
+                          transition: 'all 0.2s ease',
+                          letterSpacing: '0.01em'
                         }}
                       >
-                        <span>{loadingQuote ? 'Checking Fleet & Radar Availability...' : 'Continue to vehicles'}</span>
-                        <ArrowRight size={16} />
+                        {loadingQuote ? (
+                          <>
+                            <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
+                            <span>Calculating Guaranteed Fares...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>Continue to vehicles</span>
+                            <ArrowRight size={16} />
+                          </>
+                        )}
                       </button>
 
                     </div>
@@ -1587,11 +1807,14 @@ export const CustomerPortal: React.FC = () => {
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
                                   {US_VEHICLE_OPTIONS.map((opt) => {
                                     const isChosen = (leg.vehicle_class || 'FIRST_CLASS') === opt.type;
+                                    const isOptUnderMaint = activeFleetClasses[opt.type] === false;
                                     return (
                                       <button
                                         key={opt.type}
                                         type="button"
+                                        disabled={isOptUnderMaint}
                                         onClick={() => {
+                                          if (isOptUnderMaint) return;
                                           const updated = [...itineraryLegs];
                                           updated[idx].vehicle_class = opt.type;
                                           updated[idx].vehicle_title = opt.title;
@@ -1601,9 +1824,10 @@ export const CustomerPortal: React.FC = () => {
                                         style={{
                                           padding: '8px 10px',
                                           borderRadius: '6px',
-                                          border: isChosen ? '2px solid #9A7B4F' : '1px solid #CBD5E1',
-                                          backgroundColor: isChosen ? '#FFFDF9' : '#FFFFFF',
-                                          cursor: 'pointer',
+                                          border: isChosen ? '2px solid #9A7B4F' : isOptUnderMaint ? '1px dashed #CBD5E1' : '1px solid #CBD5E1',
+                                          backgroundColor: isOptUnderMaint ? '#F1F5F9' : isChosen ? '#FFFDF9' : '#FFFFFF',
+                                          cursor: isOptUnderMaint ? 'not-allowed' : 'pointer',
+                                          opacity: isOptUnderMaint ? 0.55 : 1,
                                           textAlign: 'left',
                                           display: 'flex',
                                           flexDirection: 'column',
@@ -1613,13 +1837,13 @@ export const CustomerPortal: React.FC = () => {
                                         }}
                                       >
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                          <span style={{ fontSize: '11.5px', fontWeight: isChosen ? 800 : 700, color: isChosen ? '#9A7B4F' : '#0A192F' }}>
+                                          <span style={{ fontSize: '11.5px', fontWeight: isChosen ? 800 : 700, color: isOptUnderMaint ? '#94A3B8' : isChosen ? '#9A7B4F' : '#0A192F' }}>
                                             {opt.title.replace('Mercedes-Benz ', '')}
                                           </span>
-                                          {isChosen && <Check size={13} color="#9A7B4F" />}
+                                          {isChosen && !isOptUnderMaint && <Check size={13} color="#9A7B4F" />}
                                         </div>
-                                        <div style={{ fontSize: '10px', color: '#64748B' }}>
-                                          {opt.pax} Pax · {opt.luggage} Bags
+                                        <div style={{ fontSize: '10px', color: isOptUnderMaint ? '#EF4444' : '#64748B', fontWeight: isOptUnderMaint ? 700 : 500 }}>
+                                          {isOptUnderMaint ? '🛠️ Under Repair' : `${opt.pax} Pax · ${opt.luggage} Bags`}
                                         </div>
                                       </button>
                                     );
@@ -1660,27 +1884,42 @@ export const CustomerPortal: React.FC = () => {
                       {/* Multi-Leg Continue CTA */}
                       <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #EAE6DF' }}>
                         <button
+                          type="button"
                           onClick={handleProceedToVehicles}
                           disabled={loadingQuote}
                           style={{
                             width: '100%',
                             padding: '14px 20px',
-                            backgroundColor: '#9A7B4F',
+                            backgroundColor: loadingQuote ? '#8C6D3F' : '#9A7B4F',
+                            backgroundImage: loadingQuote 
+                              ? 'linear-gradient(135deg, #8C6D3F 0%, #6E532E 100%)' 
+                              : 'linear-gradient(135deg, #9A7B4F 0%, #7D5E30 100%)',
                             color: '#FFFFFF',
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontSize: '14px',
+                            border: '1px solid #7D5E30',
+                            borderRadius: '8px',
+                            fontSize: '14.5px',
                             fontWeight: 800,
-                            cursor: 'pointer',
+                            cursor: loadingQuote ? 'wait' : 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            gap: '8px',
-                            boxShadow: '0 2px 8px rgba(154, 123, 79, 0.3)'
+                            gap: '10px',
+                            boxShadow: '0 4px 14px rgba(154, 123, 79, 0.4)',
+                            transition: 'all 0.2s ease',
+                            letterSpacing: '0.01em'
                           }}
                         >
-                          <span>{loadingQuote ? 'Pricing Master Itinerary...' : 'Continue →'}</span>
-                          <ArrowRight size={16} />
+                          {loadingQuote ? (
+                            <>
+                              <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
+                              <span>Pricing Master Itinerary...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>Continue to vehicles</span>
+                              <ArrowRight size={16} />
+                            </>
+                          )}
                         </button>
                       </div>
 
@@ -1791,32 +2030,39 @@ export const CustomerPortal: React.FC = () => {
                         )
                       ).toFixed(0) : '...';
 
+                      const isUnderMaintenance = activeFleetClasses[veh.type] === false;
+
                       return (
                         <div
                           key={veh.type}
-                          onClick={() => handleSelectVehicleClass(veh.type)}
+                          className="vehicle-card-container"
+                          onClick={() => {
+                            if (isUnderMaintenance) {
+                              setQuoteError(`The ${veh.title} is currently under maintenance / repair and unavailable for booking. Please select another active fleet class.`);
+                              return;
+                            }
+                            handleSelectVehicleClass(veh.type);
+                          }}
                           style={{
-                            border: isSelected ? '1.5px solid #9A7B4F' : '1px solid #EAE6DF',
-                            backgroundColor: isSelected ? '#FCFAF7' : '#FFFFFF',
-                            borderRadius: '10px',
-                            padding: '16px 20px',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease',
+                            border: isSelected ? '1.5px solid #9A7B4F' : isUnderMaintenance ? '1px dashed #CBD5E1' : '1px solid #EAE6DF',
+                            backgroundColor: isUnderMaintenance ? '#F8FAFC' : isSelected ? '#FCFAF7' : '#FFFFFF',
+                            cursor: isUnderMaintenance ? 'not-allowed' : 'pointer',
+                            opacity: isUnderMaintenance ? 0.6 : 1,
                             boxShadow: isSelected ? '0 4px 14px rgba(154, 123, 79, 0.08)' : '0 1px 3px rgba(0,0,0,0.02)'
                           }}
                         >
                           {/* Main Flex Row */}
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+                          <div className="vehicle-card-main-row">
                             
                             {/* Left: Radio & Render */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '18px', minWidth: 0, flex: 1 }}>
+                            <div className="vehicle-card-left-block">
                               
                               {/* Radio Button Checkmark */}
                               <div style={{
                                 width: '22px',
                                 height: '22px',
                                 borderRadius: '50%',
-                                backgroundColor: isSelected ? '#9A7B4F' : '#FFFFFF',
+                                backgroundColor: isSelected ? '#9A7B4F' : isUnderMaintenance ? '#E2E8F0' : '#FFFFFF',
                                 border: isSelected ? 'none' : '1.5px solid #CBD5E1',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -1828,11 +2074,11 @@ export const CustomerPortal: React.FC = () => {
                               </div>
 
                               {/* Realistic Cutout Vehicle Render */}
-                              <div style={{ width: '135px', height: '65px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <div className="vehicle-card-img-wrapper">
                                 <img
                                   src={veh.photoUrl}
                                   alt={veh.title}
-                                  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                                  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: isUnderMaintenance ? 'grayscale(80%)' : 'none' }}
                                   onError={(e) => {
                                     // Smooth graceful fallback
                                     (e.currentTarget as any).style.opacity = '0.3';
@@ -1842,18 +2088,22 @@ export const CustomerPortal: React.FC = () => {
 
                               {/* Title, Subtitle, Capacity */}
                               <div style={{ minWidth: 0 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  <span style={{ fontSize: '16px', fontWeight: 800, color: '#0A192F' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                  <span className="vehicle-card-title" style={{ fontSize: '16px', fontWeight: 800, color: isUnderMaintenance ? '#64748B' : '#0A192F' }}>
                                     {veh.title}
                                   </span>
-                                  {veh.badge && (
+                                  {isUnderMaintenance ? (
+                                    <span style={{ fontSize: '10px', fontWeight: 800, color: '#DC2626', backgroundColor: '#FEF2F2', border: '1px solid #FECACA', padding: '1px 7px', borderRadius: '4px' }}>
+                                      🛠️ Under Maintenance (Unavailable)
+                                    </span>
+                                  ) : veh.badge ? (
                                     <span style={{ fontSize: '9.5px', fontWeight: 800, color: '#9A7B4F', backgroundColor: '#F5EFE6', padding: '1px 6px', borderRadius: '3px' }}>
                                       {veh.badge}
                                     </span>
-                                  )}
+                                  ) : null}
                                 </div>
 
-                                <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                <div className="vehicle-card-models" style={{ fontSize: '12px', color: '#64748B', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                   {veh.models}
                                 </div>
 
@@ -1873,7 +2123,7 @@ export const CustomerPortal: React.FC = () => {
                             </div>
 
                             {/* Middle Right: Feature Callouts */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '11.5px', color: '#475569', minWidth: '150px' }}>
+                            <div className="vehicle-features-callout">
                               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 <Layers size={13} color="#9A7B4F" />
                                 <span>{veh.features[0]}</span>
@@ -1887,21 +2137,30 @@ export const CustomerPortal: React.FC = () => {
                             {/* Far Right: Pricing & Chevron */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
                               <div style={{ textAlign: 'right' }}>
-                                <div style={{ fontFamily: '"Libre Baskerville", Georgia, serif', fontSize: '22px', fontWeight: 800, color: '#0A192F' }}>
-                                  ${fareAmount}
-                                </div>
-                                <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 600 }}>
-                                  {hasReturnTrip ? 'roundtrip (2 rides)' : ((bookingMode === 'ITINERARY_PLANNER' && itineraryLegs.length > 1) ? `total (${itineraryLegs.length} rides)` : 'per ride')}
-                                </div>
+                                {isUnderMaintenance ? (
+                                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#94A3B8' }}>
+                                    Unavailable
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div className="vehicle-card-price" style={{ fontFamily: '"Libre Baskerville", Georgia, serif', fontSize: '22px', fontWeight: 800, color: '#0A192F' }}>
+                                      ${fareAmount}
+                                    </div>
+                                    <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 600 }}>
+                                      {hasReturnTrip ? 'roundtrip (2 rides)' : ((bookingMode === 'ITINERARY_PLANNER' && itineraryLegs.length > 1) ? `total (${itineraryLegs.length} rides)` : 'per ride')}
+                                    </div>
+                                  </>
+                                )}
                               </div>
 
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  toggleExpandVehicle(veh.type);
+                                  if (!isUnderMaintenance) toggleExpandVehicle(veh.type);
                                 }}
-                                style={{ background: 'none', border: 'none', color: '#0A192F', cursor: 'pointer', padding: '4px' }}
+                                disabled={isUnderMaintenance}
+                                style={{ background: 'none', border: 'none', color: isUnderMaintenance ? '#CBD5E1' : '#0A192F', cursor: isUnderMaintenance ? 'not-allowed' : 'pointer', padding: '4px' }}
                               >
                                 {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                               </button>
@@ -1911,7 +2170,7 @@ export const CustomerPortal: React.FC = () => {
 
                           {/* Expandable Pricing Breakdown & Vendor Disclosure Drawer */}
                           {isExpanded && qData && (
-                            <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px dashed #E2E8F0', display: 'grid', gridTemplateColumns: (hasReturnTrip || (qData.legs && qData.legs.length > 1)) ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '12px', fontSize: '11px', color: '#64748B' }}>
+                            <div className="vehicle-drawer-grid" style={{ gridTemplateColumns: (hasReturnTrip || (qData.legs && qData.legs.length > 1)) ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)' }}>
                               {(hasReturnTrip || (qData.legs && qData.legs.length > 1)) ? (
                                 <>
                                   <div style={{ backgroundColor: '#FFFFFF', padding: '8px 10px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
@@ -1958,20 +2217,23 @@ export const CustomerPortal: React.FC = () => {
                     </div>
 
                     <button
+                      type="button"
                       onClick={() => setWizardStep(3)}
                       style={{
-                        padding: '12px 28px',
+                        padding: '13px 30px',
                         backgroundColor: '#9A7B4F',
+                        backgroundImage: 'linear-gradient(135deg, #9A7B4F 0%, #7D5E30 100%)',
                         color: '#FFFFFF',
-                        border: 'none',
-                        borderRadius: '6px',
+                        border: '1px solid #7D5E30',
+                        borderRadius: '8px',
                         fontSize: '13.5px',
                         fontWeight: 800,
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '6px',
-                        boxShadow: '0 2px 6px rgba(154, 123, 79, 0.25)'
+                        gap: '8px',
+                        boxShadow: '0 3px 10px rgba(154, 123, 79, 0.35)',
+                        transition: 'all 0.2s ease'
                       }}
                     >
                       <span>Continue to Extras</span>
@@ -2003,7 +2265,7 @@ export const CustomerPortal: React.FC = () => {
                     </button>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '24px' }}>
+                  <div className="extras-selection-grid" style={{ marginBottom: '24px' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', backgroundColor: '#F8FAFC', borderRadius: '6px', border: '1px solid #E2E8F0', cursor: 'pointer' }}>
                       <input type="checkbox" checked={amenities.freeWait60Min} onChange={e => setAmenities({ ...amenities, freeWait60Min: e.target.checked })} />
                       <div>
@@ -2111,7 +2373,7 @@ export const CustomerPortal: React.FC = () => {
                       1. Lead Passenger Information
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '12px' }}>
+                    <div className="passenger-inputs-grid" style={{ marginBottom: '12px' }}>
                       <div>
                         <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
                           Passenger Full Name *
@@ -2159,7 +2421,7 @@ export const CustomerPortal: React.FC = () => {
                     </label>
 
                     {isBookerDifferentFromPassenger && (
-                      <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px dashed #CBD5E1', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                      <div className="booker-inputs-grid" style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px dashed #CBD5E1' }}>
                         <div>
                           <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
                             Cardholder Full Name *
@@ -2199,10 +2461,10 @@ export const CustomerPortal: React.FC = () => {
                       <span>Secure Card Pre-Authorization</span>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '12px' }}>
+                    <div className="card-details-form-grid">
                       
                       {/* Card Number 4-Digit Chunk Input */}
-                      <div>
+                      <div className="card-number-wrapper">
                         <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
                           Card Number
                         </label>
@@ -2298,7 +2560,7 @@ export const CustomerPortal: React.FC = () => {
                       </div>
 
                       {/* Billing ZIP Code */}
-                      <div>
+                      <div className="card-zip-wrapper">
                         <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
                           Billing ZIP
                         </label>
@@ -2373,83 +2635,211 @@ export const CustomerPortal: React.FC = () => {
                   </span>
                 </div>
 
-                {/* Route Map Preview Illustration */}
-                <div style={{ 
-                  borderRadius: '8px', 
-                  overflow: 'hidden', 
-                  border: '1px solid #E2E8F0', 
-                  marginBottom: '18px',
-                  backgroundColor: '#EBF4F6',
-                  position: 'relative',
-                  height: '140px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  {/* Stylized Map Canvas */}
-                  <svg width="100%" height="100%" viewBox="0 0 400 140" style={{ position: 'absolute', inset: 0 }}>
-                    {/* Water / Coastline shapes */}
-                    <path d="M0,0 L180,0 C170,40 190,80 160,140 L0,140 Z" fill="#D9EBF0" />
-                    <path d="M280,0 C300,50 310,90 400,100 L400,0 Z" fill="#D9EBF0" />
-                    {/* Route Line */}
-                    <path d="M330,100 Q240,60 180,30" fill="none" stroke="#0A192F" strokeWidth="3" strokeDasharray="6,4" />
-                    {/* Destination Marker */}
-                    <circle cx="180" cy="30" r="6" fill="#9A7B4F" />
-                    <circle cx="180" cy="30" r="12" fill="none" stroke="#9A7B4F" strokeWidth="1.5" />
-                    {/* Pickup Marker */}
-                    <circle cx="330" cy="100" r="6" fill="#0A192F" />
-                  </svg>
+                {/* Live Real Google Map Route Container or Route Preview Placeholder */}
+                {(() => {
+                  const embedUrl = getGoogleMapsEmbedUrl();
+                  const dirUrl = getGoogleMapsDirectionsUrl();
 
-                  {/* Route Labels */}
-                  <div style={{ position: 'absolute', top: '16px', left: '16px', backgroundColor: 'rgba(255,255,255,0.92)', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 800, color: '#0A192F' }}>
-                    {dropoffAddress ? dropoffAddress.split(',')[0] : 'Destination'}
-                  </div>
-                  <div style={{ position: 'absolute', bottom: '16px', right: '16px', backgroundColor: 'rgba(255,255,255,0.92)', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 800, color: '#0A192F' }}>
-                    {pickupAddress ? pickupAddress.split(',')[0] : 'Pickup Location'}
-                  </div>
+                  if (embedUrl) {
+                    return (
+                      <div style={{ 
+                        borderRadius: '10px', 
+                        overflow: 'hidden', 
+                        border: '1px solid #CBD5E1', 
+                        marginBottom: '18px',
+                        backgroundColor: '#E2E8F0',
+                        position: 'relative',
+                        height: '165px',
+                        boxShadow: '0 2px 8px rgba(15, 23, 42, 0.08)'
+                      }}>
+                        <iframe
+                          title="Live Google Map Route"
+                          src={embedUrl}
+                          width="100%"
+                          height="100%"
+                          style={{
+                            border: 0,
+                            display: 'block',
+                            width: '100%',
+                            height: '100%'
+                          }}
+                          loading="lazy"
+                          referrerPolicy="no-referrer-when-downgrade"
+                        />
 
-                  {/* Italic Motto */}
-                  <div style={{ position: 'absolute', right: '20px', top: '24px', textAlign: 'right', pointerEvents: 'none' }}>
-                    <div style={{ fontFamily: '"Libre Baskerville", Georgia, serif', fontStyle: 'italic', fontSize: '13px', color: '#0A192F', lineHeight: 1.2 }}>
-                      From here to<br />what's next.
+                        {/* Floating Live Radar Badge Overlay */}
+                        <div style={{
+                          position: 'absolute',
+                          top: '8px',
+                          left: '8px',
+                          backgroundColor: 'rgba(10, 25, 47, 0.88)',
+                          backdropFilter: 'blur(6px)',
+                          border: '1px solid rgba(255,255,255,0.15)',
+                          borderRadius: '6px',
+                          padding: '3px 8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          pointerEvents: 'none',
+                          zIndex: 2
+                        }}>
+                          <span style={{
+                            width: '6px',
+                            height: '6px',
+                            borderRadius: '50%',
+                            backgroundColor: '#10B981',
+                            boxShadow: '0 0 6px #10B981'
+                          }} />
+                          <span style={{
+                            fontSize: '9.5px',
+                            fontWeight: 800,
+                            color: '#FFFFFF',
+                            letterSpacing: '0.04em',
+                            textTransform: 'uppercase'
+                          }}>
+                            Live Google Map
+                          </span>
+                        </div>
+
+                        {/* External Full Map Link */}
+                        {dirUrl && (
+                          <a
+                            href={dirUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              position: 'absolute',
+                              top: '8px',
+                              right: '8px',
+                              backgroundColor: 'rgba(255, 255, 255, 0.94)',
+                              backdropFilter: 'blur(4px)',
+                              border: '1px solid #CBD5E1',
+                              borderRadius: '5px',
+                              padding: '3px 7px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '10px',
+                              fontWeight: 700,
+                              color: '#0A192F',
+                              textDecoration: 'none',
+                              boxShadow: '0 1px 4px rgba(0,0,0,0.12)',
+                              zIndex: 2
+                            }}
+                            title="Open live route in Google Maps"
+                          >
+                            <span>Full Map</span>
+                            <ArrowUpRight size={11} color="#9A7B4F" />
+                          </a>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div style={{
+                      borderRadius: '10px',
+                      border: '1px dashed #CBD5E1',
+                      marginBottom: '18px',
+                      backgroundColor: '#F8FAFC',
+                      height: '145px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '16px',
+                      textAlign: 'center',
+                      boxShadow: '0 1px 4px rgba(15, 23, 42, 0.03)'
+                    }}>
+                      <div style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '50%',
+                        backgroundColor: '#FDFBF7',
+                        border: '1px solid #EAE6DF',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: '8px'
+                      }}>
+                        <Route size={18} color="#9A7B4F" />
+                      </div>
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: '#0F172A' }}>
+                        Live Route &amp; Map Preview
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#64748B', marginTop: '3px', maxWidth: '240px', lineHeight: '1.4' }}>
+                        {selectedRideType === 'HOURLY'
+                          ? 'Enter pickup location to preview on map'
+                          : 'Enter both pickup & destination addresses to preview live route'}
+                      </div>
                     </div>
-                    <div style={{ width: '28px', height: '1.5px', backgroundColor: '#9A7B4F', marginTop: '4px', marginLeft: 'auto' }} />
-                  </div>
-                </div>
+                  );
+                })()}
 
                 {/* Key-Value Breakdown List */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '12px', color: '#334155', borderBottom: '1px solid #F1F5F9', paddingBottom: '16px', marginBottom: '16px' }}>
                   
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                    <Plane size={15} color="#0A192F" style={{ marginTop: '2px', flexShrink: 0 }} />
-                    <div style={{ flex: 1 }}>
-                      <span style={{ color: '#64748B', fontWeight: 600 }}>Pickup</span>
-                      <div style={{ fontWeight: 700, color: pickupAddress ? '#0F172A' : '#94A3B8' }}>
-                        {pickupAddress ? pickupAddress.split(',')[0] : 'Enter pickup location'}
-                      </div>
-                    </div>
-                  </div>
-
                   {selectedRideType === 'HOURLY' ? (
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                      <Clock size={15} color="#0A192F" style={{ marginTop: '2px', flexShrink: 0 }} />
-                      <div style={{ flex: 1 }}>
-                        <span style={{ color: '#64748B', fontWeight: 600 }}>Service Duration</span>
-                        <div style={{ fontWeight: 700, color: '#0F172A' }}>{hourlyHours} Hours (As Directed)</div>
-                        <div style={{ fontSize: '10px', color: '#94A3B8' }}>{flightNumber || 'Regional executive itinerary'}</div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                      <MapPin size={15} color="#0A192F" style={{ marginTop: '2px', flexShrink: 0 }} />
-                      <div style={{ flex: 1 }}>
-                        <span style={{ color: '#64748B', fontWeight: 600 }}>Destination</span>
-                        <div style={{ fontWeight: 700, color: dropoffAddress ? '#0F172A' : '#94A3B8' }}>
-                          {dropoffAddress ? dropoffAddress.split(',')[0] : 'Enter destination'}
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                        <Plane size={15} color="#0A192F" style={{ marginTop: '2px', flexShrink: 0 }} />
+                        <div style={{ flex: 1 }}>
+                          <span style={{ color: '#64748B', fontWeight: 600 }}>Pickup</span>
+                          <div style={{ fontWeight: 700, color: pickupAddress?.trim() ? '#0F172A' : '#94A3B8' }}>
+                            {pickupAddress?.trim() ? pickupAddress.split(',')[0] : 'Enter pickup location'}
+                          </div>
+                          {pickupAddress?.trim() && <div style={{ fontSize: '10px', color: '#94A3B8' }}>{pickupAddress}</div>}
                         </div>
-                        {dropoffAddress && <div style={{ fontSize: '10px', color: '#94A3B8' }}>{dropoffAddress}</div>}
                       </div>
-                    </div>
+
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                        <Clock size={15} color="#0A192F" style={{ marginTop: '2px', flexShrink: 0 }} />
+                        <div style={{ flex: 1 }}>
+                          <span style={{ color: '#64748B', fontWeight: 600 }}>Service Duration</span>
+                          <div style={{ fontWeight: 700, color: '#0F172A' }}>{hourlyHours} Hours (As Directed)</div>
+                          <div style={{ fontSize: '10px', color: '#94A3B8' }}>{flightNumber || 'Regional executive itinerary'}</div>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    (() => {
+                      const hasBoth = Boolean(
+                        pickupAddress?.trim() && 
+                        dropoffAddress?.trim() && 
+                        pickupAddress.trim().length >= 3 && 
+                        dropoffAddress.trim().length >= 3
+                      );
+
+                      return (
+                        <>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                            <Plane size={15} color="#0A192F" style={{ marginTop: '2px', flexShrink: 0 }} />
+                            <div style={{ flex: 1 }}>
+                              <span style={{ color: '#64748B', fontWeight: 600 }}>Pickup</span>
+                              <div style={{ fontWeight: 700, color: hasBoth ? '#0F172A' : (pickupAddress?.trim() ? '#475569' : '#94A3B8') }}>
+                                {hasBoth 
+                                  ? pickupAddress.split(',')[0] 
+                                  : (pickupAddress?.trim() ? `${pickupAddress.split(',')[0]} (Awaiting destination)` : 'Enter pickup location')}
+                              </div>
+                              {hasBoth && <div style={{ fontSize: '10px', color: '#94A3B8' }}>{pickupAddress}</div>}
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                            <MapPin size={15} color="#0A192F" style={{ marginTop: '2px', flexShrink: 0 }} />
+                            <div style={{ flex: 1 }}>
+                              <span style={{ color: '#64748B', fontWeight: 600 }}>Destination</span>
+                              <div style={{ fontWeight: 700, color: hasBoth ? '#0F172A' : (dropoffAddress?.trim() ? '#475569' : '#94A3B8') }}>
+                                {hasBoth 
+                                  ? dropoffAddress.split(',')[0] 
+                                  : (dropoffAddress?.trim() ? `${dropoffAddress.split(',')[0]} (Awaiting pickup)` : 'Enter destination')}
+                              </div>
+                              {hasBoth && <div style={{ fontSize: '10px', color: '#94A3B8' }}>{dropoffAddress}</div>}
+                            </div>
+                          </div>
+                        </>
+                      );
+                    })()
                   )}
 
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
@@ -2631,26 +3021,42 @@ export const CustomerPortal: React.FC = () => {
                 {/* Step Action Button if in details mode */}
                 {wizardStep === 1 && (
                   <button
+                    type="button"
                     onClick={handleProceedToVehicles}
+                    disabled={loadingQuote}
                     style={{
                       marginTop: '16px',
                       width: '100%',
-                      padding: '12px',
-                      backgroundColor: '#9A7B4F',
+                      padding: '13px 18px',
+                      backgroundColor: loadingQuote ? '#8C6D3F' : '#9A7B4F',
+                      backgroundImage: loadingQuote 
+                        ? 'linear-gradient(135deg, #8C6D3F 0%, #6E532E 100%)' 
+                        : 'linear-gradient(135deg, #9A7B4F 0%, #7D5E30 100%)',
                       color: '#FFFFFF',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '13px',
+                      border: '1px solid #7D5E30',
+                      borderRadius: '8px',
+                      fontSize: '13.5px',
                       fontWeight: 800,
-                      cursor: 'pointer',
+                      cursor: loadingQuote ? 'wait' : 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '6px'
+                      gap: '8px',
+                      boxShadow: '0 3px 10px rgba(154, 123, 79, 0.35)',
+                      transition: 'all 0.2s ease'
                     }}
                   >
-                    <span>Continue to vehicles</span>
-                    <ArrowRight size={14} />
+                    {loadingQuote ? (
+                      <>
+                        <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                        <span>Calculating Fares...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Continue to vehicles</span>
+                        <ArrowRight size={14} />
+                      </>
+                    )}
                   </button>
                 )}
 
@@ -2673,7 +3079,7 @@ export const CustomerPortal: React.FC = () => {
 
       {/* 5. FOOTER TRUST BADGES (4 COLUMNS) */}
       <div style={{ backgroundColor: '#FFFFFF', borderTop: '1px solid #EAE6DF', padding: '32px 24px' }}>
-        <div style={{ maxWidth: '1320px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
+        <div className="footer-trust-badges-grid" style={{ maxWidth: '1320px', margin: '0 auto' }}>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <ShieldCheck size={26} color="#9A7B4F" />

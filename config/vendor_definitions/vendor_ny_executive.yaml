@@ -63,3 +63,11 @@ telecom_compliance:
   website_url: "https://empirelimo-ny.com"
   contact_email: "compliance@empirelimo-ny.com"
   contact_phone: "+12125550199"
+
+insurance_compliance:
+  has_valid_insurance: true
+  policy_amount: "$5M"
+  show_policy_amount: true
+  carrier_name: "Berkshire Hathaway TLC Livery"
+  policy_number: "BH-NYC-884129"
+

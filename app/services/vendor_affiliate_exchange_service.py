@@ -16,8 +16,20 @@ from pydantic import BaseModel, Field
 
 from app.domain_models import VehicleClass, BookingStatus
 from app.services.vendor_cell_engine import vendor_cell_registry
+from app.services.vendor_identity_matcher import (
+    is_self_vendor,
+    vendor_identity_learner,
+    extract_semantic_tokens,
+)
 
 logger = logging.getLogger("VendorAffiliateExchange")
+
+
+def canonicalize_vendor_id(v_id: str) -> str:
+    """Dynamically canonicalizes vendor ID using semantic token extraction and learned alias graph."""
+    if not v_id:
+        return ""
+    return vendor_identity_learner.canonicalize(v_id)
 
 
 class AffiliateCommissionSplit(BaseModel):
@@ -207,18 +219,43 @@ class VendorAffiliateExchangeService:
                 vendor_id="la-prestige-chauffeur",
                 farm_out_policy=FarmOutRules(min_partner_rating=4.90),
                 farm_in_policy=FarmInRules(open_for_farm_in=True, min_net_payout_usd=95.0)
+            ),
+            "boston-vip-fleet": VendorAffiliatePolicyRules(
+                vendor_id="boston-vip-fleet",
+                farm_out_policy=FarmOutRules(min_partner_rating=4.90),
+                farm_in_policy=FarmInRules(open_for_farm_in=True, min_net_payout_usd=80.0)
+            ),
+            "tokyo-sovereign": VendorAffiliatePolicyRules(
+                vendor_id="tokyo-sovereign",
+                farm_out_policy=FarmOutRules(min_partner_rating=4.95),
+                farm_in_policy=FarmInRules(open_for_farm_in=True, min_net_payout_usd=110.0)
             )
         }
 
     def get_vendor_policy(self, vendor_id: str) -> VendorAffiliatePolicyRules:
-        """Retrieves sovereign affiliate business rules for a specific vendor cell."""
-        if vendor_id not in self.vendor_policies:
-            self.vendor_policies[vendor_id] = VendorAffiliatePolicyRules(vendor_id=vendor_id)
+        """Retrieves sovereign affiliate business rules for a specific vendor cell with canonical resolution."""
+        if vendor_id in self.vendor_policies:
+            return self.vendor_policies[vendor_id]
+        
+        canon = canonicalize_vendor_id(vendor_id)
+        for key, policy in self.vendor_policies.items():
+            if canonicalize_vendor_id(key) == canon:
+                return policy
+
+        self.vendor_policies[vendor_id] = VendorAffiliatePolicyRules(vendor_id=vendor_id)
         return self.vendor_policies[vendor_id]
 
     def update_vendor_policy(self, vendor_id: str, payload: Dict[str, Any]) -> VendorAffiliatePolicyRules:
         """Updates and broadcasts vendor's sovereign business rules to Global Hub Knowledge Base."""
-        current = self.get_vendor_policy(vendor_id)
+        target_key = vendor_id
+        if vendor_id not in self.vendor_policies:
+            canon = canonicalize_vendor_id(vendor_id)
+            for key in self.vendor_policies.keys():
+                if canonicalize_vendor_id(key) == canon:
+                    target_key = key
+                    break
+
+        current = self.get_vendor_policy(target_key)
         
         if "farm_out_policy" in payload and isinstance(payload["farm_out_policy"], dict):
             current.farm_out_policy = FarmOutRules(**{**current.farm_out_policy.model_dump(), **payload["farm_out_policy"]})
@@ -226,6 +263,7 @@ class VendorAffiliateExchangeService:
             current.farm_in_policy = FarmInRules(**{**current.farm_in_policy.model_dump(), **payload["farm_in_policy"]})
 
         current.updated_at = time.time()
+        self.vendor_policies[target_key] = current
         self.vendor_policies[vendor_id] = current
         logger.info(f"Vendor Sovereign Business Policy Updated & Synced to Global Hub for: {vendor_id}")
         return current
@@ -315,6 +353,23 @@ class VendorAffiliateExchangeService:
                 escrow_trust_score=98.5
             ),
             CertifiedAffiliatePartner(
+                partner_id="boston-vip-fleet",
+                company_name="Boston VIP Limousine & Chauffeurs",
+                city="Boston",
+                country="United States",
+                country_code="US",
+                airports=["BOS", "BED (Hanscom Field FBO)", "PVD"],
+                rating=4.98,
+                trips_completed=2450,
+                compliance_badge="MassDOT Commercial Livery · Logan Port Authority Permitted",
+                supported_classes=[VehicleClass.FIRST_CLASS, VehicleClass.LUXURY_SUV, VehicleClass.BUSINESS_SEDAN],
+                primary_vehicle="2025 Cadillac Escalade ESV · Lincoln Navigator",
+                vehicle_year=2025,
+                base_rate_usd=85.0,
+                per_km_rate_usd=3.40,
+                escrow_trust_score=99.5
+            ),
+            CertifiedAffiliatePartner(
                 partner_id="la-prestige-chauffeur",
                 company_name="Los Angeles Prestige Fleet",
                 city="Los Angeles",
@@ -381,6 +436,23 @@ class VendorAffiliateExchangeService:
                 base_rate_usd=95.0,
                 per_km_rate_usd=3.50,
                 escrow_trust_score=100.0
+            ),
+            CertifiedAffiliatePartner(
+                partner_id="tokyo-sovereign",
+                company_name="Tokyo Sovereign Luxury Limousine",
+                city="Tokyo",
+                country="Japan",
+                country_code="JP",
+                airports=["HND (Haneda Intl)", "NRT (Narita Intl)", "Tokyo Heliport"],
+                rating=5.00,
+                trips_completed=3920,
+                compliance_badge="MLIT Japan Luxury Hire Passenger Transport License #8820",
+                supported_classes=[VehicleClass.FIRST_CLASS, VehicleClass.LUXURY_SUV],
+                primary_vehicle="Toyota Century · Lexus LM 500h Executive Lounge",
+                vehicle_year=2025,
+                base_rate_usd=120.0,
+                per_km_rate_usd=4.80,
+                escrow_trust_score=100.0
             )
         ]
 
@@ -402,8 +474,8 @@ class VendorAffiliateExchangeService:
         recommendations: List[AffiliateRecommendation] = []
 
         for partner in self.directory:
-            # Skip self
-            if partner.partner_id == originator_vendor_id:
+            # Skip self (never recommend the originating vendor cell to itself)
+            if is_self_vendor(partner.partner_id, originator_vendor_id):
                 continue
 
             candidate_policy = self.get_vendor_policy(partner.partner_id).farm_in_policy

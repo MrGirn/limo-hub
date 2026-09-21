@@ -19,6 +19,7 @@ from app.domain_models import (
     ItineraryLeg, LegMode, MasterItinerary, VehicleClass, TripStatus,
     TransitDetails, TransitType, QuoteLineItem, DistanceUnit, LegPriceStatus
 )
+from app.database import db
 from app.services.google_maps_service import GoogleMapsService
 from app.services.pricing_service import resolve_transit_info, US_CLASS_TARIFFS
 
@@ -135,8 +136,6 @@ class ItineraryEngine:
                 except ValueError:
                     leg_vc = vehicle_class
 
-            tariffs = US_CLASS_TARIFFS.get(leg_vc, default_tariffs)
-
             origin = leg_input.get("origin_address", "Executive Airport Terminal")
             dest = leg_input.get("destination_address", "Downtown Luxury Hotel")
             orig_city = leg_input.get("origin_city", "Metropolitan")
@@ -175,6 +174,24 @@ class ItineraryEngine:
                         "gratuity_rate": Decimal("0.00"),
                         "is_available": True
                     }
+
+            from app.services.pricing_service import get_class_tariff
+            from app.services.vendor_pricing_ai_service import VendorPricingAIService
+            v_id = effective_hub.get("vendor_id")
+            custom_rule = VendorPricingAIService.get_vendor_pricing_rule(v_id, leg_vc) if v_id else None
+
+            if custom_rule:
+                base = custom_rule.base_rate_net
+                per_mi = custom_rule.per_mile_rate_net
+                min_f = custom_rule.minimum_fare_net
+                apt_surcharge = custom_rule.airport_surcharge_net
+            else:
+                tariffs = get_class_tariff(leg_vc)
+                base = tariffs["base_fee"]
+                per_mi = tariffs["per_mile_rate"]
+                min_f = tariffs.get("min_fare", base * Decimal("1.25"))
+                apt_surcharge = Decimal("15.00")
+
             countries_set.add(effective_hub["country"])
             cities_set.add(orig_city)
             cities_set.add(dest_city)
@@ -246,9 +263,13 @@ class ItineraryEngine:
 
             if leg_mode in (LegMode.CHAUFFEUR_RIDE, LegMode.CROSS_BORDER_DRIVE):
                 if is_in_network:
-                    base = tariffs["base_fee"]
-                    dist_charge = leg_distance * tariffs["per_mile_rate"]
-                    leg_fare_net = base + dist_charge
+                    dist_charge = leg_distance * per_mi
+                    leg_fare_net = max(base + dist_charge, min_f)
+                    
+                    # Airport surcharge detection
+                    if (transit_info and transit_info.transit_type == TransitType.FLIGHT) or any(k in f"{origin} {dest}".lower() for k in ("airport", "phl", "jfk", "lga", "ewr", "bos", "mia", "lhr", "hnd")):
+                        leg_fare_net += apt_surcharge
+
                     if leg_mode == LegMode.CROSS_BORDER_DRIVE:
                         leg_fare_net += Decimal("150.00")
                     leg_gratuity = (leg_fare_net * grat_rate).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if include_grat else Decimal("0.00")
@@ -265,7 +286,7 @@ class ItineraryEngine:
                     pending_msg = f"Securing preferred partner rates for {orig_city} -> {dest_city}. Confirmed pricing delivered within 25 minutes."
                     
                     # Benchmark projection for internal estimation
-                    leg_fare_net = Decimal(str(round(85.0 + (float(leg_distance) * 3.50), 2)))
+                    leg_fare_net = Decimal(str(round(float(base) + (float(leg_distance) * float(per_mi)), 2)))
                     leg_gratuity = (leg_fare_net * grat_rate).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if include_grat else Decimal("0.00")
                     leg_tax = (leg_fare_net * Decimal("0.08875")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
                     total_leg_amt = leg_fare_net + leg_tolls + leg_tax + leg_gratuity
@@ -376,3 +397,34 @@ class ItineraryEngine:
             is_binding=not has_pending_sourcing,
             expires_at=datetime.now(timezone.utc) + timedelta(minutes=30)
         )
+
+    @classmethod
+    def build_and_quote_itinerary_matrix(
+        cls,
+        title: str,
+        raw_legs: List[Dict[str, Any]]
+    ) -> Dict[str, MasterItinerary]:
+        """
+        Single-Pass Multi-Class Itinerary Matrix Builder:
+        Quotes all 5 vehicle classes across the multi-modal itinerary in parallel / cached in-memory.
+        """
+        all_classes = [
+            VehicleClass.BUSINESS_SEDAN,
+            VehicleClass.FIRST_CLASS,
+            VehicleClass.LUXURY_SUV,
+            VehicleClass.BUSINESS_VAN,
+            VehicleClass.ELECTRIC_VIP
+        ]
+
+        matrix: Dict[str, MasterItinerary] = {}
+        for vc in all_classes:
+            mapped_legs = []
+            for l in raw_legs:
+                l_copy = dict(l)
+                l_copy["vehicle_class"] = vc.value
+                mapped_legs.append(l_copy)
+            itin = cls.build_and_quote_itinerary(title=title, raw_legs=mapped_legs, vehicle_class=vc)
+            matrix[vc.value] = itin
+            db.itineraries[itin.itinerary_id] = itin
+
+        return matrix

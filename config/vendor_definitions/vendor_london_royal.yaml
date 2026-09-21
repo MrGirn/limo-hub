@@ -49,3 +49,21 @@ fleet_drivers:
     phone: "+442081234502"
     vehicle: "Range Rover Autobiography (Black)"
     license_plate: "LDN-VIP02"
+
+telecom_compliance:
+  legal_business_name: "Royal Crown Chauffeurs London Ltd"
+  ein_tax_id: "GB 982 411 029 (VAT)"
+  business_type: "LTD"
+  vertical: "TRANSPORTATION_AND_LOGISTICS"
+  physical_address: "100 Pall Mall, St. James's, London SW1Y 5NQ"
+  website_url: "https://royalcrown-london.co.uk"
+  contact_email: "compliance@royalcrown-london.co.uk"
+  contact_phone: "+442081234567"
+
+insurance_compliance:
+  has_valid_insurance: true
+  policy_amount: "£10M"
+  show_policy_amount: true
+  carrier_name: "AXA Corporate Livery UK"
+  policy_number: "AXA-LDN-449120"
+

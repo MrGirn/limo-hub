@@ -819,6 +819,419 @@ textarea:focus {
   }
 }
 
+/* ==========================================================================
+   TABLET & PHONE RESPONSIVE DESIGN SYSTEM
+   ========================================================================== */
+
+/* Main Booking Wizard Grid (Left Form + Right Trip Summary) */
+.customer-portal-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 390px;
+  gap: 32px;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .customer-portal-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+}
+
+/* Step Progress Wizard Bar */
+.wizard-progress-bar-wrapper {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 16px 24px 24px 24px;
+}
+
+.wizard-steps-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: 640px;
+}
+
+@media (max-width: 768px) {
+  .wizard-progress-bar-wrapper {
+    padding: 12px 16px 16px 16px;
+  }
+
+  .wizard-steps-container {
+    gap: 8px;
+  }
+
+  .wizard-step-label {
+    font-size: 11.5px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .wizard-step-label {
+    display: none;
+  }
+
+  .wizard-steps-container {
+    gap: 12px;
+    justify-content: center;
+  }
+}
+
+/* Main Portal Container Responsive Padding */
+.customer-portal-main-container {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 0 24px 60px 24px;
+}
+
+@media (max-width: 768px) {
+  .customer-portal-main-container {
+    padding: 0 16px 40px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .customer-portal-main-container {
+    padding: 0 12px 32px 12px;
+  }
+}
+
+/* Step 1: Ride Type Selection Grid */
+.ride-type-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 900px) {
+  .ride-type-selector-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ride-type-selector-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .ride-type-card {
+    padding: 12px 10px !important;
+  }
+}
+
+/* Step 1: Trip Date & Time Grid */
+.trip-datetime-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 640px) {
+  .trip-datetime-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+/* Step 1: Passengers, Bags, Notes Grid */
+.pax-bags-notes-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.4fr;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .pax-bags-notes-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .pax-notes-col {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 480px) {
+  .pax-bags-notes-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+/* Step 1: Return Trip Grid */
+.return-trip-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .return-trip-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+/* Step 2: Vehicle Selection Cards */
+.vehicle-card-container {
+  border-radius: 10px;
+  padding: 16px 20px;
+  transition: all 0.15s ease;
+}
+
+.vehicle-card-main-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.vehicle-card-left-block {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+  flex: 1;
+}
+
+.vehicle-card-img-wrapper {
+  width: 135px;
+  height: 65px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.vehicle-features-callout {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11.5px;
+  color: #475569;
+  min-width: 150px;
+}
+
+@media (max-width: 860px) {
+  .vehicle-features-callout {
+    display: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .vehicle-card-container {
+    padding: 14px 14px !important;
+  }
+
+  .vehicle-card-main-row {
+    gap: 10px;
+  }
+
+  .vehicle-card-left-block {
+    gap: 12px;
+  }
+
+  .vehicle-card-img-wrapper {
+    width: 90px !important;
+    height: 50px !important;
+  }
+
+  .vehicle-card-title {
+    font-size: 14px !important;
+  }
+
+  .vehicle-card-models {
+    font-size: 11px !important;
+  }
+
+  .vehicle-card-price {
+    font-size: 18px !important;
+  }
+}
+
+/* Step 2: Expandable Drawer Breakdown */
+.vehicle-drawer-grid {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed #E2E8F0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  font-size: 11px;
+  color: #64748B;
+}
+
+@media (max-width: 768px) {
+  .vehicle-drawer-grid {
+    grid-template-columns: 1fr !important;
+    gap: 8px;
+  }
+}
+
+/* Step 3: Extras Selection Grid */
+.extras-selection-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .extras-selection-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+/* Step 4: Passenger & Booker Grids */
+.passenger-inputs-grid,
+.booker-inputs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .passenger-inputs-grid,
+  .booker-inputs-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+/* Step 4: Card Details Grid */
+.card-details-form-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .card-details-form-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+  }
+
+  .card-number-wrapper {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 480px) {
+  .card-details-form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .card-number-wrapper {
+    grid-column: 1 / -1;
+  }
+
+  .card-zip-wrapper {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Step 5: Mission Secured Summary */
+.mission-pickup-dest-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.mission-details-3col {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .mission-pickup-dest-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .mission-details-3col {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+}
+
+/* Footer Trust Badges 4-Columns */
+.footer-trust-badges-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 900px) {
+  .footer-trust-badges-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .footer-trust-badges-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
+/* Public Fleet Page Responsive Grid */
+.public-fleet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 540px), 1fr));
+  gap: 32px;
+}
+
+@media (max-width: 640px) {
+  .public-fleet-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+/* Public Services & Policies Responsive Grid */
+.public-services-grid,
+.public-policies-grid,
+.public-about-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 24px;
+}
+
+@media (max-width: 640px) {
+  .public-services-grid,
+  .public-policies-grid,
+  .public-about-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+/* Lookup Modal Responsive Styles */
+.lookup-modal-content {
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 780px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+  border: 1px solid #EAE6DF;
+  overflow: hidden;
+}
+
+@media (max-width: 640px) {
+  .lookup-modal-content {
+    max-height: 95vh;
+    border-radius: 12px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .public-header *,
   .public-header *::before,

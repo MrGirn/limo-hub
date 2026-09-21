@@ -1,0 +1,21 @@
+services:
+  limo-cell-miami-prestige:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: limo-cell-miami-prestige
+    restart: always
+    ports:
+      - "8004:8000"
+    env_file:
+      - ../../.env
+      - ./vendor.env
+    environment:
+      - MYSQL_HOST=limo-mysql
+      - MYSQL_PORT=3306
+      - GLOBAL_HUB_URL=http://limo-global-hub:8000
+    depends_on:
+      limo-mysql:
+        condition: service_healthy
+    networks:
+      - limo-net

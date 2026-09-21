@@ -28,7 +28,8 @@ class StripePaymentService:
         passenger_name: str,
         passenger_email: str,
         description: str,
-        payment_token: Optional[str] = None
+        payment_token: Optional[str] = None,
+        return_url: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Creates a real live Stripe PaymentIntent with capture_method='manual'
@@ -51,6 +52,7 @@ class StripePaymentService:
         amount_cents = int(round(amount_usd * 100))
         idempotency_key = f"preauth_{booking_id}_{amount_cents}"
         pm = payment_token if payment_token and payment_token.startswith("pm_") else "pm_card_visa"
+        ret_url = return_url or f"https://hub.limo-network.com/booking/confirmation?booking_id={booking_id}"
         try:
             intent = stripe.PaymentIntent.create(
                 amount=amount_cents,
@@ -58,6 +60,7 @@ class StripePaymentService:
                 capture_method="manual",
                 payment_method=pm,
                 confirm=True,
+                return_url=ret_url,
                 automatic_payment_methods={"enabled": True, "allow_redirects": "never"},
                 description=f"Executive Chauffeur Pre-Auth: {description} (Booking {booking_id})",
                 receipt_email=passenger_email if "@" in passenger_email else None,
@@ -230,18 +233,21 @@ class StripePaymentService:
         amount_usd: float,
         payment_method_id: str = "pm_card_visa",
         vendor_name: str = "New Operator",
-        receipt_email: Optional[str] = None
+        receipt_email: Optional[str] = None,
+        return_url: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Processes instantaneous capture for new vendor platform onboarding fee.
         """
         amount_cents = int(round(amount_usd * 100))
+        ret_url = return_url or "https://hub.limo-network.com/onboarding/complete"
         try:
             intent = stripe.PaymentIntent.create(
                 amount=amount_cents,
                 currency="usd",
                 payment_method=payment_method_id if payment_method_id and payment_method_id.startswith("pm_") else "pm_card_visa",
                 confirm=True,
+                return_url=ret_url,
                 automatic_payment_methods={"enabled": True, "allow_redirects": "never"},
                 description=f"SaaS Platform Onboarding & Regulatory Vetting Fee: {vendor_name}",
                 receipt_email=receipt_email if receipt_email and "@" in receipt_email else None,

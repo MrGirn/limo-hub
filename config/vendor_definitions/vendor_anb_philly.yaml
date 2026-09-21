@@ -75,3 +75,11 @@ telecom_compliance:
   website_url: "https://anblimo-philly.com"
   contact_email: "compliance@anblimo-philly.com"
   contact_phone: "+12155550144"
+
+insurance_compliance:
+  has_valid_insurance: true
+  policy_amount: "$5M"
+  show_policy_amount: true
+  carrier_name: "Chubb Commercial Fleet Insurance"
+  policy_number: "CHUBB-PA-9812450"
+

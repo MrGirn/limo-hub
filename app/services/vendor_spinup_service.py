@@ -264,15 +264,19 @@ class VendorSpinupService:
                     base_rate_net=base_rate * Decimal("1.2"),
                     per_mile_rate_net=per_mile * Decimal("1.2"),
                     per_km_rate_net=per_km * Decimal("1.2"),
+                    hourly_rate_net=Decimal(str(round(float(base_rate * Decimal("1.2")) + (float(per_mile * Decimal("1.2")) * 15.0), 2))),
+                    hourly_minimum_hours=getattr(payload, "hourly_minimum_hours", 2) or 2,
                     tax_rate=tax_r,
                     currency=payload.currency
                 ),
                 VehicleClass.FIRST_CLASS.value: VendorPricingRule(
                     vendor_id=payload.vendor_id,
                     vehicle_class=VehicleClass.FIRST_CLASS,
-                    base_rate_net=base_rate,
-                    per_mile_rate_net=per_mile,
-                    per_km_rate_net=per_km,
+                    base_rate_net=base_rate * Decimal("1.25"),
+                    per_mile_rate_net=per_mile * Decimal("1.20"),
+                    per_km_rate_net=per_km * Decimal("1.20"),
+                    hourly_rate_net=Decimal(str(round(float(base_rate * Decimal("1.25")) + (float(per_mile * Decimal("1.20")) * 15.0), 2))),
+                    hourly_minimum_hours=getattr(payload, "hourly_minimum_hours", 2) or 2,
                     tax_rate=tax_r,
                     currency=payload.currency
                 ),
@@ -282,6 +286,8 @@ class VendorSpinupService:
                     base_rate_net=base_rate * Decimal("0.85"),
                     per_mile_rate_net=per_mile * Decimal("0.85"),
                     per_km_rate_net=per_km * Decimal("0.85"),
+                    hourly_rate_net=Decimal(str(round(float(base_rate * Decimal("0.85")) + (float(per_mile * Decimal("0.85")) * 15.0), 2))),
+                    hourly_minimum_hours=getattr(payload, "hourly_minimum_hours", 2) or 2,
                     tax_rate=tax_r,
                     currency=payload.currency
                 ),
@@ -291,15 +297,19 @@ class VendorSpinupService:
                     base_rate_net=base_rate * Decimal("1.6"),
                     per_mile_rate_net=per_mile * Decimal("1.5"),
                     per_km_rate_net=per_km * Decimal("1.5"),
+                    hourly_rate_net=Decimal(str(round(float(base_rate * Decimal("1.6")) + (float(per_mile * Decimal("1.5")) * 15.0), 2))),
+                    hourly_minimum_hours=3,
                     tax_rate=tax_r,
                     currency=payload.currency
                 ),
                 VehicleClass.ELECTRIC_VIP.value: VendorPricingRule(
                     vendor_id=payload.vendor_id,
                     vehicle_class=VehicleClass.ELECTRIC_VIP,
-                    base_rate_net=base_rate * Decimal("1.1"),
+                    base_rate_net=base_rate * Decimal("1.15"),
                     per_mile_rate_net=per_mile * Decimal("1.1"),
                     per_km_rate_net=per_km * Decimal("1.1"),
+                    hourly_rate_net=Decimal(str(round(float(base_rate * Decimal("1.15")) + (float(per_mile * Decimal("1.1")) * 15.0), 2))),
+                    hourly_minimum_hours=getattr(payload, "hourly_minimum_hours", 2) or 2,
                     tax_rate=tax_r,
                     currency=payload.currency
                 )

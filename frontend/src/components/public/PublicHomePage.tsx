@@ -79,7 +79,7 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
 
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))',
           gap: '44px',
           alignItems: 'center',
           position: 'relative',
@@ -392,7 +392,7 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
         </div>
 
         {/* 3-Column Fleet Preview Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '24px' }}>
           {[
             {
               title: 'Mercedes-Maybach S 580',
@@ -468,7 +468,7 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
       </div>
 
       {/* --- 3. VALUE PROPOSITION CARDS --- */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: '24px' }}>
         <div style={{
           background: '#FFFFFF',
           border: '1px solid #E2E8F0',

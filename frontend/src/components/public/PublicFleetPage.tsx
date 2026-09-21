@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Users, Briefcase, Sparkles, Shield, Wifi, Droplets, VolumeX, CheckCircle2, ArrowRight, Camera, ChevronLeft, ChevronRight, Eye, Award, Star, Compass, Wind, Coffee, Crown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Users, Briefcase, Sparkles, Shield, Wifi, Droplets, VolumeX, CheckCircle2, ArrowRight, Camera, ChevronLeft, ChevronRight, Eye, Award, Star, Compass, Wind, Coffee, Crown, Car } from 'lucide-react';
 import { VendorPortalConfig, VehicleClass } from '../../types';
 
 interface VehiclePhoto {
@@ -47,6 +47,8 @@ export const PublicFleetPage: React.FC<PublicFleetPageProps> = ({ config, onSele
   const [activeCategory, setActiveCategory] = useState<string>('ALL');
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<Record<string, number>>({});
   const [expandedDetailsVehicleId, setExpandedDetailsVehicleId] = useState<string | null>(null);
+  const [liveVehicles, setLiveVehicles] = useState<FleetVehicle[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const fleetVehicles: FleetVehicle[] = [
     {
@@ -238,9 +240,100 @@ export const PublicFleetPage: React.FC<PublicFleetPageProps> = ({ config, onSele
     }
   ];
 
+  useEffect(() => {
+    let isMounted = true;
+    if (!config.vendor_id) {
+      setLoading(false);
+      return;
+    }
+    
+    fetch(`/api/v1/vendors/${config.vendor_id}/fleet-inventory`)
+      .then(res => {
+        if (!res.ok) throw new Error('Fleet fetch error');
+        return res.json();
+      })
+      .then((data: any[]) => {
+        if (!isMounted) return;
+        if (Array.isArray(data) && data.length > 0) {
+          // Strictly filter only active & available vehicles (omit maintenance / disabled vehicles)
+          const activeFleetData = data.filter((v: any) => v.is_active !== false && v.status !== 'MAINTENANCE' && v.status !== 'DISABLED');
+          const mapped: FleetVehicle[] = activeFleetData.map((v: any) => {
+            const vClass = (v.vehicle_class || 'LUXURY_SUV') as VehicleClass;
+            let catName = 'SUV';
+            const vClassStr = String(v.vehicle_class || '');
+            if (vClassStr.includes('SEDAN') || vClassStr === 'FIRST_CLASS' || vClassStr.includes('ELECTRIC')) {
+              catName = 'SEDAN';
+            } else if (vClassStr.includes('VAN') || vClassStr.includes('SPRINTER') || vClassStr.includes('MINIVAN')) {
+              catName = 'VAN';
+            }
+
+            const photos: VehiclePhoto[] = Array.isArray(v.photos) && v.photos.length > 0
+              ? v.photos.map((p: any) => ({
+                  url: p.photo_url || p.url,
+                  caption: p.label || p.caption || v.name,
+                  viewType: (p.photo_type || 'EXTERIOR') as any
+                }))
+              : [
+                  {
+                    url: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=1200&q=80',
+                    caption: `${v.name} - Fleet Exterior Profile`,
+                    viewType: 'EXTERIOR'
+                  }
+                ];
+
+            return {
+              id: v.id,
+              type: vClass,
+              categoryName: catName,
+              title: v.name,
+              makeModel: `${v.name}${v.exterior_color ? ` (${v.exterior_color})` : ''}`,
+              year: v.created_at ? `Certified ${new Date(v.created_at).getFullYear()}` : '2025 Fleet Model',
+              tagline: v.tagline || 'Pinnacle Chauffeur Luxury & Executive Transport',
+              pax: v.passenger_capacity || 4,
+              luggage: v.luggage_capacity || 3,
+              multiplier: 1.0,
+              badge: v.participate_in_network ? '👑 Live Verified Fleet' : '⭐️ Sovereign Dedicated Fleet',
+              badgeColor: '#10253F',
+              desc: v.tagline 
+                ? `${v.tagline}. Meticulously maintained to sovereign white-glove standards with ${v.exterior_color || 'Obsidian Black'} exterior and ${v.interior_color || 'Executive Handcrafted'} interior.`
+                : 'Commercial flagship vehicle certified for private aviation, diplomatic roadshows, and executive airport transfers.',
+              specs: {
+                seatingType: `${v.interior_color || 'Executive Leather'} Heated/Cooled Comfort Seats`,
+                soundSystem: 'High-Fidelity Acoustic Surround Sound',
+                connectivity: 'High-Speed 5G Wi-Fi Hotspot & USB-C Power',
+                climate: 'Multi-Zone Automatic Climate & HEPA Air Ionizer',
+                beverage: 'Complimentary Chilled Artesian Bottled Water',
+                safetyRating: 'Surround 360 Telemetry & DOT Vetted Chauffeur'
+              },
+              amenities: Array.isArray(v.amenities) && v.amenities.length > 0
+                ? v.amenities
+                : [
+                    'Dedicated Luggage Cargo Space',
+                    'Complimentary High-Speed Wi-Fi Hotspot',
+                    'Chilled Fiji Bottled Water & Travel Refreshments',
+                    'Acoustic Noise Privacy Glass & Window Sunshades'
+                  ],
+              photos
+            };
+          });
+          setLiveVehicles(mapped);
+        }
+        setLoading(false);
+      })
+      .catch(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [config.vendor_id]);
+
+  const displayVehicles = liveVehicles.length > 0 ? liveVehicles : fleetVehicles;
+
   const filteredVehicles = activeCategory === 'ALL'
-    ? fleetVehicles
-    : fleetVehicles.filter(v => v.categoryName === activeCategory);
+    ? displayVehicles
+    : displayVehicles.filter(v => v.categoryName === activeCategory);
 
   const handleNextPhoto = (vehicleId: string, totalPhotos: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -331,7 +424,7 @@ export const PublicFleetPage: React.FC<PublicFleetPageProps> = ({ config, onSele
       </div>
 
       {/* --- 2. LUXURY VEHICLE SHOWCASE GRID --- */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(640px, 1fr))', gap: '32px' }}>
+      <div className="public-fleet-grid">
         {filteredVehicles.map((vehicle) => {
           const currentPhotoIdx = selectedPhotoIndex[vehicle.id] || 0;
           const currentPhoto = vehicle.photos[currentPhotoIdx] || vehicle.photos[0];

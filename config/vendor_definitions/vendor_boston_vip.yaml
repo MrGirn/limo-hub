@@ -55,3 +55,11 @@ telecom_compliance:
   website_url: https://bostonvipchauffeur.com
   contact_email: compliance@bostonvipchauffeur.com
   contact_phone: '+16175550199'
+
+insurance_compliance:
+  has_valid_insurance: true
+  policy_amount: "$5M"
+  show_policy_amount: true
+  insurer_name: "Travelers Commercial Marine & Fleet"
+  policy_number: "TRV-8829104-MA"
+  expiration_date: "2027-01-01"

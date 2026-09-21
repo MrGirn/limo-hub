@@ -1,6 +1,10 @@
 include:
   - vendors/vendor-anb-philly/compose.vendor.yaml
   - vendors/vendor-ny-executive/compose.vendor.yaml
+  - vendors/vendor-boston-vip/compose.vendor.yaml
+  - vendors/vendor-miami-prestige/compose.vendor.yaml
+  - vendors/vendor-london-royal/compose.vendor.yaml
+  - vendors/vendor-tokyo-sovereign/compose.vendor.yaml
 
 services:
   # 1. Central Global Federation Hub (Port 8000)

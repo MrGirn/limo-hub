@@ -62,6 +62,7 @@ class LimoDatabase:
         self.assignment_audits: Dict[str, Any] = {}
         self.webhook_events: List[Any] = []
         self.split_settlements: Dict[str, Any] = {}
+        self.itineraries: Dict[str, Any] = {}
         
         # Customer CRM & 5-Star VIP Preference Subsystem
         self.customers: Dict[str, Customer] = {}

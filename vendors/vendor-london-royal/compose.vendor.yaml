@@ -1,0 +1,21 @@
+services:
+  limo-cell-london-royal:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: limo-cell-london-royal
+    restart: always
+    ports:
+      - "8005:8000"
+    env_file:
+      - ../../.env
+      - ./vendor.env
+    environment:
+      - MYSQL_HOST=limo-mysql
+      - MYSQL_PORT=3306
+      - GLOBAL_HUB_URL=http://limo-global-hub:8000
+    depends_on:
+      limo-mysql:
+        condition: service_healthy
+    networks:
+      - limo-net

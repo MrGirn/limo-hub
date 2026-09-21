@@ -142,6 +142,8 @@ depot:
     }
   });
   const [isSyncingFx, setIsSyncingFx] = useState(false);
+  const [fxViewMode, setFxViewMode] = useState<'tiles' | 'rows'>('tiles');
+
 
   const copyToClipboard = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -3492,76 +3494,266 @@ depot:
               </div>
 
               {/* SUBTAB 1: LIVE MULTI-CURRENCY FX PARITY FEED */}
-              {settingsSubTab === 'fx' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  {/* Feed Status Banner */}
-                  <div style={{
-                    backgroundColor: '#FFFFFF',
-                    padding: '14px 18px',
-                    borderRadius: '8px',
-                    border: '1px solid #E2E8F0',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    fontSize: '12px',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#16A34A', display: 'inline-block' }} />
-                      <span style={{ color: '#334155' }}>
-                        Active Benchmark Feed: <strong>{fxData.source}</strong> (Base Anchor: <strong>1.0000 USD</strong>)
-                      </span>
-                    </div>
-                    <span style={{ color: '#64748B' }}>
-                      Last Synchronized: <strong>{new Date(fxData.timestamp_utc).toLocaleTimeString()} UTC</strong>
-                    </span>
-                  </div>
+              {settingsSubTab === 'fx' && (() => {
+                const currencyList = [
+                  { curr: 'USD', flag: '🇺🇸', name: 'US Dollar (Base Benchmark)', region: 'Federal Reserve Anchor / Global Standard', rate: fxData.rates.USD || 1.0, type: 'BASE BENCHMARK' },
+                  { curr: 'GBP', flag: '🇬🇧', name: 'British Pound Sterling', region: 'Bank of England / London Royal Hub', rate: fxData.rates.GBP || 0.7820, type: 'MID-MARKET' },
+                  { curr: 'EUR', flag: '🇪🇺', name: 'European Euro', region: 'European Central Bank / Paris & EU Hubs', rate: fxData.rates.EUR || 0.9210, type: 'MID-MARKET' },
+                  { curr: 'AED', flag: '🇦🇪', name: 'UAE Dirham (Dubai / Abu Dhabi)', region: 'Central Bank of UAE / Gulf Tier-1 Corridor', rate: fxData.rates.AED || 3.6725, type: 'MID-MARKET' },
+                  { curr: 'JPY', flag: '🇯🇵', name: 'Japanese Yen (Tokyo Hub)', region: 'Bank of Japan / Tokyo Sovereign Hub', rate: fxData.rates.JPY || 155.20, type: 'MID-MARKET' },
+                  { curr: 'CHF', flag: '🇨🇭', name: 'Swiss Franc (Zurich / Geneva)', region: 'Swiss National Bank / Zurich Private Banking', rate: fxData.rates.CHF || 0.8990, type: 'MID-MARKET' },
+                  { curr: 'CAD', flag: '🇨🇦', name: 'Canadian Dollar (Toronto / YUL)', region: 'Bank of Canada / Cross-Border Staging', rate: fxData.rates.CAD || 1.3650, type: 'MID-MARKET' },
+                  { curr: 'AUD', flag: '🇦🇺', name: 'Australian Dollar (Sydney / MEL)', region: 'Reserve Bank of Australia / Sydney Metro', rate: fxData.rates.AUD || 1.5240, type: 'MID-MARKET' },
+                  { curr: 'SGD', flag: '🇸🇬', name: 'Singapore Dollar (Changi Hub)', region: 'Monetary Authority of Singapore / Changi Hub', rate: fxData.rates.SGD || 1.3410, type: 'MID-MARKET' }
+                ];
 
-                  {/* Dynamic Currency Cards Grid */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-                    {[
-                      { curr: 'USD', flag: '🇺🇸', name: 'US Dollar (Base Benchmark)', rate: fxData.rates.USD || 1.0 },
-                      { curr: 'GBP', flag: '🇬🇧', name: 'British Pound Sterling', rate: fxData.rates.GBP || 0.7820 },
-                      { curr: 'EUR', flag: '🇪🇺', name: 'European Euro', rate: fxData.rates.EUR || 0.9210 },
-                      { curr: 'AED', flag: '🇦🇪', name: 'UAE Dirham (Dubai / Abu Dhabi)', rate: fxData.rates.AED || 3.6725 },
-                      { curr: 'JPY', flag: '🇯🇵', name: 'Japanese Yen (Tokyo Hub)', rate: fxData.rates.JPY || 155.20 },
-                      { curr: 'CHF', flag: '🇨🇭', name: 'Swiss Franc (Zurich / Geneva)', rate: fxData.rates.CHF || 0.8990 },
-                      { curr: 'CAD', flag: '🇨🇦', name: 'Canadian Dollar (Toronto / YUL)', rate: fxData.rates.CAD || 1.3650 },
-                      { curr: 'AUD', flag: '🇦🇺', name: 'Australian Dollar (Sydney / MEL)', rate: fxData.rates.AUD || 1.5240 },
-                      { curr: 'SGD', flag: '🇸🇬', name: 'Singapore Dollar (Changi Hub)', rate: fxData.rates.SGD || 1.3410 }
-                    ].map((f) => {
-                      const reciprocal = f.rate > 0 ? (1 / f.rate).toFixed(4) : '1.0000';
-                      return (
-                        <div key={f.curr} style={{ backgroundColor: '#FFFFFF', padding: '16px', borderRadius: '8px', border: '1px solid #E2E8F0', boxShadow: '0 1px 2px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                          <div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <div style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span style={{ fontSize: '20px' }}>{f.flag}</span>
-                                <span>{f.curr}</span>
-                              </div>
-                              <span style={{ fontSize: '10px', fontWeight: 700, backgroundColor: '#EFF6FF', color: '#0078D4', padding: '2px 6px', borderRadius: '4px' }}>
-                                MID-MARKET
-                              </span>
-                            </div>
-                            <div style={{ fontSize: '11px', color: '#64748B', marginTop: '4px' }}>{f.name}</div>
-                          </div>
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {/* Feed Status Banner & View Mode Selector */}
+                    <div style={{
+                      backgroundColor: '#FFFFFF',
+                      padding: '12px 18px',
+                      borderRadius: '8px',
+                      border: '1px solid #E2E8F0',
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: '12px',
+                      fontSize: '12px',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#16A34A', display: 'inline-block' }} />
+                        <span style={{ color: '#334155' }}>
+                          Active Benchmark Feed: <strong>{fxData.source}</strong> (Base Anchor: <strong>1.0000 USD</strong>)
+                        </span>
+                      </div>
 
-                          <div style={{ marginTop: '16px', borderTop: '1px solid #F1F5F9', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                            <div>
-                              <div style={{ fontSize: '10px', color: '#94A3B8' }}>PARITY RATE</div>
-                              <div style={{ fontSize: '20px', fontWeight: 900, color: '#0078D4' }}>{Number(f.rate).toFixed(4)}</div>
-                            </div>
-                            <div style={{ textAlign: 'right', fontSize: '10px', color: '#64748B' }}>
-                              <div>1 {f.curr} =</div>
-                              <strong style={{ color: '#16A34A', fontSize: '12px' }}>${reciprocal} USD</strong>
-                            </div>
-                          </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <span style={{ color: '#64748B' }}>
+                          Last Synchronized: <strong>{new Date(fxData.timestamp_utc).toLocaleTimeString()} UTC</strong>
+                        </span>
+
+                        {/* View Switcher: Tiles vs Rows */}
+                        <div style={{
+                          display: 'inline-flex',
+                          backgroundColor: '#F1F5F9',
+                          padding: '3px',
+                          borderRadius: '6px',
+                          border: '1px solid #CBD5E1',
+                          gap: '2px'
+                        }}>
+                          <button
+                            onClick={() => setFxViewMode('tiles')}
+                            style={{
+                              padding: '5px 12px',
+                              borderRadius: '4px',
+                              border: 'none',
+                              backgroundColor: fxViewMode === 'tiles' ? '#FFFFFF' : 'transparent',
+                              color: fxViewMode === 'tiles' ? '#0078D4' : '#64748B',
+                              boxShadow: fxViewMode === 'tiles' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                              fontWeight: fxViewMode === 'tiles' ? 700 : 500,
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              transition: 'all 0.15s ease'
+                            }}
+                            title="View as Grid Tiles"
+                          >
+                            <span>⊞</span>
+                            <span>Tiles</span>
+                          </button>
+                          <button
+                            onClick={() => setFxViewMode('rows')}
+                            style={{
+                              padding: '5px 12px',
+                              borderRadius: '4px',
+                              border: 'none',
+                              backgroundColor: fxViewMode === 'rows' ? '#FFFFFF' : 'transparent',
+                              color: fxViewMode === 'rows' ? '#0078D4' : '#64748B',
+                              boxShadow: fxViewMode === 'rows' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                              fontWeight: fxViewMode === 'rows' ? 700 : 500,
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              transition: 'all 0.15s ease'
+                            }}
+                            title="View as Rows / Table"
+                          >
+                            <span>☰</span>
+                            <span>Rows</span>
+                          </button>
                         </div>
-                      );
-                    })}
+                      </div>
+                    </div>
+
+                    {/* VIEW MODE 1: TILES (GRID CARDS) */}
+                    {fxViewMode === 'tiles' && (
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                        gap: '16px'
+                      }}>
+                        {currencyList.map((f) => {
+                          const reciprocal = f.rate > 0 ? (1 / f.rate).toFixed(4) : '1.0000';
+                          const isBase = f.curr === 'USD';
+                          return (
+                            <div
+                              key={f.curr}
+                              style={{
+                                backgroundColor: '#FFFFFF',
+                                padding: '16px',
+                                borderRadius: '8px',
+                                border: '1px solid #E2E8F0',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'space-between',
+                                transition: 'box-shadow 0.2s ease, border-color 0.2s ease'
+                              }}
+                            >
+                              <div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <div style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontSize: '20px' }}>{f.flag}</span>
+                                    <span>{f.curr}</span>
+                                  </div>
+                                  <span style={{
+                                    fontSize: '10px',
+                                    fontWeight: 700,
+                                    backgroundColor: isBase ? '#F0FDF4' : '#EFF6FF',
+                                    color: isBase ? '#16A34A' : '#0078D4',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    border: isBase ? '1px solid #BBF7D0' : '1px solid #BFDBFE'
+                                  }}>
+                                    {f.type}
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: '11px', color: '#64748B', marginTop: '4px' }}>{f.name}</div>
+                              </div>
+
+                              <div style={{ marginTop: '16px', borderTop: '1px solid #F1F5F9', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                                <div>
+                                  <div style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 600 }}>PARITY RATE</div>
+                                  <div style={{ fontSize: '20px', fontWeight: 900, color: '#0078D4' }}>{Number(f.rate).toFixed(4)}</div>
+                                </div>
+                                <div style={{ textAlign: 'right', fontSize: '10px', color: '#64748B' }}>
+                                  <div>1 {f.curr} =</div>
+                                  <strong style={{ color: '#16A34A', fontSize: '12px' }}>${reciprocal} USD</strong>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* VIEW MODE 2: ROWS (STRUCTURED TABLE) */}
+                    {fxViewMode === 'rows' && (
+                      <div style={{
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: '8px',
+                        border: '1px solid #E2E8F0',
+                        overflow: 'hidden',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+                      }}>
+                        <div style={{ overflowX: 'auto' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                            <thead>
+                              <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                <th style={{ padding: '12px 16px', fontWeight: 700 }}>Currency</th>
+                                <th style={{ padding: '12px 16px', fontWeight: 700 }}>Name & Regional Corridor</th>
+                                <th style={{ padding: '12px 16px', fontWeight: 700 }}>Market Classification</th>
+                                <th style={{ padding: '12px 16px', fontWeight: 700, textAlign: 'right' }}>Parity Rate (vs 1.0 USD)</th>
+                                <th style={{ padding: '12px 16px', fontWeight: 700, textAlign: 'right' }}>1 Unit Inverse in USD</th>
+                                <th style={{ padding: '12px 16px', fontWeight: 700, textAlign: 'center' }}>Feed Status</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {currencyList.map((f, idx) => {
+                                const reciprocal = f.rate > 0 ? (1 / f.rate).toFixed(4) : '1.0000';
+                                const isBase = f.curr === 'USD';
+                                return (
+                                  <tr
+                                    key={f.curr}
+                                    style={{
+                                      borderBottom: idx === currencyList.length - 1 ? 'none' : '1px solid #F1F5F9',
+                                      backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#FAFCFF',
+                                      transition: 'background-color 0.15s ease'
+                                    }}
+                                  >
+                                    <td style={{ padding: '14px 16px', fontWeight: 800, color: '#0F172A' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <span style={{ fontSize: '22px' }}>{f.flag}</span>
+                                        <div>
+                                          <div style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>{f.curr}</div>
+                                          <div style={{ fontSize: '10px', color: '#94A3B8' }}>ISO 4217</div>
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td style={{ padding: '14px 16px' }}>
+                                      <div style={{ fontWeight: 600, color: '#1E293B', fontSize: '13px' }}>{f.name}</div>
+                                      <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>{f.region}</div>
+                                    </td>
+                                    <td style={{ padding: '14px 16px' }}>
+                                      <span style={{
+                                        fontSize: '11px',
+                                        fontWeight: 700,
+                                        backgroundColor: isBase ? '#F0FDF4' : '#EFF6FF',
+                                        color: isBase ? '#16A34A' : '#0078D4',
+                                        padding: '3px 8px',
+                                        borderRadius: '4px',
+                                        border: isBase ? '1px solid #BBF7D0' : '1px solid #BFDBFE',
+                                        display: 'inline-block'
+                                      }}>
+                                        {f.type}
+                                      </span>
+                                    </td>
+                                    <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                                      <div style={{ fontSize: '16px', fontWeight: 900, color: '#0078D4' }}>
+                                        {Number(f.rate).toFixed(4)}
+                                      </div>
+                                      <div style={{ fontSize: '10px', color: '#94A3B8' }}>per 1 USD</div>
+                                    </td>
+                                    <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                                      <div style={{ fontSize: '14px', fontWeight: 800, color: '#16A34A' }}>
+                                        ${reciprocal} USD
+                                      </div>
+                                      <div style={{ fontSize: '10px', color: '#64748B' }}>1 {f.curr} equivalent</div>
+                                    </td>
+                                    <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                                      <span style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        fontSize: '11px',
+                                        fontWeight: 600,
+                                        color: '#15803D',
+                                        backgroundColor: '#DCFCE7',
+                                        padding: '2px 8px',
+                                        borderRadius: '12px'
+                                      }}>
+                                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#16A34A' }} />
+                                        Synchronized
+                                      </span>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* SUBTAB 2: GLOBAL GEMINI GA AI GATEWAY & AUTONOMOUS MONTHLY SUNSET ROLLOVER */}
               {settingsSubTab === 'ai' && (

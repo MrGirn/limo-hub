@@ -49,6 +49,27 @@ class BookingService:
         resolved_vendor_id = vendor_id or os.getenv("SOVEREIGN_VENDOR_ID") or "vendor_anb_philly"
         resolved_tenant_id = tenant_id or os.getenv("TENANT_ID") or "tenant-us-east"
 
+        # Check vehicle maintenance status for explicit vendor
+        req_cls_str = vehicle_class.value if hasattr(vehicle_class, "value") else str(vehicle_class)
+        v_norm = resolved_vendor_id.replace("-", "_")
+        v_alias = resolved_vendor_id.replace("_", "-")
+        matching_vehs = [
+            veh for veh in db.vehicles.values()
+            if (
+                getattr(veh, "vendor_id", "") in (resolved_vendor_id, v_norm, v_alias)
+                or veh.id.startswith(f"veh_{v_norm}")
+                or veh.id.startswith(f"veh_{v_alias}")
+                or veh.id.startswith(f"veh_{resolved_vendor_id}")
+            ) and (
+                (veh.vehicle_class.value if hasattr(veh.vehicle_class, "value") else str(veh.vehicle_class)) == req_cls_str
+            )
+        ]
+        if matching_vehs and not any(
+            veh.is_active is True and getattr(veh, "status", "AVAILABLE") not in ("MAINTENANCE", "DISABLED", "UNDER_REPAIR")
+            for veh in matching_vehs
+        ):
+            raise ValueError(f"Vehicle class {req_cls_str} is currently under maintenance / out of service for {resolved_vendor_id} and cannot be booked.")
+
         quote = PricingService.calculate_quote(
             tenant_id=resolved_tenant_id,
             vendor_id=resolved_vendor_id,
@@ -126,8 +147,56 @@ class BookingService:
         payment_token: str = "tok_visa_4242"
     ) -> Booking:
         quote = db.quotes.get(quote_id)
+        if not quote and mysql_db and mysql_db.is_available():
+            try:
+                session = mysql_db.get_session()
+                q_model = session.query(QuoteModel).filter(QuoteModel.id == quote_id).first()
+                if q_model:
+                    quote = Quote(
+                        id=q_model.id,
+                        tenant_id=q_model.tenant_id,
+                        vendor_id=q_model.vendor_id,
+                        service_type=ServiceType(q_model.service_type),
+                        vehicle_class=VehicleClass(q_model.vehicle_class),
+                        pickup_address=q_model.pickup_address,
+                        dropoff_address=q_model.dropoff_address,
+                        distance_miles=Decimal(str(q_model.distance_miles or 0)),
+                        subtotal_net=Decimal(str(q_model.subtotal_net or 0)),
+                        tax_amount=Decimal(str(q_model.tax_amount or 0)),
+                        total_gross=Decimal(str(q_model.total_gross or 0)),
+                        final_payable_amount=Decimal(str(q_model.final_payable_amount or 0)),
+                        currency=q_model.currency or "USD",
+                        created_at=q_model.created_at or datetime.now(timezone.utc),
+                        expires_at=q_model.expires_at or (datetime.now(timezone.utc) + timedelta(minutes=30))
+                    )
+                    db.quotes[quote.id] = quote
+                session.close()
+            except Exception as ex:
+                logger.warning(f"Failed to load quote from MySQL: {ex}")
+
         if not quote:
-            raise ValueError(f"Quote {quote_id} not found")
+            raise ValueError(f"Quote {quote_id} not found or has expired. Please select a vehicle to refresh pricing.")
+
+        # Check vehicle maintenance status for quote's vendor
+        req_cls_str = quote.vehicle_class.value if hasattr(quote.vehicle_class, "value") else str(quote.vehicle_class)
+        v_norm = quote.vendor_id.replace("-", "_")
+        v_alias = quote.vendor_id.replace("_", "-")
+        matching_vehs = [
+            veh for veh in db.vehicles.values()
+            if (
+                getattr(veh, "vendor_id", "") in (quote.vendor_id, v_norm, v_alias)
+                or veh.id.startswith(f"veh_{v_norm}")
+                or veh.id.startswith(f"veh_{v_alias}")
+                or veh.id.startswith(f"veh_{quote.vendor_id}")
+            ) and (
+                (veh.vehicle_class.value if hasattr(veh.vehicle_class, "value") else str(veh.vehicle_class)) == req_cls_str
+            )
+        ]
+        if matching_vehs and not any(
+            veh.is_active is True and getattr(veh, "status", "AVAILABLE") not in ("MAINTENANCE", "DISABLED", "UNDER_REPAIR")
+            for veh in matching_vehs
+        ):
+            raise ValueError(f"Vehicle class {req_cls_str} is currently under maintenance / out of service for {quote.vendor_id} and cannot be booked.")
 
         booking_id = f"bk-{uuid.uuid4().hex[:8]}"
         trip_id = f"trip-{uuid.uuid4().hex[:8]}"

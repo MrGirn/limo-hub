@@ -13,7 +13,7 @@ from decimal import Decimal
 from datetime import datetime, timezone
 from enum import Enum
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class VehicleClass(str, Enum):
@@ -747,6 +747,8 @@ class CorporateInvoice(BaseModel):
 
 
 class Vehicle(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
     id: str
     tenant_id: str
     vendor_id: str
@@ -758,6 +760,13 @@ class Vehicle(BaseModel):
     passenger_capacity: int
     luggage_capacity: int
     exterior_color: str
+    name: Optional[str] = None
+    interior_color: Optional[str] = "Executive Nappa Leather"
+    tagline: Optional[str] = None
+    vin: Optional[str] = None
+    hourly_rate_usd: Optional[float] = 125.0
+    per_km_usd: Optional[float] = 3.85
+    participate_in_network: bool = True
     is_active: bool = True
     is_wheelchair_accessible: bool = False
     requires_ramp_or_lift: bool = False

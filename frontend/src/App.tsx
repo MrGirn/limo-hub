@@ -499,7 +499,7 @@ const MainLayout: React.FC = () => {
                   ← Return to Overview
                 </button>
               </div>
-              <CustomerPortal />
+              <CustomerPortal config={vendorConfig} />
             </div>
           )}
         </main>

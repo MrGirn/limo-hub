@@ -325,3 +325,28 @@ def test_pricing_multi_parameter_variations_matrix():
         assert hourly_item.total_net == expected_base
 
 
+def test_hourly_quote_matrix_multi_class_variation():
+    """Verify PricingService.calculate_quote_matrix produces distinct, class-differentiated rates for HOURLY_AS_DIRECTED."""
+    matrix = PricingService.calculate_quote_matrix(
+        tenant_id="tenant-us-east",
+        vendor_id="vendor_anb_philly",
+        service_type=ServiceType.HOURLY_AS_DIRECTED,
+        pickup_address="301 Lawrence Road, Broomall, PA 19008",
+        hourly_hours=4
+    )
+
+    prices = {vc: q.final_payable_amount for vc, q in matrix.items()}
+    # All classes must be present
+    assert VehicleClass.BUSINESS_SEDAN.value in prices
+    assert VehicleClass.LUXURY_SUV.value in prices
+    assert VehicleClass.FIRST_CLASS.value in prices
+    assert VehicleClass.BUSINESS_VAN.value in prices
+    assert VehicleClass.ELECTRIC_VIP.value in prices
+
+    # Verify that rates strictly scale by vehicle tier (Sedan < Electric/SUV < First Class < Sprinter Van)
+    assert prices[VehicleClass.BUSINESS_SEDAN.value] < prices[VehicleClass.LUXURY_SUV.value]
+    assert prices[VehicleClass.LUXURY_SUV.value] < prices[VehicleClass.FIRST_CLASS.value]
+    assert prices[VehicleClass.FIRST_CLASS.value] < prices[VehicleClass.BUSINESS_VAN.value]
+
+
+

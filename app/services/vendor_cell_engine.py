@@ -297,6 +297,28 @@ class VendorCellEngine:
         """
         Processes booking in isolated local cell and enqueues outbox event for asynchronous Global Hub sync.
         """
+        # Validate vehicle maintenance status
+        from app.database import db
+        norm_id = self.vendor_id.replace("-", "_")
+        alias_id = self.vendor_id.replace("_", "-")
+        req_cls_str = vehicle_class.value if hasattr(vehicle_class, "value") else str(vehicle_class)
+        vehs = [
+            v for v in db.vehicles.values()
+            if (
+                getattr(v, "vendor_id", "") in (self.vendor_id, norm_id, alias_id)
+                or v.id.startswith(f"veh_{norm_id}")
+                or v.id.startswith(f"veh_{alias_id}")
+                or v.id.startswith(f"veh_{self.vendor_id}")
+            ) and (
+                (v.vehicle_class.value if hasattr(v.vehicle_class, "value") else str(v.vehicle_class)) == req_cls_str
+            )
+        ]
+        if vehs and not any(
+            v.is_active is True and getattr(v, "status", "AVAILABLE") not in ("MAINTENANCE", "DISABLED", "UNDER_REPAIR")
+            for v in vehs
+        ):
+            raise ValueError(f"Vehicle class {req_cls_str} is currently under maintenance / out of service for {self.vendor_id} and cannot be booked.")
+
         quote = self.calculate_local_quote(distance_km, vehicle_class)
 
         booking = LocalDirectBooking(

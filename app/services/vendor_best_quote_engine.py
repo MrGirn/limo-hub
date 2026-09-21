@@ -121,8 +121,36 @@ class VendorBestQuoteEngine:
 
         evaluated_candidates: List[Tuple[Quote, VendorCandidateEvaluation]] = []
 
+        req_class_str = vehicle_class.value if hasattr(vehicle_class, "value") else str(vehicle_class)
+
         for v in candidate_vendors:
             try:
+                # Disqualify vendor if all vehicles in this class are under maintenance / disabled
+                v_norm = v.id.replace("-", "_")
+                v_alias = v.id.replace("_", "-")
+                v_vehicles = [
+                    veh for veh in db.vehicles.values()
+                    if (
+                        getattr(veh, "vendor_id", "") in (v.id, v_norm, v_alias)
+                        or veh.id.startswith(f"veh_{v_norm}")
+                        or veh.id.startswith(f"veh_{v_alias}")
+                        or veh.id.startswith(f"veh_{v.id}")
+                    ) and (
+                        (veh.vehicle_class.value if hasattr(veh.vehicle_class, "value") else str(veh.vehicle_class)) == req_class_str
+                    )
+                ]
+
+                # If vehicles exist for this vendor and class, at least one must be ACTIVE and not in MAINTENANCE
+                if v_vehicles:
+                    has_active = any(
+                        veh.is_active is True
+                        and getattr(veh, "status", "AVAILABLE") not in ("MAINTENANCE", "DISABLED", "UNDER_REPAIR")
+                        for veh in v_vehicles
+                    )
+                    if not has_active:
+                        logger.info(f"Skipping vendor {v.id} for quote: All {len(v_vehicles)} vehicles in class {req_class_str} are under maintenance / disabled.")
+                        continue
+
                 cand_quote = PricingService.calculate_quote(
                     tenant_id=tenant_id,
                     vendor_id=v.id,
