@@ -55,7 +55,7 @@ export const PublicFooter: React.FC<PublicFooterProps> = ({ config, onSelectTab,
                 {config.vendor_name}
               </span>
               <span style={{ fontSize: '11px', color: '#806734', fontWeight: 600, letterSpacing: '0.04em' }}>
-                Philadelphia &amp; Beyond
+                {config.city ? `${config.city} & Regional Metro` : 'Executive Livery Fleet'}
               </span>
             </div>
           </div>
@@ -68,11 +68,11 @@ export const PublicFooter: React.FC<PublicFooterProps> = ({ config, onSelectTab,
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#059669', fontWeight: 600 }}>
               <ShieldCheck size={15} /> $5,000,000 Commercial Liability Coverage
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#10253F', fontWeight: 600 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#10253F', fontWeight: 600 }}>
               <Lock size={15} /> 256-bit Encrypted Pre-Auth Security
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#967B42', fontWeight: 600 }}>
-              <Award size={15} /> TLC / PPA Certified Background-Checked Chauffeurs
+              <Award size={15} /> State Certified Background-Checked Chauffeurs
             </div>
           </div>
         </div>
@@ -100,7 +100,7 @@ export const PublicFooter: React.FC<PublicFooterProps> = ({ config, onSelectTab,
                 onMouseOver={(e) => (e.currentTarget.style.color = '#0B1B2D')}
                 onMouseOut={(e) => (e.currentTarget.style.color = '#586579')}
               >
-                Executive Fleet Showroom (Escalade &amp; Denali)
+                Executive Fleet Showroom
               </button>
             </li>
             <li>
@@ -110,21 +110,9 @@ export const PublicFooter: React.FC<PublicFooterProps> = ({ config, onSelectTab,
                 onMouseOver={(e) => (e.currentTarget.style.color = '#0B1B2D')}
                 onMouseOut={(e) => (e.currentTarget.style.color = '#586579')}
               >
-                Airport Transfers &amp; FBO Tarmac Clearance
+                Airport Transfers &amp; FBO
               </button>
             </li>
-            {onOpenOperatorOnboarding && (
-              <li>
-                <button
-                  onClick={onOpenOperatorOnboarding}
-                  style={{ background: 'transparent', border: 'none', color: '#967B42', cursor: 'pointer', padding: 0, fontSize: '13px', fontWeight: 700, textAlign: 'left', transition: 'color 0.15s ease' }}
-                  onMouseOver={(e) => (e.currentTarget.style.color = '#806734')}
-                  onMouseOut={(e) => (e.currentTarget.style.color = '#967B42')}
-                >
-                  👑 Operator Onboarding &amp; Fleet Expansion
-                </button>
-              </li>
-            )}
             <li>
               <button
                 onClick={() => onSelectTab('ABOUT')}
@@ -157,7 +145,10 @@ export const PublicFooter: React.FC<PublicFooterProps> = ({ config, onSelectTab,
             Providing 24/7 private terminal staging and door-to-door luxury transport across:
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            {['PHL Airport', 'Atlantic Aviation FBO', 'Center City Philadelphia', 'Main Line PA', 'JFK & EWR Hubs', 'Manhattan VIP', 'Wilmington DE', 'Atlantic City'].map((area) => (
+            {(config.city?.includes('New York') || config.vendor_id.includes('ny')
+              ? ['JFK International', 'LaGuardia Airport (LGA)', 'Newark Liberty (EWR)', 'Teterboro FBO (TEB)', 'Westchester (HPN)', 'Manhattan Financial VIP', 'Hamptons Corridors']
+              : ['PHL Airport', 'Atlantic Aviation FBO', 'Center City Metro', 'Regional Corporate Hubs', 'Interstate Corridors', 'Private Aviation Terminals']
+            ).map((area) => (
               <span
                 key={area}
                 style={{
@@ -184,15 +175,15 @@ export const PublicFooter: React.FC<PublicFooterProps> = ({ config, onSelectTab,
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '12px', color: '#586579' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
               <MapPin size={15} color="#967B42" style={{ flexShrink: 0, marginTop: '2px' }} />
-              <span style={{ lineHeight: '1.5' }}>{branding.office_address || '1500 Market St, Center City, Philadelphia, PA 19102'}</span>
+              <span style={{ lineHeight: '1.5' }}>{branding.office_address || 'Executive Operations Center'}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <Phone size={15} color="#967B42" style={{ flexShrink: 0 }} />
-              <strong style={{ color: '#0B1B2D', fontSize: '13px' }}>{branding.contact_phone || '+1 (215) 555-0144'}</strong>
+              <strong style={{ color: '#0B1B2D', fontSize: '13px' }}>{branding.contact_phone || '+1 (800) 555-0199'}</strong>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <Mail size={15} color="#967B42" style={{ flexShrink: 0 }} />
-              <span>{branding.domain ? `dispatch@${branding.domain}` : 'dispatch@anblimo-philly.com'}</span>
+              <span>{branding.domain ? `dispatch@${branding.domain}` : 'dispatch@limo-ops.com'}</span>
             </div>
           </div>
         </div>

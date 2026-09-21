@@ -2658,7 +2658,7 @@ export const CustomerPortal: React.FC = () => {
               {/* Watermark Motto */}
               <div style={{ textAlign: 'center', padding: '16px', color: '#94A3B8' }}>
                 <div style={{ fontFamily: '"Libre Baskerville", Georgia, serif', fontStyle: 'italic', fontSize: '13px', color: '#64748B' }}>
-                  Exceptional service from Philadelphia & beyond.
+                  Exceptional executive service, precision &amp; discretion.
                 </div>
                 <div style={{ width: '40px', height: '1.5px', backgroundColor: '#9A7B4F', margin: '6px auto 0 auto' }} />
               </div>
@@ -2707,7 +2707,7 @@ export const CustomerPortal: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Star size={26} color="#9A7B4F" />
             <div>
-              <div style={{ fontSize: '13px', fontWeight: 800, color: '#0A192F' }}>Philadelphia & Beyond</div>
+              <div style={{ fontSize: '13px', fontWeight: 800, color: '#0A192F' }}>Executive Standards</div>
               <div style={{ fontSize: '10px', fontWeight: 700, color: '#8C6D3F', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                 A HIGHER STANDARD OF SERVICE.
               </div>

@@ -41,8 +41,8 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
     onNavigateToBooking({
       serviceType,
       vehicleClass,
-      pickupLocation: pickupLocation || (serviceType === 'AIRPORT_TRANSFER' ? 'Philadelphia International Airport (PHL)' : 'Center City, Philadelphia, PA'),
-      dropoffLocation: dropoffLocation || 'The Ritz-Carlton, Center City Philadelphia',
+      pickupLocation: pickupLocation || (serviceType === 'AIRPORT_TRANSFER' ? 'Regional Executive Airport' : 'Executive Terminal Blvd'),
+      dropoffLocation: dropoffLocation || 'Downtown Luxury Hotel & Suites',
       flightNumber: serviceType === 'AIRPORT_TRANSFER' ? (flightNumber || undefined) : undefined,
       pickupDate: pickupDate || todayStr,
       pickupTime: pickupTime || `${defaultHour}:${defaultMinute}`,
@@ -104,7 +104,7 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
               width: 'fit-content'
             }}>
               <Crown size={14} color="#967B42" />
-              <span>Philadelphia &amp; Beyond · Premier Chauffeur Fleet</span>
+              <span>{branding.company_tagline || `${vendorName} · Premier Executive Chauffeur Fleet`}</span>
             </div>
 
             <h1 style={{

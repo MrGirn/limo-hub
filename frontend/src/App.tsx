@@ -73,7 +73,8 @@ const MainLayout: React.FC = () => {
       const config = await fetchVendorPortalConfig(vendorId);
       if (config) {
         setVendorConfig(config);
-        if (config.encrypted_token) {
+        // Only append ?vt token if on global hub/multi-tenant router, NOT on standalone sovereign cells
+        if (config.encrypted_token && !runtimeMode?.is_sovereign_cell) {
           const url = new URL(window.location.href);
           url.searchParams.delete('domain');
           url.searchParams.delete('vendor_domain');
@@ -85,7 +86,7 @@ const MainLayout: React.FC = () => {
       setVendorConfig(prev => ({
         ...prev,
         vendor_id: vendorId,
-        vendor_name: vendorId.includes('philly') ? 'ANB Limo Company' : 'New York Executive Limousine'
+        vendor_name: vendorId.includes('philly') ? 'ANB Limo Company' : 'Empire Executive Chauffeurs NY'
       }));
     }
   };
@@ -105,9 +106,26 @@ const MainLayout: React.FC = () => {
 
         // 2. Sovereign Vendor Cell (Port 8001 / 8002) -> Boots directly into Local Vendor Public Website
         if (mode.is_sovereign_cell && mode.sovereign_vendor_id) {
+          // If address bar has old ?vt= or ?domain= from another session, clear it for a clean URL
+          if (window.location.search) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('vt');
+            url.searchParams.delete('token');
+            url.searchParams.delete('cell_token');
+            url.searchParams.delete('domain');
+            url.searchParams.delete('vendor_domain');
+            window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
+          }
           setActiveView('PUBLIC_WEBSITE');
           setPublicPage('HOME');
-          await handleVendorSelect(mode.sovereign_vendor_id);
+          try {
+            const config = await fetchVendorPortalConfig(mode.sovereign_vendor_id);
+            if (config) {
+              setVendorConfig(config);
+            }
+          } catch (e) {
+            console.error('Could not load sovereign config:', e);
+          }
           return;
         }
 

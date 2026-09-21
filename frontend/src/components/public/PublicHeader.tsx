@@ -61,21 +61,23 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
       <header className="public-header" role="banner">
         <div className="public-header__inner">
           
-          {/* Brand: Logo + ANB Limo + Subtitle */}
+          {/* Brand: Logo + Dynamic Vendor Name + Tagline */}
           <div 
             className="public-header__brand"
             onClick={() => handleNavClick('HOME')}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleNavClick('HOME'); }}
-            aria-label="ANB Limo - Return to homepage"
+            aria-label={`${config.vendor_name || 'Executive Chauffeur'} - Return to homepage`}
           >
-            <div className="public-header__logo" aria-hidden="true">
-              <span>A</span>
+            <div className="public-header__logo" aria-hidden="true" style={{ backgroundColor: config.branding?.primary_color || '#0B1B2D' }}>
+              <span>{(config.vendor_name || 'E').charAt(0).toUpperCase()}</span>
             </div>
             <div className="public-header__brand-copy">
-              <span className="public-header__name">ANB Limo</span>
-              <span className="public-header__tagline">Philadelphia &amp; Beyond</span>
+              <span className="public-header__name">{config.vendor_name || 'Executive Limousine'}</span>
+              <span className="public-header__tagline">
+                {config.branding?.company_tagline || (config.city ? `${config.city} & Regional Metro` : 'Philadelphia & Beyond')}
+              </span>
             </div>
           </div>
 
@@ -144,7 +146,7 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
                   setIsAuthDropdownOpen(false);
                   if (onAuthSuccess) onAuthSuccess(user, token);
                 }}
-                vendorName="ANB Limo"
+                vendorName={config.vendor_name || 'Executive Chauffeur'}
                 vendorId={config.vendor_id}
               />
             </div>
