@@ -18,9 +18,16 @@ from app.business_api import router as business_router
 from app.services.voice_stream_service import voice_stream_engine, twilio_media_handler
 
 
+from app.services.vendor_spinup_service import vendor_spinup_service
+
+
 @asynccontextmanager
 async def lifespan(app):
     knowledge.initialise()
+    try:
+        vendor_spinup_service.load_all_declarative_definitions()
+    except Exception as e:
+        print(f"Error loading vendor definitions: {e}")
     yield
 
 

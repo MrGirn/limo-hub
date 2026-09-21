@@ -95,6 +95,14 @@ class VendorSpinupService:
         )
         cell.config.local_tax_rate_pct = payload.tax_rate_pct
 
+        # Save branding and telecom profiles for dynamic portal rendering
+        if payload.branding:
+            self.branding_profiles[payload.vendor_id] = payload.branding
+        if payload.telecom_compliance:
+            self.telecom_compliance_profiles[payload.vendor_id] = payload.telecom_compliance
+        if payload.operational_stats:
+            self.operational_stats_profiles[payload.vendor_id] = payload.operational_stats
+
         # 2. Persist authoritative fleet drivers, vehicles, and vendor domain models into Database
         target_db = db_instance
         if target_db is None:
@@ -366,8 +374,8 @@ class VendorSpinupService:
             region=vendor_data.get("region", "Metro Area"),
             country=vendor_data.get("country", "United States"),
             country_code=vendor_data.get("country_code", "US"),
-            state=vendor_data.get("state", "PA"),
-            city=vendor_data.get("city", "Philadelphia"),
+            state=vendor_data.get("state", ""),
+            city=vendor_data.get("city", ""),
             currency=vendor_data.get("currency", "USD"),
             currency_symbol=vendor_data.get("currency_symbol", "$"),
             time_zone=vendor_data.get("time_zone", "America/New_York"),
@@ -385,8 +393,8 @@ class VendorSpinupService:
                 primary_color=branding_data.get("primary_color", "#1E3A8A"),
                 accent_color=branding_data.get("accent_color", "#F59E0B"),
                 domain=branding_data.get("domain", "limo-ops.com"),
-                contact_phone=branding_data.get("contact_phone", "+18005550199"),
-                office_address=branding_data.get("office_address", "Executive Airport Terminal"),
+                contact_phone=branding_data.get("contact_phone", comms_data.get("twilio_sms_number", "+18005550199")),
+                office_address=branding_data.get("office_address", depot_data.get("address", "Executive Airport Terminal")),
                 logo_url=branding_data.get("logo_url", "/assets/default_logo.png")
             ),
             telecom_compliance=telecom_data if telecom_data else None,
