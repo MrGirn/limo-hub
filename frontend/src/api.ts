@@ -728,10 +728,7 @@ export async function fetchAvailableVendors(): Promise<{ id: string; name: strin
       headers: getAuthHeaders()
     });
     if (!res.ok) {
-      return [
-        { id: 'vendor_anb_philly', name: 'ANB Limo Company (Philadelphia)' },
-        { id: 'vendor_ny_executive', name: 'New York Executive Limousine (NYC)' }
-      ];
+      return [];
     }
     const data = await res.json();
     return data.map((c: any) => ({
@@ -739,10 +736,7 @@ export async function fetchAvailableVendors(): Promise<{ id: string; name: strin
       name: c.config?.vendor_name || c.vendor_name || c.vendor_id
     }));
   } catch {
-    return [
-      { id: 'vendor_anb_philly', name: 'ANB Limo Company (Philadelphia)' },
-      { id: 'vendor_ny_executive', name: 'New York Executive Limousine (NYC)' }
-    ];
+    return [];
   }
 }
 

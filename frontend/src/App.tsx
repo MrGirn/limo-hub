@@ -51,8 +51,8 @@ const MainLayout: React.FC = () => {
   
   // Active Vendor White-Label Configuration Profile
   const [vendorConfig, setVendorConfig] = useState<VendorPortalConfig>({
-    vendor_id: 'vendor_anb_philly',
-    vendor_name: 'ANB Limo Company',
+    vendor_id: '',
+    vendor_name: '',
     tier: 'AUTONOMOUS_T1',
     operating_mode: 'GLOBAL_FEDERATED',
     currency: 'USD',
@@ -86,7 +86,7 @@ const MainLayout: React.FC = () => {
       setVendorConfig(prev => ({
         ...prev,
         vendor_id: vendorId,
-        vendor_name: vendorId.includes('philly') ? 'ANB Limo Company' : 'Empire Executive Chauffeurs NY'
+        vendor_name: prev.vendor_name || vendorId
       }));
     }
   };

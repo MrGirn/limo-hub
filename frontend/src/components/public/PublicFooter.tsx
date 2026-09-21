@@ -145,10 +145,14 @@ export const PublicFooter: React.FC<PublicFooterProps> = ({ config, onSelectTab,
             Providing 24/7 private terminal staging and door-to-door luxury transport across:
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            {(config.city?.includes('New York') || config.vendor_id.includes('ny')
-              ? ['JFK International', 'LaGuardia Airport (LGA)', 'Newark Liberty (EWR)', 'Teterboro FBO (TEB)', 'Westchester (HPN)', 'Manhattan Financial VIP', 'Hamptons Corridors']
-              : ['PHL Airport', 'Atlantic Aviation FBO', 'Center City Metro', 'Regional Corporate Hubs', 'Interstate Corridors', 'Private Aviation Terminals']
-            ).map((area) => (
+            {[
+              `${config.city || 'Regional'} International Airport`,
+              `${config.city || 'Metropolitan'} Executive FBO`,
+              `${config.city || 'Downtown'} Financial District`,
+              `${config.state || 'Metro'} Regional Corridors`,
+              'Private Jet & Tarmac Transfers',
+              'Diplomatic & Hotel Enclaves'
+            ].map((area) => (
               <span
                 key={area}
                 style={{

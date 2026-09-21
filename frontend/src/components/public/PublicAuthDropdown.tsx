@@ -20,8 +20,8 @@ export const PublicAuthDropdown: React.FC<PublicAuthDropdownProps> = ({
   onClose,
   onAuthSuccess,
   defaultRole = 'ROLE_CUSTOMER',
-  vendorName = 'Executive Chauffeur Alliance',
-  vendorId = 'vendor_anb_philly'
+  vendorName = 'Executive Chauffeur Service',
+  vendorId = ''
 }) => {
   const [activeTab, setActiveTab] = useState<'oauth' | 'email' | 'corporate' | 'owner'>('oauth');
   const [isProcessing, setIsProcessing] = useState(false);
