@@ -78,11 +78,16 @@ export const FlightAwarePlanUpdaterHub: React.FC = () => {
 
   const handleExecuteInboundUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+    const targetBookingId = selectedBookingId || bookings[0]?.id;
+    if (!targetBookingId) {
+      alert('No active booking selected. Please create or select an authoritative booking first.');
+      return;
+    }
     setLoading(true);
     setLastActionRes(null);
     try {
       const res = await executeInboundPlanUpdate({
-        booking_id: selectedBookingId || (bookings[0]?.id || 'bk-demo'),
+        booking_id: targetBookingId,
         update_source: intakeSource,
         raw_message_transcript: rawTranscript,
         detected_delay_minutes: delayMin
@@ -298,7 +303,7 @@ export const FlightAwarePlanUpdaterHub: React.FC = () => {
                           {b.id} — {b.party.passenger_name} ({b.flight_number || b.service_type})
                         </option>
                       ))}
-                      {bookings.length === 0 && <option value="bk-demo">bk-demo — Sir Arthur Davies (BA 178)</option>}
+                      {bookings.length === 0 && <option value="">No Active Bookings Available</option>}
                     </select>
                   </div>
 

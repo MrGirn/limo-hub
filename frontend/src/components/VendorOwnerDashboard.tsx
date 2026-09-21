@@ -137,16 +137,16 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
   const [show10DlcWizard, setShow10DlcWizard] = useState(false);
   const [wizardMode, setWizardMode] = useState<'API_AUTO' | 'MANUAL_TWILIO_GUIDE'>('API_AUTO');
   const [tcrBrandForm, setTcrBrandForm] = useState({
-    legal_name: config.telecom_compliance?.legal_business_name || `${config.vendor_name || 'ANB Limo Company'} LLC`,
-    ein_tax_id: config.telecom_compliance?.ein_tax_id || '23-7891240',
+    legal_name: config.telecom_compliance?.legal_business_name || (config.vendor_name ? `${config.vendor_name} LLC` : ''),
+    ein_tax_id: config.telecom_compliance?.ein_tax_id || '',
     business_type: config.telecom_compliance?.business_type || 'LLC',
     vertical: config.telecom_compliance?.vertical || 'TRANSPORTATION_AND_LOGISTICS',
-    address: config.telecom_compliance?.physical_address || config.branding?.office_address || '1500 Market St, Center City, Philadelphia, PA 19102',
-    website: config.telecom_compliance?.website_url || `https://${config.branding?.domain || 'anblimo-philly.com'}`,
-    contact_email: config.telecom_compliance?.contact_email || `compliance@${config.branding?.domain || 'anblimo-philly.com'}`,
-    contact_phone: config.telecom_compliance?.contact_phone || config.branding?.contact_phone || '+12155550144',
+    address: config.telecom_compliance?.physical_address || config.branding?.office_address || '',
+    website: config.telecom_compliance?.website_url || (config.branding?.domain ? `https://${config.branding.domain}` : ''),
+    contact_email: config.telecom_compliance?.contact_email || (config.branding?.domain ? `compliance@${config.branding.domain}` : ''),
+    contact_phone: config.telecom_compliance?.contact_phone || config.branding?.contact_phone || '',
     campaign_use_case: 'CUSTOMER_CARE_AND_DISPATCH',
-    opt_in_url: `https://${config.branding?.domain || 'anblimo-philly.com'}/book`
+    opt_in_url: config.branding?.domain ? `https://${config.branding.domain}/book` : ''
   });
 
   const [affiliateJobs, setAffiliateJobs] = useState([
@@ -433,91 +433,62 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
   const [inboundTestResult, setInboundTestResult] = useState<any>(null);
   const [copiedWebhookUrl, setCopiedWebhookUrl] = useState(false);
   const [emailConfig, setEmailConfig] = useState<any>({
-    vendor_id: config.vendor_id || 'vendor_anb_philly',
+    vendor_id: config.vendor_id || '',
     provider_type: 'CUSTOM_SMTP',
     provider: 'CUSTOM_SMTP',
-    from_email: `dispatch@${config.branding?.domain || 'anblimo-philly.com'}`,
-    sender_email: `dispatch@${config.branding?.domain || 'anblimo-philly.com'}`,
-    sender_display_name: config.vendor_name || 'ANB Executive Transportation',
-    reply_to_email: `support@${config.branding?.domain || 'anblimo-philly.com'}`,
+    from_email: config.branding?.domain ? `dispatch@${config.branding.domain}` : '',
+    sender_email: config.branding?.domain ? `dispatch@${config.branding.domain}` : '',
+    sender_display_name: config.vendor_name || 'Executive Dispatch',
+    reply_to_email: config.branding?.domain ? `support@${config.branding.domain}` : '',
     
     // Outbound SMTP Settings
-    smtp_host: 'smtp.mailgun.org',
+    smtp_host: '',
     smtp_port: 587,
-    smtp_user: `postmaster@${config.branding?.domain || 'anblimo-philly.com'}`,
-    smtp_username: `postmaster@${config.branding?.domain || 'anblimo-philly.com'}`,
-    smtp_password: '••••••••••••••••',
+    smtp_user: '',
+    smtp_username: '',
+    smtp_password: '',
     smtp_use_tls: true,
     use_tls: true,
     
     // Provider Credentials
-    aws_access_key_id: 'AKIAIOSFODNN7EXAMPLE',
-    aws_secret_access_key: '••••••••••••••••••••••••',
+    aws_access_key_id: '',
+    aws_secret_access_key: '',
     aws_region: 'us-east-1',
-    sendgrid_api_key: 'SG.••••••••••••••••',
-    postmark_server_token: '••••••••-••••-••••-••••',
-    google_app_password: '•••• •••• •••• ••••',
-    ms_app_password: '••••••••••••••••',
+    sendgrid_api_key: '',
+    postmark_server_token: '',
+    google_app_password: '',
+    ms_app_password: '',
     oauth_client_id: '',
     oauth_client_secret: '',
     oauth_tenant_id: '',
     
     // Inbound RFQ Mailbox Settings (IMAP / POP3 / Webhook)
     inbound_protocol: 'IMAP',
-    inbound_email: `rfq@${config.branding?.domain || 'anblimo-philly.com'}`,
-    imap_host: 'imap.mailgun.org',
+    inbound_email: config.branding?.domain ? `rfq@${config.branding.domain}` : '',
+    imap_host: '',
     imap_port: 993,
-    imap_user: `rfq@${config.branding?.domain || 'anblimo-philly.com'}`,
-    imap_password: '••••••••••••••••',
+    imap_user: '',
+    imap_password: '',
     imap_use_ssl: true,
     imap_mailbox_folder: 'INBOX',
     polling_interval_minutes: 5,
     
     // Webhook Token & Relay Fallback
-    inbound_webhook_token: 'wh_eml_anb_phl_sec99',
+    inbound_webhook_token: '',
     fallback_to_global_hub: true,
     
     // Statuses & Automations
     is_active: true,
-    dkim_verified: true,
-    spf_verified: true,
-    dmarc_verified: true,
-    auto_reply_quotes_enabled: true,
+    dkim_verified: false,
+    spf_verified: false,
+    dmarc_verified: false,
+    auto_reply_quotes_enabled: false,
     auto_convert_corporate_bookings: false,
     notify_driver_on_dispatch: true,
     attach_pdf_invoices: true
   });
-  const [emailInbox, setEmailInbox] = useState<any[]>([
-    {
-      id: 'rfq-phl-991',
-      sender_email: 'travel-desk@citadel-capital.com',
-      subject: 'URGENT: Executive Airport Transfer for Partner Thorne (PHL → Logan Sq)',
-      received_at: '10 mins ago',
-      raw_body: 'Dear ANB Dispatch,\nPlease book a luxury executive transfer for Board Member Ms. Clara Thorne.\nDate: Tomorrow at 3:30 PM\nPickup: PHL Airport Terminal C (Gate 12)\nDropoff: Logan Square Philadelphia Hotel\nFlight: DL 1984\nVehicle Preference: Luxury SUV\nBilling Code: CITADEL-EXEC-994',
-      parsed_passenger_name: 'Ms. Clara Thorne',
-      parsed_pickup: 'PHL Airport Terminal C (Gate 12)',
-      parsed_dropoff: 'Logan Square Philadelphia Hotel',
-      parsed_flight_number: 'DL 1984',
-      parsed_vehicle_class: 'LUXURY_SUV',
-      quoted_amount_usd: 138.50,
-      status: 'PARSED_AWAITING_CONVERSION'
-    },
-    {
-      id: 'rfq-phl-992',
-      sender_email: 'concierge@ritz-carlton-philly.com',
-      subject: 'VIP Transfer to 30th Street Station - Dr. Arthur Sterling',
-      received_at: '45 mins ago',
-      raw_body: 'Hi team,\nRequesting a Business Sedan pickup for Dr. Arthur Sterling.\nDate: Today at 5:00 PM\nPickup: The Ritz-Carlton Philadelphia, 10 Ave of the Arts\nDropoff: 30th Street Amtrak Station VIP Concourse\nPassenger Mobile: +1 (215) 555-0182\nAccount: RITZ-VIP-08',
-      parsed_passenger_name: 'Dr. Arthur Sterling',
-      parsed_pickup: 'The Ritz-Carlton Philadelphia, 10 Ave of the Arts',
-      parsed_dropoff: '30th Street Amtrak Station VIP Concourse',
-      parsed_flight_number: null,
-      parsed_vehicle_class: 'BUSINESS_SEDAN',
-      quoted_amount_usd: 85.00,
-      status: 'PARSED_AWAITING_CONVERSION'
-    }
-  ]);
-  const [testEmailRecipient, setTestEmailRecipient] = useState(`dispatch-test@${config.branding?.domain || 'anblimo-philly.com'}`);
+  const [emailInbox, setEmailInbox] = useState<any[]>([]);
+  const [testEmailRecipient, setTestEmailRecipient] = useState(config.branding?.domain ? `dispatch-test@${config.branding.domain}` : '');
   const [dispatchedEmails, setDispatchedEmails] = useState<any[]>([
     {
       id: 'EML-DISP-101',
@@ -548,67 +519,7 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
   const [parsedEmailQuote, setParsedEmailQuote] = useState<any>(null);
 
   // Team & RBAC Access State
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([
-    {
-      id: 'usr-vnd-002',
-      vendor_id: config.vendor_id,
-      email: 'owner@anblimo-philly.com',
-      full_name: 'Dave Anderson (Cell Principal & Owner)',
-      phone: '+1 (215) 555-0144',
-      role: 'ROLE_VENDOR_ADMIN',
-      status: 'ACTIVE',
-      permissions: ['team:manage', 'billing:manage', 'byoe:manage', 'pricing:override', 'autonomy:override', 'dispatch:assign'],
-      created_at: '2026-01-01'
-    },
-    {
-      id: 'usr-dsp-002',
-      vendor_id: config.vendor_id,
-      email: 'dispatch@anblimo-philly.com',
-      full_name: 'Samantha Taylor (PHL Hub Dispatch Lead)',
-      phone: '+1 (215) 555-0145',
-      role: 'ROLE_DISPATCHER',
-      status: 'ACTIVE',
-      permissions: ['dispatch:assign', 'dispatch:radar', 'quotes:manage', 'omnichannel:respond', 'flights:override'],
-      created_at: '2026-01-15'
-    },
-    {
-      id: 'usr-drv-002',
-      vendor_id: config.vendor_id,
-      email: 'dave.miller@anblimo-philly.com',
-      full_name: 'Dave Miller (Senior Chauffeur)',
-      phone: '+1 (215) 555-0188',
-      role: 'ROLE_CHAUFFEUR',
-      status: 'ACTIVE',
-      driver_id: 'drv-phl-01',
-      assigned_vehicle_id: 'veh-phl-01',
-      permissions: ['trip:execute', 'trip:accept', 'earnings:read_own', 'payouts:request_own'],
-      created_at: '2026-02-01'
-    },
-    {
-      id: 'usr-drv-003',
-      vendor_id: config.vendor_id,
-      email: 'marcus.vance@anblimo-philly.com',
-      full_name: 'Marcus Vance (Master Chauffeur)',
-      phone: '+1 (215) 555-0199',
-      role: 'ROLE_CHAUFFEUR',
-      status: 'ACTIVE',
-      driver_id: 'drv-phl-02',
-      assigned_vehicle_id: 'veh-phl-02',
-      permissions: ['trip:execute', 'trip:accept', 'earnings:read_own', 'payouts:request_own'],
-      created_at: '2026-02-05'
-    },
-    {
-      id: 'usr-corp-001',
-      vendor_id: config.vendor_id,
-      email: 'traveldesk@blackrock-vip.com',
-      full_name: 'Eleanor Vance (Corporate Travel Desk)',
-      phone: '+1 (212) 555-0810',
-      role: 'ROLE_CORPORATE_BOOKER',
-      status: 'ACTIVE',
-      permissions: ['corporate:book', 'corporate:cost_centers', 'corporate:invoices'],
-      created_at: '2026-02-10'
-    }
-  ]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [rolesMatrix, setRolesMatrix] = useState<RoleMatrixResponse | null>(null);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [teamSearch, setTeamSearch] = useState('');
@@ -644,9 +555,9 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
         if (Array.isArray(data)) {
           const mapped = data.map((v: any) => ({
             id: v.id,
-            make_model: `${v.make || ''} ${v.model || ''}`.trim() || 'Executive Sedan',
-            plate: v.license_plate || 'PA-LM001',
-            vin: v.vin || 'VIN-LIVE-10293',
+            make_model: `${v.make || ''} ${v.model || ''}`.trim() || 'Executive Vehicle',
+            plate: v.license_plate || '—',
+            vin: v.vin || '—',
             year: v.year || 2025,
             class: v.vehicle_class || 'FIRST_CLASS',
             status: v.status || 'AVAILABLE',
@@ -667,13 +578,13 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
           const mapped = data.map((d: any) => ({
             id: d.id,
             name: `${d.first_name || ''} ${d.last_name || ''}`.trim() || d.name || 'Chauffeur',
-            phone: d.phone || '+1 (215) 555-0991',
-            badge_id: `PPA-CH-${d.id.slice(-5)}`,
+            phone: d.phone || '—',
+            badge_id: `CH-${d.id.slice(-5)}`,
             vehicle: d.current_vehicle_id || 'Assigned Fleet Vehicle',
             shift: d.is_on_duty ? 'ON_DUTY' : 'STANDBY',
-            trips_today: d.trips_completed || 3,
-            earnings_today: 220.0,
-            rating: d.rating || 4.96
+            trips_today: d.trips_completed || 0,
+            earnings_today: 0,
+            rating: d.rating || 5.0
           }));
           setChauffeurs(mapped);
         }
@@ -687,13 +598,13 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
         if (Array.isArray(data)) {
           const mapped = data.map((b: any) => ({
             id: b.id,
-            passenger: b.passenger?.name || b.party?.passenger_name || 'VIP Passenger',
+            passenger: b.passenger?.name || b.party?.passenger_name || 'Passenger',
             pickup: b.pickup_address || 'Pickup Location',
             dropoff: b.dropoff_address || 'Dropoff Location',
             vehicle_class: b.vehicle_class || 'FIRST_CLASS',
             chauffeur: b.trip?.driver_id || b.assigned_driver_name || 'Autonomous Auto-Assign',
             status: b.status || 'SCHEDULED',
-            fare_usd: Number(b.total_amount || b.total_fare_usd || b.amount || 120.0),
+            fare_usd: Number(b.total_amount || b.total_fare_usd || b.amount || 0),
             source: b.origin_channel || 'DIRECT_STOREFRONT',
             eta_minutes: 15
           }));
@@ -701,6 +612,17 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
         }
       })
       .catch(err => console.log('Could not fetch bookings:', err));
+
+    // 4. Fetch Team Roster for THIS specific vendor
+    if (config.vendor_id) {
+      fetchVendorTeam(config.vendor_id)
+        .then(data => {
+          if (Array.isArray(data)) {
+            setTeamMembers(data);
+          }
+        })
+        .catch(err => console.log('Could not fetch team roster:', err));
+    }
 
     // 4. Fetch Omnichannel Desk Summary
     fetch(`/api/v1/vendors/${config.vendor_id}/omnichannel/desk`)

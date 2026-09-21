@@ -4,9 +4,12 @@ Provides multi-tenant partitioning, pre-seeded US executive fleet (Escalade, S 5
 certified chauffeurs, NYC/LA vendor depots, and active trip telemetry.
 """
 
+import logging
 from typing import Dict, List, Optional, Any
 from decimal import Decimal
 from datetime import datetime, timezone, timedelta
+
+logger = logging.getLogger("LimoDatabase")
 from app.domain_models import (
     Tenant, Vendor, Vehicle, Driver, VehicleClass, Quote, Booking, Trip,
     TripEvent, TripStatus, BookingStatus, BookingParty, ServiceType,
@@ -389,6 +392,110 @@ class LimoDatabase:
         except Exception as e:
             print(f"Note: MySQL sync not available or deferred: {e}")
 
+    def sync_vendor_to_mysql(self, vendor_id: str):
+        """Persists or updates a single vendor entity and its fleet to MySQL."""
+        try:
+            session = mysql_db.get_session()
+            if not session:
+                return
+            with session:
+                v = self.vendors.get(vendor_id)
+                if not v:
+                    return
+                
+                # Check/Create tenant
+                t = self.tenants.get(v.tenant_id)
+                if t and not session.query(TenantModel).filter_by(id=t.id).first():
+                    session.add(TenantModel(
+                        id=t.id,
+                        name=t.name,
+                        country_code=t.country_code,
+                        default_currency=t.default_currency,
+                        is_active=t.is_active
+                    ))
+                    session.flush()
+
+                # Upsert vendor
+                existing_v = session.query(VendorModel).filter_by(id=v.id).first()
+                if not existing_v:
+                    session.add(VendorModel(
+                        id=v.id,
+                        tenant_id=v.tenant_id,
+                        name=v.name,
+                        legal_name=v.legal_name,
+                        tax_id=v.tax_id,
+                        contact_email=v.contact_email,
+                        contact_phone=v.contact_phone,
+                        office_address=v.office_address or f"{v.office_city or 'Executive'}, {v.office_state or 'Depot'}",
+                        office_city=v.office_city or "New York",
+                        office_state=v.office_state or "NY",
+                        office_zip=v.office_zip or "10019",
+                        office_lat=v.office_lat or 40.7675,
+                        office_lng=v.office_lng or -73.9912,
+                        service_radius_miles=v.service_radius_miles or 65.0,
+                        deadhead_rate_per_mile=v.deadhead_rate_per_mile or Decimal("1.75"),
+                        rating=v.rating or 4.97,
+                        is_verified=v.is_verified,
+                        network_sharing_enabled=v.network_sharing_enabled
+                    ))
+                else:
+                    existing_v.name = v.name
+                    existing_v.legal_name = v.legal_name
+                    existing_v.contact_email = v.contact_email
+                    existing_v.contact_phone = v.contact_phone
+                    existing_v.office_address = v.office_address
+                    existing_v.office_city = v.office_city
+                    existing_v.office_state = v.office_state
+                session.flush()
+
+                # Upsert vehicles belonging to this vendor
+                for veh_id, veh in self.vehicles.items():
+                    if veh.vendor_id == v.id and not session.query(VehicleModel).filter_by(id=veh_id).first():
+                        session.add(VehicleModel(
+                            id=veh.id,
+                            tenant_id=veh.tenant_id,
+                            vendor_id=veh.vendor_id,
+                            make=veh.make,
+                            model=veh.model,
+                            year=veh.year,
+                            license_plate=veh.license_plate,
+                            vehicle_class=veh.vehicle_class.value if hasattr(veh.vehicle_class, 'value') else veh.vehicle_class,
+                            passenger_capacity=veh.passenger_capacity,
+                            luggage_capacity=veh.luggage_capacity,
+                            exterior_color=veh.exterior_color,
+                            is_active=veh.is_active,
+                            current_lat=veh.current_lat,
+                            current_lng=veh.current_lng
+                        ))
+
+                # Upsert drivers belonging to this vendor
+                for d_id, d in self.drivers.items():
+                    if d.vendor_id == v.id and not session.query(DriverModel).filter_by(id=d_id).first():
+                        session.add(DriverModel(
+                            id=d.id,
+                            tenant_id=d.tenant_id,
+                            vendor_id=d.vendor_id,
+                            first_name=d.first_name,
+                            last_name=d.last_name,
+                            email=d.email,
+                            phone=d.phone,
+                            license_number=d.license_number,
+                            license_expiry=d.license_expiry,
+                            rating=d.rating,
+                            trips_completed=d.trips_completed,
+                            is_on_duty=d.is_on_duty,
+                            current_vehicle_id=d.current_vehicle_id,
+                            current_lat=d.current_lat,
+                            current_lng=d.current_lng
+                        ))
+                session.commit()
+        except Exception as e:
+            logger.debug(f"MySQL vendor persist deferred: {e}")
+
+    def sync_all_vendors_to_mysql(self):
+        """Persists all current vendors in memory to MySQL database."""
+        for v_id in list(self.vendors.keys()):
+            self.sync_vendor_to_mysql(v_id)
 
     def seed_defaults(self):
         """

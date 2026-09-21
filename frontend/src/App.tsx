@@ -37,10 +37,10 @@ type PortalView =
 const DEFAULT_BRANDING: VendorBrandingProfile = {
   primary_color: '#0F172A',
   accent_color: '#F59E0B',
-  company_tagline: 'Precision Chauffeur Service & Luxury Airport Transfers',
-  contact_phone: '+1 (215) 555-0144',
-  office_address: 'Philadelphia International Airport (PHL) & Northeast Corridor',
-  domain: 'anblimo-philly.com'
+  company_tagline: '',
+  contact_phone: '',
+  office_address: '',
+  domain: ''
 };
 
 const MainLayout: React.FC = () => {
@@ -350,7 +350,7 @@ const MainLayout: React.FC = () => {
     // --- 7. PUBLIC MOBILE VENDOR QUOTE PORTAL (External RFP Landing Page) ---
     if (activeView === 'PUBLIC_VENDOR_QUOTE') {
       const searchParams = new URLSearchParams(window.location.search);
-      const token = searchParams.get('token') || searchParams.get('quote_token') || 'tok_asp_demo_8821';
+      const token = searchParams.get('token') || searchParams.get('quote_token') || '';
       return (
         <PublicVendorQuotePortal
           token={token}

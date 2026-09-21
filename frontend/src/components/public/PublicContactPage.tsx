@@ -107,9 +107,13 @@ export const PublicContactPage: React.FC<PublicContactPageProps> = ({
                 <Phone size={16} color="#967B42" style={{ flexShrink: 0, marginTop: '2px' }} />
                 <div>
                   <span style={{ color: '#586579', display: 'block', fontWeight: 500, marginBottom: '2px' }}>Toll-Free VIP Priority Line</span>
-                  <a href={`tel:${branding.contact_phone || '+1 (215) 555-0144'}`} style={{ fontSize: '14px', fontWeight: 700, color: '#0B1B2D', textDecoration: 'none' }}>
-                    {branding.contact_phone || '+1 (215) 555-0144'}
-                  </a>
+                  {branding.contact_phone ? (
+                    <a href={`tel:${branding.contact_phone}`} style={{ fontSize: '14px', fontWeight: 700, color: '#0B1B2D', textDecoration: 'none' }}>
+                      {branding.contact_phone}
+                    </a>
+                  ) : (
+                    <span style={{ fontSize: '13px', color: '#586579' }}>Contact phone pending configuration</span>
+                  )}
                 </div>
               </div>
 
@@ -118,7 +122,7 @@ export const PublicContactPage: React.FC<PublicContactPageProps> = ({
                 <div>
                   <span style={{ color: '#586579', display: 'block', fontWeight: 500, marginBottom: '2px' }}>Operations &amp; Dispatch Email</span>
                   <span style={{ fontSize: '13px', fontWeight: 700, color: '#0B1B2D' }}>
-                    {branding.domain ? `dispatch@${branding.domain}` : 'dispatch@anblimo-philly.com'}
+                    {branding.domain ? `dispatch@${branding.domain}` : 'dispatch@limo-ops.com'}
                   </span>
                 </div>
               </div>
@@ -128,7 +132,7 @@ export const PublicContactPage: React.FC<PublicContactPageProps> = ({
                 <div>
                   <span style={{ color: '#586579', display: 'block', fontWeight: 500, marginBottom: '2px' }}>Headquarters &amp; Fleet Depot</span>
                   <span style={{ fontSize: '13px', fontWeight: 600, color: '#10253F', lineHeight: '1.5' }}>
-                    {branding.office_address || '1500 Market Street, Suite 3200, Philadelphia, PA 19102'}
+                    {branding.office_address || 'Executive Operations Center'}
                   </span>
                 </div>
               </div>

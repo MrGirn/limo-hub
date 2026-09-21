@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { VendorLoginModal } from './components/VendorAuth/VendorLoginModal';
 import { VendorPublicPortal } from './components/VendorPublicBooking/VendorPublicPortal';
 import { VendorDispatchRadar } from './components/VendorOperationsDesk/VendorDispatchRadar';
@@ -9,12 +9,31 @@ import { Shield, Car, Radio, Globe, LogIn, LogOut, Smartphone } from 'lucide-rea
 
 export const App: React.FC = () => {
   const [viewMode, setViewMode] = useState<'OPS_DASHBOARD' | 'PASSENGER_TRACKING' | 'DRIVER_HUD' | 'DISPATCHER_MOBILE' | 'PUBLIC_BOOKING'>('OPS_DASHBOARD');
-  const [session, setSession] = useState<any | null>({
-    full_name: 'David Sterling',
-    role: 'ROLE_DISPATCHER',
-    department: 'Fleet Logistics & Tariff Operations',
-    vendor_id: 'vendor_anb_philly'
+  const [runtimeVendor, setRuntimeVendor] = useState<{ vendor_id: string; vendor_name: string }>({
+    vendor_id: '',
+    vendor_name: ''
   });
+  const [session, setSession] = useState<any | null>(null);
+
+  useEffect(() => {
+    fetch('/api/v1/system/runtime-mode')
+      .then(res => res.json())
+      .then(data => {
+        if (data?.sovereign_vendor) {
+          setRuntimeVendor({
+            vendor_id: data.sovereign_vendor.vendor_id || '',
+            vendor_name: data.sovereign_vendor.vendor_name || 'Sovereign Vendor'
+          });
+          setSession({
+            full_name: 'Operations Dispatcher',
+            role: 'ROLE_DISPATCHER',
+            department: 'Fleet Logistics & Tariff Operations',
+            vendor_id: data.sovereign_vendor.vendor_id
+          });
+        }
+      })
+      .catch(err => console.log('Could not load runtime mode:', err));
+  }, []);
 
   return (
     <div style={{ minHeight: '100vh', background: '#F8FAFC', color: '#0F172A', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
@@ -36,7 +55,9 @@ export const App: React.FC = () => {
             <Car size={18} color="#FFFFFF" />
           </div>
           <div>
-            <div style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>ANB LIMO PHILADELPHIA</div>
+            <div style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
+              {runtimeVendor.vendor_name || 'SOVEREIGN LIMO OPERATING SYSTEM'}
+            </div>
             <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>Sovereign Vendor Operating System</div>
           </div>
         </div>

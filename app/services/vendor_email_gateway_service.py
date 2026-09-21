@@ -74,51 +74,21 @@ class VendorEmailGatewayService:
         self.vendor_id = vendor_id
         self.domain = domain
         self.sender_name = sender_name
-        self.inbound_rfqs: List[InboundEmailRFQ] = [
-            InboundEmailRFQ(
-                email_id="rfq-phl-991",
-                vendor_id=vendor_id,
-                sender_email="travel-desk@citadel-capital.com",
-                sender_name="Ms. Clara Thorne",
-                subject="URGENT: Executive Airport Transfer for Partner Thorne (PHL → Logan Sq)",
-                raw_body="Dear ANB Dispatch,\nPlease book a luxury executive transfer for Board Member Ms. Clara Thorne.\nDate: Tomorrow at 3:30 PM\nPickup: PHL Airport Terminal C (Gate 12)\nDropoff: Logan Square Philadelphia Hotel\nFlight: DL 1984\nVehicle Preference: Luxury SUV\nBilling Code: CITADEL-EXEC-994",
-                parsed_passenger_name="Ms. Clara Thorne",
-                parsed_passenger_phone="+1 (215) 555-0199",
-                parsed_pickup="PHL Airport Terminal C (Gate 12)",
-                parsed_dropoff="Logan Square Philadelphia Hotel",
-                parsed_flight_number="DL 1984",
-                parsed_vehicle_class=VehicleClass.LUXURY_SUV,
-                estimated_distance_km=18.5,
-                quoted_amount_usd=138.50,
-                status="PARSED_QUOTED"
-            ),
-            InboundEmailRFQ(
-                email_id="rfq-phl-992",
-                vendor_id=vendor_id,
-                sender_email="concierge@ritz-carlton-philly.com",
-                sender_name="Dr. Arthur Sterling",
-                subject="VIP Transfer to 30th Street Station - Dr. Arthur Sterling",
-                raw_body="Hi team,\nRequesting a Business Sedan pickup for Dr. Arthur Sterling.\nDate: Today at 5:00 PM\nPickup: The Ritz-Carlton Philadelphia, 10 Ave of the Arts\nDropoff: 30th Street Amtrak Station VIP Concourse\nPassenger Mobile: +1 (215) 555-0182\nAccount: RITZ-VIP-08",
-                parsed_passenger_name="Dr. Arthur Sterling",
-                parsed_passenger_phone="+1 (215) 555-0182",
-                parsed_pickup="The Ritz-Carlton Philadelphia, 10 Ave of the Arts",
-                parsed_dropoff="30th Street Amtrak Station VIP Concourse",
-                parsed_flight_number=None,
-                parsed_vehicle_class=VehicleClass.FIRST_CLASS,
-                estimated_distance_km=5.0,
-                quoted_amount_usd=85.00,
-                status="PARSED_QUOTED"
-            )
-        ]
+        self.inbound_rfqs: List[InboundEmailRFQ] = []
         self.outbound_history: List[OutboundEmailMessage] = []
+        
+        # Resolve vendor name dynamically if present in database
+        vendor_obj = getattr(db, "vendors", {}).get(vendor_id)
+        effective_sender = getattr(vendor_obj, "name", sender_name) if vendor_obj else sender_name
+        
         self.config: VendorEmailConfig = VendorEmailConfig(
             vendor_id=vendor_id,
             from_email=f"dispatch@{domain}",
-            sender_display_name=sender_name,
+            sender_display_name=effective_sender,
             reply_to_email=f"dispatch@{domain}",
-            smtp_host="smtp.mailgun.org",
+            smtp_host="",
             smtp_port=587,
-            smtp_user=f"postmaster@{domain}"
+            smtp_user=f"dispatch@{domain}"
         )
 
     def get_config(self) -> VendorEmailConfig:
@@ -337,6 +307,21 @@ class VendorEmailGatewayService:
         rfq.status = "CONVERTED_TO_BOOKING"
         rfq.converted_booking_id = booking_id
 
+        # Resolve assigned chauffeur and vehicle from database if allocated
+        driver_name = "Assigned Chauffeur"
+        driver_phone = ""
+        vehicle_info = f"{rfq.parsed_vehicle_class.value} Fleet Vehicle"
+
+        if booking.trip and booking.trip.driver_id:
+            drv = getattr(db, "drivers", {}).get(booking.trip.driver_id)
+            if drv:
+                driver_name = f"{drv.first_name} {drv.last_name}".strip() or "Executive Chauffeur"
+                driver_phone = drv.phone or ""
+                if drv.current_vehicle_id:
+                    veh = getattr(db, "vehicles", {}).get(drv.current_vehicle_id)
+                    if veh:
+                        vehicle_info = f"{veh.make} {veh.model} (Plate: {veh.license_plate})"
+
         # Send Outbound Branded Confirmation
         self.generate_and_send_outbound_confirmation(
             recipient_email=rfq.sender_email,
@@ -346,9 +331,9 @@ class VendorEmailGatewayService:
             dropoff_address=rfq.parsed_dropoff,
             vehicle_class=rfq.parsed_vehicle_class.value,
             amount_usd=float(booking.total_amount),
-            driver_name="Marcus Sterling",
-            driver_phone="+1 215 555 0199",
-            vehicle_info="Cadillac Escalade ESV (Plate: PA-LM992)",
+            driver_name=driver_name,
+            driver_phone=driver_phone,
+            vehicle_info=vehicle_info,
             company_name=self.config.sender_display_name
         )
 
@@ -374,16 +359,17 @@ class VendorEmailGatewayService:
         dropoff_address: str,
         vehicle_class: str,
         amount_usd: float,
-        driver_name: str = "Marcus Sterling",
-        driver_phone: str = "+1 215 555 0199",
-        vehicle_info: str = "Cadillac Escalade ESV (Plate: PA-LM992)",
-        company_name: str = "Executive Chauffeur Services"
+        driver_name: str = "Assigned Chauffeur",
+        driver_phone: str = "",
+        vehicle_info: str = "Executive Fleet Vehicle",
+        company_name: Optional[str] = None
     ) -> OutboundEmailMessage:
         """
         Generates branded HTML booking confirmation email with DKIM/SPF authenticity headers.
         """
+        resolved_company = company_name or self.config.sender_display_name
         sender = f"{self.config.sender_display_name} <{self.config.from_email}>"
-        subject = f"Booking Confirmed: {booking_id} - {company_name}"
+        subject = f"Booking Confirmed: {booking_id} - {resolved_company}"
         
         html = f"""
         <!DOCTYPE html>

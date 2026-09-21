@@ -179,6 +179,21 @@ class ItineraryEngine:
             cities_set.add(orig_city)
             cities_set.add(dest_city)
 
+            # Detect international country destinations
+            full_leg_str = f"{origin} {dest} {orig_city} {dest_city}".lower()
+            if any(k in full_leg_str for k in ("london", "united kingdom", " u.k", " uk", "lhr", "lgw")):
+                countries_set.add("UK")
+            if any(k in full_leg_str for k in ("tokyo", "japan", "hnd", "nrt")):
+                countries_set.add("JP")
+            if any(k in full_leg_str for k in ("paris", "france", "cdg", "ory")):
+                countries_set.add("FR")
+            if any(k in full_leg_str for k in ("dubai", "uae", "dxb")):
+                countries_set.add("AE")
+            if any(k in full_leg_str for k in ("canada", "toronto", "montreal", "yyz")):
+                countries_set.add("CA")
+            if any(k in full_leg_str for k in ("us", "usa", "united states", "new york", "jfk", "philadelphia", "phl", "los angeles", "lax")):
+                countries_set.add("US")
+
             # 1. Resolve Transit Carrier for Flights, Trains, or Helicopter
             transit_ident = leg_input.get("flight_number") or leg_input.get("train_number") or leg_input.get("transit_identifier")
             transit_info = None

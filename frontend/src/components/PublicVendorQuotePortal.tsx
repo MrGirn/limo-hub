@@ -11,7 +11,7 @@ interface PublicVendorQuotePortalProps {
 }
 
 export const PublicVendorQuotePortal: React.FC<PublicVendorQuotePortalProps> = ({ 
-  token = 'tok_asp_demo_8821', 
+  token = '', 
   onBackToMain 
 }) => {
   const [rfp, setRfp] = useState<any | null>(null);
@@ -23,12 +23,17 @@ export const PublicVendorQuotePortal: React.FC<PublicVendorQuotePortalProps> = (
   const [companyName, setCompanyName] = useState('');
   const [dispatcherName, setDispatcherName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
-  const [vehicleModel, setVehicleModel] = useState('2025 Cadillac Escalade ESV');
+  const [vehicleModel, setVehicleModel] = useState('');
   const [acceptTerms, setAcceptTerms] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submittedResult, setSubmittedResult] = useState<any | null>(null);
 
   useEffect(() => {
+    if (!token) {
+      setError('No RFP quote token provided in the URL or request parameters.');
+      setLoading(false);
+      return;
+    }
     const loadRfp = async () => {
       setLoading(true);
       try {
@@ -36,7 +41,9 @@ export const PublicVendorQuotePortal: React.FC<PublicVendorQuotePortalProps> = (
         setRfp(data);
         setCompanyName(data.target_vendor_name || '');
         setContactPhone(data.target_vendor_phone || '');
-        setQuotePayout(String(data.suggested_benchmark_payout_usd || 185));
+        if (data.suggested_benchmark_payout_usd) {
+          setQuotePayout(String(data.suggested_benchmark_payout_usd));
+        }
       } catch (err: any) {
         setError(err.message || 'Failed to load RFP trip details');
       } finally {

@@ -10,6 +10,9 @@ interface VendorCellStatus {
   vendor_name: string;
   operating_mode: string;
   tier?: string;
+  city?: string;
+  state?: string;
+  country_code?: string;
   circuit_breaker_status: string;
   local_currency: string;
   local_db_partition_id: string;
@@ -207,7 +210,7 @@ export const VendorCellAndGlobalHubStudio: React.FC = () => {
         return {
           pickup: '767 5th Ave, Manhattan, NY',
           dropoff: 'JFK Airport Terminal 4 VIP Gate',
-          phone: '+12125550199',
+          phone: '+1 (555) 019-9200',
           defaultKm: 28.5
         };
     }
@@ -232,23 +235,12 @@ export const VendorCellAndGlobalHubStudio: React.FC = () => {
         const data = await res.json();
         setLastBooking(data);
         fetchCellAndHubData();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.detail || 'Direct booking creation failed');
       }
-    } catch {
-      setLastBooking({
-        booking_id: `bk_demo_${Math.floor(Math.random()*10000)}`,
-        vendor_id: selectedVendor,
-        passenger_name: passengerName,
-        estimated_cost_usd: Math.round(distanceKm * 3.25 + 75.0),
-        status: 'CONFIRMED',
-        fallback_pricing_applied: cellStatus?.circuit_breaker_status !== 'HEALTHY'
-      });
-      if (cellStatus) {
-        setCellStatus({
-          ...cellStatus,
-          total_bookings_processed: cellStatus.total_bookings_processed + 1,
-          pending_outbox_events: cellStatus.pending_outbox_events + 1
-        });
-      }
+    } catch (err: any) {
+      alert(err.message || 'Network error during direct booking');
     }
   };
 
@@ -267,19 +259,12 @@ export const VendorCellAndGlobalHubStudio: React.FC = () => {
       if (res.ok) {
         const data = await res.json();
         setParsedRFQ(data);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.detail || 'Failed to parse inbound email');
       }
-    } catch {
-      setParsedRFQ({
-        email_id: 'eml_in_demo',
-        vendor_id: selectedVendor,
-        parsed_passenger_name: 'Director Harrison Vance',
-        parsed_pickup: 'Philadelphia International Airport (PHL) Terminal A',
-        parsed_dropoff: 'The Ritz-Carlton Philadelphia, 10 Avenue of the Arts',
-        parsed_flight_number: 'AA 1204',
-        parsed_vehicle_class: 'LUXURY_SUV',
-        quoted_amount_usd: 146.06,
-        status: 'PARSED_QUOTED'
-      });
+    } catch (err: any) {
+      alert(err.message || 'Network error during email parsing');
     } finally {
       setParsingEmail(false);
     }
@@ -291,32 +276,28 @@ export const VendorCellAndGlobalHubStudio: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          recipient_email: 'hvance@blackrock.com',
-          booking_id: parsedRFQ?.email_id ? `bk_${parsedRFQ.email_id}` : 'bk_philly_901',
-          passenger_name: parsedRFQ?.parsed_passenger_name || 'Director Harrison Vance',
-          pickup_address: parsedRFQ?.parsed_pickup || 'PHL Airport',
-          dropoff_address: parsedRFQ?.parsed_dropoff || 'The Ritz-Carlton Philadelphia',
-          vehicle_class: parsedRFQ?.parsed_vehicle_class || 'LUXURY_SUV',
-          amount_usd: parsedRFQ?.quoted_amount_usd || 146.06,
-          driver_name: 'Marcus Brody',
-          driver_phone: '+12155550991',
-          vehicle_info: 'Cadillac Escalade ESV (Plate: PA-LM992)',
-          company_name: cellStatus?.vendor_name || 'ANB Limo Company'
+          recipient_email: 'passenger@example.com',
+          booking_id: parsedRFQ?.email_id ? `bk_${parsedRFQ.email_id}` : 'bk_live_901',
+          passenger_name: parsedRFQ?.parsed_passenger_name || 'Passenger',
+          pickup_address: parsedRFQ?.parsed_pickup || 'Airport FBO',
+          dropoff_address: parsedRFQ?.parsed_dropoff || 'Hotel VIP',
+          vehicle_class: parsedRFQ?.parsed_vehicle_class || 'FIRST_CLASS',
+          amount_usd: parsedRFQ?.quoted_amount_usd || 120.00,
+          driver_name: 'Lead Chauffeur',
+          driver_phone: '+1 (555) 019-9000',
+          vehicle_info: 'Luxury Executive Vehicle',
+          company_name: cellStatus?.vendor_name || 'Executive Transport'
         })
       });
       if (res.ok) {
         const data = await res.json();
         setOutboundEmailResult(data);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.detail || 'Outbound email dispatch failed');
       }
-    } catch {
-      setOutboundEmailResult({
-        message_id: 'eml_out_demo99',
-        sender_from: `${cellStatus?.vendor_name} Dispatch <dispatch@anblimo-philly.com>`,
-        subject: `Booking Confirmed: bk_philly_901 - ${cellStatus?.vendor_name}`,
-        dkim_signature: 'v=1; a=rsa-sha256; d=anblimo-philly.com; s=limo',
-        spf_record_status: 'PASS_VERIFIED',
-        status: 'DELIVERED'
-      });
+    } catch (err: any) {
+      alert(err.message || 'Network error during outbound dispatch');
     }
   };
 
@@ -329,9 +310,9 @@ export const VendorCellAndGlobalHubStudio: React.FC = () => {
         body: JSON.stringify({
           performing_vendor_id: performingVendor,
           passenger_name: affiliatePassenger,
-          passenger_phone: '+12125550199',
-          pickup_address: 'Philadelphia International Airport (PHL) Terminal A',
-          dropoff_address: 'The Ritz-Carlton Philadelphia',
+          passenger_phone: '+1 (555) 019-9100',
+          pickup_address: 'Airport FBO Terminal A',
+          dropoff_address: 'Center City Executive Plaza',
           distance_km: 18.2,
           vehicle_class: 'FIRST_CLASS'
         })
@@ -340,22 +321,12 @@ export const VendorCellAndGlobalHubStudio: React.FC = () => {
         const data = await res.json();
         setLastAffiliateRecord(data);
         fetchCellAndHubData();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.detail || 'Affiliate farm-out failed');
       }
-    } catch {
-      setLastAffiliateRecord({
-        exchange_id: 'aff_xch_demo',
-        originator_vendor_name: 'Empire Executive Chauffeurs NY',
-        performing_vendor_name: 'ANB Limo Company (Philadelphia, PA)',
-        passenger_name: affiliatePassenger,
-        fare_split: {
-          gross_fare_usd: 146.06,
-          performing_vendor_net_usd: 124.15,
-          originating_vendor_commission_usd: 14.61,
-          hub_clearing_fee_usd: 7.30
-        },
-        status: 'ACCEPTED_DISPATCHED',
-        assigned_driver_id: 'driver_anb_01'
-      });
+    } catch (err: any) {
+      alert(err.message || 'Network error during affiliate farm-out');
     } finally {
       setFarmingRide(false);
     }
@@ -871,12 +842,12 @@ export const VendorCellAndGlobalHubStudio: React.FC = () => {
                 </span>
               </div>
               <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: '#CBD5E1' }}>
-                {selectedVendor.includes('anb') ? 'Philadelphia Premier Executive Chauffeur & Airport Transport • 24/7 Hotline: +1 (800) 555-0199' : 'Private Executive Transportation & Airport Transfers • 24/7 Concierge'}
+                {cellStatus?.vendor_name ? `${cellStatus.vendor_name} • Sovereign Executive Chauffeur & Airport Transport` : 'Private Executive Transportation & Airport Transfers'}
               </p>
               <div style={{ display: 'flex', gap: '16px', marginTop: '12px', fontSize: '12px', color: '#94A3B8' }}>
-                <span>🌐 Domain: <strong style={{ color: '#F8FAFC' }}>{selectedVendor.includes('anb') ? 'anblimo-philly.com' : 'empire-limo.com'}</strong></span>
-                <span>📍 Coverage: <strong style={{ color: '#F8FAFC' }}>{selectedVendor.includes('anb') ? 'Greater Philadelphia & Tri-State' : 'Tri-State Metro Area'}</strong></span>
-                <span>💳 Rates: <strong style={{ color: '#34D399' }}>${cellStatus?.local_currency === 'JPY' ? '¥12,000' : '$75.00'} Base + ${cellStatus?.local_currency === 'JPY' ? '¥550' : '$3.25'}/km</strong></span>
+                <span>🌐 Domain: <strong style={{ color: '#F8FAFC' }}>{cellStatus?.vendor_id ? `${cellStatus.vendor_id.replace(/_/g, '-')}.limo-ops.com` : 'vendor-portal.limo-ops.com'}</strong></span>
+                <span>📍 Coverage: <strong style={{ color: '#F8FAFC' }}>{cellStatus?.city ? `${cellStatus.city}, ${cellStatus.state || cellStatus.country_code || 'US'}` : 'Regional Metro Service Area'}</strong></span>
+                <span>💳 Rates: <strong style={{ color: '#34D399' }}>{cellStatus?.local_currency || 'USD'} Base Tariff Active</strong></span>
               </div>
             </div>
 

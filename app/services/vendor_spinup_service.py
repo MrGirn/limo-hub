@@ -341,6 +341,13 @@ class VendorSpinupService:
         }
         cell.config.owner_credentials = credentials_receipt
 
+        # 6. Persist to authoritative MySQL database if available
+        if target_db is not None and hasattr(target_db, "sync_vendor_to_mysql"):
+            try:
+                target_db.sync_vendor_to_mysql(payload.vendor_id)
+            except Exception as e:
+                logger.debug(f"MySQL vendor sync deferred: {e}")
+
         logger.info(f"Successfully Spun Up Vendor Cell: {payload.vendor_id} ({payload.name}) [{payload.tier}] with Owner: {owner_email}")
         return cell.config
 
