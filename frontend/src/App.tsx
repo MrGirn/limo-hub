@@ -49,6 +49,7 @@ const MainLayout: React.FC = () => {
   const { user, role, switchPersona } = useAuth();
   const [activeView, setActiveView] = useState<PortalView>('PUBLIC_WEBSITE');
   const [publicPage, setPublicPage] = useState<PublicPage>('HOME');
+  const [pendingBookingDetails, setPendingBookingDetails] = useState<any>(null);
   const [runtimeMode, setRuntimeMode] = useState<SystemRuntimeMode | null>(null);
   
   // Active Vendor White-Label Configuration Profile
@@ -425,7 +426,10 @@ const MainLayout: React.FC = () => {
             <PublicHomePage
               branding={vendorConfig.branding}
               vendorName={vendorConfig.vendor_name}
-              onNavigateToBooking={(details) => setPublicPage('BOOKING')}
+              onNavigateToBooking={(details) => {
+                setPendingBookingDetails(details || null);
+                setPublicPage('BOOKING');
+              }}
               onNavigateToFleet={() => setPublicPage('FLEET')}
             />
           )}
@@ -433,7 +437,10 @@ const MainLayout: React.FC = () => {
           {publicPage === 'FLEET' && (
             <PublicFleetPage
               config={vendorConfig}
-              onSelectVehicle={(vClass) => setPublicPage('BOOKING')}
+              onSelectVehicle={(vClass) => {
+                setPendingBookingDetails({ vehicleClass: vClass });
+                setPublicPage('BOOKING');
+              }}
             />
           )}
 
@@ -441,7 +448,10 @@ const MainLayout: React.FC = () => {
             <PublicServicesPage
               branding={vendorConfig.branding}
               vendorName={vendorConfig.vendor_name}
-              onBookService={(svc) => setPublicPage('BOOKING')}
+              onBookService={(svc) => {
+                setPendingBookingDetails({ serviceType: svc });
+                setPublicPage('BOOKING');
+              }}
             />
           )}
 
@@ -449,7 +459,10 @@ const MainLayout: React.FC = () => {
             <PublicAboutPage
               branding={vendorConfig.branding}
               vendorName={vendorConfig.vendor_name}
-              onNavigateToBooking={() => setPublicPage('BOOKING')}
+              onNavigateToBooking={() => {
+                setPendingBookingDetails(null);
+                setPublicPage('BOOKING');
+              }}
               onNavigateToFleet={() => setPublicPage('FLEET')}
             />
           )}
@@ -458,7 +471,10 @@ const MainLayout: React.FC = () => {
             <PublicPoliciesPage
               branding={vendorConfig.branding}
               vendorName={vendorConfig.vendor_name}
-              onNavigateToBooking={() => setPublicPage('BOOKING')}
+              onNavigateToBooking={() => {
+                setPendingBookingDetails(null);
+                setPublicPage('BOOKING');
+              }}
               onNavigateToContact={() => setPublicPage('CONTACT')}
             />
           )}
@@ -467,7 +483,10 @@ const MainLayout: React.FC = () => {
             <PublicContactPage
               branding={vendorConfig.branding}
               vendorName={vendorConfig.vendor_name}
-              onNavigateToBooking={() => setPublicPage('BOOKING')}
+              onNavigateToBooking={() => {
+                setPendingBookingDetails(null);
+                setPublicPage('BOOKING');
+              }}
             />
           )}
 
@@ -483,7 +502,10 @@ const MainLayout: React.FC = () => {
                   </p>
                 </div>
                 <button
-                  onClick={() => setPublicPage('HOME')}
+                  onClick={() => {
+                    setPendingBookingDetails(null);
+                    setPublicPage('HOME');
+                  }}
                   style={{ 
                     background: '#FFFFFF', 
                     border: '1px solid #E5E8ED', 
@@ -499,7 +521,7 @@ const MainLayout: React.FC = () => {
                   ← Return to Overview
                 </button>
               </div>
-              <CustomerPortal config={vendorConfig} />
+              <CustomerPortal config={vendorConfig} initialDetails={pendingBookingDetails} isStandalonePublicSite={true} />
             </div>
           )}
         </main>

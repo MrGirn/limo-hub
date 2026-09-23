@@ -109,18 +109,21 @@ class VendorPricingAIService:
         if vc_val in ("FIRST_CLASS", "VehicleClass.FIRST_CLASS"):
             class_base = Decimal(str(round(float(base_rate) * 1.25, 2)))
             class_mile = Decimal(str(round(float(per_mile) * 1.20, 2)))
-        elif vc_val in ("BUSINESS_VAN", "VehicleClass.BUSINESS_VAN"):
+        elif vc_val in ("LUXURY_SUV", "VehicleClass.LUXURY_SUV", "EXECUTIVE_SUV"):
+            class_base = Decimal(str(round(float(base_rate) * 1.10, 2)))
+            class_mile = Decimal(str(round(float(per_mile) * 1.15, 2)))
+        elif vc_val in ("BUSINESS_VAN", "VehicleClass.BUSINESS_VAN", "SPRINTER_VAN"):
             class_base = Decimal(str(round(float(base_rate) * 1.60, 2)))
             class_mile = Decimal(str(round(float(per_mile) * 1.50, 2)))
+        elif vc_val in ("ULTRA_LUXURY", "VehicleClass.ULTRA_LUXURY", "PRESTIGE"):
+            class_base = Decimal(str(round(float(base_rate) * 1.85, 2)))
+            class_mile = Decimal(str(round(float(per_mile) * 1.75, 2)))
         elif vc_val in ("ELECTRIC_VIP", "VehicleClass.ELECTRIC_VIP"):
             class_base = Decimal(str(round(float(base_rate) * 1.15, 2)))
             class_mile = Decimal(str(round(float(per_mile) * 1.10, 2)))
-        elif vc_val in ("BUSINESS_SEDAN", "VehicleClass.BUSINESS_SEDAN"):
+        elif vc_val in ("BUSINESS_SEDAN", "VehicleClass.BUSINESS_SEDAN", "SEDAN"):
             class_base = Decimal(str(round(float(base_rate) * 0.85, 2)))
             class_mile = Decimal(str(round(float(per_mile) * 0.85, 2)))
-        elif vc_val in ("LUXURY_SUV", "VehicleClass.LUXURY_SUV"):
-            class_base = base_rate
-            class_mile = per_mile
 
         per_km_rate = Decimal(str(round(float(class_mile) / 1.60934, 2)))
 

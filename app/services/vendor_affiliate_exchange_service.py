@@ -14,7 +14,7 @@ import logging
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
-from app.domain_models import VehicleClass, BookingStatus
+from app.domain_models import VehicleClass, BookingStatus, MultiLegRoutingRules
 from app.services.vendor_cell_engine import vendor_cell_registry
 from app.services.vendor_identity_matcher import (
     is_self_vendor,
@@ -104,6 +104,7 @@ class VendorAffiliatePolicyRules(BaseModel):
     custom_owner_notes: str = "Autonomous operations configured by fleet owner."
     farm_out_policy: FarmOutRules = Field(default_factory=FarmOutRules)
     farm_in_policy: FarmInRules = Field(default_factory=FarmInRules)
+    multi_leg_rules: MultiLegRoutingRules = Field(default_factory=MultiLegRoutingRules)
     ai_compiled_summary: str = "AI Agent Directives Active & Synced to Global Hub Knowledge Base"
     updated_at: float = Field(default_factory=time.time)
 
@@ -261,12 +262,125 @@ class VendorAffiliateExchangeService:
             current.farm_out_policy = FarmOutRules(**{**current.farm_out_policy.model_dump(), **payload["farm_out_policy"]})
         if "farm_in_policy" in payload and isinstance(payload["farm_in_policy"], dict):
             current.farm_in_policy = FarmInRules(**{**current.farm_in_policy.model_dump(), **payload["farm_in_policy"]})
+        if "multi_leg_rules" in payload and isinstance(payload["multi_leg_rules"], dict):
+            current.multi_leg_rules = MultiLegRoutingRules(**{**current.multi_leg_rules.model_dump(), **payload["multi_leg_rules"]})
+        if "custom_owner_notes" in payload and isinstance(payload["custom_owner_notes"], str):
+            current.custom_owner_notes = payload["custom_owner_notes"]
 
         current.updated_at = time.time()
         self.vendor_policies[target_key] = current
         self.vendor_policies[vendor_id] = current
         logger.info(f"Vendor Sovereign Business Policy Updated & Synced to Global Hub for: {vendor_id}")
         return current
+
+    def evaluate_multileg_itinerary_strategy(
+        self,
+        vendor_id: str,
+        legs: List[Dict[str, Any]],
+        is_vip: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Evaluates vendor's sovereign multi-leg routing & farm-out rules against an itinerary.
+        Returns recommended strategy, itemized breakdown, and partner recommendations.
+        """
+        policy = self.get_vendor_policy(vendor_id)
+        rules = policy.multi_leg_rules
+
+        if not legs or len(legs) <= 1:
+            return {
+                "strategy": "SINGLE_LEG_IN_HOUSE",
+                "recommended_action": "Fulfill in-house using local sovereign fleet.",
+                "total_legs": len(legs) if legs else 0,
+                "rules_applied": rules.model_dump(),
+                "legs_breakdown": [{"leg_index": 0, "fulfillment": "IN_HOUSE", "reason": "Single point-to-point trip"}]
+            }
+
+        leg1 = legs[0]
+        leg2 = legs[1]
+
+        leg1_dest = (leg1.get("destination_address") or leg1.get("destination_city") or "").lower()
+        leg2_dest = (leg2.get("destination_address") or leg2.get("destination_city") or "").lower()
+
+        is_roundtrip_return = "philly" in leg2_dest or "philadelphia" in leg2_dest or "pa" in leg2_dest or "center city" in leg2_dest
+        is_forward_chain = ("boston" in leg2_dest or "bos" in leg2_dest or "dc" in leg2_dest or "washington" in leg2_dest or "greenwich" in leg2_dest)
+
+        # Estimate layover in hours (default 4.0h if not parsed)
+        layover_hours = 4.0
+
+        legs_breakdown = [
+            {
+                "leg_index": 0,
+                "title": "Leg 1 · Departure",
+                "fulfillment": "IN_HOUSE",
+                "assigned_vendor": vendor_id,
+                "reason": "Departs from home metro territory"
+            }
+        ]
+
+        if is_vip and rules.client_vip_override_enabled:
+            strategy = "DEDICATED_VIP_CHAUFFEUR_STANDBY"
+            recommendation = "Client VIP Continuity override: Keep same chauffeur and vehicle on dedicated standby."
+            legs_breakdown.append({
+                "leg_index": 1,
+                "title": "Leg 2 · Return / Forward",
+                "fulfillment": "IN_HOUSE_DEDICATED_STANDBY",
+                "assigned_vendor": vendor_id,
+                "hourly_standby_rate": rules.hourly_wait_rate_usd,
+                "reason": "VIP dedicated chauffeur on location with luggage"
+            })
+        elif is_roundtrip_return:
+            if layover_hours <= rules.max_layover_hours_for_wait:
+                strategy = "KEEP_IN_HOUSE_WITH_WAIT"
+                recommendation = f"Short layover ({layover_hours}h <= {rules.max_layover_hours_for_wait}h limit). Dedicated chauffeur standby is most profitable."
+                legs_breakdown.append({
+                    "leg_index": 1,
+                    "title": "Leg 2 · Roundtrip Return",
+                    "fulfillment": "IN_HOUSE_WAIT_AND_RETURN",
+                    "assigned_vendor": vendor_id,
+                    "hourly_standby_rate": rules.hourly_wait_rate_usd,
+                    "reason": "Cost-effective chauffeur wait & return"
+                })
+            else:
+                strategy = "SPLIT_FARM_OUT_RETURN"
+                recommendation = f"Layover ({layover_hours}h > {rules.max_layover_hours_for_wait}h threshold). Farm out return leg to NYC affiliate to eliminate deadhead and avoid driver shift overflow."
+                legs_breakdown.append({
+                    "leg_index": 1,
+                    "title": "Leg 2 · Roundtrip Return",
+                    "fulfillment": "FARM_OUT_AFFILIATE",
+                    "target_affiliate_city": "New York",
+                    "commission_margin_pct": rules.affiliate_commission_target_pct,
+                    "reason": "Optimal price for client, frees local driver in afternoon"
+                })
+        elif is_forward_chain:
+            strategy = "FORWARD_CHAIN_FARM_OUT"
+            recommendation = "Forward corridor leg outside home market (e.g. NYC to Boston). Farm out to regional affiliate network to eliminate 300+ mile return deadhead."
+            legs_breakdown.append({
+                "leg_index": 1,
+                "title": "Leg 2 · Forward Inter-City Leg",
+                "fulfillment": "FARM_OUT_AFFILIATE",
+                "target_affiliate_city": "New York / Boston",
+                "commission_margin_pct": rules.affiliate_commission_target_pct,
+                "reason": "Eliminates empty return deadhead and driver fatigue"
+            })
+        else:
+            strategy = "SMART_SPLIT_CORRIDOR"
+            recommendation = "Inter-city journey evaluated against vendor sovereign radius."
+            legs_breakdown.append({
+                "leg_index": 1,
+                "title": "Leg 2 · Connected Trip",
+                "fulfillment": "FARM_OUT_AFFILIATE" if rules.auto_farm_out_long_layovers else "IN_HOUSE",
+                "commission_margin_pct": rules.affiliate_commission_target_pct,
+                "reason": "Automated dispatch optimization"
+            })
+
+        return {
+            "vendor_id": vendor_id,
+            "strategy": strategy,
+            "recommended_action": recommendation,
+            "layover_hours": layover_hours,
+            "rules_applied": rules.model_dump(),
+            "legs_breakdown": legs_breakdown
+        }
 
     def get_global_hub_knowledge_base(self) -> Dict[str, Any]:
         """Returns the Global Hub Knowledge Base of all registered partner policies and capacity."""

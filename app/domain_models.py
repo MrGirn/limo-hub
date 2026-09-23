@@ -1374,3 +1374,119 @@ class Customer(BaseModel):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class MultiLegRoutingRules(BaseModel):
+    max_layover_hours_for_wait: float = 3.5  # If layover between legs <= this, keep in-house with wait fee
+    hourly_wait_rate_usd: float = 75.00  # Standby wait rate per hour
+    deadhead_rate_per_km_usd: float = 1.75  # Return deadhead calculation multiplier
+    max_driver_shift_hours: float = 12.0  # Max shift before requiring farm-out or fresh driver
+    max_out_of_market_radius_km: float = 160.0  # Max distance from base depot for in-house execution
+    inter_city_corridor_policy: str = "SMART_SPLIT"  # SMART_SPLIT, DEDICATED_WAIT_ONLY, AUTO_FARM_FORWARD
+    auto_farm_out_long_layovers: bool = True  # Automatically offer/assign affiliate when layover > threshold
+    affiliate_commission_target_pct: float = 18.0  # Commission retained on farmed-out legs
+    require_continuous_charter_for_local_stops: bool = True  # Enforce TLC/PPA cabotage compliance
+    client_vip_override_enabled: bool = True  # Allow VIP client to choose Dedicated Chauffeur override
+    overnight_hotel_allowance_usd: float = 250.0  # Per-night hotel allowance for multi-day roadshows
+    chauffeur_meal_per_diem_usd: float = 75.0  # Daily meal per-diem for multi-day roadshows
+
+
+class QuickQuoteRequestDTO(BaseModel):
+    vendor_id: Optional[str] = "vendor_anb_philly"
+    service_type: ServiceType = ServiceType.POINT_TO_POINT
+    vehicle_class: VehicleClass = VehicleClass.FIRST_CLASS
+    pickup_address: str
+    dropoff_address: Optional[str] = None
+    flight_number: Optional[str] = None
+    hourly_hours: Optional[int] = None
+    meet_and_greet: bool = False
+    multi_leg_stops: Optional[List[Dict[str, Any]]] = None
+    manual_discount_usd: float = 0.0
+    custom_surcharge_usd: float = 0.0
+
+
+class QuickQuoteResponseDTO(BaseModel):
+    base_fare_usd: float
+    distance_km: float
+    distance_fare_usd: float
+    airport_fee_usd: float
+    layover_standby_fee_usd: float
+    tolls_and_fees_usd: float
+    tax_amount_usd: float
+    discount_usd: float
+    surcharge_usd: float
+    total_amount_usd: float
+    currency: str = "USD"
+    estimated_duration_minutes: int = 45
+    multi_leg_strategy: Optional[str] = None
+    strategy_recommendation: Optional[str] = None
+
+
+class ManualPhoneBookingRequestDTO(BaseModel):
+    vendor_id: str = "vendor_anb_philly"
+    dispatcher_user_id: Optional[str] = "disp-lead-01"
+    
+    # Caller & Passenger Details
+    caller_name: str
+    caller_phone: str
+    caller_email: Optional[str] = None
+    is_vip: bool = False
+    corporate_account_name: Optional[str] = None
+    corporate_po_number: Optional[str] = None
+    passenger_name: Optional[str] = None  # If different from caller
+    passenger_phone: Optional[str] = None
+    passenger_count: int = 1
+    luggage_count: int = 1
+    
+    # Trip & Itinerary
+    service_type: ServiceType = ServiceType.POINT_TO_POINT
+    vehicle_class: VehicleClass = VehicleClass.FIRST_CLASS
+    pickup_address: str
+    dropoff_address: Optional[str] = None
+    pickup_time_utc: datetime
+    flight_number: Optional[str] = None
+    airline_name: Optional[str] = None
+    train_number: Optional[str] = None
+    hourly_hours: Optional[int] = None
+    meet_and_greet_inside: bool = False
+    child_car_seat_requested: bool = False
+    special_instructions: Optional[str] = None
+    
+    # Multi-Leg Stops (if applicable)
+    multi_leg_stops: Optional[List[Dict[str, Any]]] = None
+    
+    # Financial Overrides
+    manual_discount_usd: float = 0.0
+    custom_surcharge_usd: float = 0.0
+    
+    # Payment & Billing Method
+    payment_method: str = "SMS_PAYMENT_LINK"  # SMS_PAYMENT_LINK, DIRECT_CARD_PREAUTH, CORPORATE_INVOICE, CASH_ON_BOARD
+    card_number_masked: Optional[str] = None
+    card_token: Optional[str] = None
+    
+    # Dispatch & Fulfillment Action
+    dispatch_action: str = "AUTO_DISPATCH"  # AUTO_DISPATCH, ASSIGN_SPECIFIC_DRIVER, QUEUE_24H_DISPATCH, FARM_OUT_AFFILIATE
+    assigned_driver_id: Optional[str] = None
+    assigned_vehicle_id: Optional[str] = None
+    target_affiliate_vendor_id: Optional[str] = None
+
+
+class PhoneBookingResultDTO(BaseModel):
+    success: bool
+    booking_id: str
+    trip_id: str
+    status: str
+    total_amount_usd: float
+    payment_method: str
+    payment_status: str
+    sms_notification_sent: bool
+    email_notification_sent: bool = False
+    customer_email: Optional[str] = None
+    email_preview_url: Optional[str] = None
+    payment_link_url: Optional[str] = None
+    assigned_driver_name: Optional[str] = None
+    assigned_vehicle_details: Optional[str] = None
+    calendar_invite_url: str
+    message: str
+
+
+
+

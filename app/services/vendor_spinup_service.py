@@ -312,6 +312,17 @@ class VendorSpinupService:
                     hourly_minimum_hours=getattr(payload, "hourly_minimum_hours", 2) or 2,
                     tax_rate=tax_r,
                     currency=payload.currency
+                ),
+                VehicleClass.ULTRA_LUXURY.value: VendorPricingRule(
+                    vendor_id=payload.vendor_id,
+                    vehicle_class=VehicleClass.ULTRA_LUXURY,
+                    base_rate_net=base_rate * Decimal("1.85"),
+                    per_mile_rate_net=per_mile * Decimal("1.75"),
+                    per_km_rate_net=per_km * Decimal("1.75"),
+                    hourly_rate_net=Decimal(str(round(float(base_rate * Decimal("1.85")) + (float(per_mile * Decimal("1.75")) * 15.0), 2))),
+                    hourly_minimum_hours=getattr(payload, "hourly_minimum_hours", 2) or 2,
+                    tax_rate=tax_r,
+                    currency=payload.currency
                 )
             }
             target_db.vendor_pricing_rules[payload.vendor_id] = rules_dict

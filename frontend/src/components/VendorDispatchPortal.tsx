@@ -12,6 +12,7 @@ import {
   fetchPending24hDispatchAlerts, assign24hChauffeur
 } from '../api';
 import { SourcingConciergeDesk } from './SourcingConciergeDesk';
+import { DispatcherPhoneBookingModal } from './DispatcherPhoneBookingModal';
 
 export const VendorDispatchPortal: React.FC = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -23,6 +24,7 @@ export const VendorDispatchPortal: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [killSwitchActive, setKillSwitchActive] = useState(false);
   const [selectedVendorId, setSelectedVendorId] = useState<string>('vendor-ny-executive');
+  const [showPhoneBookingModal, setShowPhoneBookingModal] = useState(false);
 
   const [pending24hAlerts, setPending24hAlerts] = useState<Dispatch24hAlert[]>([]);
   const [assigning24hTripId, setAssigning24hTripId] = useState<string | null>(null);
@@ -213,6 +215,26 @@ export const VendorDispatchPortal: React.FC = () => {
               )}
             </select>
           </div>
+
+          <button 
+            onClick={() => setShowPhoneBookingModal(true)}
+            style={{
+              fontSize: '13px',
+              padding: '10px 18px',
+              backgroundColor: '#10B981',
+              color: '#FFFFFF',
+              border: 'none',
+              borderRadius: '8px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 2px 4px rgba(16, 185, 129, 0.25)'
+            }}
+          >
+            <PhoneCall size={14} /> 📞 Inbound Phone Booking Desk
+          </button>
 
           <button 
             className="btn-primary"
@@ -1334,6 +1356,19 @@ export const VendorDispatchPortal: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* DISPATCHER INBOUND PHONE BOOKING DESK MODAL */}
+      <DispatcherPhoneBookingModal
+        isOpen={showPhoneBookingModal}
+        onClose={() => setShowPhoneBookingModal(false)}
+        vendorId={selectedVendorId}
+        vendorName={activeVendor?.name || 'Sovereign Fleet'}
+        availableDrivers={vendorDrivers}
+        availableVehicles={vendorVehicles}
+        onBookingCreated={async (bkgId) => {
+          await loadData();
+        }}
+      />
     </div>
   );
 };

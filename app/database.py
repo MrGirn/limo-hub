@@ -524,12 +524,8 @@ class LimoDatabase:
             country_code="GB",
             default_currency="GBP"
         )
-        # 2. Dynamic Declarative Loading of all Vendor Cells from YAML specs
-        try:
-            from app.services.vendor_spinup_service import vendor_spinup_service
-            vendor_spinup_service.load_all_declarative_definitions(db_instance=self)
-        except Exception as e:
-            print(f"Vendor declarative spinup deferred or completed: {e}")
+        # 2. Dynamic Declarative Loading deferred until db singleton instantiation
+        pass
 
         # 3. FlightAware & Transit Live Radar Stream
         self.transit_radar_events = [
@@ -665,4 +661,11 @@ class LimoDatabase:
 
 # Global singleton database instance
 db = LimoDatabase()
+
+try:
+    from app.services.vendor_spinup_service import vendor_spinup_service
+    vendor_spinup_service.load_all_declarative_definitions(db_instance=db)
+except Exception as e:
+    pass
+
 

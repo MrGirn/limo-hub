@@ -409,12 +409,14 @@ Global Chauffeur Dispatch & Affiliate Clearinghouse
         from app.services.vendor_affiliate_exchange_service import vendor_affiliate_exchange_service
         vendor_affiliate_exchange_service.directory.append(provisional_partner)
 
-        # Passenger Price Calculation: Net Payout + 18% margin + 8.875% tax + 20% chauffeur gratuity
+        # Passenger Price Calculation: Net Payout + 18% margin + dynamic regional tax + 20% chauffeur gratuity
+        from app.services.pricing_service import get_regional_tax_and_surcharges
+        reg_tax = get_regional_tax_and_surcharges(rfp.pickup_address or rfp.target_city).vat_or_sales_tax_rate
         net_fare = submission.quoted_payout_usd
         margin = (net_fare * Decimal("0.18")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         subtotal_fare = net_fare + margin
         gratuity = (subtotal_fare * Decimal("0.20")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        tax = (subtotal_fare * Decimal("0.08875")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        tax = (subtotal_fare * reg_tax).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         passenger_total = subtotal_fare + gratuity + tax
 
         logger.info(

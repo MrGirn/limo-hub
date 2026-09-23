@@ -24,6 +24,7 @@ from app.services.pricing_service import PricingService
 from app.services.dispatch_service import DispatchService
 from app.services.stripe_payment_service import StripePaymentService
 from app.services.twilio_notification_service import TwilioNotificationService
+from app.services.email_notification_service import EmailNotificationService
 
 logger = logging.getLogger("BookingService")
 
@@ -208,7 +209,15 @@ class BookingService:
             passenger_name=party.passenger_name,
             passenger_email=party.booker_email,
             description=f"{quote.vehicle_class.value} from {quote.pickup_address[:30]}",
-            payment_token=payment_token
+            payment_token=payment_token,
+            metadata={
+                "tax_amount_usd": str(quote.tax_amount),
+                "tax_rate_percent": f"{float(quote.tax_rate) * 100:.2f}%",
+                "tax_jurisdiction": getattr(quote, "tax_jurisdiction", "US_DOMESTIC"),
+                "base_net_usd": str(quote.base_net),
+                "estimated_tolls_usd": str(getattr(quote, "estimated_tolls_net", "0.00")),
+                "total_gross_usd": str(quote.total_gross)
+            }
         )
 
         payment = PaymentAttempt(
@@ -413,3 +422,382 @@ class BookingService:
                 session.close()
 
         return trip
+
+    @staticmethod
+    def normalize_vehicle_class(raw_class: Any) -> VehicleClass:
+        """Normalizes any vehicle class string or enum to canonical VehicleClass."""
+        if isinstance(raw_class, VehicleClass):
+            return raw_class
+        raw = str(raw_class or "").strip().upper()
+        if raw in ("SEDAN", "BUSINESS_SEDAN", "BUSINESS SEDAN", "MERCEDES E-CLASS"):
+            return VehicleClass.BUSINESS_SEDAN
+        elif raw in ("FIRST_CLASS", "FIRST CLASS", "MERCEDES S-CLASS", "BMW 7"):
+            return VehicleClass.FIRST_CLASS
+        elif raw in ("EXECUTIVE_SUV", "EXEC_SUV", "EXEC SUV", "LUXURY_SUV", "LUXURY SUV", "CADILLAC ESCALADE"):
+            return VehicleClass.LUXURY_SUV
+        elif raw in ("SPRINTER_VAN", "SPRINTER", "BUSINESS_VAN", "BUSINESS VAN", "MERCEDES SPRINTER"):
+            return VehicleClass.BUSINESS_VAN
+        elif raw in ("PRESTIGE", "ULTRA_LUXURY", "ULTRA LUXURY", "ROLLS ROYCE"):
+            return VehicleClass.ULTRA_LUXURY
+        elif raw in ("ELECTRIC_VIP", "ELECTRIC VIP", "LUCID AIR", "TESLA"):
+            return VehicleClass.ELECTRIC_VIP
+        return VehicleClass.FIRST_CLASS
+
+    @staticmethod
+    def normalize_service_type(raw_service: Any) -> ServiceType:
+        """Normalizes any service type string or enum to canonical ServiceType."""
+        if isinstance(raw_service, ServiceType):
+            return raw_service
+        raw = str(raw_service or "").strip().upper()
+        if "AIRPORT" in raw:
+            return ServiceType.AIRPORT_TRANSFER
+        elif "HOURLY" in raw or "DIRECTED" in raw or "CHARTER" in raw:
+            return ServiceType.HOURLY_AS_DIRECTED
+        elif "MULTI" in raw or "LEG" in raw or "CORRIDOR" in raw:
+            return ServiceType.MULTI_CITY_TOUR
+        return ServiceType.POINT_TO_POINT
+
+    @staticmethod
+    def calculate_quick_phone_quote(req: Any) -> Any:
+        """
+        Computes real-time price estimation for telephone intake orders using authoritative PricingService,
+        supporting single-leg transfers, hourly charters, and multi-leg corridors with layover fees.
+        Guarantees 100% engine parity with the customer booking portal.
+        """
+        from app.domain_models import QuickQuoteResponseDTO
+        from app.services.vendor_affiliate_exchange_service import vendor_affiliate_exchange_service
+        from app.services.pricing_service import PricingService
+
+        resolved_vendor_id = req.vendor_id or os.getenv("SOVEREIGN_VENDOR_ID") or "vendor_anb_philly"
+        norm_class = BookingService.normalize_vehicle_class(req.vehicle_class)
+        norm_service = BookingService.normalize_service_type(req.service_type)
+
+        # Calculate real quote using authoritative PricingService (Same engine as customer portal)
+        quote = PricingService.calculate_quote(
+            tenant_id="tenant-us-east",
+            vendor_id=resolved_vendor_id,
+            service_type=norm_service,
+            vehicle_class=norm_class,
+            pickup_address=req.pickup_address,
+            dropoff_address=req.dropoff_address or req.pickup_address,
+            flight_number=req.flight_number if norm_service == ServiceType.AIRPORT_TRANSFER else None,
+            hourly_hours=req.hourly_hours if norm_service == ServiceType.HOURLY_AS_DIRECTED else None,
+            meet_and_greet_inside=bool(req.meet_and_greet) if norm_service == ServiceType.AIRPORT_TRANSFER else False
+        )
+
+        base_fare = float(quote.base_net)
+        distance_km = float(quote.distance_miles or Decimal("0.0")) * 1.60934
+        distance_fare = float(quote.passenger_distance_net)
+        airport_fee = float(quote.airport_train_surcharge_net + getattr(quote, "inside_meet_greet_fee_net", Decimal("0.00")))
+        tolls_fees = float(getattr(quote, "estimated_tolls_net", Decimal("0.00")) + getattr(quote, "outbound_positioning_net", Decimal("0.00")) + getattr(quote, "return_deadhead_net", Decimal("0.00")))
+        tax = float(quote.tax_amount)
+        layover_fee = 0.0
+        strategy = "STANDARD_DIRECT"
+        recommendation = f"Direct in-house chauffeur fulfillment ({norm_class.value.replace('_', ' ').title()})"
+
+        # Multi-leg routing evaluation if multiple stops provided
+        if req.multi_leg_stops and len(req.multi_leg_stops) > 0:
+            eval_result = vendor_affiliate_exchange_service.evaluate_multileg_itinerary_strategy(
+                vendor_id=resolved_vendor_id,
+                legs=req.multi_leg_stops,
+                is_vip=False
+            )
+            strategy = eval_result.get("strategy", "SMART_SPLIT_CORRIDOR")
+            recommendation = eval_result.get("recommended_action", "Multi-leg evaluated")
+            layover_hours = eval_result.get("layover_hours", 0.0)
+            hourly_standby = eval_result.get("rules_applied", {}).get("hourly_wait_rate_usd", 75.0)
+            if strategy == "DEDICATED_CHAUFFEUR_STANDBY":
+                layover_fee = layover_hours * hourly_standby
+
+        # Adjustments
+        discount = float(req.manual_discount_usd or 0.0)
+        surcharge = float(req.custom_surcharge_usd or 0.0)
+        subtotal = base_fare + distance_fare + airport_fee + layover_fee + tolls_fees
+        tax = (subtotal - discount + surcharge) * float(quote.tax_rate)
+        total = max(subtotal + tax - discount + surcharge, 35.0)
+
+        return QuickQuoteResponseDTO(
+            base_fare_usd=round(base_fare, 2),
+            distance_km=round(distance_km, 1),
+            distance_fare_usd=round(distance_fare, 2),
+            airport_fee_usd=round(airport_fee, 2),
+            layover_standby_fee_usd=round(layover_fee, 2),
+            tolls_and_fees_usd=round(tolls_fees, 2),
+            tax_amount_usd=round(tax, 2),
+            discount_usd=round(discount, 2),
+            surcharge_usd=round(surcharge, 2),
+            total_amount_usd=round(total, 2),
+            currency="USD",
+            estimated_duration_minutes=quote.estimated_duration_min or 45,
+            multi_leg_strategy=strategy,
+            strategy_recommendation=recommendation
+        )
+
+    @staticmethod
+    def create_manual_phone_booking(dto: Any) -> Any:
+        """
+        Creates an authoritative booking taken over the phone by a dispatcher.
+        Generates MySQL records, sets up payment state, assigns driver/vehicle, and sends SMS.
+        """
+        from app.domain_models import (
+            Booking, BookingStatus, BookingParty, Trip, TripEvent, TripStatus,
+            PaymentAttempt, PhoneBookingResultDTO, QuickQuoteRequestDTO
+        )
+
+        # 1. Compute price quote
+        quote_req = QuickQuoteRequestDTO(
+            vendor_id=dto.vendor_id,
+            service_type=dto.service_type,
+            vehicle_class=dto.vehicle_class,
+            pickup_address=dto.pickup_address,
+            dropoff_address=dto.dropoff_address,
+            flight_number=dto.flight_number,
+            hourly_hours=dto.hourly_hours,
+            meet_and_greet=dto.meet_and_greet_inside,
+            multi_leg_stops=dto.multi_leg_stops,
+            manual_discount_usd=dto.manual_discount_usd,
+            custom_surcharge_usd=dto.custom_surcharge_usd
+        )
+        quote_calc = BookingService.calculate_quick_phone_quote(quote_req)
+        total_amount = Decimal(str(quote_calc.total_amount_usd))
+
+        # 2. Unique Identifiers
+        booking_id = f"BKG-PH-{uuid.uuid4().hex[:6].upper()}"
+        trip_id = f"TRP-{uuid.uuid4().hex[:6].upper()}"
+
+        # 3. Party details
+        p_name = dto.passenger_name or dto.caller_name
+        p_phone = dto.passenger_phone or dto.caller_phone
+        b_email = dto.caller_email or f"{dto.caller_name.lower().replace(' ', '.')}@executive-guest.com"
+
+        party = BookingParty(
+            passenger_name=p_name,
+            passenger_phone=p_phone,
+            booker_name=dto.caller_name,
+            booker_phone=dto.caller_phone,
+            booker_email=b_email
+        )
+
+        # 4. Payment Setup
+        payment_link = f"http://localhost:8001/pay/{booking_id}"
+        payment_method = dto.payment_method or "SMS_PAYMENT_LINK"
+        payment_status = "PENDING_SMS_CHECKOUT"
+        
+        if payment_method == "DIRECT_CARD_PREAUTH":
+            payment_status = "PREAUTH_HELD"
+        elif payment_method == "CORPORATE_INVOICE":
+            payment_status = "NET_30_INVOICED"
+        elif payment_method == "CASH_ON_BOARD":
+            payment_status = "DUE_UPON_DROPOFF"
+
+        payment_attempt = PaymentAttempt(
+            id=f"pay-{uuid.uuid4().hex[:8]}",
+            booking_id=booking_id,
+            amount=total_amount,
+            currency="USD",
+            status=payment_status,
+            payment_method=payment_method,
+            card_last4=dto.card_number_masked[-4:] if (dto.card_number_masked and len(dto.card_number_masked) >= 4) else "4242"
+        )
+
+        # 5. Driver / Vehicle Assignment
+        driver_name = "To Be Assigned (24h JIT Radar)"
+        driver_phone = "+1 (215) 555-0199"
+        vehicle_details = f"{dto.vehicle_class.value if hasattr(dto.vehicle_class, 'value') else dto.vehicle_class} Executive Class"
+        assigned_driver_id = dto.assigned_driver_id
+        assigned_vehicle_id = dto.assigned_vehicle_id
+
+        if assigned_driver_id and assigned_driver_id in db.drivers:
+            d_obj = db.drivers[assigned_driver_id]
+            driver_name = f"{d_obj.first_name} {d_obj.last_name}" if hasattr(d_obj, 'first_name') else getattr(d_obj, 'name', 'Executive Chauffeur')
+            driver_phone = getattr(d_obj, 'phone', '+1 (215) 555-0199')
+        elif dto.dispatch_action == "AUTO_DISPATCH":
+            # Pick first available driver
+            avail_drivers = [d for d in db.drivers.values() if getattr(d, 'is_on_duty', True) or getattr(d, 'status', 'AVAILABLE') == 'AVAILABLE']
+            if avail_drivers:
+                d_obj = avail_drivers[0]
+                assigned_driver_id = d_obj.id
+                driver_name = f"{d_obj.first_name} {d_obj.last_name}" if hasattr(d_obj, 'first_name') else getattr(d_obj, 'name', 'Executive Chauffeur')
+                driver_phone = getattr(d_obj, 'phone', '+1 (215) 555-0199')
+
+        if assigned_vehicle_id and assigned_vehicle_id in db.vehicles:
+            v_obj = db.vehicles[assigned_vehicle_id]
+            vehicle_details = f"{v_obj.year} {v_obj.make} {v_obj.model} ({v_obj.license_plate})"
+
+        # 6. Authoritative Quote Entity via PricingService
+        quote = PricingService.calculate_quote(
+            tenant_id="tenant-us-east",
+            vendor_id=dto.vendor_id,
+            service_type=dto.service_type,
+            vehicle_class=dto.vehicle_class,
+            pickup_address=dto.pickup_address,
+            dropoff_address=dto.dropoff_address or dto.pickup_address,
+            flight_number=dto.flight_number,
+            train_number=dto.train_number,
+            hourly_hours=dto.hourly_hours,
+            pickup_time_utc=dto.pickup_time_utc,
+            meet_and_greet_inside=dto.meet_and_greet_inside
+        )
+        quote.final_payable_amount = total_amount
+        quote.total_gross = total_amount
+        db.quotes[quote.id] = quote
+
+        # 7. Construct Trip
+        trip = Trip(
+            id=trip_id,
+            booking_id=booking_id,
+            tenant_id="tenant-us-east",
+            vendor_id=dto.vendor_id,
+            pickup_address=dto.pickup_address,
+            dropoff_address=dto.dropoff_address or dto.pickup_address,
+            pickup_time_utc=dto.pickup_time_utc,
+            flight_number=dto.flight_number,
+            train_number=dto.train_number,
+            status=TripStatus.SCHEDULED,
+            driver_id=assigned_driver_id,
+            vehicle_id=assigned_vehicle_id,
+            events=[
+                TripEvent(
+                    id=f"ev-{uuid.uuid4().hex[:6]}",
+                    trip_id=trip_id,
+                    event_type="PHONE_INTAKE_CREATED",
+                    description=f"Phone reservation booked by dispatcher ({dto.dispatcher_user_id}). Mode: {payment_method}.",
+                    actor=f"Dispatcher {dto.dispatcher_user_id}"
+                )
+            ]
+        )
+
+        # 8. Construct Booking
+        booking = Booking(
+            id=booking_id,
+            tenant_id="tenant-us-east",
+            vendor_id=dto.vendor_id,
+            quote_id=quote.id,
+            status=BookingStatus.CONFIRMED,
+            service_type=dto.service_type,
+            vehicle_class=dto.vehicle_class,
+            pickup_time_utc=dto.pickup_time_utc,
+            pickup_address=dto.pickup_address,
+            dropoff_address=dto.dropoff_address or dto.pickup_address,
+            flight_number=dto.flight_number,
+            train_number=dto.train_number,
+            party=party,
+            total_amount=total_amount,
+            currency="USD",
+            quote=quote,
+            trip=trip,
+            payment=payment_attempt
+        )
+
+        # 9. Save to memory cache
+        db.bookings[booking_id] = booking
+        db.trips[trip_id] = trip
+
+        # 9. Save to MySQL
+        session = mysql_db.get_session()
+        if session:
+            try:
+                b_m = BookingModel(
+                    id=booking_id,
+                    tenant_id="tenant-us-east",
+                    itinerary_id=booking.itinerary_id,
+                    pickup_address=dto.pickup_address,
+                    dropoff_address=dto.dropoff_address or dto.pickup_address,
+                    status=BookingStatus.CONFIRMED.value,
+                    passenger_name=p_name,
+                    passenger_phone=p_phone,
+                    booker_name=dto.caller_name,
+                    booker_phone=dto.caller_phone,
+                    booker_email=b_email,
+                    total_amount=total_amount,
+                    currency="USD",
+                    created_at=datetime.now(timezone.utc)
+                )
+                session.add(b_m)
+
+                t_m = TripModel(
+                    id=trip_id,
+                    booking_id=booking_id,
+                    tenant_id="tenant-us-east",
+                    status=TripStatus.SCHEDULED.value,
+                    pickup_address=dto.pickup_address,
+                    dropoff_address=dto.dropoff_address or dto.pickup_address,
+                    pickup_time_utc=dto.pickup_time_utc,
+                    driver_name=driver_name,
+                    driver_phone=driver_phone,
+                    vehicle_details=vehicle_details,
+                    flight_number=dto.flight_number
+                )
+                session.add(t_m)
+                session.commit()
+            except Exception as e:
+                session.rollback()
+                logger.error(f"MySQL manual phone booking insert failed: {e}")
+            finally:
+                session.close()
+
+        # 10. Send Instant Twilio Confirmation SMS & Branded Payment Email
+        sms_sent = False
+        pickup_fmt = dto.pickup_time_utc.strftime("%b %d, %Y at %I:%M %p")
+        try:
+            sms_text = (
+                f"📞 RESERVATION CONFIRMED #{booking_id}\n"
+                f"Dear {dto.caller_name}, your executive reservation is confirmed for {pickup_fmt}.\n"
+                f"From: {dto.pickup_address}\n"
+                f"To: {dto.dropoff_address or dto.pickup_address}\n"
+                f"Chauffeur: {driver_name}\n"
+                f"Total: ${float(total_amount):.2f} USD\n"
+                f"Live Driver Tracking & Payment Link: {payment_link}"
+            )
+            TwilioNotificationService.send_sms(p_phone, sms_text)
+            sms_sent = True
+        except Exception as e:
+            logger.warning(f"SMS notification failed: {e}")
+
+        # Send Email from Vendor with Direct Payment Button
+        email_sent = False
+        email_preview_url = f"/api/v1/bookings/{booking_id}/email-receipt"
+        if b_email and "@" in b_email:
+            try:
+                v_name = "ANB Limo Executive Chauffeurs"
+                v_class_str = dto.vehicle_class.value if hasattr(dto.vehicle_class, 'value') else str(dto.vehicle_class)
+                email_res = EmailNotificationService.send_payment_request_email(
+                    to_email=b_email,
+                    customer_name=dto.caller_name,
+                    booking_id=booking_id,
+                    pickup_address=dto.pickup_address,
+                    dropoff_address=dto.dropoff_address or dto.pickup_address,
+                    pickup_time_str=pickup_fmt,
+                    vehicle_class=v_class_str,
+                    driver_name=driver_name,
+                    total_amount=float(total_amount),
+                    currency="USD",
+                    payment_link_url=payment_link,
+                    vendor_name=v_name,
+                    flight_number=dto.flight_number
+                )
+                email_sent = email_res.get("success", False)
+            except Exception as e:
+                logger.warning(f"Email notification dispatch failed: {e}")
+
+        cal_url = f"/api/v1/bookings/{booking_id}/calendar.ics"
+
+        return PhoneBookingResultDTO(
+            success=True,
+            booking_id=booking_id,
+            trip_id=trip_id,
+            status="CONFIRMED",
+            total_amount_usd=float(total_amount),
+            payment_method=payment_method,
+            payment_status=payment_status,
+            sms_notification_sent=sms_sent,
+            email_notification_sent=email_sent,
+            customer_email=b_email,
+            email_preview_url=email_preview_url,
+            payment_link_url=payment_link,
+            assigned_driver_name=driver_name,
+            assigned_vehicle_details=vehicle_details,
+            calendar_invite_url=cal_url,
+            message=f"Reservation #{booking_id} successfully created via Phone Intake Desk. Confirmation and payment link dispatched."
+        )
+

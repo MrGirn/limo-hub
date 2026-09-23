@@ -35,7 +35,7 @@ def get_regional_tax_and_surcharges(pickup_address: str, currency: str = "USD") 
     lower = pickup_address.lower()
     curr_upper = currency.upper()
     
-    # 1. Physical location match
+    # 1. Global Jurisdictions
     if "london" in lower or "heathrow" in lower or "lhr" in lower or "gatwick" in lower or "uk" in lower or "united kingdom" in lower:
         return db.regional_tax_rules.get("UK_LON") or RegionalTaxRule(
             jurisdiction_code="UK_LON", country="United Kingdom", city_or_region="London",
@@ -56,15 +56,49 @@ def get_regional_tax_and_surcharges(pickup_address: str, currency: str = "USD") 
             jurisdiction_code="AE_DXB", country="UAE", city_or_region="Dubai",
             vat_or_sales_tax_rate=Decimal("0.05"), airport_access_fee=Decimal("25.00"), congestion_charge=Decimal("0.00"), currency="AED"
         )
-    elif "philadelphia" in lower or "phl" in lower or " pa" in lower or "pennsylvania" in lower or "wilmington" in lower or " delaware" in lower or " de" in lower:
+    
+    # 2. US State & Municipal Jurisdictions (Dynamic Tax Resolution)
+    # Philadelphia County: 6% PA State + 2% Local = 8.00%
+    elif "philadelphia" in lower or "phl" in lower or "center city" in lower:
         return RegionalTaxRule(
-            jurisdiction_code="US_PA_PHL", country="United States", city_or_region="Philadelphia/Delaware Valley",
+            jurisdiction_code="US_PA_PHL", country="United States", city_or_region="Philadelphia (City & County)",
             vat_or_sales_tax_rate=Decimal("0.0800"), airport_access_fee=Decimal("15.00"), congestion_charge=Decimal("0.00"), currency="USD"
         )
-    elif "new york" in lower or " ny" in lower or "jfk" in lower or "lga" in lower or "ewr" in lower or "manhattan" in lower:
+    # Pennsylvania State (Outside Philadelphia, e.g. Broomall, Delaware County, King of Prussia): 6.00%
+    elif "broomall" in lower or " delaware county" in lower or "montgomery" in lower or "bucks" in lower or "chester" in lower or " pa" in lower or "pennsylvania" in lower:
+        return RegionalTaxRule(
+            jurisdiction_code="US_PA_STATE", country="United States", city_or_region="Pennsylvania (General State)",
+            vat_or_sales_tax_rate=Decimal("0.0600"), airport_access_fee=Decimal("0.00"), congestion_charge=Decimal("0.00"), currency="USD"
+        )
+    # Delaware (Tax-Free State): 0.00%
+    elif "wilmington" in lower or " delaware" in lower or " de" in lower or "new castle" in lower:
+        return RegionalTaxRule(
+            jurisdiction_code="US_DE", country="United States", city_or_region="Delaware (Tax-Free)",
+            vat_or_sales_tax_rate=Decimal("0.0000"), airport_access_fee=Decimal("0.00"), congestion_charge=Decimal("0.00"), currency="USD"
+        )
+    # New York City & State: 8.875% (4% NYS + 4.5% NYC + 0.375% MCTD)
+    elif "new york" in lower or " ny" in lower or "jfk" in lower or "lga" in lower or "manhattan" in lower or "brooklyn" in lower or "queens" in lower:
         return db.regional_tax_rules.get("US_NY") or RegionalTaxRule(
-            jurisdiction_code="US_NY", country="United States", city_or_region="New York",
+            jurisdiction_code="US_NY", country="United States", city_or_region="New York (NYC / Metro)",
             vat_or_sales_tax_rate=Decimal("0.08875"), airport_access_fee=Decimal("18.00"), congestion_charge=Decimal("0.00"), currency="USD"
+        )
+    # New Jersey: 6.625%
+    elif "new jersey" in lower or " nj" in lower or "ewr" in lower or "newark" in lower or "jersey city" in lower or "hoboken" in lower:
+        return RegionalTaxRule(
+            jurisdiction_code="US_NJ", country="United States", city_or_region="New Jersey",
+            vat_or_sales_tax_rate=Decimal("0.06625"), airport_access_fee=Decimal("15.00"), congestion_charge=Decimal("0.00"), currency="USD"
+        )
+    # Massachusetts / Boston: 6.25%
+    elif "boston" in lower or "massachusetts" in lower or " ma" in lower or "bos" in lower:
+        return RegionalTaxRule(
+            jurisdiction_code="US_MA_BOS", country="United States", city_or_region="Massachusetts (Boston Metro)",
+            vat_or_sales_tax_rate=Decimal("0.0625"), airport_access_fee=Decimal("15.00"), congestion_charge=Decimal("0.00"), currency="USD"
+        )
+    # Florida / Miami: 7.00%
+    elif "miami" in lower or "florida" in lower or " fl" in lower or "mia" in lower or "fll" in lower:
+        return RegionalTaxRule(
+            jurisdiction_code="US_FL_MIA", country="United States", city_or_region="Florida (Miami-Dade)",
+            vat_or_sales_tax_rate=Decimal("0.0700"), airport_access_fee=Decimal("12.00"), congestion_charge=Decimal("0.00"), currency="USD"
         )
     elif curr_upper == "GBP":
         return db.regional_tax_rules.get("UK_LON") or RegionalTaxRule(
@@ -84,8 +118,9 @@ def get_regional_tax_and_surcharges(pickup_address: str, currency: str = "USD") 
     else:
         return RegionalTaxRule(
             jurisdiction_code="US_DOMESTIC", country="United States", city_or_region="Domestic Corridors",
-            vat_or_sales_tax_rate=Decimal("0.0800"), airport_access_fee=Decimal("15.00"), congestion_charge=Decimal("0.00"), currency="USD"
+            vat_or_sales_tax_rate=Decimal("0.0600"), airport_access_fee=Decimal("0.00"), congestion_charge=Decimal("0.00"), currency="USD"
         )
+
 
 
 def get_fx_snapshot(target_currency: str, base_currency: str = "USD") -> FXRateSnapshot:
@@ -99,62 +134,7 @@ def get_fx_snapshot(target_currency: str, base_currency: str = "USD") -> FXRateS
     )
 
 
-# US Vehicle Class Rate Multipliers and Tariffs (in USD)
-US_CLASS_TARIFFS = {
-    VehicleClass.LUXURY_SUV: {
-        "title": "Luxury Executive SUV (Cadillac Escalade ESV, Lincoln Navigator)",
-        "base_fee": Decimal("110.00"),
-        "per_mile_rate": Decimal("4.25"),
-        "per_hour_rate": Decimal("145.00"),
-        "wait_per_min": Decimal("1.75"),
-        "min_fare": Decimal("135.00"),
-        "deadhead_rate_per_mile": Decimal("1.75")
-    },
-    VehicleClass.FIRST_CLASS: {
-        "title": "First Class Sedan (Mercedes-Benz S 580, BMW 760i)",
-        "base_fee": Decimal("125.00"),
-        "per_mile_rate": Decimal("4.50"),
-        "per_hour_rate": Decimal("165.00"),
-        "wait_per_min": Decimal("1.90"),
-        "min_fare": Decimal("150.00"),
-        "deadhead_rate_per_mile": Decimal("1.85")
-    },
-    VehicleClass.BUSINESS_VAN: {
-        "title": "Executive Van VIP (Mercedes-Benz Sprinter 3500)",
-        "base_fee": Decimal("150.00"),
-        "per_mile_rate": Decimal("5.25"),
-        "per_hour_rate": Decimal("195.00"),
-        "wait_per_min": Decimal("2.25"),
-        "min_fare": Decimal("185.00"),
-        "deadhead_rate_per_mile": Decimal("2.25")
-    },
-    VehicleClass.ELECTRIC_VIP: {
-        "title": "Electric VIP Lounge (Lucid Air Grand Touring, Tesla Model S Plaid)",
-        "base_fee": Decimal("120.00"),
-        "per_mile_rate": Decimal("4.35"),
-        "per_hour_rate": Decimal("155.00"),
-        "wait_per_min": Decimal("1.80"),
-        "min_fare": Decimal("145.00"),
-        "deadhead_rate_per_mile": Decimal("1.75")
-    },
-    VehicleClass.BUSINESS_SEDAN: {
-        "title": "Business Sedan (Mercedes-Benz E-Class, BMW 5 Series)",
-        "base_fee": Decimal("85.00"),
-        "per_mile_rate": Decimal("3.50"),
-        "per_hour_rate": Decimal("115.00"),
-        "wait_per_min": Decimal("1.40"),
-        "min_fare": Decimal("105.00"),
-        "deadhead_rate_per_mile": Decimal("1.50")
-    }
-}
 
-
-def get_class_tariff(vehicle_class: Any) -> Dict[str, Any]:
-    vc_val = vehicle_class.value if hasattr(vehicle_class, "value") else str(vehicle_class)
-    for k, v in US_CLASS_TARIFFS.items():
-        if (hasattr(k, "value") and k.value == vc_val) or str(k) == vc_val or k == vehicle_class:
-            return v
-    return US_CLASS_TARIFFS[VehicleClass.LUXURY_SUV]
 
 
 
@@ -287,51 +267,28 @@ class PricingService:
         custom_rule = VendorPricingAIService.get_vendor_pricing_rule(vendor_id, vehicle_class) if vendor_id else None
         vendor_depot_address = getattr(vendor, "office_address", None) or "1500 Market St, Philadelphia, PA 19102"
 
-        if custom_rule:
-            base_fee = round_cur(custom_rule.base_rate_net * fx_multiplier)
-            per_mile_rate = round_cur(custom_rule.per_mile_rate_net * fx_multiplier)
-            per_hour_rate = round_cur(custom_rule.hourly_rate_net * fx_multiplier)
-            hourly_min_hours = getattr(custom_rule, "hourly_minimum_hours", 2) or 2
-            min_fare = round_cur(custom_rule.minimum_fare_net * fx_multiplier)
-            vendor_dh = getattr(custom_rule, "deadhead_rate_per_mile", None) or getattr(vendor, "deadhead_rate_per_mile", None)
-            if vendor_dh is not None:
-                deadhead_rate = round_cur(Decimal(str(vendor_dh)) * fx_multiplier)
-            else:
-                deadhead_rate = round_cur(per_mile_rate * Decimal("0.45"))
-            wait_per_min = round_cur(custom_rule.wait_minute_rate_net * fx_multiplier) if hasattr(custom_rule, 'wait_minute_rate_net') else round_cur(per_hour_rate / Decimal("60.0"))
-            tax_rate = custom_rule.tax_rate
-            fuel_surcharge_pct = Decimal(str(getattr(custom_rule, "fuel_surcharge_pct", None) or getattr(vendor, "fuel_surcharge_pct", None) or Decimal("0.00")))
-            service_charge_pct = Decimal(str(getattr(custom_rule, "service_charge_pct", None) or getattr(vendor, "service_charge_pct", None) or Decimal("0.00")))
-            credit_card_fee_pct = Decimal(str(getattr(custom_rule, "credit_card_fee_pct", None) or getattr(vendor, "credit_card_fee_pct", None) or Decimal("0.00")))
-            deadhead_buffer_outbound = Decimal(str(getattr(custom_rule, "deadhead_buffer_miles_outbound", Decimal("0.00"))))
-            deadhead_buffer_return = Decimal(str(getattr(custom_rule, "deadhead_buffer_miles_return", Decimal("0.00"))))
-            rush_hour_surcharge_net = round_cur(Decimal(str(getattr(custom_rule, "rush_hour_surcharge_net", base_fee * Decimal("0.25")))) * fx_multiplier)
-            late_night_surcharge_net = round_cur(Decimal(str(getattr(custom_rule, "late_night_surcharge_net", base_fee * Decimal("0.35")))) * fx_multiplier)
-            inside_meet_greet_fee_net = round_cur(Decimal(str(getattr(custom_rule, "inside_baggage_meet_and_greet_fee_net", custom_rule.airport_surcharge_net))) * fx_multiplier)
-            airport_fee_net = round_cur(custom_rule.airport_surcharge_net * fx_multiplier)
+        base_fee = round_cur(custom_rule.base_rate_net * fx_multiplier)
+        per_mile_rate = round_cur(custom_rule.per_mile_rate_net * fx_multiplier)
+        per_hour_rate = round_cur(custom_rule.hourly_rate_net * fx_multiplier)
+        hourly_min_hours = getattr(custom_rule, "hourly_minimum_hours", 2) or 2
+        min_fare = round_cur(custom_rule.minimum_fare_net * fx_multiplier)
+        vendor_dh = getattr(custom_rule, "deadhead_rate_per_mile", None) or getattr(vendor, "deadhead_rate_per_mile", None)
+        if vendor_dh is not None:
+            deadhead_rate = round_cur(Decimal(str(vendor_dh)) * fx_multiplier)
         else:
-            tariffs = get_class_tariff(vehicle_class)
-            base_fee = round_cur(tariffs["base_fee"] * fx_multiplier)
-            per_mile_rate = round_cur(tariffs["per_mile_rate"] * fx_multiplier)
-            per_hour_rate = round_cur(tariffs["per_hour_rate"] * fx_multiplier)
-            hourly_min_hours = 2
-            min_fare = round_cur(tariffs["min_fare"] * fx_multiplier)
-            vendor_dh = getattr(vendor, "deadhead_rate_per_mile", None) or tariffs.get("deadhead_rate_per_mile")
-            if vendor_dh is not None:
-                deadhead_rate = round_cur(Decimal(str(vendor_dh)) * fx_multiplier)
-            else:
-                deadhead_rate = round_cur(per_mile_rate * Decimal("0.45"))
-            wait_per_min = round_cur(tariffs["wait_per_min"] * fx_multiplier)
-            tax_rate = regional_rule.vat_or_sales_tax_rate
-            fuel_surcharge_pct = Decimal(str(getattr(vendor, "fuel_surcharge_pct", Decimal("0.00")) or Decimal("0.00")))
-            service_charge_pct = Decimal(str(getattr(vendor, "service_charge_pct", Decimal("0.00")) or Decimal("0.00")))
-            credit_card_fee_pct = Decimal(str(getattr(vendor, "credit_card_fee_pct", Decimal("0.00")) or Decimal("0.00")))
-            deadhead_buffer_outbound = Decimal("0.00")
-            deadhead_buffer_return = Decimal("0.00")
-            rush_hour_surcharge_net = round_cur(base_fee * Decimal("0.25"))
-            late_night_surcharge_net = round_cur(base_fee * Decimal("0.35"))
-            inside_meet_greet_fee_net = round_cur(regional_rule.airport_access_fee * fx_multiplier)
-            airport_fee_net = round_cur(regional_rule.airport_access_fee * fx_multiplier)
+            deadhead_rate = round_cur(per_mile_rate * Decimal("0.45"))
+        wait_per_min = round_cur(custom_rule.wait_minute_rate_net * fx_multiplier) if hasattr(custom_rule, 'wait_minute_rate_net') else round_cur(per_hour_rate / Decimal("60.0"))
+        # Dynamically determine statutory tax rate from pickup jurisdiction
+        tax_rate = regional_rule.vat_or_sales_tax_rate if regional_rule else (getattr(custom_rule, "tax_rate", Decimal("0.0600")) or Decimal("0.0600"))
+        fuel_surcharge_pct = Decimal(str(getattr(custom_rule, "fuel_surcharge_pct", None) or getattr(vendor, "fuel_surcharge_pct", None) or Decimal("0.00")))
+        service_charge_pct = Decimal(str(getattr(custom_rule, "service_charge_pct", None) or getattr(vendor, "service_charge_pct", None) or Decimal("0.00")))
+        credit_card_fee_pct = Decimal(str(getattr(custom_rule, "credit_card_fee_pct", None) or getattr(vendor, "credit_card_fee_pct", None) or Decimal("0.00")))
+        deadhead_buffer_outbound = Decimal(str(getattr(custom_rule, "deadhead_buffer_miles_outbound", Decimal("0.00"))))
+        deadhead_buffer_return = Decimal(str(getattr(custom_rule, "deadhead_buffer_miles_return", Decimal("0.00"))))
+        rush_hour_surcharge_net = round_cur(Decimal(str(getattr(custom_rule, "rush_hour_surcharge_net", base_fee * Decimal("0.25")))) * fx_multiplier)
+        late_night_surcharge_net = round_cur(Decimal(str(getattr(custom_rule, "late_night_surcharge_net", base_fee * Decimal("0.35")))) * fx_multiplier)
+        inside_meet_greet_fee_net = round_cur(Decimal(str(getattr(custom_rule, "inside_baggage_meet_and_greet_fee_net", custom_rule.airport_surcharge_net))) * fx_multiplier)
+        airport_fee_net = round_cur(custom_rule.airport_surcharge_net * fx_multiplier)
 
         # Normalize percentage values (if configured as e.g. 10.0 for 10%, convert to 0.10)
         if fuel_surcharge_pct > Decimal("1.0"):

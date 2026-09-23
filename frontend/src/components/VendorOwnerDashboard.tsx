@@ -8,25 +8,27 @@ import {
   Layers, ChevronDown, Bell, Terminal, Server, MessageSquare,
   Send, Volume2, Globe, Key, CheckCircle, ExternalLink, Sparkles, Download, Zap,
   CreditCard, Percent, Banknote, Receipt, ArrowDownRight, UserCheck, Lock, Unlock, UserPlus,
-  Copy, Inbox, AtSign, BookOpen, Settings, Trash2, HelpCircle, Edit3, Camera
+  Copy, Inbox, AtSign, BookOpen, Settings, Trash2, HelpCircle, Edit3, Camera, AlertCircle,
+  Plane, Printer, ChevronUp, PhoneCall
 } from 'lucide-react';
 import { 
   VendorPortalConfig, TeamMember, RoleMatrixResponse, CertifiedAffiliatePartner, 
-  AffiliateRecommendation, VendorAffiliatePolicyRules, FarmOutPolicy, FarmInPolicy 
+  AffiliateRecommendation, VendorAffiliatePolicyRules, FarmOutPolicy, FarmInPolicy,
+  MultiLegRoutingRules
 } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { 
   fetchVendorTeam, createVendorTeamMember, updateVendorTeamMember, 
   deleteVendorTeamMember, generateTeamMemberImpersonateToken, fetchVendorRolesMatrix,
   fetchGlobalAffiliateDirectory, fetchAffiliateRecommendations, farmOutAffiliateRide, fetchVendorAffiliateRecords,
-  fetchVendorAffiliatePolicy, updateVendorAffiliatePolicy, fetchGlobalHubKnowledgeBase,
+  fetchVendorAffiliatePolicy, updateVendorAffiliatePolicy, evaluateVendorMultilegStrategy, fetchGlobalHubKnowledgeBase,
   createVendorVehicle, updateVendorVehicle, deleteVendorVehicle, toggleVehicleNetwork, toggleVehicleActive, getAuthHeaders, uploadVehiclePhotoToS3,
   fetchVendorOnboardingStatus, sendVendorOnboardingInvite,
   fetchVendorStripeStatus, createVendorStripeConnectLink, createVendorStripeLoginLink,
   fetchVendorPayoutsLedger, VendorPayoutLedgerRecord,
-  fetchVendorSubscription, upgradeVendorSubscription, switchVendorToPayAsYouGo,
-  cancelVendorSubscription, requestVendorAccountDeletion
+  fetchVendorSubscription, createVendorBillingPortalSession, clearVendorDunning
 } from '../api';
+import { DispatcherPhoneBookingModal } from './DispatcherPhoneBookingModal';
 import { 
   compressStudioImage, toggleAiStudioLighting, formatBytes, ProcessedStudioImage 
 } from '../utils/imageStudioCompressor';
@@ -128,6 +130,12 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
   const [affiliateRecommendations, setAffiliateRecommendations] = useState<AffiliateRecommendation[]>([]);
   const [matcherLocationQuery, setMatcherLocationQuery] = useState('New York JFK Airport');
   const [matcherLoading, setMatcherLoading] = useState(false);
+  const [isMultiLegPolicyOpen, setIsMultiLegPolicyOpen] = useState(true);
+  const [isFarmInOpen, setIsFarmInOpen] = useState(false);
+  const [isFarmOutOpen, setIsFarmOutOpen] = useState(false);
+  const [simulatedStrategyResult, setSimulatedStrategyResult] = useState<any>(null);
+  const [simEvaluating, setSimEvaluating] = useState(false);
+  const [showPhoneBookingModal, setShowPhoneBookingModal] = useState(false);
   const [vendorAffiliatePolicy, setVendorAffiliatePolicy] = useState<VendorAffiliatePolicyRules>({
     vendor_id: config.vendor_id,
     custom_owner_notes: 'Autonomous operations configured by fleet owner. Priority corporate & airport transfers.',
@@ -159,6 +167,20 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
       preferred_originator_ids: ['ny-executive-limo'],
       blacklisted_originator_ids: [],
       require_verified_passenger_phone: true
+    },
+    multi_leg_rules: {
+      max_layover_hours_for_wait: 3.5,
+      hourly_wait_rate_usd: 75.0,
+      deadhead_rate_per_km_usd: 1.75,
+      max_driver_shift_hours: 12.0,
+      max_out_of_market_radius_km: 160.0,
+      inter_city_corridor_policy: 'SMART_SPLIT',
+      auto_farm_out_long_layovers: true,
+      affiliate_commission_target_pct: 18.0,
+      require_continuous_charter_for_local_stops: true,
+      client_vip_override_enabled: true,
+      overnight_hotel_allowance_usd: 250.0,
+      chauffeur_meal_per_diem_usd: 75.0
     },
     ai_compiled_summary: 'AI Agent Directives Active & Synced to Global Hub Knowledge Base',
     updated_at: Date.now() / 1000
@@ -193,8 +215,6 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
   });
 
   const [affiliateJobs, setAffiliateJobs] = useState<any[]>([]);
-  const [isFarmInOpen, setIsFarmInOpen] = useState(false);
-  const [isFarmOutOpen, setIsFarmOutOpen] = useState(false);
 
   // Local KPI Metrics
   const [metrics, setMetrics] = useState({
@@ -210,6 +230,8 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
 
   // Local Live Trips
   const [trips, setTrips] = useState<any[]>([]);
+  const [selectedTripForManifest, setSelectedTripForManifest] = useState<any | null>(null);
+  const [expandedLegsRow, setExpandedLegsRow] = useState<Record<string, boolean>>({});
 
   // Local Fleet
   const [vehicles, setVehicles] = useState<any[]>([]);
@@ -319,9 +341,6 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
   // Vendor SaaS Subscription & Hub Billing State
   const [subscriptionData, setSubscriptionData] = useState<any | null>(null);
   const [isLoadingSub, setIsLoadingSub] = useState<boolean>(false);
-  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState<boolean>(false);
-  const [deleteReason, setDeleteReason] = useState<string>('Business restructuring');
-  const [deleteConfirmText, setDeleteConfirmText] = useState<string>('');
   const [isProcessingSubAction, setIsProcessingSubAction] = useState<boolean>(false);
 
   // Local Pricing Rules
@@ -453,7 +472,7 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
     { id: 'payouts', label: 'Direct Payouts & Banking', icon: <Banknote size={16} />, category: 'Commercial', badge: stripeConnectStatus?.payouts_enabled ? 'Active' : '⚠️ Setup' },
     { id: 'email_rfq', label: 'Email Gateway & BYOE', icon: <Mail size={16} />, category: 'Intelligence', badge: emailInbox.filter(e => e.status === 'PARSED_AWAITING_CONVERSION').length > 0 ? `${emailInbox.filter(e => e.status === 'PARSED_AWAITING_CONVERSION').length}` : undefined },
     { id: 'team', label: 'Team & RBAC Access', icon: <ShieldCheck size={16} />, category: 'Administration', badge: `${teamMembers.length} Staff` },
-    { id: 'subscription', label: 'Subscription & Hub Billing', icon: <CreditCard size={16} />, category: 'Administration', badge: subscriptionData?.billing_status === 'PAST_DUE' ? '⚠️ Due' : subscriptionData?.tier_name ? subscriptionData.tier_name.split(' ')[0] : 'SaaS' },
+    { id: 'subscription', label: 'Platform Billing & Services', icon: <CreditCard size={16} />, category: 'Administration', badge: subscriptionData?.billing_status === 'PAST_DUE' ? '⚠️ Due' : 'Active' },
     { id: 'affiliates', label: 'Affiliate Network (Hub)', icon: <ArrowUpRight size={16} />, category: 'Commercial', badge: '85%' },
     { id: 'omnichannel', label: 'Omnichannel & Telecom', icon: <Radio size={16} />, category: 'Communications', badge: '10DLC OK' },
     { id: 'voice_ai', label: 'Voice AI Telephony', icon: <Phone size={16} />, category: 'Intelligence' },
@@ -506,60 +525,31 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
     }
   };
 
-  const handleUpgradeTier = async (planId: string) => {
+  const handleOpenBillingPortal = async () => {
     setIsProcessingSubAction(true);
     try {
-      const res = await upgradeVendorSubscription(config.vendor_id, planId, 'monthly');
-      setActionNotice(`🎉 Successfully switched to ${res.tier_name}! Next renewal: ${res.renews_at ? new Date(res.renews_at).toLocaleDateString() : 'Active'}`);
-      loadSubscription();
+      const res = await createVendorBillingPortalSession(config.vendor_id);
+      if (res.url && res.url.startsWith('http')) {
+        window.open(res.url, '_blank');
+        setActionNotice('💳 Opened Stripe Customer Billing Portal in new window.');
+      } else {
+        setActionNotice('💳 Direct 1-Click Billing Update session active. Opening portal...');
+      }
     } catch (err: any) {
-      setActionNotice(`⚠️ Subscription change failed: ${err.message}`);
+      setActionNotice(`⚠️ Billing portal error: ${err.message}`);
     } finally {
       setIsProcessingSubAction(false);
     }
   };
 
-  const handleSwitchPayAsYouGo = async () => {
-    if (!confirm('Switch to Pay-As-You-Go ($0/mo fixed fee + 5% per completed ride)? Monthly SaaS fees will stop immediately.')) return;
+  const handleClearDunning = async () => {
     setIsProcessingSubAction(true);
     try {
-      const res = await switchVendorToPayAsYouGo(config.vendor_id);
-      setActionNotice(`✓ Switched to Pay-As-You-Go ($0/mo fixed + 5% per booking)! Monthly subscription charges stopped.`);
+      await clearVendorDunning(config.vendor_id);
+      setActionNotice(`✓ Account restored to Good Standing. Delinquent warning dismissed.`);
       loadSubscription();
     } catch (err: any) {
-      setActionNotice(`⚠️ Failed to switch to Pay-As-You-Go: ${err.message}`);
-    } finally {
-      setIsProcessingSubAction(false);
-    }
-  };
-
-  const handleCancelSubscription = async () => {
-    if (!confirm('Cancel your Hub SaaS subscription? Your account will switch to Free Tier at the end of the current billing cycle.')) return;
-    setIsProcessingSubAction(true);
-    try {
-      const res = await cancelVendorSubscription(config.vendor_id, 'Vendor requested cancellation via dashboard');
-      setActionNotice(`✓ Subscription cancelled. Free tier features remain available.`);
-      loadSubscription();
-    } catch (err: any) {
-      setActionNotice(`⚠️ Cancellation error: ${err.message}`);
-    } finally {
-      setIsProcessingSubAction(false);
-    }
-  };
-
-  const handleConfirmAccountDeletion = async () => {
-    if (deleteConfirmText.trim().toUpperCase() !== 'DELETE') {
-      alert('Please type "DELETE" into the confirmation field.');
-      return;
-    }
-    setIsProcessingSubAction(true);
-    try {
-      const res = await requestVendorAccountDeletion(config.vendor_id, deleteReason, true);
-      setShowDeleteAccountModal(false);
-      setActionNotice(`🛑 Account Decommission Submitted: Ticket ${res.ticket_id}. Status: ${res.status}. All container services will be decommissioned.`);
-      loadSubscription();
-    } catch (err: any) {
-      setActionNotice(`⚠️ Account deletion error: ${err.message}`);
+      setActionNotice(`⚠️ Failed to clear dunning: ${err.message}`);
     } finally {
       setIsProcessingSubAction(false);
     }
@@ -653,14 +643,28 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
         if (Array.isArray(data)) {
           const mapped = data.map((b: any) => ({
             id: b.id,
-            passenger: b.passenger?.name || b.party?.passenger_name || 'Passenger',
-            pickup: b.pickup_address || 'Pickup Location',
-            dropoff: b.dropoff_address || 'Dropoff Location',
+            trip_id: b.trip?.id || b.trip_id || `trp-${b.id.slice(-6)}`,
+            passenger: b.passenger?.name || b.party?.passenger_name || b.passenger_name || 'Executive Guest',
+            passenger_phone: b.passenger?.phone || b.party?.passenger_phone || b.passenger_phone || '+1-215-555-0199',
+            passenger_email: b.passenger?.email || b.party?.booker_email || b.booker_email || 'client@vip.com',
+            booker_name: b.party?.booker_name || b.booker_name,
+            booker_phone: b.party?.booker_phone || b.booker_phone,
+            pickup: b.pickup_address || 'Philadelphia International Airport (PHL) - Terminal B',
+            dropoff: b.dropoff_address || 'The Ritz-Carlton, Philadelphia',
+            pickup_time: b.pickup_time_utc || b.pickup_time,
+            flight_number: b.flight_number || b.trip?.flight_number || '',
             vehicle_class: b.vehicle_class || 'FIRST_CLASS',
-            chauffeur: b.trip?.driver_id || b.assigned_driver_name || 'Autonomous Auto-Assign',
+            chauffeur: b.assigned_driver_name || b.trip?.driver_name || b.trip?.driver_id || 'Autonomous Auto-Assign',
+            chauffeur_phone: b.assigned_driver_phone || b.trip?.driver_phone || '',
             status: b.status || 'SCHEDULED',
-            fare_usd: Number(b.total_amount || b.total_fare_usd || b.amount || 0),
-            source: b.origin_channel || 'DIRECT_STOREFRONT',
+            fare_usd: Number(b.total_amount || b.fare_usd || b.total_fare_usd || b.amount || 0),
+            net_payout_usd: Number(b.net_payout_usd || (Number(b.total_amount || b.fare_usd || 0) * 0.85)),
+            source: b.origin_channel || b.source || 'DIRECT_STOREFRONT',
+            special_instructions: b.party?.special_instructions || b.special_instructions || '',
+            passenger_count: b.party?.passenger_count || b.passenger_count || 1,
+            luggage_count: b.party?.luggage_count || b.luggage_count || 1,
+            legs: b.legs || (b.master_itinerary?.legs) || [],
+            raw: b,
             eta_minutes: 15
           }));
           setTrips(mapped);
@@ -705,25 +709,32 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
-          const mapped = data.map((r: any) => ({
-            id: r.exchange_id || r.trip_id,
-            type: r.originator_vendor_id === config.vendor_id ? 'OUTGOING_FARM' : 'INCOMING_HUB',
-            direction: r.originator_vendor_id === config.vendor_id ? '📤 Farmed-Out (10% Referral)' : '📥 Farmed-In (85% Net)',
-            passenger: r.passenger_name || 'VIP Client',
-            phone: '+1 (215) 555-0100',
-            pickup: r.pickup_address || 'Airport FBO',
-            dropoff: r.dropoff_address || 'Hotel VIP',
-            partner: r.performing_vendor_id,
-            city: 'Philadelphia, PA',
-            vehicle_class: r.vehicle_class || 'FIRST_CLASS',
-            gross_fare: Number(r.gross_fare_usd || 0),
-            net_cut: Number(r.performing_payout_usd || r.originator_commission_usd || 0),
-            cut_label: r.originator_vendor_id === config.vendor_id ? '10% Referral Cut' : '85% Net Payout',
-            status: r.settlement_status || 'SETTLED',
-            chauffeur: 'Partner Chauffeur',
-            date: 'Today',
-            escrow_status: 'ESCROW_LOCKED'
-          }));
+          const mapped = data.map((r: any) => {
+            const isOriginator = (r.originator_vendor_id === config.vendor_id || r.originator_vendor_id === config.vendor_id.replace('-', '_'));
+            const gross = Number(r.gross_fare_usd || 0);
+            const origComm = Number(r.originator_commission_usd ?? (r.fare_split?.originating_vendor_commission_usd ?? gross * 0.10));
+            const perfNet = Number(r.performing_payout_usd ?? (r.fare_split?.performing_vendor_net_usd ?? gross * 0.85));
+
+            return {
+              id: r.exchange_id || r.trip_id,
+              type: isOriginator ? 'OUTGOING_FARM' : 'INCOMING_HUB',
+              direction: isOriginator ? '📤 Farmed-Out (10% Referral)' : '📥 Farmed-In (85% Net)',
+              passenger: r.passenger_name || 'VIP Client',
+              phone: '+1 (215) 555-0100',
+              pickup: r.pickup_address || 'Airport FBO',
+              dropoff: r.dropoff_address || 'Hotel VIP',
+              partner: isOriginator ? r.performing_vendor_id : r.originator_vendor_id,
+              city: isOriginator ? 'Destination Out-of-Market' : 'Local Market Servicing',
+              vehicle_class: r.vehicle_class || 'FIRST_CLASS',
+              gross_fare: gross,
+              net_cut: isOriginator ? origComm : perfNet,
+              cut_label: isOriginator ? '10% Referral Cut' : '85% Net Payout',
+              status: r.settlement_status || 'SETTLED',
+              chauffeur: isOriginator ? 'Partner Chauffeur' : 'Local Fleet Chauffeur',
+              date: 'Today',
+              escrow_status: 'ESCROW_LOCKED'
+            };
+          });
           setAffiliateJobs(mapped);
         }
       })
@@ -2285,6 +2296,27 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <button
+                onClick={() => setShowPhoneBookingModal(true)}
+                style={{
+                  padding: '6px 14px',
+                  backgroundColor: '#10B981',
+                  color: '#FFFFFF',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 800,
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)'
+                }}
+              >
+                <PhoneCall size={13} color="#FFFFFF" />
+                <span>📞 Phone Intake Desk</span>
+              </button>
+
+              <button
                 onClick={() => setActionNotice('🔄 Data refreshed from local database partition.')}
                 style={{
                   padding: '6px 12px',
@@ -2325,58 +2357,70 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                 gap: '14px',
                 boxShadow: '0 2px 6px rgba(220, 38, 38, 0.08)'
               }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                  <div style={{ padding: '8px', backgroundColor: '#FEE2E2', borderRadius: '8px', color: '#DC2626' }}>
-                    <AlertTriangle size={20} />
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', maxWidth: '680px' }}>
+                  <div style={{ padding: '8px', backgroundColor: '#FEE2E2', borderRadius: '8px', color: '#DC2626', marginTop: '2px' }}>
+                    <AlertTriangle size={22} />
                   </div>
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#991B1B' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <h4 style={{ margin: 0, fontSize: '14.5px', fontWeight: 800, color: '#991B1B' }}>
                         ⚠️ Monthly Hub SaaS Subscription Payment Past Due (Stage {subscriptionData.dunning_stage || 1})
                       </h4>
                       <span style={{ fontSize: '10px', fontWeight: 800, backgroundColor: '#DC2626', color: '#FFFFFF', padding: '2px 8px', borderRadius: '12px' }}>
                         7-DAY GRACE ACTIVE
                       </span>
                     </div>
-                    <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#B91C1C' }}>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#B91C1C', lineHeight: 1.5 }}>
                       {subscriptionData.grace_period_expires_at 
-                        ? `Grace period expires on ${new Date(subscriptionData.grace_period_expires_at).toLocaleDateString()} at ${new Date(subscriptionData.grace_period_expires_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Please settle balance or switch to Pay-As-You-Go ($0/mo) to prevent automatic sovereign cell pause.`
-                        : 'Please settle past due balance or switch to Pay-As-You-Go ($0/mo) to keep your Sovereign Cell active.'}
+                        ? `Grace period expires on ${new Date(subscriptionData.grace_period_expires_at).toLocaleDateString()} at ${new Date(subscriptionData.grace_period_expires_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Settle balance or switch to Starter ($0/mo + 5%) to prevent cell suspension.`
+                        : 'Please update your payment method or switch to Starter ($0/mo + 5%) to keep your Sovereign Cell active.'}
                     </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', fontSize: '11px', color: '#7F1D1D', fontWeight: 600 }}>
+                      <Mail size={13} color="#DC2626" />
+                      <span>📧 Automated dunning notice sent to owner email with 1-click update link.</span>
+                    </div>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   <button
-                    onClick={handleSwitchPayAsYouGo}
+                    onClick={handleOpenBillingPortal}
                     disabled={isProcessingSubAction}
                     style={{
                       padding: '8px 14px',
-                      backgroundColor: '#FFFFFF',
-                      color: '#991B1B',
-                      border: '1px solid #FECACA',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      fontWeight: 800,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Switch to Pay-As-You-Go ($0/mo)
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('subscription')}
-                    style={{
-                      padding: '8px 16px',
                       backgroundColor: '#DC2626',
                       color: '#FFFFFF',
                       border: 'none',
                       borderRadius: '6px',
                       fontSize: '12px',
                       fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 2px 4px rgba(220, 38, 38, 0.2)'
+                    }}
+                  >
+                    <CreditCard size={14} />
+                    <span>💳 Update Payment (1-Click)</span>
+                  </button>
+
+                  <button
+                    onClick={handleClearDunning}
+                    disabled={isProcessingSubAction}
+                    title="Mark in good standing and dismiss warning"
+                    style={{
+                      padding: '8px 12px',
+                      backgroundColor: '#F1F5F9',
+                      color: '#475569',
+                      border: '1px solid #CBD5E1',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 700,
                       cursor: 'pointer'
                     }}
                   >
-                    Manage Billing & Renew
+                    ✓ Settle / Dismiss
                   </button>
                 </div>
               </div>
@@ -2852,109 +2896,222 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px' }}>
                           <thead>
                             <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontSize: '11px', textTransform: 'uppercase' }}>
-                              <th style={{ padding: '12px 14px', fontWeight: 800 }}>Trip ID</th>
-                              <th style={{ padding: '12px 14px', fontWeight: 800 }}>Passenger</th>
-                              <th style={{ padding: '12px 14px', fontWeight: 800 }}>Pickup Location</th>
+                              <th style={{ padding: '12px 14px', fontWeight: 800 }}>Trip ID & Schedule</th>
+                              <th style={{ padding: '12px 14px', fontWeight: 800 }}>Passenger & Contact</th>
+                              <th style={{ padding: '12px 14px', fontWeight: 800 }}>Pickup Location & Flight</th>
                               <th style={{ padding: '12px 14px', fontWeight: 800 }}>Dropoff Destination</th>
                               <th style={{ padding: '12px 14px', fontWeight: 800 }}>Vehicle Class</th>
-                              <th style={{ padding: '12px 14px', fontWeight: 800 }}>Channel / Source</th>
-                              <th style={{ padding: '12px 14px', fontWeight: 800 }}>Gross Fare</th>
+                              <th style={{ padding: '12px 14px', fontWeight: 800 }}>Channel</th>
+                              <th style={{ padding: '12px 14px', fontWeight: 800 }}>Gross / Net</th>
                               <th style={{ padding: '12px 14px', fontWeight: 800 }}>Assigned Chauffeur</th>
                               <th style={{ padding: '12px 14px', fontWeight: 800 }}>Status</th>
-                              <th style={{ padding: '12px 14px', fontWeight: 800 }}>Action</th>
+                              <th style={{ padding: '12px 14px', fontWeight: 800 }}>Dispatcher Action</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {filtered.map((trip) => (
-                              <tr
-                                key={trip.id}
-                                style={{
-                                  borderBottom: '1px solid #F1F5F9',
-                                  backgroundColor: trip.status === 'UNASSIGNED' ? '#FEF2F2' : '#FFFFFF'
-                                }}
-                              >
-                                <td style={{ padding: '12px 14px', fontWeight: 800, color: '#0F172A', whiteSpace: 'nowrap' }}>
-                                  {trip.id}
-                                </td>
-                                <td style={{ padding: '12px 14px', fontWeight: 700, color: '#0F172A', whiteSpace: 'nowrap' }}>
-                                  {trip.passenger}
-                                </td>
-                                <td style={{ padding: '12px 14px', color: '#334155', maxWidth: '200px' }}>
-                                  {trip.pickup}
-                                </td>
-                                <td style={{ padding: '12px 14px', color: '#334155', maxWidth: '200px' }}>
-                                  {trip.dropoff}
-                                </td>
-                                <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
-                                  <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#F1F5F9', color: '#475569', fontWeight: 700 }}>
-                                    {trip.vehicle_class}
-                                  </span>
-                                </td>
-                                <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
-                                  {trip.source === 'GLOBAL_HUB_MARKETPLACE' ? (
-                                    <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#EFF6FF', color: '#0078D4', fontWeight: 800 }}>
-                                      🌐 HUB (85% Net)
-                                    </span>
-                                  ) : (
-                                    <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#F0FDF4', color: '#15803D', fontWeight: 800 }}>
-                                      🏢 DIRECT
-                                    </span>
-                                  )}
-                                </td>
-                                <td style={{ padding: '12px 14px', fontWeight: 800, color: '#0F172A', whiteSpace: 'nowrap' }}>
-                                  ${trip.fare_usd.toFixed(2)}
-                                  {trip.net_payout_usd && (
-                                    <div style={{ fontSize: '10px', color: '#16A34A', fontWeight: 700 }}>
-                                      Net: ${trip.net_payout_usd.toFixed(2)}
-                                    </div>
-                                  )}
-                                </td>
-                                <td style={{ padding: '12px 14px', fontWeight: 700, color: trip.chauffeur === 'Unassigned' ? '#DC2626' : '#0F172A', whiteSpace: 'nowrap' }}>
-                                  {trip.chauffeur}
-                                </td>
-                                <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
-                                  <span style={{
-                                    fontSize: '10px',
-                                    fontWeight: 800,
-                                    padding: '3px 8px',
-                                    borderRadius: '4px',
-                                    backgroundColor: trip.status === 'UNASSIGNED' ? '#FEE2E2' : '#DCFCE7',
-                                    color: trip.status === 'UNASSIGNED' ? '#B91C1C' : '#15803D'
-                                  }}>
-                                    {trip.status}
-                                  </span>
-                                </td>
-                                <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
-                                  {trip.status === 'UNASSIGNED' ? (
-                                    <select
-                                      onChange={(e) => handleAssignChauffeur(trip.id, e.target.value)}
-                                      style={{
-                                        backgroundColor: '#FFFFFF',
-                                        color: '#0078D4',
-                                        border: '1px solid #0078D4',
+                            {filtered.map((trip) => {
+                              const hasLegs = trip.legs && trip.legs.length > 1;
+                              const isLegsExpanded = expandedLegsRow[trip.id];
+                              const formattedDate = trip.pickup_time ? (() => {
+                                try {
+                                  const d = new Date(trip.pickup_time);
+                                  return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} • ${d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
+                                } catch { return 'Scheduled Time'; }
+                              })() : 'Scheduled Departure';
+
+                              return (
+                                <React.Fragment key={trip.id}>
+                                  <tr
+                                    style={{
+                                      borderBottom: hasLegs && isLegsExpanded ? 'none' : '1px solid #F1F5F9',
+                                      backgroundColor: trip.status === 'UNASSIGNED' ? '#FEF2F2' : (trip.status === 'CANCELLED' ? '#F8FAFC' : '#FFFFFF')
+                                    }}
+                                  >
+                                    <td style={{ padding: '12px 14px', fontWeight: 800, color: '#0F172A', whiteSpace: 'nowrap' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <span style={{ color: '#0078D4' }}>{trip.id}</span>
+                                      </div>
+                                      <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 600, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <Clock size={10} /> {formattedDate}
+                                      </div>
+                                    </td>
+                                    <td style={{ padding: '12px 14px', fontWeight: 700, color: '#0F172A', minWidth: '180px' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <span>{trip.passenger}</span>
+                                        {trip.booker_name && trip.booker_name !== trip.passenger && (
+                                          <span style={{ fontSize: '9px', padding: '1px 5px', borderRadius: '4px', backgroundColor: '#F1F5F9', color: '#64748B' }}>
+                                            Booked by {trip.booker_name}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                                        <a
+                                          href={`tel:${trip.passenger_phone}`}
+                                          style={{ fontSize: '11px', color: '#0078D4', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '3px', fontWeight: 700 }}
+                                          title="Call Passenger Directly"
+                                        >
+                                          <Phone size={11} /> {trip.passenger_phone}
+                                        </a>
+                                        <a
+                                          href={`sms:${trip.passenger_phone}`}
+                                          style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#EFF6FF', color: '#0078D4', textDecoration: 'none', fontWeight: 800 }}
+                                          title="Send SMS to Passenger"
+                                        >
+                                          SMS
+                                        </a>
+                                      </div>
+                                    </td>
+                                    <td style={{ padding: '12px 14px', color: '#334155', maxWidth: '240px' }}>
+                                      <div style={{ fontWeight: 600, color: '#0F172A' }}>{trip.pickup}</div>
+                                      {trip.flight_number && (
+                                        <div style={{ marginTop: '3px', display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 700, color: '#0284C7' }}>
+                                          <Plane size={11} /> Flight {trip.flight_number}
+                                        </div>
+                                      )}
+                                      {hasLegs && (
+                                        <button
+                                          onClick={() => setExpandedLegsRow(prev => ({ ...prev, [trip.id]: !prev[trip.id] }))}
+                                          style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 700, color: '#475569', cursor: 'pointer' }}
+                                        >
+                                          🌐 {trip.legs.length} Legs Breakdown {isLegsExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                                        </button>
+                                      )}
+                                    </td>
+                                    <td style={{ padding: '12px 14px', color: '#334155', maxWidth: '240px' }}>
+                                      <div style={{ fontWeight: 600, color: '#0F172A' }}>{trip.dropoff}</div>
+                                      {trip.special_instructions && (
+                                        <div style={{ fontSize: '10px', color: '#B45309', marginTop: '2px', fontStyle: 'italic' }}>
+                                          Note: "{trip.special_instructions}"
+                                        </div>
+                                      )}
+                                    </td>
+                                    <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
+                                      <span style={{ fontSize: '10px', padding: '3px 7px', borderRadius: '4px', backgroundColor: '#F1F5F9', color: '#475569', fontWeight: 800 }}>
+                                        {trip.vehicle_class}
+                                      </span>
+                                    </td>
+                                    <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
+                                      {trip.source === 'GLOBAL_HUB_MARKETPLACE' ? (
+                                        <span style={{ fontSize: '10px', padding: '3px 6px', borderRadius: '4px', backgroundColor: '#EFF6FF', color: '#0078D4', fontWeight: 800 }}>
+                                          🌐 HUB (85%)
+                                        </span>
+                                      ) : (
+                                        <span style={{ fontSize: '10px', padding: '3px 6px', borderRadius: '4px', backgroundColor: '#F0FDF4', color: '#15803D', fontWeight: 800 }}>
+                                          🏢 DIRECT
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td style={{ padding: '12px 14px', fontWeight: 800, color: '#0F172A', whiteSpace: 'nowrap' }}>
+                                      ${trip.fare_usd.toFixed(2)}
+                                      <div style={{ fontSize: '10px', color: '#16A34A', fontWeight: 700 }}>
+                                        Net: ${(trip.net_payout_usd || (trip.fare_usd * 0.85)).toFixed(2)}
+                                      </div>
+                                    </td>
+                                    <td style={{ padding: '12px 14px', fontWeight: 700, color: trip.chauffeur === 'Unassigned' ? '#DC2626' : '#0F172A', whiteSpace: 'nowrap' }}>
+                                      <div>{trip.chauffeur}</div>
+                                      {trip.chauffeur_phone && (
+                                        <a href={`tel:${trip.chauffeur_phone}`} style={{ fontSize: '10px', color: '#64748B', textDecoration: 'none' }}>
+                                          {trip.chauffeur_phone}
+                                        </a>
+                                      )}
+                                    </td>
+                                    <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
+                                      <span style={{
+                                        fontSize: '10px',
+                                        fontWeight: 800,
+                                        padding: '3px 8px',
                                         borderRadius: '4px',
-                                        padding: '4px 8px',
-                                        fontSize: '11px',
-                                        fontWeight: 700,
-                                        cursor: 'pointer'
-                                      }}
-                                    >
-                                      <option value="">Assign Chauffeur...</option>
-                                      {chauffeurs.filter(c => c.shift === 'ON_DUTY' || c.shift === 'STANDBY').map(c => (
-                                        <option key={c.id} value={c.name}>{c.name}</option>
-                                      ))}
-                                    </select>
-                                  ) : (
-                                    <button
-                                      onClick={() => setActionNotice(`📍 Opened real-time GPS telemetry radar for trip ${trip.id}. Chauffeur: ${trip.chauffeur}`)}
-                                      style={{ padding: '4px 8px', backgroundColor: '#EFF6FF', color: '#0078D4', border: '1px solid #BFDBFE', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
-                                    >
-                                      Track Radar
-                                    </button>
+                                        backgroundColor: trip.status === 'UNASSIGNED' ? '#FEE2E2' : (trip.status === 'CANCELLED' ? '#F1F5F9' : '#DCFCE7'),
+                                        color: trip.status === 'UNASSIGNED' ? '#B91C1C' : (trip.status === 'CANCELLED' ? '#64748B' : '#15803D')
+                                      }}>
+                                        {trip.status}
+                                      </span>
+                                    </td>
+                                    <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
+                                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                        <button
+                                          onClick={() => setSelectedTripForManifest(trip)}
+                                          style={{
+                                            padding: '4px 8px',
+                                            backgroundColor: '#0F172A',
+                                            color: '#FFFFFF',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            fontSize: '11px',
+                                            fontWeight: 700,
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '3px'
+                                          }}
+                                          title="Open Complete Chauffeur Dispatch Manifest"
+                                        >
+                                          <FileText size={11} /> 📋 Dispatch Sheet
+                                        </button>
+
+                                        {trip.status === 'UNASSIGNED' ? (
+                                          <select
+                                            onChange={(e) => handleAssignChauffeur(trip.id, e.target.value)}
+                                            style={{
+                                              backgroundColor: '#FFFFFF',
+                                              color: '#0078D4',
+                                              border: '1px solid #0078D4',
+                                              borderRadius: '4px',
+                                              padding: '4px 6px',
+                                              fontSize: '11px',
+                                              fontWeight: 700,
+                                              cursor: 'pointer'
+                                            }}
+                                          >
+                                            <option value="">Assign...</option>
+                                            {chauffeurs.filter(c => c.shift === 'ON_DUTY' || c.shift === 'STANDBY').map(c => (
+                                              <option key={c.id} value={c.name}>{c.name}</option>
+                                            ))}
+                                          </select>
+                                        ) : (
+                                          <button
+                                            onClick={() => setActionNotice(`📍 Opened real-time GPS telemetry radar for trip ${trip.id}. Chauffeur: ${trip.chauffeur}`)}
+                                            style={{ padding: '4px 6px', backgroundColor: '#EFF6FF', color: '#0078D4', border: '1px solid #BFDBFE', borderRadius: '4px', fontSize: '10px', fontWeight: 700, cursor: 'pointer' }}
+                                          >
+                                            Radar
+                                          </button>
+                                        )}
+                                      </div>
+                                    </td>
+                                  </tr>
+
+                                  {/* Multi-Leg Expanded Accordion Row */}
+                                  {hasLegs && isLegsExpanded && (
+                                    <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+                                      <td colSpan={10} style={{ padding: '12px 20px' }}>
+                                        <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '14px' }}>
+                                          <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <Globe size={14} color="#0078D4" /> Multi-Segment Journey Itinerary Breakdown ({trip.legs.length} Segments)
+                                          </div>
+                                          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(trip.legs.length, 3)}, 1fr)`, gap: '12px' }}>
+                                            {trip.legs.map((leg: any, idx: number) => (
+                                              <div key={idx} style={{ border: '1px solid #E5E7EB', borderRadius: '6px', padding: '10px', backgroundColor: '#FAFAFA' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#0078D4' }}>Leg {idx + 1}</span>
+                                                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#15803D' }}>${Number(leg.subtotal_net || leg.price_usd || 0).toFixed(2)}</span>
+                                                </div>
+                                                <div style={{ fontSize: '11px', color: '#334155' }}>
+                                                  <div><strong>From:</strong> {leg.origin_address || 'Origin'}</div>
+                                                  <div><strong>To:</strong> {leg.destination_address || 'Destination'}</div>
+                                                  <div style={{ fontSize: '10px', color: '#64748B', marginTop: '4px' }}>
+                                                    Class: {leg.vehicle_class || 'FIRST_CLASS'} • Status: {leg.price_status || 'CONFIRMED'}
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      </td>
+                                    </tr>
                                   )}
-                                </td>
-                              </tr>
-                            ))}
+                                </React.Fragment>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
@@ -2963,7 +3120,7 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
 
                   {/* 2. CARD GRID VIEW */}
                   return (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '16px' }}>
                       {filtered.map((trip) => (
                         <div
                           key={trip.id}
@@ -2980,7 +3137,14 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                             <div>
-                              <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 600 }}>{trip.id}</span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ fontSize: '11px', color: '#0078D4', fontWeight: 800 }}>{trip.id}</span>
+                                {trip.flight_number && (
+                                  <span style={{ fontSize: '10px', padding: '1px 5px', borderRadius: '4px', backgroundColor: '#EFF6FF', color: '#0284C7', fontWeight: 700 }}>
+                                    ✈️ {trip.flight_number}
+                                  </span>
+                                )}
+                              </div>
                               <h4 style={{ margin: '2px 0 0 0', fontSize: '15px', fontWeight: 800, color: '#0F172A' }}>{trip.passenger}</h4>
                             </div>
                             <span style={{
@@ -2988,22 +3152,34 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                               fontWeight: 800,
                               padding: '3px 8px',
                               borderRadius: '4px',
-                              backgroundColor: trip.status === 'UNASSIGNED' ? '#FEE2E2' : '#DCFCE7',
-                              color: trip.status === 'UNASSIGNED' ? '#B91C1C' : '#15803D'
+                              backgroundColor: trip.status === 'UNASSIGNED' ? '#FEE2E2' : (trip.status === 'CANCELLED' ? '#F1F5F9' : '#DCFCE7'),
+                              color: trip.status === 'UNASSIGNED' ? '#B91C1C' : (trip.status === 'CANCELLED' ? '#64748B' : '#15803D')
                             }}>
                               {trip.status}
                             </span>
                           </div>
 
-                          <div style={{ fontSize: '12px', color: '#374151', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <div style={{ fontSize: '12px', color: '#374151', display: 'flex', flexDirection: 'column', gap: '5px' }}>
                             <div><strong>Pickup:</strong> {trip.pickup}</div>
                             <div><strong>Dropoff:</strong> {trip.dropoff}</div>
-                            <div><strong>Class:</strong> {trip.vehicle_class}</div>
-                            {trip.source === 'GLOBAL_HUB_MARKETPLACE' && (
-                              <div style={{ color: '#0078D4', fontWeight: 700 }}>
-                                🌐 Global Hub Job • Net Payout: ${trip.net_payout_usd?.toFixed(2)} (85%)
-                              </div>
-                            )}
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span><strong>Class:</strong> {trip.vehicle_class}</span>
+                              <span style={{ fontWeight: 800, color: '#0F172A' }}>${trip.fare_usd.toFixed(2)}</span>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                              <a
+                                href={`tel:${trip.passenger_phone}`}
+                                style={{ fontSize: '11px', color: '#0078D4', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '3px', fontWeight: 700 }}
+                              >
+                                <Phone size={11} /> {trip.passenger_phone}
+                              </a>
+                              <a
+                                href={`sms:${trip.passenger_phone}`}
+                                style={{ fontSize: '10px', padding: '1px 5px', borderRadius: '4px', backgroundColor: '#EFF6FF', color: '#0078D4', textDecoration: 'none', fontWeight: 800 }}
+                              >
+                                SMS Passenger
+                              </a>
+                            </div>
                           </div>
 
                           <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -3012,32 +3188,258 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                               <div style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>{trip.chauffeur}</div>
                             </div>
 
-                            {trip.status === 'UNASSIGNED' && (
-                              <select
-                                onChange={(e) => handleAssignChauffeur(trip.id, e.target.value)}
-                                style={{
-                                  backgroundColor: '#FFFFFF',
-                                  color: '#0078D4',
-                                  border: '1px solid #0078D4',
-                                  borderRadius: '6px',
-                                  padding: '6px 10px',
-                                  fontSize: '11px',
-                                  fontWeight: 700,
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                <option value="">Assign Driver...</option>
-                                {chauffeurs.filter(c => c.shift === 'ON_DUTY' || c.shift === 'STANDBY').map(c => (
-                                  <option key={c.id} value={c.name}>{c.name} ({c.vehicle})</option>
-                                ))}
-                              </select>
-                            )}
+                            <button
+                              onClick={() => setSelectedTripForManifest(trip)}
+                              style={{
+                                padding: '6px 12px',
+                                backgroundColor: '#0F172A',
+                                color: '#FFFFFF',
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              <FileText size={12} /> Dispatch Sheet
+                            </button>
                           </div>
                         </div>
                       ))}
                     </div>
                   );
                 })()}
+
+                {/* Chauffeur Dispatch Manifest & Trip Sheet Modal */}
+                {selectedTripForManifest && (
+                  <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 9999,
+                    padding: '20px',
+                    backdropFilter: 'blur(4px)'
+                  }}>
+                    <div style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '16px',
+                      maxWidth: '750px',
+                      width: '100%',
+                      maxHeight: '90vh',
+                      overflowY: 'auto',
+                      padding: '28px',
+                      boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                      border: '1px solid #E2E8F0'
+                    }}>
+                      {/* Modal Header */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #E2E8F0', paddingBottom: '16px', marginBottom: '20px' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '4px', backgroundColor: '#EFF6FF', color: '#0078D4', fontWeight: 800 }}>
+                              {selectedTripForManifest.id}
+                            </span>
+                            <span style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '4px', backgroundColor: '#DCFCE7', color: '#15803D', fontWeight: 800 }}>
+                              {selectedTripForManifest.status}
+                            </span>
+                          </div>
+                          <h3 style={{ margin: '6px 0 0 0', fontSize: '20px', fontWeight: 800, color: '#0F172A' }}>
+                            Chauffeur Dispatch Manifest & Trip Sheet
+                          </h3>
+                          <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748B' }}>
+                            Authoritative reservation manifest for dispatcher communication and chauffeur execution.
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setSelectedTripForManifest(null)}
+                          style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748B' }}
+                        >
+                          <X size={20} />
+                        </button>
+                      </div>
+
+                      {/* Passenger & Booker Details */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '18px' }}>
+                        <div style={{ backgroundColor: '#F8FAFC', padding: '14px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                          <div style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: '6px' }}>
+                            👤 Lead Passenger
+                          </div>
+                          <div style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A' }}>
+                            {selectedTripForManifest.passenger}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#334155', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                            <div><strong>Phone:</strong> {selectedTripForManifest.passenger_phone}</div>
+                            <div><strong>Email:</strong> {selectedTripForManifest.passenger_email}</div>
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                            <a
+                              href={`tel:${selectedTripForManifest.passenger_phone}`}
+                              style={{ padding: '5px 10px', backgroundColor: '#0078D4', color: '#FFFFFF', borderRadius: '4px', fontSize: '11px', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              <Phone size={12} /> Call Passenger
+                            </a>
+                            <a
+                              href={`sms:${selectedTripForManifest.passenger_phone}`}
+                              style={{ padding: '5px 10px', backgroundColor: '#EFF6FF', color: '#0078D4', border: '1px solid #BFDBFE', borderRadius: '4px', fontSize: '11px', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              <MessageSquare size={12} /> SMS Passenger
+                            </a>
+                          </div>
+                        </div>
+
+                        <div style={{ backgroundColor: '#F8FAFC', padding: '14px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                          <div style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: '6px' }}>
+                            🛡️ Service & Vehicle Specs
+                          </div>
+                          <div style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>
+                            {selectedTripForManifest.vehicle_class}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#334155', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                            <div><strong>Passengers:</strong> {selectedTripForManifest.passenger_count || 1} • <strong>Luggage:</strong> {selectedTripForManifest.luggage_count || 1} bags</div>
+                            <div><strong>Gross Fare:</strong> ${selectedTripForManifest.fare_usd.toFixed(2)} USD</div>
+                            <div style={{ color: '#16A34A', fontWeight: 700 }}><strong>Net Vendor Payout:</strong> ${(selectedTripForManifest.net_payout_usd || (selectedTripForManifest.fare_usd * 0.85)).toFixed(2)} USD</div>
+                          </div>
+                          {selectedTripForManifest.flight_number && (
+                            <div style={{ marginTop: '8px', display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 700, color: '#0284C7' }}>
+                              <Plane size={12} /> Flight Radar: {selectedTripForManifest.flight_number} (Auto Delay Tracking Active)
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Route Manifest */}
+                      <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '16px', marginBottom: '18px' }}>
+                        <div style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: '10px' }}>
+                          📍 Turn-by-Turn Route Itinerary
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                            <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#16A34A', marginTop: '4px' }} />
+                            <div>
+                              <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700 }}>PICKUP LOCATION</div>
+                              <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>{selectedTripForManifest.pickup}</div>
+                            </div>
+                          </div>
+
+                          <div style={{ width: '2px', height: '14px', backgroundColor: '#CBD5E1', marginLeft: '4px' }} />
+
+                          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                            <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#DC2626', marginTop: '4px' }} />
+                            <div>
+                              <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700 }}>DROPOFF DESTINATION</div>
+                              <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>{selectedTripForManifest.dropoff}</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {selectedTripForManifest.special_instructions && (
+                          <div style={{ marginTop: '12px', padding: '8px 12px', backgroundColor: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: '6px', fontSize: '11px', color: '#92400E' }}>
+                            <strong>Chauffeur VIP Instructions:</strong> {selectedTripForManifest.special_instructions}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Chauffeur Assignment Control */}
+                      <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '16px', marginBottom: '20px' }}>
+                        <div style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: '8px' }}>
+                          🚘 Chauffeur & Vehicle Assignment
+                        </div>
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <div style={{ flex: 1, minWidth: '220px' }}>
+                            <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '4px' }}>Currently Assigned:</div>
+                            <div style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>{selectedTripForManifest.chauffeur}</div>
+                          </div>
+                          <select
+                            onChange={(e) => {
+                              handleAssignChauffeur(selectedTripForManifest.id, e.target.value);
+                              setSelectedTripForManifest({ ...selectedTripForManifest, chauffeur: e.target.value });
+                            }}
+                            style={{
+                              padding: '8px 12px',
+                              backgroundColor: '#FFFFFF',
+                              color: '#0F172A',
+                              border: '1px solid #CBD5E1',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <option value="">Reassign Chauffeur...</option>
+                            {chauffeurs.map(c => (
+                              <option key={c.id} value={c.name}>{c.name} ({c.shift})</option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => {
+                              alert(`📱 Dispatched SMS Manifest to ${selectedTripForManifest.chauffeur} with pickup: ${selectedTripForManifest.pickup}`);
+                            }}
+                            style={{
+                              padding: '8px 14px',
+                              backgroundColor: '#0078D4',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            <Send size={13} /> Dispatch SMS to Driver
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Modal Footer Actions */}
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                        <button
+                          onClick={() => window.print()}
+                          style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#FFFFFF',
+                            color: '#0F172A',
+                            border: '1px solid #CBD5E1',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          <Printer size={14} /> Print Trip Sheet
+                        </button>
+                        <button
+                          onClick={() => setSelectedTripForManifest(null)}
+                          style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#0F172A',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: 800,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Close Manifest
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
               </div>
             )}
@@ -8033,6 +8435,428 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                             </div>
                           )}
                         </div>
+
+                        {/* 3. MULTI-LEG & DEADHEAD ROUTING POLICY (INTER-CITY & CORRIDOR RULES) */}
+                        <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '10px', padding: '14px 18px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                          <div
+                            onClick={() => setIsMultiLegPolicyOpen(!isMultiLegPolicyOpen)}
+                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                🛣️ Multi-Leg & Deadhead Routing Rules (Inter-City Corridors)
+                              </div>
+                              <span style={{ fontSize: '11px', fontWeight: 700, color: '#7C3AED', background: '#EDE9FE', padding: '2px 8px', borderRadius: '12px' }}>
+                                🟣 Multi-Leg Auto-Routing Active
+                              </span>
+                              <span style={{ fontSize: '11px', color: '#64748B' }}>
+                                Max Standby Layover: <strong>{vendorAffiliatePolicy.multi_leg_rules?.max_layover_hours_for_wait ?? 3.5}h</strong> • Standby Rate: <strong>${vendorAffiliatePolicy.multi_leg_rules?.hourly_wait_rate_usd ?? 75}/hr</strong> • Commission: <strong>{vendorAffiliatePolicy.multi_leg_rules?.affiliate_commission_target_pct ?? 18}%</strong>
+                              </span>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setIsMultiLegPolicyOpen(!isMultiLegPolicyOpen); }}
+                              style={{
+                                padding: '4px 10px',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                backgroundColor: isMultiLegPolicyOpen ? '#F3E8FF' : '#F8FAFC',
+                                color: isMultiLegPolicyOpen ? '#7C3AED' : '#475569',
+                                border: '1px solid #CBD5E1',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              {isMultiLegPolicyOpen ? '▲ Collapse' : '▼ Configure Rules'}
+                            </button>
+                          </div>
+
+                          {isMultiLegPolicyOpen && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px', borderTop: '1px solid #F1F5F9', paddingTop: '14px' }}>
+                              
+                              {/* Strategy Info Box */}
+                              <div style={{ backgroundColor: '#FAF5FF', border: '1px solid #E9D5FF', borderRadius: '8px', padding: '12px', fontSize: '12px', color: '#581C87', lineHeight: 1.5 }}>
+                                <strong>💡 How Multi-Leg Decision Engine Works for {config.vendor_name || 'Your Fleet'}:</strong>
+                                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#6B21A8' }}>
+                                  When a customer requests multi-leg travel (e.g. <strong>PHL ➔ NYC in the morning and return/forward later</strong>), our engine evaluates layover duration, empty deadhead fuel/tolls, and DOT 14-hour shift limits to automatically recommend <strong>Dedicated Chauffeur Standby</strong> vs. <strong>Split Relay Farm-Out</strong> to trusted partner operators.
+                                </p>
+                              </div>
+
+                              {/* Form Grid 1: Layover & Wait Rates */}
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
+                                
+                                <div style={{ backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#1E293B', display: 'block' }}>
+                                    ⏱️ Max Layover for In-House Standby (Hours)
+                                  </label>
+                                  <p style={{ fontSize: '10px', color: '#64748B', margin: '2px 0 6px 0' }}>
+                                    Layovers &le; threshold keep same chauffeur on wait. Layovers &gt; threshold trigger farm-out.
+                                  </p>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <input
+                                      type="number"
+                                      step="0.5"
+                                      min="1.0"
+                                      max="12.0"
+                                      value={vendorAffiliatePolicy.multi_leg_rules?.max_layover_hours_for_wait ?? 3.5}
+                                      onChange={e => setVendorAffiliatePolicy({
+                                        ...vendorAffiliatePolicy,
+                                        multi_leg_rules: {
+                                          ...(vendorAffiliatePolicy.multi_leg_rules || {
+                                            max_layover_hours_for_wait: 3.5,
+                                            hourly_wait_rate_usd: 75.0,
+                                            deadhead_rate_per_km_usd: 1.75,
+                                            max_driver_shift_hours: 12.0,
+                                            max_out_of_market_radius_km: 160.0,
+                                            inter_city_corridor_policy: 'SMART_SPLIT',
+                                            auto_farm_out_long_layovers: true,
+                                            affiliate_commission_target_pct: 18.0,
+                                            require_continuous_charter_for_local_stops: true,
+                                            client_vip_override_enabled: true,
+                                            overnight_hotel_allowance_usd: 250.0,
+                                            chauffeur_meal_per_diem_usd: 75.0
+                                          }),
+                                          max_layover_hours_for_wait: parseFloat(e.target.value) || 3.5
+                                        }
+                                      })}
+                                      style={{ width: '80px', padding: '6px 8px', fontSize: '12px', border: '1px solid #CBD5E1', borderRadius: '4px', fontWeight: 700 }}
+                                    />
+                                    <span style={{ fontSize: '11px', color: '#475569', fontWeight: 600 }}>Hours (Industry Standard: 3.5h)</span>
+                                  </div>
+                                </div>
+
+                                <div style={{ backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#1E293B', display: 'block' }}>
+                                    💵 Hourly Chauffeur Standby Rate ($ USD / hr)
+                                  </label>
+                                  <p style={{ fontSize: '10px', color: '#64748B', margin: '2px 0 6px 0' }}>
+                                    Billable rate charged to customer per hour when chauffeur is waiting on location.
+                                  </p>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontWeight: 800, color: '#0F172A' }}>$</span>
+                                    <input
+                                      type="number"
+                                      step="5"
+                                      min="40"
+                                      max="250"
+                                      value={vendorAffiliatePolicy.multi_leg_rules?.hourly_wait_rate_usd ?? 75.0}
+                                      onChange={e => setVendorAffiliatePolicy({
+                                        ...vendorAffiliatePolicy,
+                                        multi_leg_rules: {
+                                          ...(vendorAffiliatePolicy.multi_leg_rules || {
+                                            max_layover_hours_for_wait: 3.5,
+                                            hourly_wait_rate_usd: 75.0,
+                                            deadhead_rate_per_km_usd: 1.75,
+                                            max_driver_shift_hours: 12.0,
+                                            max_out_of_market_radius_km: 160.0,
+                                            inter_city_corridor_policy: 'SMART_SPLIT',
+                                            auto_farm_out_long_layovers: true,
+                                            affiliate_commission_target_pct: 18.0,
+                                            require_continuous_charter_for_local_stops: true,
+                                            client_vip_override_enabled: true,
+                                            overnight_hotel_allowance_usd: 250.0,
+                                            chauffeur_meal_per_diem_usd: 75.0
+                                          }),
+                                          hourly_wait_rate_usd: parseFloat(e.target.value) || 75.0
+                                        }
+                                      })}
+                                      style={{ width: '80px', padding: '6px 8px', fontSize: '12px', border: '1px solid #CBD5E1', borderRadius: '4px', fontWeight: 700 }}
+                                    />
+                                    <span style={{ fontSize: '11px', color: '#475569', fontWeight: 600 }}>/ hour</span>
+                                  </div>
+                                </div>
+
+                                <div style={{ backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#1E293B', display: 'block' }}>
+                                    🤝 Retained Farm-Out Commission Target (%)
+                                  </label>
+                                  <p style={{ fontSize: '10px', color: '#64748B', margin: '2px 0 6px 0' }}>
+                                    Gross profit margin retained by {config.vendor_name || 'your company'} on farmed legs.
+                                  </p>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <input
+                                      type="number"
+                                      step="1"
+                                      min="5"
+                                      max="40"
+                                      value={vendorAffiliatePolicy.multi_leg_rules?.affiliate_commission_target_pct ?? 18.0}
+                                      onChange={e => setVendorAffiliatePolicy({
+                                        ...vendorAffiliatePolicy,
+                                        multi_leg_rules: {
+                                          ...(vendorAffiliatePolicy.multi_leg_rules || {
+                                            max_layover_hours_for_wait: 3.5,
+                                            hourly_wait_rate_usd: 75.0,
+                                            deadhead_rate_per_km_usd: 1.75,
+                                            max_driver_shift_hours: 12.0,
+                                            max_out_of_market_radius_km: 160.0,
+                                            inter_city_corridor_policy: 'SMART_SPLIT',
+                                            auto_farm_out_long_layovers: true,
+                                            affiliate_commission_target_pct: 18.0,
+                                            require_continuous_charter_for_local_stops: true,
+                                            client_vip_override_enabled: true,
+                                            overnight_hotel_allowance_usd: 250.0,
+                                            chauffeur_meal_per_diem_usd: 75.0
+                                          }),
+                                          affiliate_commission_target_pct: parseFloat(e.target.value) || 18.0
+                                        }
+                                      })}
+                                      style={{ width: '80px', padding: '6px 8px', fontSize: '12px', border: '1px solid #CBD5E1', borderRadius: '4px', fontWeight: 700 }}
+                                    />
+                                    <span style={{ fontSize: '11px', color: '#475569', fontWeight: 600 }}>% referral cut (15% - 25% typical)</span>
+                                  </div>
+                                </div>
+
+                                <div style={{ backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#1E293B', display: 'block' }}>
+                                    🛡️ Federal DOT Driver Shift Limit (Hours)
+                                  </label>
+                                  <p style={{ fontSize: '10px', color: '#64748B', margin: '2px 0 6px 0' }}>
+                                    Alert threshold for chauffeur daily shift to prevent exceeding 14-hour legal window.
+                                  </p>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <input
+                                      type="number"
+                                      step="0.5"
+                                      min="8"
+                                      max="14"
+                                      value={vendorAffiliatePolicy.multi_leg_rules?.max_driver_shift_hours ?? 12.0}
+                                      onChange={e => setVendorAffiliatePolicy({
+                                        ...vendorAffiliatePolicy,
+                                        multi_leg_rules: {
+                                          ...(vendorAffiliatePolicy.multi_leg_rules || {
+                                            max_layover_hours_for_wait: 3.5,
+                                            hourly_wait_rate_usd: 75.0,
+                                            deadhead_rate_per_km_usd: 1.75,
+                                            max_driver_shift_hours: 12.0,
+                                            max_out_of_market_radius_km: 160.0,
+                                            inter_city_corridor_policy: 'SMART_SPLIT',
+                                            auto_farm_out_long_layovers: true,
+                                            affiliate_commission_target_pct: 18.0,
+                                            require_continuous_charter_for_local_stops: true,
+                                            client_vip_override_enabled: true,
+                                            overnight_hotel_allowance_usd: 250.0,
+                                            chauffeur_meal_per_diem_usd: 75.0
+                                          }),
+                                          max_driver_shift_hours: parseFloat(e.target.value) || 12.0
+                                        }
+                                      })}
+                                      style={{ width: '80px', padding: '6px 8px', fontSize: '12px', border: '1px solid #CBD5E1', borderRadius: '4px', fontWeight: 700 }}
+                                    />
+                                    <span style={{ fontSize: '11px', color: '#DC2626', fontWeight: 700 }}>Hours Safety Warning (14h Hard Cap)</span>
+                                  </div>
+                                </div>
+
+                              </div>
+
+                              {/* Form Grid 2: Corridor & Regulatory Policies */}
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '14px' }}>
+                                
+                                <div style={{ backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#1E293B', display: 'block', marginBottom: '4px' }}>
+                                    🔀 Inter-City Corridor Default Fulfillment Strategy
+                                  </label>
+                                  <select
+                                    value={vendorAffiliatePolicy.multi_leg_rules?.inter_city_corridor_policy || 'SMART_SPLIT'}
+                                    onChange={e => setVendorAffiliatePolicy({
+                                      ...vendorAffiliatePolicy,
+                                      multi_leg_rules: {
+                                        ...(vendorAffiliatePolicy.multi_leg_rules || {
+                                          max_layover_hours_for_wait: 3.5,
+                                          hourly_wait_rate_usd: 75.0,
+                                          deadhead_rate_per_km_usd: 1.75,
+                                          max_driver_shift_hours: 12.0,
+                                          max_out_of_market_radius_km: 160.0,
+                                          inter_city_corridor_policy: 'SMART_SPLIT',
+                                          auto_farm_out_long_layovers: true,
+                                          affiliate_commission_target_pct: 18.0,
+                                          require_continuous_charter_for_local_stops: true,
+                                          client_vip_override_enabled: true,
+                                          overnight_hotel_allowance_usd: 250.0,
+                                          chauffeur_meal_per_diem_usd: 75.0
+                                        }),
+                                        inter_city_corridor_policy: e.target.value as any
+                                      }
+                                    })}
+                                    style={{ width: '100%', padding: '8px', fontSize: '12px', border: '1px solid #CBD5E1', borderRadius: '6px', backgroundColor: '#FFFFFF', fontWeight: 600 }}
+                                  >
+                                    <option value="SMART_SPLIT">⚡ Smart Split (Evaluate Layover & Auto-Select Optimal)</option>
+                                    <option value="DEDICATED_WAIT_ONLY">🚘 Dedicated Chauffeur Standby Only (Always Keep In-House)</option>
+                                    <option value="AUTO_FARM_FORWARD">🌐 Auto-Farm Outward Legs (Eliminate All Return Deadhead)</option>
+                                  </select>
+                                </div>
+
+                                <div style={{ backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#1E293B' }}>
+                                    ⚖️ Regulatory & VIP Service Protections
+                                  </label>
+                                  
+                                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: '#334155', cursor: 'pointer' }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={vendorAffiliatePolicy.multi_leg_rules?.require_continuous_charter_for_local_stops ?? true}
+                                      onChange={e => setVendorAffiliatePolicy({
+                                        ...vendorAffiliatePolicy,
+                                        multi_leg_rules: {
+                                          ...(vendorAffiliatePolicy.multi_leg_rules || {
+                                            max_layover_hours_for_wait: 3.5,
+                                            hourly_wait_rate_usd: 75.0,
+                                            deadhead_rate_per_km_usd: 1.75,
+                                            max_driver_shift_hours: 12.0,
+                                            max_out_of_market_radius_km: 160.0,
+                                            inter_city_corridor_policy: 'SMART_SPLIT',
+                                            auto_farm_out_long_layovers: true,
+                                            affiliate_commission_target_pct: 18.0,
+                                            require_continuous_charter_for_local_stops: true,
+                                            client_vip_override_enabled: true,
+                                            overnight_hotel_allowance_usd: 250.0,
+                                            chauffeur_meal_per_diem_usd: 75.0
+                                          }),
+                                          require_continuous_charter_for_local_stops: e.target.checked
+                                        }
+                                      })}
+                                    />
+                                    <strong>Enforce Continuous Interstate Charter</strong> (NYC TLC / PA PPA cabotage legal shield)
+                                  </label>
+
+                                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: '#334155', cursor: 'pointer' }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={vendorAffiliatePolicy.multi_leg_rules?.client_vip_override_enabled ?? true}
+                                      onChange={e => setVendorAffiliatePolicy({
+                                        ...vendorAffiliatePolicy,
+                                        multi_leg_rules: {
+                                          ...(vendorAffiliatePolicy.multi_leg_rules || {
+                                            max_layover_hours_for_wait: 3.5,
+                                            hourly_wait_rate_usd: 75.0,
+                                            deadhead_rate_per_km_usd: 1.75,
+                                            max_driver_shift_hours: 12.0,
+                                            max_out_of_market_radius_km: 160.0,
+                                            inter_city_corridor_policy: 'SMART_SPLIT',
+                                            auto_farm_out_long_layovers: true,
+                                            affiliate_commission_target_pct: 18.0,
+                                            require_continuous_charter_for_local_stops: true,
+                                            client_vip_override_enabled: true,
+                                            overnight_hotel_allowance_usd: 250.0,
+                                            chauffeur_meal_per_diem_usd: 75.0
+                                          }),
+                                          client_vip_override_enabled: e.target.checked
+                                        }
+                                      })}
+                                    />
+                                    <strong>Enable VIP Dedicated Chauffeur Option</strong> (Allows executive booker to request same driver)
+                                  </label>
+                                </div>
+
+                              </div>
+
+                              {/* LIVE SCENARIO SIMULATOR & TEST BENCH */}
+                              <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', padding: '14px', marginTop: '4px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                  <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    🧪 Live Multi-Leg Strategy Simulator & Test Bench
+                                  </div>
+                                  <span style={{ fontSize: '10px', color: '#64748B' }}>
+                                    Test how your sovereign rules evaluate real customer itineraries
+                                  </span>
+                                </div>
+
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+                                  {[
+                                    {
+                                      label: '⚡ Scenario A: PHL ➔ NYC (2.5h Layover) ➔ PHL',
+                                      legs: [
+                                        { origin_address: 'Philadelphia, PA', destination_address: 'Manhattan, NYC', time: '08:00 AM' },
+                                        { origin_address: 'Manhattan, NYC', destination_address: 'Philadelphia, PA', time: '12:30 PM' }
+                                      ]
+                                    },
+                                    {
+                                      label: '⚡ Scenario B: PHL ➔ NYC (7.0h Layover) ➔ PHL',
+                                      legs: [
+                                        { origin_address: 'Philadelphia, PA', destination_address: 'Manhattan, NYC', time: '08:00 AM' },
+                                        { origin_address: 'Manhattan, NYC', destination_address: 'Philadelphia, PA', time: '06:00 PM' }
+                                      ]
+                                    },
+                                    {
+                                      label: '⚡ Scenario C: PHL ➔ NYC ➔ Boston (Forward Chain)',
+                                      legs: [
+                                        { origin_address: 'Philadelphia, PA', destination_address: 'Manhattan, NYC', time: '07:30 AM' },
+                                        { origin_address: 'Manhattan, NYC', destination_address: 'Boston Back Bay, MA', time: '02:00 PM' }
+                                      ]
+                                    }
+                                  ].map((sc, scIdx) => (
+                                    <button
+                                      key={scIdx}
+                                      type="button"
+                                      onClick={async () => {
+                                        setSimEvaluating(true);
+                                        try {
+                                          const res = await evaluateVendorMultilegStrategy(config.vendor_id, sc.legs, false);
+                                          setSimulatedStrategyResult(res);
+                                        } catch (err: any) {
+                                          console.error('Sim error', err);
+                                        } finally {
+                                          setSimEvaluating(false);
+                                        }
+                                      }}
+                                      style={{
+                                        padding: '4px 8px',
+                                        fontSize: '11px',
+                                        fontWeight: 600,
+                                        backgroundColor: '#EFF6FF',
+                                        color: '#1E40AF',
+                                        border: '1px solid #BFDBFE',
+                                        borderRadius: '4px',
+                                        cursor: 'pointer'
+                                      }}
+                                    >
+                                      {sc.label}
+                                    </button>
+                                  ))}
+                                </div>
+
+                                {/* Simulation Result Output Card */}
+                                {simEvaluating && (
+                                  <div style={{ padding: '10px', fontSize: '11px', color: '#64748B', backgroundColor: '#F8FAFC', borderRadius: '6px' }}>
+                                    Evaluating routing algorithm against {config.vendor_name || 'vendor'} business rules...
+                                  </div>
+                                )}
+
+                                {simulatedStrategyResult && !simEvaluating && (
+                                  <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '6px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                      <span style={{ fontSize: '11px', fontWeight: 800, color: '#0F172A' }}>
+                                        🎯 Strategy: <span style={{ color: '#0078D4' }}>{simulatedStrategyResult.strategy}</span>
+                                      </span>
+                                      <span style={{ fontSize: '10px', backgroundColor: '#DCFCE7', color: '#15803D', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                                        Evaluated via Sovereign Rules
+                                      </span>
+                                    </div>
+                                    <p style={{ margin: 0, fontSize: '11px', color: '#334155' }}>
+                                      {simulatedStrategyResult.recommended_action}
+                                    </p>
+                                    <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                                      {simulatedStrategyResult.legs_breakdown?.map((l: any, lIdx: number) => (
+                                        <div key={lIdx} style={{ flex: 1, padding: '6px 8px', backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '10.5px' }}>
+                                          <div style={{ fontWeight: 700, color: '#0F172A' }}>{l.title}</div>
+                                          <div style={{ color: l.fulfillment === 'IN_HOUSE' ? '#15803D' : '#7C3AED', fontWeight: 800 }}>
+                                            {l.fulfillment === 'IN_HOUSE' ? '🏢 In-House Chauffeur' : l.fulfillment === 'IN_HOUSE_WAIT_AND_RETURN' ? '🚘 Dedicated Standby' : '🤝 Farm-Out Partner'}
+                                          </div>
+                                          <div style={{ color: '#64748B', fontSize: '9.5px', marginTop: '2px' }}>{l.reason}</div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                            </div>
+                          )}
+                        </div>
+
                       </div>
 
                       {/* 3. CERTIFIED GLOBAL AFFILIATE DIRECTORY IN GLOBAL HUB KNOWLEDGE BASE */}
@@ -10176,18 +11000,19 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
               </div>
             )}
 
-            {/* TAB 10: VENDOR SAAS SUBSCRIPTION & HUB BILLING */}
+            {/* TAB 10: VENDOR PLATFORM SERVICES & AUTO-PAY BILLING HUB */}
             {activeTab === 'subscription' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
                 
                 {/* Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                   <div>
-                    <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#0F172A' }}>
-                      Sovereign Cell SaaS Subscription & Hub Billing
+                    <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <CreditCard size={22} color="#0078D4" />
+                      <span>Platform Services & Auto-Pay Hub</span>
                     </h2>
-                    <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#6B7280' }}>
-                      Manage your monthly container hosting plan, switch to Pay-As-You-Go ($0/mo), manage dunning renewals, or decommission your cell.
+                    <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748B' }}>
+                      Review your sovereign cell hosting, payment method on file, and central hub charging profile.
                     </p>
                   </div>
 
@@ -10195,414 +11020,211 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                     onClick={loadSubscription}
                     disabled={isLoadingSub}
                     style={{
-                      padding: '6px 14px',
+                      padding: '7px 14px',
                       backgroundColor: '#FFFFFF',
                       color: '#374151',
                       border: '1px solid #D1D5DB',
                       borderRadius: '6px',
                       fontSize: '12px',
-                      fontWeight: 600,
+                      fontWeight: 700,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '6px'
+                      gap: '6px',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
                     }}
                   >
-                    <RefreshCw size={13} className={isLoadingSub ? 'animate-spin' : ''} />
-                    <span>Refresh Plan Status</span>
+                    <RefreshCw size={13} className={isLoadingSub ? 'animate-spin' : ''} color="#0078D4" />
+                    <span>Refresh Billing Status</span>
                   </button>
                 </div>
 
-                {/* Active Plan Overview Banner */}
+                {/* Main 1-Card Platform Services & Auto-Pay Overview */}
                 <div style={{
                   backgroundColor: '#FFFFFF',
                   borderRadius: '12px',
                   border: '1px solid #E2E8F0',
-                  padding: '24px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '16px'
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.04)',
+                  overflow: 'hidden'
                 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px' }}>
+                  {/* Card Header Banner */}
+                  <div style={{
+                    padding: '24px',
+                    borderBottom: '1px solid #F1F5F9',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    flexWrap: 'wrap',
+                    gap: '16px',
+                    backgroundColor: '#FAFAFA'
+                  }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                       <div style={{
-                        width: '48px',
-                        height: '48px',
-                        borderRadius: '10px',
+                        width: '52px',
+                        height: '52px',
+                        borderRadius: '12px',
                         backgroundColor: '#EFF6FF',
                         color: '#0078D4',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center'
                       }}>
-                        <CreditCard size={24} />
+                        <ShieldCheck size={28} />
                       </div>
                       <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>
                             {subscriptionData?.tier_name || 'Pro Sovereign (Dedicated Cell)'}
                           </h3>
                           <span style={{
                             fontSize: '11px',
                             fontWeight: 800,
-                            padding: '2px 8px',
+                            padding: '3px 10px',
                             borderRadius: '12px',
                             backgroundColor: subscriptionData?.billing_status === 'ACTIVE' ? '#DCFCE7' : subscriptionData?.billing_status === 'PAST_DUE' ? '#FEE2E2' : '#F1F5F9',
-                            color: subscriptionData?.billing_status === 'ACTIVE' ? '#15803D' : subscriptionData?.billing_status === 'PAST_DUE' ? '#B91C1C' : '#64748B'
+                            color: subscriptionData?.billing_status === 'ACTIVE' ? '#15803D' : subscriptionData?.billing_status === 'PAST_DUE' ? '#B91C1C' : '#64748B',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px'
                           }}>
-                            ● {subscriptionData?.billing_status || 'ACTIVE'}
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: subscriptionData?.billing_status === 'ACTIVE' ? '#16A34A' : '#EF4444' }} />
+                            {subscriptionData?.billing_status || 'ACTIVE'}
                           </span>
                         </div>
-                        <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '3px' }}>
-                          Vendor Cell: <strong style={{ color: '#0F172A', fontFamily: 'monospace' }}>{config.vendor_id}</strong> • Dedicated Isolated DB Partition: <strong style={{ color: '#0F172A', fontFamily: 'monospace' }}>db_{config.vendor_id}</strong>
+                        <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>
+                          Cell ID: <strong style={{ color: '#0F172A', fontFamily: 'monospace' }}>{config.vendor_id}</strong> • Dedicated Partition: <strong style={{ color: '#0F172A', fontFamily: 'monospace' }}>db_{config.vendor_id}</strong>
                         </div>
                       </div>
                     </div>
 
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '28px', fontWeight: 900, color: subscriptionData?.monthly_fee === 0 ? '#64748B' : '#0078D4' }}>
+                      <div style={{ fontSize: '28px', fontWeight: 900, color: '#0078D4' }}>
                         ${(subscriptionData?.monthly_fee ?? 99).toFixed(2)}
                         <span style={{ fontSize: '13px', fontWeight: 600, color: '#64748B' }}> / month</span>
                       </div>
-                      {subscriptionData?.pay_as_you_go_rate > 0 && (
-                        <div style={{ fontSize: '11px', color: '#D97706', fontWeight: 700 }}>
-                          +{(subscriptionData.pay_as_you_go_rate * 100).toFixed(0)}% fee on completed bookings
-                        </div>
-                      )}
+                      <div style={{ fontSize: '12px', color: '#166534', fontWeight: 700, marginTop: '2px' }}>
+                        +{(Number(subscriptionData?.pay_as_you_go_rate || 0) * 100).toFixed(1)}% per-ride commission
+                      </div>
                     </div>
                   </div>
 
+                  {/* Operational Details Grid */}
                   <div style={{
+                    padding: '24px',
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                    gap: '12px',
-                    padding: '16px',
-                    backgroundColor: '#F8FAFC',
-                    borderRadius: '8px',
-                    border: '1px solid #E2E8F0',
-                    fontSize: '12px'
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                    gap: '16px',
+                    backgroundColor: '#FFFFFF'
                   }}>
-                    <div>
-                      <div style={{ color: '#64748B', fontWeight: 600, fontSize: '11px' }}>NEXT RENEWAL DATE</div>
-                      <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>
-                        {subscriptionData?.renews_at ? new Date(subscriptionData.renews_at).toLocaleDateString() : 'N/A (Free/Pay-As-You-Go)'}
+                    <div style={{ backgroundColor: '#F8FAFC', padding: '14px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                      <div style={{ color: '#64748B', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>BILLING TERMS</div>
+                      <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '14px', marginTop: '4px' }}>
+                        {subscriptionData?.billing_terms || 'Net 30 (Monthly Auto-Debit)'}
                       </div>
+                      <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>Global Hub Standard Terms</div>
                     </div>
 
-                    <div>
-                      <div style={{ color: '#64748B', fontWeight: 600, fontSize: '11px' }}>DUNNING & GRACE PERIOD</div>
-                      <div style={{ fontWeight: 800, color: subscriptionData?.is_grace_period_active ? '#DC2626' : '#16A34A', marginTop: '2px' }}>
-                        {subscriptionData?.is_grace_period_active 
-                          ? `⚠️ 7-Day Grace Active (Expires ${new Date(subscriptionData.grace_period_expires_at).toLocaleDateString()})` 
-                          : '✓ In Good Standing'}
+                    <div style={{ backgroundColor: '#F8FAFC', padding: '14px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                      <div style={{ color: '#64748B', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>PAYMENT METHOD ON FILE</div>
+                      <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '14px', marginTop: '4px' }}>
+                        {subscriptionData?.payment_method_summary || '•••• 4242 (Stripe Auto-Pay Active)'}
                       </div>
+                      <div style={{ fontSize: '11px', color: '#16A34A', marginTop: '2px' }}>✓ Direct ACH / Card Verified</div>
                     </div>
 
-                    <div>
-                      <div style={{ color: '#64748B', fontWeight: 600, fontSize: '11px' }}>AUTOMATIC CONTAINER SUSPENSION</div>
-                      <div style={{ fontWeight: 800, color: '#0078D4', marginTop: '2px' }}>
-                        {subscriptionData?.auto_cell_suspension ? '🛡️ Enabled on Non-Payment' : 'Manual Review'}
+                    <div style={{ backgroundColor: '#F8FAFC', padding: '14px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                      <div style={{ color: '#64748B', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>NEXT BILLING CYCLE</div>
+                      <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '14px', marginTop: '4px' }}>
+                        {subscriptionData?.renews_at ? new Date(subscriptionData.renews_at).toLocaleDateString() : 'Active Rolling Cycle'}
                       </div>
+                      <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>Automated Statement Generation</div>
                     </div>
 
-                    <div>
-                      <div style={{ color: '#64748B', fontWeight: 600, fontSize: '11px' }}>STRIPE CONNECT PAYOUTS</div>
-                      <div style={{ fontWeight: 800, color: '#16A34A', marginTop: '2px' }}>
-                        ✓ Express Verified (24h Direct ACH)
+                    <div style={{ backgroundColor: '#F8FAFC', padding: '14px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                      <div style={{ color: '#64748B', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>CONTRACT / AGREEMENT REF</div>
+                      <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '14px', marginTop: '4px', fontFamily: 'monospace' }}>
+                        {subscriptionData?.contract_reference || `CTR-${config.vendor_id.toUpperCase().slice(-6)}-2026`}
                       </div>
+                      <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>Sovereign Cell Master Agreement</div>
                     </div>
                   </div>
-                </div>
 
-                {/* 4-Tier Plan Selection Matrix */}
-                <div>
-                  <h3 style={{ margin: '0 0 14px 0', fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>
-                    Choose Your Sovereign Cell Tier
-                  </h3>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-                    
-                    {/* Plan 1: Starter Free */}
-                    <div style={{
-                      backgroundColor: '#FFFFFF',
-                      borderRadius: '10px',
-                      border: `2px solid ${subscriptionData?.tier === 'tier_starter_free' ? '#0078D4' : '#E5E7EB'}`,
-                      padding: '20px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '14px',
-                      position: 'relative'
-                    }}>
-                      {subscriptionData?.tier === 'tier_starter_free' && (
-                        <span style={{ position: 'absolute', top: '-10px', right: '14px', backgroundColor: '#0078D4', color: '#FFFFFF', fontSize: '10px', fontWeight: 800, padding: '2px 8px', borderRadius: '10px' }}>
-                          CURRENT PLAN
-                        </span>
-                      )}
-                      <div>
-                        <div style={{ fontWeight: 800, fontSize: '15px', color: '#0F172A' }}>Starter / Free Trial</div>
-                        <div style={{ fontSize: '22px', fontWeight: 900, color: '#0F172A', marginTop: '4px' }}>$0 <span style={{ fontSize: '12px', fontWeight: 500, color: '#64748B' }}>/mo</span></div>
-                        <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>Zero fixed commitment</div>
-                      </div>
-
-                      <div style={{ fontSize: '11.5px', color: '#4B5563', display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
-                        <div>✓ 1 Sovereign Fleet Vehicle</div>
-                        <div>✓ Single Chauffeur Driver</div>
-                        <div>✓ Basic AI Booking Form</div>
-                        <div>✓ Local DB Partition</div>
-                      </div>
-
-                      <button
-                        onClick={() => handleUpgradeTier('tier_starter_free')}
-                        disabled={subscriptionData?.tier === 'tier_starter_free' || isProcessingSubAction}
-                        style={{
-                          marginTop: 'auto',
-                          padding: '8px',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          cursor: subscriptionData?.tier === 'tier_starter_free' ? 'default' : 'pointer',
-                          backgroundColor: subscriptionData?.tier === 'tier_starter_free' ? '#F1F5F9' : '#FFFFFF',
-                          color: subscriptionData?.tier === 'tier_starter_free' ? '#94A3B8' : '#0F172A',
-                          border: '1px solid #CBD5E1'
-                        }}
-                      >
-                        {subscriptionData?.tier === 'tier_starter_free' ? 'Active Plan' : 'Downgrade to Free'}
-                      </button>
+                  {/* 3 Simple Action Buttons */}
+                  <div style={{
+                    padding: '20px 24px',
+                    borderTop: '1px solid #E2E8F0',
+                    backgroundColor: '#F8FAFC',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '12px'
+                  }}>
+                    <div style={{ fontSize: '12px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Shield size={14} color="#16A34A" />
+                      <span>Encrypted direct integration with Stripe Customer Portal for PCI-compliant billing management.</span>
                     </div>
 
-                    {/* Plan 2: Pro Sovereign (Recommended) */}
-                    <div style={{
-                      backgroundColor: '#FFFFFF',
-                      borderRadius: '10px',
-                      border: `2px solid ${subscriptionData?.tier === 'tier_pro_sovereign' ? '#0078D4' : '#BFDBFE'}`,
-                      padding: '20px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '14px',
-                      position: 'relative',
-                      boxShadow: '0 4px 12px rgba(0, 120, 212, 0.08)'
-                    }}>
-                      <span style={{ position: 'absolute', top: '-10px', right: '14px', backgroundColor: '#16A34A', color: '#FFFFFF', fontSize: '10px', fontWeight: 800, padding: '2px 8px', borderRadius: '10px' }}>
-                        MOST POPULAR
-                      </span>
-                      <div>
-                        <div style={{ fontWeight: 800, fontSize: '15px', color: '#0F172A' }}>Pro Sovereign Cell</div>
-                        <div style={{ fontSize: '22px', fontWeight: 900, color: '#0078D4', marginTop: '4px' }}>$99 <span style={{ fontSize: '12px', fontWeight: 500, color: '#64748B' }}>/mo</span></div>
-                        <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>Full autonomous agency</div>
-                      </div>
-
-                      <div style={{ fontSize: '11.5px', color: '#4B5563', display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
-                        <div>✓ Unlimited Fleet Vehicles & Drivers</div>
-                        <div>✓ Isolated Docker Container</div>
-                        <div>✓ BYOE Inbound RFQ AI Gateway</div>
-                        <div>✓ Chauffeur Contractor & W2 Payroll</div>
-                        <div>✓ Stripe Express 24h Payouts</div>
-                      </div>
-
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                       <button
-                        onClick={() => handleUpgradeTier('tier_pro_sovereign')}
-                        disabled={subscriptionData?.tier === 'tier_pro_sovereign' || isProcessingSubAction}
+                        onClick={handleOpenBillingPortal}
+                        disabled={isProcessingSubAction}
                         style={{
-                          marginTop: 'auto',
-                          padding: '8px',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          fontWeight: 800,
-                          cursor: subscriptionData?.tier === 'tier_pro_sovereign' ? 'default' : 'pointer',
-                          backgroundColor: subscriptionData?.tier === 'tier_pro_sovereign' ? '#EFF6FF' : '#0078D4',
-                          color: subscriptionData?.tier === 'tier_pro_sovereign' ? '#0078D4' : '#FFFFFF',
-                          border: subscriptionData?.tier === 'tier_pro_sovereign' ? '1px solid #BFDBFE' : 'none'
-                        }}
-                      >
-                        {subscriptionData?.tier === 'tier_pro_sovereign' ? 'Active Plan' : 'Upgrade to Pro ($99/mo)'}
-                      </button>
-                    </div>
-
-                    {/* Plan 3: Enterprise Cluster */}
-                    <div style={{
-                      backgroundColor: '#FFFFFF',
-                      borderRadius: '10px',
-                      border: `2px solid ${subscriptionData?.tier === 'tier_enterprise_cluster' ? '#7E22CE' : '#E5E7EB'}`,
-                      padding: '20px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '14px',
-                      position: 'relative'
-                    }}>
-                      <div>
-                        <div style={{ fontWeight: 800, fontSize: '15px', color: '#0F172A' }}>Enterprise Cluster</div>
-                        <div style={{ fontSize: '22px', fontWeight: 900, color: '#7E22CE', marginTop: '4px' }}>$249 <span style={{ fontSize: '12px', fontWeight: 500, color: '#64748B' }}>/mo</span></div>
-                        <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>Multi-Region High Availability</div>
-                      </div>
-
-                      <div style={{ fontSize: '11.5px', color: '#4B5563', display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
-                        <div>✓ Multi-Region Route53 & ACM TLS</div>
-                        <div>✓ Dedicated AWS WAF & Rate Limiter</div>
-                        <div>✓ Voice AI Telephony Fine-Tuning</div>
-                        <div>✓ 99.99% Uptime Enterprise SLA</div>
-                        <div>✓ Priority Hub Clearing Routing</div>
-                      </div>
-
-                      <button
-                        onClick={() => handleUpgradeTier('tier_enterprise_cluster')}
-                        disabled={subscriptionData?.tier === 'tier_enterprise_cluster' || isProcessingSubAction}
-                        style={{
-                          marginTop: 'auto',
-                          padding: '8px',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          fontWeight: 800,
-                          cursor: subscriptionData?.tier === 'tier_enterprise_cluster' ? 'default' : 'pointer',
-                          backgroundColor: subscriptionData?.tier === 'tier_enterprise_cluster' ? '#FAF5FF' : '#7E22CE',
-                          color: subscriptionData?.tier === 'tier_enterprise_cluster' ? '#7E22CE' : '#FFFFFF',
-                          border: subscriptionData?.tier === 'tier_enterprise_cluster' ? '1px solid #E9D5FF' : 'none'
-                        }}
-                      >
-                        {subscriptionData?.tier === 'tier_enterprise_cluster' ? 'Active Plan' : 'Upgrade to Enterprise ($249/mo)'}
-                      </button>
-                    </div>
-
-                    {/* Plan 4: Pay-As-You-Go */}
-                    <div style={{
-                      backgroundColor: '#FFFFFF',
-                      borderRadius: '10px',
-                      border: `2px solid ${subscriptionData?.tier === 'tier_pay_as_you_go' ? '#D97706' : '#E5E7EB'}`,
-                      padding: '20px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '14px',
-                      position: 'relative'
-                    }}>
-                      <div>
-                        <div style={{ fontWeight: 800, fontSize: '15px', color: '#0F172A' }}>Pay-As-You-Go</div>
-                        <div style={{ fontSize: '22px', fontWeight: 900, color: '#D97706', marginTop: '4px' }}>$0 <span style={{ fontSize: '12px', fontWeight: 500, color: '#64748B' }}>+ 5% / ride</span></div>
-                        <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>Zero fixed monthly fee</div>
-                      </div>
-
-                      <div style={{ fontSize: '11.5px', color: '#4B5563', display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
-                        <div>✓ $0 Monthly Fixed Fee Forever</div>
-                        <div>✓ 5% Platform Fee Only on Completed Rides</div>
-                        <div>✓ Full Dispatch & Fleet Access</div>
-                        <div>✓ Never Suspended for Non-Payment</div>
-                      </div>
-
-                      <button
-                        onClick={handleSwitchPayAsYouGo}
-                        disabled={subscriptionData?.tier === 'tier_pay_as_you_go' || isProcessingSubAction}
-                        style={{
-                          marginTop: 'auto',
-                          padding: '8px',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          fontWeight: 800,
-                          cursor: subscriptionData?.tier === 'tier_pay_as_you_go' ? 'default' : 'pointer',
-                          backgroundColor: subscriptionData?.tier === 'tier_pay_as_you_go' ? '#FFFBEB' : '#D97706',
-                          color: subscriptionData?.tier === 'tier_pay_as_you_go' ? '#D97706' : '#FFFFFF',
-                          border: subscriptionData?.tier === 'tier_pay_as_you_go' ? '1px solid #FDE68A' : 'none'
-                        }}
-                      >
-                        {subscriptionData?.tier === 'tier_pay_as_you_go' ? 'Active Plan' : 'Switch to Pay-As-You-Go ($0/mo)'}
-                      </button>
-                    </div>
-
-                  </div>
-                </div>
-
-                {/* Self-Serve Governance & Danger Zone Actions */}
-                <div style={{
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: '10px',
-                  border: '1px solid #E5E7EB',
-                  padding: '22px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '14px',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
-                }}>
-                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0F172A' }}>
-                    Account Governance & Self-Serve Controls
-                  </h3>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
-                    
-                    {/* Action 1: Switch to Pay-As-You-Go */}
-                    <div style={{ padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ fontWeight: 800, fontSize: '13px', color: '#0F172A' }}>⚡ Pause Fixed Monthly Charges</div>
-                      <p style={{ margin: 0, fontSize: '11.5px', color: '#64748B', lineHeight: '1.4' }}>
-                        Switch instantly to Pay-As-You-Go ($0/mo + 5% per ride). You keep all dispatch capabilities without recurring monthly fees.
-                      </p>
-                      <button
-                        onClick={handleSwitchPayAsYouGo}
-                        disabled={isProcessingSubAction || subscriptionData?.tier === 'tier_pay_as_you_go'}
-                        style={{
-                          marginTop: 'auto',
-                          padding: '7px 12px',
-                          backgroundColor: '#FFFFFF',
-                          color: '#D97706',
-                          border: '1px solid #FDE68A',
-                          borderRadius: '6px',
-                          fontSize: '11px',
-                          fontWeight: 800,
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Switch to Pay-As-You-Go ($0/mo)
-                      </button>
-                    </div>
-
-                    {/* Action 2: Cancel Subscription */}
-                    <div style={{ padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ fontWeight: 800, fontSize: '13px', color: '#0F172A' }}>🛑 Cancel Subscription Plan</div>
-                      <p style={{ margin: 0, fontSize: '11.5px', color: '#64748B', lineHeight: '1.4' }}>
-                        Cancel your active subscription. Your account will automatically revert to the Free Tier at the end of the billing period.
-                      </p>
-                      <button
-                        onClick={handleCancelSubscription}
-                        disabled={isProcessingSubAction || subscriptionData?.billing_status === 'CANCELLED'}
-                        style={{
-                          marginTop: 'auto',
-                          padding: '7px 12px',
-                          backgroundColor: '#FFFFFF',
-                          color: '#475569',
-                          border: '1px solid #CBD5E1',
-                          borderRadius: '6px',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {subscriptionData?.billing_status === 'CANCELLED' ? 'Subscription Cancelled' : 'Cancel Subscription'}
-                      </button>
-                    </div>
-
-                    {/* Action 3: Request Account Deletion */}
-                    <div style={{ padding: '16px', backgroundColor: '#FEF2F2', borderRadius: '8px', border: '1px solid #FECACA', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ fontWeight: 800, fontSize: '13px', color: '#991B1B' }}>⚠️ Decommission & Delete Account</div>
-                      <p style={{ margin: 0, fontSize: '11.5px', color: '#B91C1C', lineHeight: '1.4' }}>
-                        Permanently decommission your Sovereign Cell container, scale replicas to 0, and archive data partition.
-                      </p>
-                      <button
-                        onClick={() => {
-                          setDeleteConfirmText('');
-                          setShowDeleteAccountModal(true);
-                        }}
-                        style={{
-                          marginTop: 'auto',
-                          padding: '7px 12px',
-                          backgroundColor: '#DC2626',
+                          padding: '9px 16px',
+                          backgroundColor: '#0078D4',
                           color: '#FFFFFF',
                           border: 'none',
                           borderRadius: '6px',
-                          fontSize: '11px',
+                          fontSize: '12px',
                           fontWeight: 800,
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          boxShadow: '0 1px 3px rgba(0, 120, 212, 0.25)'
                         }}
                       >
-                        Request Account Deletion
+                        <CreditCard size={14} />
+                        <span>💳 Update Payment Method / Auto-Pay</span>
+                      </button>
+
+                      <button
+                        onClick={handleOpenBillingPortal}
+                        disabled={isProcessingSubAction}
+                        style={{
+                          padding: '9px 16px',
+                          backgroundColor: '#FFFFFF',
+                          color: '#334155',
+                          border: '1px solid #CBD5E1',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <FileText size={14} color="#0078D4" />
+                        <span>📄 View Invoices & Receipts</span>
                       </button>
                     </div>
+                  </div>
+                </div>
 
+                {/* Central Management Note */}
+                <div style={{
+                  padding: '16px 20px',
+                  backgroundColor: '#EFF6FF',
+                  borderRadius: '8px',
+                  border: '1px solid #BFDBFE',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '12px'
+                }}>
+                  <AlertCircle size={18} color="#0078D4" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <div style={{ fontSize: '12px', color: '#1E40AF', lineHeight: '1.5' }}>
+                    <strong>Centralized Billing & Contract Profiles:</strong> Your sovereign cell monthly fee and per-ride commission rates are managed centrally by Global Hub Operations. If you require changes to your billing terms, custom enterprise volumes, or tax documentation, please contact your Global Hub account manager.
                   </div>
                 </div>
 
@@ -10615,112 +11237,18 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
 
       </div>
 
-      {/* ACCOUNT DELETION CONFIRMATION MODAL */}
-      {showDeleteAccountModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.65)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '20px'
-        }}>
-          <div style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '12px',
-            maxWidth: '520px',
-            width: '100%',
-            padding: '24px',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Trash2 size={20} />
-              </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#991B1B' }}>
-                  Decommission Sovereign Cell & Delete Account
-                </h3>
-                <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748B' }}>
-                  Vendor Cell ID: <strong style={{ fontFamily: 'monospace', color: '#0F172A' }}>{config.vendor_id}</strong>
-                </p>
-              </div>
-            </div>
-
-            <div style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '6px', padding: '12px', fontSize: '12px', color: '#991B1B', lineHeight: '1.4' }}>
-              <strong>⚠️ CRITICAL WARNING:</strong> Submitting this decommission request will:
-              <ul style={{ margin: '6px 0 0 0', paddingLeft: '18px' }}>
-                <li>Scale isolated container replicas to 0</li>
-                <li>Halt incoming customer bookings and email RFQ routing</li>
-                <li>Archive database partition <code style={{ fontFamily: 'monospace' }}>db_{config.vendor_id}</code></li>
-                <li>Cancel all future Hub recurring monthly SaaS subscription fees</li>
-              </ul>
-            </div>
-
-            <div>
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#374151' }}>Reason for Decommissioning</label>
-              <select
-                value={deleteReason}
-                onChange={(e) => setDeleteReason(e.target.value)}
-                style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', marginTop: '4px' }}
-              >
-                <option value="Business restructuring">Business restructuring / Change of operations</option>
-                <option value="Switching to another platform">Switching to another platform</option>
-                <option value="Seasonal fleet shutdown">Seasonal fleet shutdown</option>
-                <option value="Cost reduction">Cost reduction</option>
-                <option value="Other">Other reason</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#374151' }}>
-                Type <strong style={{ color: '#DC2626' }}>DELETE</strong> to confirm decommission:
-              </label>
-              <input
-                type="text"
-                placeholder="DELETE"
-                value={deleteConfirmText}
-                onChange={(e) => setDeleteConfirmText(e.target.value)}
-                style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '13px', fontFamily: 'monospace', marginTop: '4px' }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
-              <button
-                onClick={() => setShowDeleteAccountModal(false)}
-                disabled={isProcessingSubAction}
-                style={{ padding: '8px 16px', backgroundColor: '#F1F5F9', color: '#475569', border: '1px solid #CBD5E1', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmAccountDeletion}
-                disabled={deleteConfirmText.trim().toUpperCase() !== 'DELETE' || isProcessingSubAction}
-                style={{
-                  padding: '8px 18px',
-                  backgroundColor: deleteConfirmText.trim().toUpperCase() === 'DELETE' ? '#DC2626' : '#94A3B8',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  fontWeight: 800,
-                  cursor: deleteConfirmText.trim().toUpperCase() === 'DELETE' && !isProcessingSubAction ? 'pointer' : 'not-allowed'
-                }}
-              >
-                {isProcessingSubAction ? 'Processing Decommission...' : 'Confirm & Decommission Cell'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* DISPATCHER INBOUND PHONE BOOKING DESK MODAL */}
+      <DispatcherPhoneBookingModal
+        isOpen={showPhoneBookingModal}
+        onClose={() => setShowPhoneBookingModal(false)}
+        vendorId={config.vendor_id}
+        vendorName={config.vendor_name || 'ANB Limo Executive Chauffeurs'}
+        availableDrivers={[]}
+        availableVehicles={vehicles}
+        onBookingCreated={async () => {
+          setActionNotice('✅ Phone reservation created and synchronized to dispatch partition.');
+        }}
+      />
 
     </div>
   );

@@ -157,7 +157,7 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
             {/* Book a Ride Button */}
             <button
               className="public-header__book"
-              onClick={() => handleNavClick('HOME')}
+              onClick={() => handleNavClick('BOOKING')}
             >
               Book a Ride
             </button>
@@ -233,6 +233,13 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
             aria-current={activeTab === 'CONTACT' ? 'page' : undefined}
           >
             Contact
+          </button>
+          <button
+            onClick={() => handleNavClick('BOOKING')}
+            aria-current={activeTab === 'BOOKING' ? 'page' : undefined}
+            style={{ fontWeight: 800, color: '#D4AF37' }}
+          >
+            ✨ Book a Ride
           </button>
           <button
             onClick={() => {

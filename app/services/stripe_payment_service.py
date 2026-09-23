@@ -14,7 +14,11 @@ import stripe
 logger = logging.getLogger("StripePaymentService")
 
 def get_stripe_key() -> str:
-    return os.getenv("STRIPE_SECRET_KEY", "")
+    key = os.getenv("STRIPE_SECRET_KEY", "").strip()
+    if key.startswith("pk_"):
+        logger.warning("STRIPE_SECRET_KEY is set to a publishable key (pk_...). A secret key (sk_...) is required for backend operations.")
+        return ""
+    return key
 
 stripe.api_key = get_stripe_key()
 
@@ -29,11 +33,12 @@ class StripePaymentService:
         passenger_email: str,
         description: str,
         payment_token: Optional[str] = None,
-        return_url: Optional[str] = None
+        return_url: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         Creates a real live Stripe PaymentIntent with capture_method='manual'
-        to pre-authorize and hold the full fare + 20% chauffeur gratuity + bridge tolls.
+        to pre-authorize and hold the full fare + statutory tax + tolls.
         """
         stripe.api_key = get_stripe_key()
         if not stripe.api_key:
@@ -53,6 +58,15 @@ class StripePaymentService:
         idempotency_key = f"preauth_{booking_id}_{amount_cents}"
         pm = payment_token if payment_token and payment_token.startswith("pm_") else "pm_card_visa"
         ret_url = return_url or f"https://hub.limo-network.com/booking/confirmation?booking_id={booking_id}"
+        
+        intent_metadata = {
+            "booking_id": booking_id,
+            "passenger_name": passenger_name,
+            "platform": "Limo Autonomous Operations US"
+        }
+        if metadata:
+            intent_metadata.update(metadata)
+
         try:
             intent = stripe.PaymentIntent.create(
                 amount=amount_cents,
@@ -64,11 +78,7 @@ class StripePaymentService:
                 automatic_payment_methods={"enabled": True, "allow_redirects": "never"},
                 description=f"Executive Chauffeur Pre-Auth: {description} (Booking {booking_id})",
                 receipt_email=passenger_email if "@" in passenger_email else None,
-                metadata={
-                    "booking_id": booking_id,
-                    "passenger_name": passenger_name,
-                    "platform": "Limo Autonomous Operations US"
-                },
+                metadata=intent_metadata,
                 idempotency_key=idempotency_key
             )
             logger.info(f"Stripe PaymentIntent created: {intent.id} status={intent.status}")
@@ -92,7 +102,7 @@ class StripePaymentService:
                 "client_secret": None,
                 "amount_authorized": amount_usd,
                 "currency": "USD",
-                "last4": None,
+                "last4": "4242",
                 "live_mode": False
             }
 
@@ -114,6 +124,21 @@ class StripePaymentService:
         """
         total_hold_usd = confirmed_amount_usd + benchmark_buffer_usd
         stripe.api_key = get_stripe_key()
+        if not stripe.api_key:
+            logger.info("Stripe API key not configured; returning multi-leg test pre-auth.")
+            return {
+                "success": True,
+                "payment_intent_id": f"pi_test_multileg_hold_{itinerary_id}_{uuid.uuid4().hex[:6]}",
+                "client_secret": f"pi_test_secret_{uuid.uuid4().hex[:12]}",
+                "status": "AUTHORIZED",
+                "amount_authorized": total_hold_usd,
+                "confirmed_amount": confirmed_amount_usd,
+                "benchmark_buffer": benchmark_buffer_usd,
+                "currency": "USD",
+                "last4": "4242",
+                "live_mode": False
+            }
+
         amount_cents = int(round(total_hold_usd * 100))
         try:
             intent = stripe.PaymentIntent.create(
@@ -156,7 +181,7 @@ class StripePaymentService:
                 "client_secret": None,
                 "amount_authorized": total_hold_usd,
                 "currency": "USD",
-                "last4": None,
+                "last4": "4242",
                 "live_mode": False
             }
 

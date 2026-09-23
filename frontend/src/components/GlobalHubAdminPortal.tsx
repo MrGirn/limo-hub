@@ -12,7 +12,8 @@ import {
 } from 'lucide-react';
 import { 
   stopSovereignCell, startSovereignCell, terminateSovereignCell, 
-  fetchHubSubscriptionsOverview 
+  fetchHubSubscriptionsOverview, updateVendorChargingProfile,
+  sendVendorInvoice, chargeVendorAutoPay 
 } from '../api';
 
 interface GlobalHubAdminPortalProps {
@@ -29,6 +30,18 @@ export const GlobalHubAdminPortal: React.FC<GlobalHubAdminPortalProps> = ({
   const [paymentViewTab, setPaymentViewTab] = useState<'activity' | 'subscriptions' | 'stripe_model'>('activity');
   const [hubSubscriptions, setHubSubscriptions] = useState<any | null>(null);
   const [isDunningTesting, setIsDunningTesting] = useState(false);
+  const [editingProfileVendor, setEditingProfileVendor] = useState<any | null>(null);
+  const [chargingProfileForm, setChargingProfileForm] = useState({
+    plan_name: '',
+    monthly_price_usd: 99.0,
+    per_ride_commission_pct: 0.0,
+    billing_terms: 'Net 30 (Monthly Auto-Debit)',
+    contract_reference: '',
+    status: 'ACTIVE'
+  });
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isSendingInvoice, setIsSendingInvoice] = useState<string | null>(null);
+  const [isChargingAutoPay, setIsChargingAutoPay] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
@@ -40,7 +53,6 @@ export const GlobalHubAdminPortal: React.FC<GlobalHubAdminPortalProps> = ({
   const [settlementStatusFilter, setSettlementStatusFilter] = useState<'ALL' | 'SETTLED' | 'HELD_IN_ESCROW'>('ALL');
   const [expandedSettlementId, setExpandedSettlementId] = useState<string | null>(null);
   const [stripeArchitecture, setStripeArchitecture] = useState<any | null>(null);
-  const [isSimulatingSettlement, setIsSimulatingSettlement] = useState(false);
   const [aiLifecycleData, setAiLifecycleData] = useState<any | null>(null);
   const [isCheckingModelLifecycle, setIsCheckingModelLifecycle] = useState(false);
 
@@ -360,6 +372,67 @@ depot:
     }
   };
 
+  const handleOpenEditProfile = (sub: any) => {
+    setEditingProfileVendor(sub);
+    setChargingProfileForm({
+      plan_name: sub.tier_name || sub.tier || 'Pro Sovereign (Dedicated Cell)',
+      monthly_price_usd: Number(sub.monthly_fee) || 0,
+      per_ride_commission_pct: (Number(sub.pay_as_you_go_rate) || 0) * 100,
+      billing_terms: sub.billing_terms || 'Net 30 (Monthly Auto-Debit)',
+      contract_reference: sub.contract_reference || `CTR-${sub.vendor_id.toUpperCase().slice(-6)}-2026`,
+      status: sub.billing_status || 'ACTIVE'
+    });
+  };
+
+  const handleSaveChargingProfile = async () => {
+    if (!editingProfileVendor) return;
+    setIsSavingProfile(true);
+    try {
+      await updateVendorChargingProfile(editingProfileVendor.vendor_id, {
+        plan_name: chargingProfileForm.plan_name,
+        monthly_price_usd: Number(chargingProfileForm.monthly_price_usd),
+        per_ride_commission_pct: Number(chargingProfileForm.per_ride_commission_pct) / 100,
+        billing_terms: chargingProfileForm.billing_terms,
+        contract_reference: chargingProfileForm.contract_reference,
+        status: chargingProfileForm.status
+      });
+      setActionNotice(`✓ Custom charging profile saved for ${editingProfileVendor.vendor_id}!`);
+      setEditingProfileVendor(null);
+      loadData();
+    } catch (err: any) {
+      alert(`Failed to save profile: ${err.message}`);
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const handleSendInvoice = async (vendorId: string) => {
+    setIsSendingInvoice(vendorId);
+    try {
+      const res = await sendVendorInvoice(vendorId);
+      setActionNotice(`📄 Invoice successfully generated & sent to ${vendorId}! Invoice ID: ${res.invoice_id} ($${Number(res.amount_due_usd).toFixed(2)})`);
+      loadData();
+    } catch (err: any) {
+      alert(`Failed to send invoice: ${err.message}`);
+    } finally {
+      setIsSendingInvoice(null);
+    }
+  };
+
+  const handleTriggerAutoPay = async (vendorId: string) => {
+    if (!confirm(`Execute Stripe auto-debit charge for vendor "${vendorId}" now?`)) return;
+    setIsChargingAutoPay(vendorId);
+    try {
+      const res = await chargeVendorAutoPay(vendorId);
+      setActionNotice(`⚡ Stripe Auto-Debit succeeded for ${vendorId}! PaymentIntent: ${res.stripe_payment_intent} ($${Number(res.amount_charged_usd).toFixed(2)})`);
+      loadData();
+    } catch (err: any) {
+      alert(`Auto-pay failed: ${err.message}`);
+    } finally {
+      setIsChargingAutoPay(null);
+    }
+  };
+
   const handleRunModelLifecycleAudit = async () => {
     setIsCheckingModelLifecycle(true);
     try {
@@ -378,32 +451,6 @@ depot:
     }
   };
 
-  const handleSimulateSettlement = async () => {
-    setIsSimulatingSettlement(true);
-    try {
-      const resp = await fetch('/api/v1/payments/simulate-escrow-settlement', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          originator_vendor_id: 'ny-executive-limo',
-          performing_vendor_id: 'anb-limo-philly',
-          passenger_name: 'Lady Eleanor Vance (Goldman Sachs Executive)',
-          pickup_address: 'PHL Airport Atlantic Aviation FBO',
-          dropoff_address: 'The Rittenhouse Hotel Philadelphia',
-          gross_fare_usd: 265.0
-        })
-      });
-      if (resp.ok) {
-        const res = await resp.json();
-        setActionNotice(`💳 Executed Live Card Escrow Settlement! Exchange: ${res.exchange_id} • 85% Performing: $${res.performer_payout_85_usd} • 10% Originator: $${res.originator_commission_10_usd} • 5% Hub: $${res.hub_clearing_fee_5_usd}`);
-        loadData();
-      }
-    } catch (err) {
-      console.log('Simulation settlement error:', err);
-    } finally {
-      setIsSimulatingSettlement(false);
-    }
-  };
 
   useEffect(() => {
     loadData();
@@ -2514,26 +2561,39 @@ depot:
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    backgroundColor: '#F0FDF4',
+                    color: '#166534',
+                    border: '1px solid #BBF7D0',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: 700
+                  }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#16A34A', display: 'inline-block' }} />
+                    Live Authoritative Data
+                  </span>
                   <button
-                    onClick={handleSimulateSettlement}
-                    disabled={isSimulatingSettlement}
+                    onClick={loadData}
                     style={{
-                      padding: '8px 16px',
-                      backgroundColor: '#0078D4',
-                      color: '#FFFFFF',
-                      border: 'none',
+                      padding: '6px 12px',
+                      backgroundColor: '#FFFFFF',
+                      color: '#374151',
+                      border: '1px solid #D1D5DB',
                       borderRadius: '6px',
                       fontSize: '12px',
-                      fontWeight: 700,
-                      cursor: isSimulatingSettlement ? 'not-allowed' : 'pointer',
+                      fontWeight: 600,
+                      cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '6px',
-                      boxShadow: '0 1px 3px rgba(0, 120, 212, 0.25)'
+                      gap: '6px'
                     }}
                   >
-                    <Plus size={14} />
-                    <span>{isSimulatingSettlement ? 'Executing Split Transfer...' : '+ Simulate Farm-In/Out Split ($265.00)'}</span>
+                    <RefreshCw size={13} color="#0078D4" />
+                    <span>Refresh Ledger</span>
                   </button>
                 </div>
               </div>
@@ -2737,7 +2797,7 @@ depot:
                                   </button>
                                 </div>
                               ) : (
-                                'No settlements recorded yet. Click "+ Simulate Farm-In/Out Split" to trigger a live transaction.'
+                                'No cross-dispatch settlements recorded yet. Real farm-in/farm-out transactions from dispatched bookings will appear here automatically.'
                               )}
                             </td>
                           </tr>
@@ -2789,18 +2849,18 @@ depot:
 
                                   <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
                                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 800 }}>
-                                      <span style={{ color: '#0F172A', fontWeight: 900 }}>${s.gross_fare_usd.toFixed(2)}</span>
+                                      <span style={{ color: '#0F172A', fontWeight: 900 }}>${(Number(s.gross_fare_usd) || 0).toFixed(2)}</span>
                                       <span style={{ color: '#CBD5E1', fontWeight: 400 }}>|</span>
                                       <span style={{ color: '#15803D' }}>
-                                        ${s.performing_net_usd.toFixed(2)} <span style={{ fontSize: '10px', color: '#16A34A', fontWeight: 700 }}>(85%)</span>
+                                        ${(Number(s.performing_net_usd) || 0).toFixed(2)} <span style={{ fontSize: '10px', color: '#16A34A', fontWeight: 700 }}>(85%)</span>
                                       </span>
                                       <span style={{ color: '#CBD5E1', fontWeight: 400 }}>|</span>
                                       <span style={{ color: '#D97706' }}>
-                                        ${s.originator_commission_usd.toFixed(2)} <span style={{ fontSize: '10px', color: '#B45309', fontWeight: 700 }}>(10%)</span>
+                                        ${(Number(s.originator_commission_usd) || 0).toFixed(2)} <span style={{ fontSize: '10px', color: '#B45309', fontWeight: 700 }}>(10%)</span>
                                       </span>
                                       <span style={{ color: '#CBD5E1', fontWeight: 400 }}>|</span>
                                       <span style={{ color: '#0078D4' }}>
-                                        ${s.hub_clearing_fee_usd.toFixed(2)} <span style={{ fontSize: '10px', color: '#0284C7', fontWeight: 700 }}>(5%)</span>
+                                        ${(Number(s.hub_clearing_fee_usd) || 0).toFixed(2)} <span style={{ fontSize: '10px', color: '#0284C7', fontWeight: 700 }}>(5%)</span>
                                       </span>
                                     </div>
                                   </td>
@@ -2933,7 +2993,7 @@ depot:
                                             <div style={{ backgroundColor: '#FFFFFF', padding: '10px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
                                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                 <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 700 }}>Gross Collected Fare:</span>
-                                                <span style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A' }}>${s.gross_fare_usd.toFixed(2)} USD</span>
+                                                <span style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A' }}>${(Number(s.gross_fare_usd) || 0).toFixed(2)} USD</span>
                                               </div>
                                             </div>
 
@@ -2943,7 +3003,7 @@ depot:
                                                   <div style={{ fontSize: '11px', fontWeight: 800, color: '#166534' }}>85% Performing Operator Net</div>
                                                   <div style={{ fontSize: '9px', color: '#15803D' }}>{s.performing_vendor_name}</div>
                                                 </div>
-                                                <span style={{ fontSize: '13px', fontWeight: 900, color: '#15803D' }}>+${s.performing_net_usd.toFixed(2)}</span>
+                                                <span style={{ fontSize: '13px', fontWeight: 900, color: '#15803D' }}>+${(Number(s.performing_net_usd) || 0).toFixed(2)}</span>
                                               </div>
 
                                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', backgroundColor: '#FEF3C7', borderRadius: '4px', border: '1px solid #FDE68A' }}>
@@ -2951,7 +3011,7 @@ depot:
                                                   <div style={{ fontSize: '11px', fontWeight: 800, color: '#92400E' }}>10% Originator Referral Comm</div>
                                                   <div style={{ fontSize: '9px', color: '#B45309' }}>{s.originator_vendor_name}</div>
                                                 </div>
-                                                <span style={{ fontSize: '13px', fontWeight: 900, color: '#D97706' }}>+${s.originator_commission_usd.toFixed(2)}</span>
+                                                <span style={{ fontSize: '13px', fontWeight: 900, color: '#D97706' }}>+${(Number(s.originator_commission_usd) || 0).toFixed(2)}</span>
                                               </div>
 
                                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', backgroundColor: '#EFF6FF', borderRadius: '4px', border: '1px solid #BFDBFE' }}>
@@ -2959,7 +3019,7 @@ depot:
                                                   <div style={{ fontSize: '11px', fontWeight: 800, color: '#1E40AF' }}>5% Global Hub Clearing Fee</div>
                                                   <div style={{ fontSize: '9px', color: '#2563EB' }}>Platform Bond & Instant Settlement</div>
                                                 </div>
-                                                <span style={{ fontSize: '13px', fontWeight: 900, color: '#0078D4' }}>+${s.hub_clearing_fee_usd.toFixed(2)}</span>
+                                                <span style={{ fontSize: '13px', fontWeight: 900, color: '#0078D4' }}>+${(Number(s.hub_clearing_fee_usd) || 0).toFixed(2)}</span>
                                               </div>
                                             </div>
                                           </div>
@@ -3081,9 +3141,9 @@ depot:
                     <div style={{ backgroundColor: '#FFFFFF', padding: '16px', borderRadius: '8px', border: '1px solid #E2E8F0', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
                       <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700 }}>TOTAL MONTHLY RECURRING REVENUE (MRR)</div>
                       <div style={{ fontSize: '24px', fontWeight: 900, color: '#0078D4', marginTop: '4px' }}>
-                        ${(hubSubscriptions?.total_mrr || 348).toFixed(2)} USD
+                        ${(Number(hubSubscriptions?.total_mrr) || 348).toFixed(2)} USD
                       </div>
-                      <div style={{ fontSize: '11px', color: '#16A34A', marginTop: '2px' }}>SaaS Subscription ARR: ${((hubSubscriptions?.total_mrr || 348) * 12).toFixed(2)}</div>
+                      <div style={{ fontSize: '11px', color: '#16A34A', marginTop: '2px' }}>SaaS Subscription ARR: ${((Number(hubSubscriptions?.total_mrr) || 348) * 12).toFixed(2)}</div>
                     </div>
 
                     <div style={{ backgroundColor: '#FFFFFF', padding: '16px', borderRadius: '8px', border: '1px solid #E2E8F0', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
@@ -3146,26 +3206,30 @@ depot:
                       <thead style={{ backgroundColor: '#F8FAFC', color: '#475569', textTransform: 'uppercase', fontSize: '11px', borderBottom: '1px solid #E2E8F0' }}>
                         <tr>
                           <th style={{ padding: '12px 14px' }}>Vendor Cell</th>
-                          <th style={{ padding: '12px 14px' }}>Active Plan Tier</th>
-                          <th style={{ padding: '12px 14px' }}>Base Monthly Fee</th>
+                          <th style={{ padding: '12px 14px' }}>Charging Profile & Ref</th>
+                          <th style={{ padding: '12px 14px' }}>Custom Rate & Commission</th>
+                          <th style={{ padding: '12px 14px' }}>Billing Terms</th>
                           <th style={{ padding: '12px 14px' }}>Billing Status</th>
-                          <th style={{ padding: '12px 14px' }}>Dunning & Grace Expiry</th>
-                          <th style={{ padding: '12px 14px' }}>Auto Cell Pause</th>
-                          <th style={{ padding: '12px 14px' }}>Next Renewal</th>
-                          <th style={{ padding: '12px 14px', textAlign: 'right' }}>Admin Dunning Actions</th>
+                          <th style={{ padding: '12px 14px' }}>Next Statement</th>
+                          <th style={{ padding: '12px 14px', textAlign: 'right' }}>Admin Invoicing & Billing Controls</th>
                         </tr>
                       </thead>
                       <tbody>
                         {(!hubSubscriptions?.subscriptions || hubSubscriptions.subscriptions.length === 0) ? (
                           <tr>
-                            <td colSpan={8} style={{ padding: '24px', textAlign: 'center', color: '#64748B' }}>
-                              Loading active SaaS subscriptions...
+                            <td colSpan={7} style={{ padding: '24px', textAlign: 'center', color: '#64748B' }}>
+                              Loading active SaaS subscriptions and charging profiles...
                             </td>
                           </tr>
                         ) : (
                           hubSubscriptions.subscriptions.map((sub: any) => {
                             const isDelinquent = sub.billing_status === 'PAST_DUE';
-                            const isFree = sub.monthly_fee === 0;
+                            const monthlyFee = Number(sub.monthly_fee) || 0;
+                            const isFree = monthlyFee === 0;
+                            const paygRate = Number(sub.pay_as_you_go_rate) || 0;
+                            const isSending = isSendingInvoice === sub.vendor_id;
+                            const isCharging = isChargingAutoPay === sub.vendor_id;
+
                             return (
                               <tr key={sub.vendor_id} style={{ borderBottom: '1px solid #F1F5F9', color: '#0F172A', backgroundColor: isDelinquent ? '#FEF2F2' : 'transparent' }}>
                                 <td style={{ padding: '12px 14px' }}>
@@ -3174,27 +3238,34 @@ depot:
                                 </td>
 
                                 <td style={{ padding: '12px 14px' }}>
-                                  <span style={{
-                                    padding: '2px 8px',
-                                    borderRadius: '4px',
-                                    fontSize: '11px',
-                                    fontWeight: 800,
-                                    backgroundColor: sub.tier === 'tier_enterprise_cluster' ? '#FAF5FF' : sub.tier === 'tier_pro_sovereign' ? '#EFF6FF' : '#F1F5F9',
-                                    color: sub.tier === 'tier_enterprise_cluster' ? '#7E22CE' : sub.tier === 'tier_pro_sovereign' ? '#0078D4' : '#475569'
-                                  }}>
-                                    {sub.tier_name}
-                                  </span>
+                                  <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '12px' }}>
+                                    {sub.tier_name || sub.tier}
+                                  </div>
+                                  <div style={{ fontSize: '10px', color: '#64748B', fontFamily: 'monospace', marginTop: '2px' }}>
+                                    {sub.contract_reference || `CTR-${sub.vendor_id.toUpperCase().slice(-6)}-2026`}
+                                  </div>
                                 </td>
 
                                 <td style={{ padding: '12px 14px' }}>
                                   <div style={{ fontWeight: 800, fontSize: '13px', color: isFree ? '#64748B' : '#15803D' }}>
-                                    ${sub.monthly_fee.toFixed(2)}/mo
+                                    ${monthlyFee.toFixed(2)}/mo
                                   </div>
-                                  {sub.pay_as_you_go_rate > 0 && (
-                                    <div style={{ fontSize: '10px', color: '#D97706', fontWeight: 600 }}>
-                                      +{(sub.pay_as_you_go_rate * 100).toFixed(0)}% per completed ride
-                                    </div>
-                                  )}
+                                  <div style={{ fontSize: '10px', color: paygRate > 0 ? '#D97706' : '#64748B', fontWeight: 600 }}>
+                                    +{(paygRate * 100).toFixed(1)}% per ride
+                                  </div>
+                                </td>
+
+                                <td style={{ padding: '12px 14px' }}>
+                                  <span style={{
+                                    fontSize: '11px',
+                                    fontWeight: 700,
+                                    padding: '2px 8px',
+                                    borderRadius: '4px',
+                                    backgroundColor: '#F1F5F9',
+                                    color: '#334155'
+                                  }}>
+                                    {sub.billing_terms || 'Net 30 (Monthly Auto-Debit)'}
+                                  </span>
                                 </td>
 
                                 <td style={{ padding: '12px 14px' }}>
@@ -3212,64 +3283,109 @@ depot:
                                     <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: sub.billing_status === 'ACTIVE' ? '#16A34A' : '#EF4444' }} />
                                     {sub.billing_status}
                                   </span>
-                                </td>
-
-                                <td style={{ padding: '12px 14px' }}>
-                                  {sub.grace_period_expires_at ? (
-                                    <div>
-                                      <div style={{ color: '#DC2626', fontWeight: 800, fontSize: '11px' }}>
-                                        ⚠️ Stage {sub.dunning_stage} (Grace Active)
-                                      </div>
-                                      <div style={{ fontSize: '10px', color: '#64748B' }}>
-                                        Expires: {new Date(sub.grace_period_expires_at).toLocaleDateString()}
-                                      </div>
+                                  {sub.grace_period_expires_at && (
+                                    <div style={{ fontSize: '10px', color: '#DC2626', fontWeight: 700, marginTop: '2px' }}>
+                                      ⚠️ Grace: {new Date(sub.grace_period_expires_at).toLocaleDateString()}
                                     </div>
-                                  ) : (
-                                    <span style={{ fontSize: '11px', color: '#16A34A', fontWeight: 600 }}>
-                                      ✓ Account Current (No Grace Required)
-                                    </span>
                                   )}
                                 </td>
 
-                                <td style={{ padding: '12px 14px' }}>
-                                  <span style={{
-                                    fontSize: '10px',
-                                    padding: '1px 6px',
-                                    borderRadius: '3px',
-                                    backgroundColor: sub.auto_cell_suspension ? '#EFF6FF' : '#F8FAFC',
-                                    color: sub.auto_cell_suspension ? '#0078D4' : '#94A3B8',
-                                    fontWeight: 700
-                                  }}>
-                                    {sub.auto_cell_suspension ? '🛡️ AUTO-SUSPEND ENABLED' : 'MANUAL'}
-                                  </span>
-                                </td>
-
                                 <td style={{ padding: '12px 14px', fontSize: '11px', color: '#475569' }}>
-                                  {sub.renews_at ? new Date(sub.renews_at).toLocaleDateString() : 'N/A (Free Tier)'}
+                                  {sub.renews_at ? new Date(sub.renews_at).toLocaleDateString() : 'Auto-Cycle'}
                                 </td>
 
                                 <td style={{ padding: '12px 14px', textAlign: 'right' }}>
-                                  <button
-                                    onClick={() => handleTriggerDunningTest(sub.vendor_id)}
-                                    disabled={isDunningTesting}
-                                    style={{
-                                      padding: '4px 8px',
-                                      backgroundColor: '#FEF2F2',
-                                      color: '#DC2626',
-                                      border: '1px solid #FECACA',
-                                      borderRadius: '4px',
-                                      fontSize: '11px',
-                                      fontWeight: 700,
-                                      cursor: isDunningTesting ? 'not-allowed' : 'pointer',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '4px'
-                                    }}
-                                    title="Simulate Delinquent Payment & Dunning Warning"
-                                  >
-                                    <AlertTriangle size={11} />
-                                    <span>Simulate Dunning</span>
-                                  </button>
+                                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                    {/* 1. Edit Custom Charging Profile */}
+                                    <button
+                                      onClick={() => handleOpenEditProfile(sub)}
+                                      style={{
+                                        padding: '4px 8px',
+                                        backgroundColor: '#EFF6FF',
+                                        color: '#0078D4',
+                                        border: '1px solid #BFDBFE',
+                                        borderRadius: '4px',
+                                        fontSize: '11px',
+                                        fontWeight: 700,
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '3px'
+                                      }}
+                                      title="Edit Custom Pricing, Terms & Commission"
+                                    >
+                                      <Settings size={11} />
+                                      <span>✏️ Profile</span>
+                                    </button>
+
+                                    {/* 2. Send Direct Monthly Invoice */}
+                                    <button
+                                      onClick={() => handleSendInvoice(sub.vendor_id)}
+                                      disabled={isSending}
+                                      style={{
+                                        padding: '4px 8px',
+                                        backgroundColor: '#FFFFFF',
+                                        color: '#334155',
+                                        border: '1px solid #CBD5E1',
+                                        borderRadius: '4px',
+                                        fontSize: '11px',
+                                        fontWeight: 700,
+                                        cursor: isSending ? 'not-allowed' : 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '3px'
+                                      }}
+                                      title="Generate & Send Official Monthly Invoice"
+                                    >
+                                      <FileText size={11} color="#0078D4" />
+                                      <span>{isSending ? 'Sending...' : '📄 Send Inv'}</span>
+                                    </button>
+
+                                    {/* 3. Execute Instant Stripe Auto-Pay Charge */}
+                                    <button
+                                      onClick={() => handleTriggerAutoPay(sub.vendor_id)}
+                                      disabled={isCharging}
+                                      style={{
+                                        padding: '4px 8px',
+                                        backgroundColor: '#DCFCE7',
+                                        color: '#15803D',
+                                        border: '1px solid #86EFAC',
+                                        borderRadius: '4px',
+                                        fontSize: '11px',
+                                        fontWeight: 800,
+                                        cursor: isCharging ? 'not-allowed' : 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '3px'
+                                      }}
+                                      title="Trigger Stripe PaymentIntent Direct Auto-Debit"
+                                    >
+                                      <Zap size={11} />
+                                      <span>{isCharging ? 'Debiting...' : '⚡ Auto-Debit'}</span>
+                                    </button>
+
+                                    {/* 4. Dunning Simulation */}
+                                    <button
+                                      onClick={() => handleTriggerDunningTest(sub.vendor_id)}
+                                      disabled={isDunningTesting}
+                                      style={{
+                                        padding: '4px 7px',
+                                        backgroundColor: '#FEF2F2',
+                                        color: '#DC2626',
+                                        border: '1px solid #FECACA',
+                                        borderRadius: '4px',
+                                        fontSize: '11px',
+                                        fontWeight: 700,
+                                        cursor: isDunningTesting ? 'not-allowed' : 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '2px'
+                                      }}
+                                      title="Simulate Delinquent Payment Warning"
+                                    >
+                                      <AlertTriangle size={11} />
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -3278,6 +3394,164 @@ depot:
                       </tbody>
                     </table>
                   </div>
+
+                  {/* EDIT CUSTOM CHARGING PROFILE MODAL */}
+                  {editingProfileVendor && (
+                    <div style={{
+                      position: 'fixed',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: 'rgba(0, 0, 0, 0.65)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 9999,
+                      padding: '20px'
+                    }}>
+                      <div style={{
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: '12px',
+                        maxWidth: '540px',
+                        width: '100%',
+                        padding: '24px',
+                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '16px'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E2E8F0', paddingBottom: '12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ padding: '8px', backgroundColor: '#EFF6FF', borderRadius: '8px', color: '#0078D4' }}>
+                              <Sliders size={20} />
+                            </div>
+                            <div>
+                              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>
+                                Custom Vendor Charging Profile
+                              </h3>
+                              <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#64748B' }}>
+                                Vendor: <strong style={{ color: '#0F172A' }}>{editingProfileVendor.vendor_name || editingProfileVendor.vendor_id}</strong> (<span style={{ fontFamily: 'monospace' }}>{editingProfileVendor.vendor_id}</span>)
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setEditingProfileVendor(null)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8' }}
+                          >
+                            <X size={20} />
+                          </button>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                          <div style={{ gridColumn: 'span 2' }}>
+                            <label style={{ fontSize: '11.5px', fontWeight: 700, color: '#374151' }}>Plan / Tier Display Name</label>
+                            <input
+                              type="text"
+                              value={chargingProfileForm.plan_name}
+                              onChange={(e) => setChargingProfileForm({ ...chargingProfileForm, plan_name: e.target.value })}
+                              style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', marginTop: '4px' }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11.5px', fontWeight: 700, color: '#374151' }}>Monthly Base Fee (USD)</label>
+                            <div style={{ position: 'relative', marginTop: '4px' }}>
+                              <span style={{ position: 'absolute', left: '10px', top: '8px', color: '#64748B', fontWeight: 700 }}>$</span>
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={chargingProfileForm.monthly_price_usd}
+                                onChange={(e) => setChargingProfileForm({ ...chargingProfileForm, monthly_price_usd: parseFloat(e.target.value) || 0 })}
+                                style={{ width: '100%', padding: '8px 10px 8px 24px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', fontWeight: 800 }}
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11.5px', fontWeight: 700, color: '#374151' }}>Per-Ride Commission (%)</label>
+                            <div style={{ position: 'relative', marginTop: '4px' }}>
+                              <input
+                                type="number"
+                                step="0.1"
+                                min="0"
+                                max="100"
+                                value={chargingProfileForm.per_ride_commission_pct}
+                                onChange={(e) => setChargingProfileForm({ ...chargingProfileForm, per_ride_commission_pct: parseFloat(e.target.value) || 0 })}
+                                style={{ width: '100%', padding: '8px 24px 8px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', fontWeight: 800 }}
+                              />
+                              <span style={{ position: 'absolute', right: '10px', top: '8px', color: '#64748B', fontWeight: 700 }}>%</span>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11.5px', fontWeight: 700, color: '#374151' }}>Billing Terms</label>
+                            <select
+                              value={chargingProfileForm.billing_terms}
+                              onChange={(e) => setChargingProfileForm({ ...chargingProfileForm, billing_terms: e.target.value })}
+                              style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', marginTop: '4px' }}
+                            >
+                              <option value="Net 30 (Monthly Auto-Debit)">Net 30 (Monthly Auto-Debit)</option>
+                              <option value="Net 15 (Direct Wire / ACH)">Net 15 (Direct Wire / ACH)</option>
+                              <option value="Due on Receipt (Stripe Auto-Charge)">Due on Receipt (Stripe Auto-Charge)</option>
+                              <option value="Pay-As-You-Go Clearinghouse Only">Pay-As-You-Go Clearinghouse Only</option>
+                              <option value="Annual Upfront Contract">Annual Upfront Contract</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11.5px', fontWeight: 700, color: '#374151' }}>Contract Reference ID</label>
+                            <input
+                              type="text"
+                              value={chargingProfileForm.contract_reference}
+                              onChange={(e) => setChargingProfileForm({ ...chargingProfileForm, contract_reference: e.target.value })}
+                              style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', fontFamily: 'monospace', marginTop: '4px' }}
+                            />
+                          </div>
+
+                          <div style={{ gridColumn: 'span 2' }}>
+                            <label style={{ fontSize: '11.5px', fontWeight: 700, color: '#374151' }}>Account Status</label>
+                            <select
+                              value={chargingProfileForm.status}
+                              onChange={(e) => setChargingProfileForm({ ...chargingProfileForm, status: e.target.value })}
+                              style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', marginTop: '4px' }}
+                            >
+                              <option value="ACTIVE">ACTIVE (In Good Standing)</option>
+                              <option value="PAST_DUE">PAST_DUE (Dunning Grace Active)</option>
+                              <option value="SUSPENDED">SUSPENDED (Traffic Paused)</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #E2E8F0', paddingTop: '12px', marginTop: '6px' }}>
+                          <button
+                            onClick={() => setEditingProfileVendor(null)}
+                            disabled={isSavingProfile}
+                            style={{ padding: '8px 14px', backgroundColor: '#F1F5F9', color: '#475569', border: '1px solid #CBD5E1', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={handleSaveChargingProfile}
+                            disabled={isSavingProfile}
+                            style={{
+                              padding: '8px 18px',
+                              backgroundColor: '#0078D4',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: 800,
+                              cursor: isSavingProfile ? 'not-allowed' : 'pointer'
+                            }}
+                          >
+                            {isSavingProfile ? 'Saving Profile...' : 'Save Charging Profile'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                 </div>
               )}

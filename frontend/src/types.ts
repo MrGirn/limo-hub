@@ -927,11 +927,27 @@ export interface FarmInPolicy {
   require_verified_passenger_phone: boolean;
 }
 
+export interface MultiLegRoutingRules {
+  max_layover_hours_for_wait: number;
+  hourly_wait_rate_usd: number;
+  deadhead_rate_per_km_usd: number;
+  max_driver_shift_hours: number;
+  max_out_of_market_radius_km: number;
+  inter_city_corridor_policy: 'SMART_SPLIT' | 'DEDICATED_WAIT_ONLY' | 'AUTO_FARM_FORWARD';
+  auto_farm_out_long_layovers: boolean;
+  affiliate_commission_target_pct: number;
+  require_continuous_charter_for_local_stops: boolean;
+  client_vip_override_enabled: boolean;
+  overnight_hotel_allowance_usd: number;
+  chauffeur_meal_per_diem_usd: number;
+}
+
 export interface VendorAffiliatePolicyRules {
   vendor_id: string;
   custom_owner_notes?: string;
   farm_out_policy: FarmOutPolicy;
   farm_in_policy: FarmInPolicy;
+  multi_leg_rules?: MultiLegRoutingRules;
   ai_compiled_summary?: string;
   updated_at: number;
 }
@@ -963,6 +979,94 @@ export interface Dispatch24hAlert {
   status: string;
   recommended_candidates: CandidateChauffeur[];
 }
+
+export interface QuickQuoteRequest {
+  vendor_id?: string;
+  service_type: 'POINT_TO_POINT' | 'AIRPORT_TRANSFER' | 'HOURLY_AS_DIRECTED' | 'MULTI_CITY_TOUR' | string;
+  vehicle_class: 'BUSINESS_SEDAN' | 'FIRST_CLASS' | 'LUXURY_SUV' | 'BUSINESS_VAN' | 'ULTRA_LUXURY' | 'ELECTRIC_VIP' | string;
+  pickup_address: string;
+  dropoff_address?: string;
+  flight_number?: string;
+  hourly_hours?: number;
+  meet_and_greet?: boolean;
+  multi_leg_stops?: any[];
+  manual_discount_usd?: number;
+  custom_surcharge_usd?: number;
+}
+
+export interface QuickQuoteResponse {
+  base_fare_usd: number;
+  distance_km: number;
+  distance_fare_usd: number;
+  airport_fee_usd: number;
+  layover_standby_fee_usd: number;
+  tolls_and_fees_usd: number;
+  tax_amount_usd: number;
+  discount_usd: number;
+  surcharge_usd: number;
+  total_amount_usd: number;
+  currency: string;
+  estimated_duration_minutes: number;
+  multi_leg_strategy?: string;
+  strategy_recommendation?: string;
+}
+
+export interface ManualPhoneBookingRequest {
+  vendor_id: string;
+  dispatcher_user_id?: string;
+  caller_name: string;
+  caller_phone: string;
+  caller_email?: string;
+  is_vip?: boolean;
+  corporate_account_name?: string;
+  corporate_po_number?: string;
+  passenger_name?: string;
+  passenger_phone?: string;
+  passenger_count?: number;
+  luggage_count?: number;
+  service_type: 'POINT_TO_POINT' | 'AIRPORT_TRANSFER' | 'HOURLY_AS_DIRECTED' | 'MULTI_CITY_TOUR' | string;
+  vehicle_class: 'BUSINESS_SEDAN' | 'FIRST_CLASS' | 'LUXURY_SUV' | 'BUSINESS_VAN' | 'ULTRA_LUXURY' | 'ELECTRIC_VIP' | string;
+  pickup_address: string;
+  dropoff_address?: string;
+  pickup_time_utc: string;
+  flight_number?: string;
+  airline_name?: string;
+  train_number?: string;
+  hourly_hours?: number;
+  meet_and_greet_inside?: boolean;
+  child_car_seat_requested?: boolean;
+  special_instructions?: string;
+  multi_leg_stops?: any[];
+  manual_discount_usd?: number;
+  custom_surcharge_usd?: number;
+  payment_method: 'SMS_PAYMENT_LINK' | 'DIRECT_CARD_PREAUTH' | 'CORPORATE_INVOICE' | 'CASH_ON_BOARD';
+  card_number_masked?: string;
+  card_token?: string;
+  dispatch_action: 'AUTO_DISPATCH' | 'ASSIGN_SPECIFIC_DRIVER' | 'QUEUE_24H_DISPATCH' | 'FARM_OUT_AFFILIATE';
+  assigned_driver_id?: string;
+  assigned_vehicle_id?: string;
+  target_affiliate_vendor_id?: string;
+}
+
+export interface PhoneBookingResult {
+  success: boolean;
+  booking_id: string;
+  trip_id: string;
+  status: string;
+  total_amount_usd: number;
+  payment_method: string;
+  payment_status: string;
+  sms_notification_sent: boolean;
+  email_notification_sent?: boolean;
+  customer_email?: string;
+  email_preview_url?: string;
+  payment_link_url?: string;
+  assigned_driver_name?: string;
+  assigned_vehicle_details?: string;
+  calendar_invite_url: string;
+  message: string;
+}
+
 
 
 

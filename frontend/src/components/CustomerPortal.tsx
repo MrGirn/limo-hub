@@ -18,7 +18,9 @@ import {
   quoteMasterItineraryMatrix,
   getBookingCalendarIcsUrl, 
   generateGoogleCalendarUrl, 
-  generateOutlookCalendarUrl 
+  generateOutlookCalendarUrl,
+  cancelBookingApi,
+  fetchBookingTermsVoucher
 } from '../api';
 import { AddressAutocompleteInput } from './AddressAutocompleteInput';
 import { CustomerBookingsLookupModal } from './public/CustomerBookingsLookupModal';
@@ -129,16 +131,27 @@ const extractCityFromAddress = (address?: string): string => {
 
 export interface CustomerPortalProps {
   config?: any;
+  initialDetails?: {
+    serviceType?: string;
+    vehicleClass?: VehicleClass;
+    pickupLocation?: string;
+    dropoffLocation?: string;
+    flightNumber?: string;
+    pickupDate?: string;
+    pickupTime?: string;
+    passengers?: number;
+  };
+  isStandalonePublicSite?: boolean;
 }
 
-export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config }) => {
-  // Booking Mode: 'ITINERARY_PLANNER' (Option 3 Multi-Leg) vs 'GUIDED_SINGLE' (Option 1)
-  const [bookingMode, setBookingMode] = useState<'GUIDED_SINGLE' | 'ITINERARY_PLANNER'>('ITINERARY_PLANNER');
+export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialDetails, isStandalonePublicSite }) => {
+  // Booking Mode: 'GUIDED_SINGLE' (Option 1 Default) vs 'ITINERARY_PLANNER' (Option 3 Multi-Leg)
+  const [bookingMode, setBookingMode] = useState<'GUIDED_SINGLE' | 'ITINERARY_PLANNER'>('GUIDED_SINGLE');
 
   // Active Wizard Step: 1 = Details, 2 = Vehicles, 3 = Extras/Preferences, 4 = Review & Pre-Auth, 5 = Confirmed
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3 | 4 | 5>(1);
 
-  // Selected Service Type for Single Leg
+  // Selected Service Type for Single Leg - Airport Transfer by default
   const [selectedRideType, setSelectedRideType] = useState<'AIRPORT' | 'POINT_TO_POINT' | 'HOURLY' | 'MULTI_CITY'>('AIRPORT');
 
   // Single Leg Inputs
@@ -176,6 +189,45 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config }) => {
       is_expanded: true
     }
   ]);
+
+  // Sync initial details if navigated from Quick Quote Widget or Fleet page
+  useEffect(() => {
+    if (initialDetails) {
+      if (initialDetails.serviceType) {
+        if (initialDetails.serviceType === 'HOURLY' || initialDetails.serviceType === 'AS_DIRECTED') {
+          setSelectedRideType('HOURLY');
+          setBookingMode('GUIDED_SINGLE');
+        } else if (initialDetails.serviceType === 'AIRPORT_TRANSFER' || initialDetails.serviceType === 'AIRPORT') {
+          setSelectedRideType('AIRPORT');
+          setBookingMode('GUIDED_SINGLE');
+        } else if (initialDetails.serviceType === 'MULTI_CITY') {
+          setSelectedRideType('MULTI_CITY');
+          setBookingMode('ITINERARY_PLANNER');
+        } else {
+          setSelectedRideType('POINT_TO_POINT');
+          setBookingMode('GUIDED_SINGLE');
+        }
+      }
+      if (initialDetails.vehicleClass) setVehicleClass(initialDetails.vehicleClass);
+      if (initialDetails.pickupLocation) setPickupAddress(initialDetails.pickupLocation);
+      if (initialDetails.dropoffLocation) setDropoffAddress(initialDetails.dropoffLocation);
+      if (initialDetails.flightNumber) setFlightNumber(initialDetails.flightNumber);
+      if (initialDetails.pickupDate) setTripDate(initialDetails.pickupDate);
+      if (initialDetails.pickupTime) setTripTime(initialDetails.pickupTime);
+      if (initialDetails.passengers) setPassengersCount(initialDetails.passengers);
+
+      setItineraryLegs(prev => [{
+        ...prev[0],
+        origin_address: initialDetails.pickupLocation || prev[0]?.origin_address || '',
+        destination_address: initialDetails.dropoffLocation || prev[0]?.destination_address || '',
+        flight_number: initialDetails.flightNumber || prev[0]?.flight_number || '',
+        vehicle_class: initialDetails.vehicleClass || prev[0]?.vehicle_class || 'LUXURY_SUV',
+        date: initialDetails.pickupDate || prev[0]?.date || getDynamicTodayDate(),
+        time: initialDetails.pickupTime || prev[0]?.time || getDynamicUpcomingTimeSlot(2),
+        passengers: initialDetails.passengers || prev[0]?.passengers || 1,
+      }]);
+    }
+  }, [initialDetails]);
 
   // Vehicle Selection & Live API Quotes
   const [vehicleQuotes, setVehicleQuotes] = useState<Record<string, any>>({});
@@ -229,6 +281,14 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config }) => {
   const [isBookerDifferentFromPassenger, setIsBookerDifferentFromPassenger] = useState(false);
   const [showLookupModal, setShowLookupModal] = useState(false);
   const [activeFleetClasses, setActiveFleetClasses] = useState<Record<string, boolean>>({});
+
+  // Terms & Conditions and Self-Service Cancellation States
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [termsError, setTermsError] = useState<string | null>(null);
+  const [cancellingBooking, setCancellingBooking] = useState(false);
+  const [cancellationResult, setCancellationResult] = useState<any>(null);
+  const [downloadingVoucher, setDownloadingVoucher] = useState(false);
 
   useEffect(() => {
     // Fetch active fleet inventory to determine vehicle availability and maintenance status
@@ -416,14 +476,14 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config }) => {
 
         if (bookingMode === 'ITINERARY_PLANNER' && !hasReturnTrip) {
           legsToQuote = itineraryLegs.map(l => ({
-            leg_mode: l.flight_number ? 'FLIGHT' : 'CHAUFFEUR_RIDE',
-            title: l.title,
+            leg_mode: 'CHAUFFEUR_RIDE',
+            title: l.title || `Transfer: ${(l.origin_address || effPickup).split(',')[0]} → ${(l.destination_address || effDropoff).split(',')[0]}`,
             origin_address: l.origin_address || effPickup,
             origin_city: l.origin_city || extractCityFromAddress(l.origin_address || effPickup),
             destination_address: l.destination_address || effDropoff,
             destination_city: l.destination_city || extractCityFromAddress(l.destination_address || effDropoff),
             vehicle_class: l.vehicle_class || vehicleClass,
-            flight_number: l.flight_number || undefined
+            flight_number: l.flight_number || flightNumber || undefined
           }));
         } else {
           // Roundtrip Mode: Outbound Leg + Return Leg
@@ -525,13 +585,9 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config }) => {
         }
       }
 
-      // Advance step once guaranteed fares have successfully computed
+      // Advance to Step 2 (Select your vehicle) once guaranteed fares have computed
       if (advanceStep) {
-        if (bookingMode === 'ITINERARY_PLANNER' && !hasReturnTrip) {
-          setWizardStep(3);
-        } else {
-          setWizardStep(2);
-        }
+        setWizardStep(2);
       }
     } catch (err: any) {
       setQuoteError(err.message || 'Error generating guaranteed quote');
@@ -609,7 +665,110 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config }) => {
     }));
   };
 
+  const handleDownloadTermsVoucher = async (bookingId: string) => {
+    setDownloadingVoucher(true);
+    try {
+      const data = await fetchBookingTermsVoucher(bookingId);
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>Terms of Carriage & Booking Voucher #${data.booking_id}</title>
+              <style>
+                body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 40px; color: #0F172A; max-width: 800px; margin: 0 auto; line-height: 1.5; }
+                .header { border-bottom: 2px solid #0A192F; padding-bottom: 20px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-start; }
+                .title { font-size: 24px; font-weight: 800; color: #0A192F; margin: 0; }
+                .vendor-meta { font-size: 13px; color: #64748B; margin-top: 4px; }
+                .ref-badge { background: #F1F5F9; border: 1px solid #CBD5E1; padding: 8px 16px; border-radius: 8px; font-family: monospace; font-size: 16px; font-weight: 800; color: #0078D4; }
+                .section { margin-bottom: 24px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 20px; }
+                .section-title { font-size: 14px; font-weight: 800; color: #9A7B4F; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
+                .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 13px; }
+                .term-card { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid #E2E8F0; }
+                .term-card:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+                .term-title { font-weight: 700; color: #0F172A; font-size: 13px; margin-bottom: 2px; }
+                .term-text { font-size: 12px; color: #475569; }
+                .footer { font-size: 11px; color: #94A3B8; text-align: center; margin-top: 36px; border-top: 1px solid #E2E8F0; padding-top: 16px; }
+                @media print { .no-print { display: none; } }
+              </style>
+            </head>
+            <body>
+              <div class="header">
+                <div>
+                  <h1 class="title">${data.vendor_name}</h1>
+                  <div class="vendor-meta">${data.vendor_address} · ${data.vendor_phone} · ${data.vendor_email}</div>
+                  <div style="font-size: 13px; color: #16A34A; font-weight: 700; margin-top: 6px;">✓ Authorized Sovereign Chauffeur Service Voucher</div>
+                </div>
+                <div class="ref-badge">#${data.booking_id}</div>
+              </div>
+
+              <div class="section">
+                <div class="section-title">Itinerary & Schedule</div>
+                <div class="grid-2">
+                  <div><strong>Pickup:</strong> ${data.pickup_address}</div>
+                  <div><strong>Destination:</strong> ${data.dropoff_address}</div>
+                  <div><strong>Lead Passenger:</strong> ${data.passenger_name} (${data.passenger_phone})</div>
+                  <div><strong>Date & Time (UTC):</strong> ${new Date(data.pickup_time_utc).toLocaleString()}</div>
+                  <div><strong>Guaranteed Total:</strong> $${data.total_amount_usd.toFixed(2)} USD</div>
+                  <div><strong>Pre-Auth Escrow Status:</strong> ${data.preauth_status} (Card ending in ${data.card_last4})</div>
+                </div>
+              </div>
+
+              <div class="section">
+                <div class="section-title">Authoritative Terms of Carriage & Cancellation Policies</div>
+                ${data.terms_and_conditions.map((t: any) => `
+                  <div class="term-card">
+                    <div class="term-title">✓ ${t.title}</div>
+                    <div class="term-text">${t.text}</div>
+                  </div>
+                `).join('')}
+              </div>
+
+              <div class="footer">
+                This document serves as an authoritative booking contract and terms agreement under the Global Limo Autonomous Operations Network.
+              </div>
+              <script>window.onload = function() { window.print(); }<\/script>
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error generating voucher PDF');
+    } finally {
+      setDownloadingVoucher(false);
+    }
+  };
+
+  const handleCancelBooking = async (bookingId: string) => {
+    if (!window.confirm(`Are you sure you want to cancel reservation #${bookingId}? Your Pre-Auth escrow hold will be immediately released in full.`)) {
+      return;
+    }
+    setCancellingBooking(true);
+    try {
+      const res = await cancelBookingApi(bookingId, 'Customer self-cancellation via confirmation portal');
+      setCancellationResult(res);
+      if (booking) {
+        setBooking({
+          ...booking,
+          status: 'CANCELLED' as any,
+          trip: { ...booking.trip, status: 'CANCELLED' as any }
+        });
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error cancelling booking');
+    } finally {
+      setCancellingBooking(false);
+    }
+  };
+
   const handleConfirmPreAuthBooking = async () => {
+    if (!acceptedTerms) {
+      setTermsError('Please agree to the Terms of Service & Cancellation Policy before confirming your reservation.');
+      return;
+    }
+    setTermsError(null);
     setBookingLoading(true);
     try {
       const cardDigits = cardDetails.cardNumber.replace(/\D/g, '');
@@ -625,7 +784,24 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config }) => {
       };
 
       if ((bookingMode === 'ITINERARY_PLANNER' || hasReturnTrip) && masterItinerary) {
-        const res = await bookItinerary(masterItinerary.itinerary_id, resolvedParty, 'tok_visa_4242');
+        const pickupDateResolved = tripDate || new Date().toISOString().split('T')[0];
+        const pickupTimeResolved = safeFormatIsoDateTime(pickupDateResolved, tripTime) || new Date().toISOString();
+        const res = await bookItinerary(
+          masterItinerary.itinerary_id,
+          resolvedParty,
+          'tok_visa_4242',
+          {
+            itinerary: masterItinerary,
+            legs: itineraryLegs.length > 0 ? itineraryLegs : masterItinerary.legs,
+            pickup_address: itineraryLegs[0]?.origin_address || pickupAddress || 'Philadelphia International Airport (PHL)',
+            dropoff_address: itineraryLegs[itineraryLegs.length - 1]?.destination_address || dropoffAddress || 'The Ritz-Carlton, Philadelphia',
+            pickup_time: pickupTimeResolved,
+            flight_details: { flightNumber: flightNumber || itineraryLegs[0]?.flight_number || '' },
+            flight_number: flightNumber || itineraryLegs[0]?.flight_number || 'DL1234',
+            vehicle_class: vehicleClass,
+            total_amount: Number(activeTotalFormatted)
+          }
+        );
         setBooking(res.booking || {
           id: res.booking_id,
           pickup_address: itineraryLegs[0]?.origin_address || pickupAddress,
@@ -956,18 +1132,45 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config }) => {
               </div>
             </div>
 
-            {/* DUAL NOTIFICATION DISPATCH STATUS */}
-            <div className="mission-pickup-dest-grid" style={{ gap: '14px', marginBottom: '32px', textAlign: 'left' }}>
+            {/* CANCELLATION SUCCESS BANNER */}
+            {cancellationResult && (
+              <div style={{
+                backgroundColor: '#FEF2F2',
+                border: '1px solid #FECACA',
+                borderRadius: '12px',
+                padding: '18px 24px',
+                marginBottom: '24px',
+                textAlign: 'left',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '14px'
+              }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <CheckCircle2 size={20} color="#DC2626" />
+                </div>
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: 800, color: '#991B1B' }}>
+                    Reservation #{cancellationResult.booking_id} Cancelled
+                  </div>
+                  <div style={{ fontSize: '12.5px', color: '#7F1D1D', marginTop: '2px' }}>
+                    {cancellationResult.message || '100% Pre-Authorization escrow hold has been released back to your card. No cancellation fees applied.'}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* DUAL NOTIFICATION & DELIVERY SUMMARY */}
+            <div className="mission-pickup-dest-grid" style={{ gap: '14px', marginBottom: '24px', textAlign: 'left' }}>
               {/* Booker Notification */}
               <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                   <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <FileText size={13} color="#2563EB" />
                   </div>
-                  <span style={{ fontSize: '12px', fontWeight: 800, color: '#1E293B' }}>Booker Tax Invoice & Receipt</span>
+                  <span style={{ fontSize: '12px', fontWeight: 800, color: '#1E293B' }}>Booker Terms PDF &amp; Receipt</span>
                 </div>
                 <div style={{ fontSize: '11px', color: '#64748B', lineHeight: '1.5' }}>
-                  Dispatched to <strong style={{ color: '#0F172A' }}>{booking.party?.booker_email || (booking.party as any)?.passenger_email || 'Executive Booker'}</strong> with PDF VAT receipt & calendar invite attached.
+                  Dispatched to <strong style={{ color: '#0F172A' }}>{booking.party?.booker_email || (booking.party as any)?.passenger_email || 'Executive Booker'}</strong> with carrier terms PDF, cancellation link, and calendar invite attached.
                 </div>
               </div>
 
@@ -977,20 +1180,22 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config }) => {
                   <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#F0FDF4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Phone size={13} color="#16A34A" />
                   </div>
-                  <span style={{ fontSize: '12px', fontWeight: 800, color: '#1E293B' }}>Passenger Live Chauffeur Briefing</span>
+                  <span style={{ fontSize: '12px', fontWeight: 800, color: '#1E293B' }}>Passenger Mobile SMS &amp; Radar Link</span>
                 </div>
                 <div style={{ fontSize: '11px', color: '#64748B', lineHeight: '1.5' }}>
-                  SMS dispatched to <strong style={{ color: '#0F172A' }}>{booking.party?.passenger_phone || 'Passenger Phone'}</strong> with chauffeur details & real-time meet & greet PIN.
+                  SMS dispatched to <strong style={{ color: '#0F172A' }}>{booking.party?.passenger_phone || 'Passenger Phone'}</strong> with meet &amp; greet PIN and 1-click self-service cancellation link.
                 </div>
               </div>
             </div>
 
-            {/* ACTION BUTTONS */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', flexWrap: 'wrap' }}>
+            {/* ACTION BUTTONS & DOCUMENT CENTER */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
+              {/* Download Terms & Voucher PDF */}
               <button 
-                onClick={() => setShowLookupModal(true)}
+                onClick={() => handleDownloadTermsVoucher(booking.id)}
+                disabled={downloadingVoucher}
                 style={{ 
-                  padding: '12px 24px', 
+                  padding: '12px 20px', 
                   backgroundColor: '#0A192F', 
                   color: '#FFFFFF', 
                   border: 'none', 
@@ -1000,20 +1205,67 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config }) => {
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 2px 8px rgba(10,25,47,0.2)'
+                }}
+              >
+                <Download size={15} />
+                <span>{downloadingVoucher ? 'Generating Document...' : 'Download Terms & Voucher PDF'}</span>
+              </button>
+
+              {/* View in My Bookings */}
+              <button 
+                onClick={() => setShowLookupModal(true)}
+                style={{ 
+                  padding: '12px 20px', 
+                  backgroundColor: '#FFFFFF', 
+                  color: '#0A192F', 
+                  border: '1px solid #CBD5E1', 
+                  borderRadius: '8px', 
+                  fontSize: '13px', 
+                  fontWeight: 700, 
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
                   gap: '8px'
                 }}
               >
-                <Calendar size={16} />
-                View in My Bookings & Schedule
+                <Calendar size={15} />
+                My Bookings &amp; Schedule
               </button>
 
+              {/* Self-Service Cancellation */}
+              {booking.trip?.status !== 'CANCELLED' && (
+                <button 
+                  onClick={() => handleCancelBooking(booking.id)}
+                  disabled={cancellingBooking}
+                  style={{ 
+                    padding: '12px 20px', 
+                    backgroundColor: '#FEF2F2', 
+                    color: '#991B1B', 
+                    border: '1px solid #FECACA', 
+                    borderRadius: '8px', 
+                    fontSize: '13px', 
+                    fontWeight: 700, 
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <Trash2 size={15} color="#DC2626" />
+                  <span>{cancellingBooking ? 'Releasing Hold...' : 'Manage / Cancel Booking'}</span>
+                </button>
+              )}
+
+              {/* Book Another */}
               <button 
-                onClick={() => { setWizardStep(1); setBooking(null); }}
+                onClick={() => { setWizardStep(1); setBooking(null); setAcceptedTerms(false); setCancellationResult(null); }}
                 style={{ 
-                  padding: '12px 24px', 
-                  backgroundColor: '#FFFFFF', 
+                  padding: '12px 20px', 
+                  backgroundColor: '#F8FAFC', 
                   color: '#64748B', 
-                  border: '1px solid #CBD5E1', 
+                  border: '1px solid #E2E8F0', 
                   borderRadius: '8px', 
                   fontSize: '13px', 
                   fontWeight: 700, 
@@ -2588,6 +2840,106 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config }) => {
                     </div>
                   </div>
 
+                  {/* TERMS OF SERVICE & CANCELLATION POLICY AGREEMENT */}
+                  <div style={{
+                    backgroundColor: acceptedTerms ? '#F0FDF4' : '#F8FAFC',
+                    border: acceptedTerms ? '1px solid #86EFAC' : '1px solid #E2E8F0',
+                    borderRadius: '10px',
+                    padding: '16px',
+                    marginBottom: '20px',
+                    transition: 'all 0.2s'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                      <input
+                        type="checkbox"
+                        id="terms_agree_checkbox"
+                        checked={acceptedTerms}
+                        onChange={(e) => {
+                          setAcceptedTerms(e.target.checked);
+                          if (e.target.checked) setTermsError(null);
+                        }}
+                        style={{
+                          width: '18px',
+                          height: '18px',
+                          marginTop: '2px',
+                          accentColor: '#16A34A',
+                          cursor: 'pointer',
+                          flexShrink: 0
+                        }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <label 
+                          htmlFor="terms_agree_checkbox"
+                          style={{ 
+                            fontSize: '12.5px', 
+                            fontWeight: 700, 
+                            color: '#0F172A', 
+                            cursor: 'pointer', 
+                            lineHeight: '1.5',
+                            display: 'block'
+                          }}
+                        >
+                          I have read and agree to the <span style={{ color: '#0078D4', textDecoration: 'underline' }} onClick={(e) => { e.preventDefault(); setShowTermsModal(true); }}>Terms of Service &amp; Carriage</span>, the <span style={{ color: '#16A34A', fontWeight: 800 }}>Complimentary 2-Hour Free Cancellation Policy</span>, and Authorize the Pre-Auth Escrow Hold on my card.
+                        </label>
+                        
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: '#166534', backgroundColor: '#DCFCE7', padding: '2px 8px', borderRadius: '4px' }}>
+                            <ShieldCheck size={12} /> Free Cancel up to 2 hrs
+                          </span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: '#1E40AF', backgroundColor: '#DBEAFE', padding: '2px 8px', borderRadius: '4px' }}>
+                            <Plane size={12} /> Flight Radar Delay Auto-Adjust
+                          </span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: '#854D0E', backgroundColor: '#FEF9C3', padding: '2px 8px', borderRadius: '4px' }}>
+                            <CreditCard size={12} /> $0 Charged Until Completed
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '11px', color: '#64748B' }}>Authoritative Sovereign Carrier Contract</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowTermsModal(true)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#0078D4',
+                          fontSize: '11.5px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: 0
+                        }}
+                      >
+                        <FileText size={13} />
+                        View Complete Policy Details
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Terms Validation Error Banner */}
+                  {termsError && (
+                    <div style={{
+                      backgroundColor: '#FEF2F2',
+                      border: '1px solid #FECACA',
+                      color: '#991B1B',
+                      padding: '10px 14px',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      marginBottom: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <AlertCircle size={16} />
+                      <span>{termsError}</span>
+                    </div>
+                  )}
+
                   {/* Primary Pre-Auth Hold CTA */}
                   <button
                     onClick={handleConfirmPreAuthBooking}
@@ -2595,18 +2947,18 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config }) => {
                     style={{
                       width: '100%',
                       padding: '14px 20px',
-                      backgroundColor: '#16A34A',
+                      backgroundColor: acceptedTerms ? '#16A34A' : '#94A3B8',
                       color: '#FFFFFF',
                       border: 'none',
                       borderRadius: '6px',
                       fontSize: '14px',
                       fontWeight: 800,
-                      cursor: 'pointer',
+                      cursor: acceptedTerms ? 'pointer' : 'not-allowed',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '8px',
-                      boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)',
+                      boxShadow: acceptedTerms ? '0 2px 8px rgba(22, 163, 74, 0.3)' : 'none',
                       transition: 'background-color 0.2s'
                     }}
                   >
@@ -2803,11 +3155,13 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config }) => {
                     </>
                   ) : (
                     (() => {
+                      const effPickupDisp = pickupAddress?.trim() || (bookingMode === 'ITINERARY_PLANNER' ? itineraryLegs[0]?.origin_address?.trim() : '') || '';
+                      const effDropoffDisp = dropoffAddress?.trim() || (bookingMode === 'ITINERARY_PLANNER' ? itineraryLegs[itineraryLegs.length - 1]?.destination_address?.trim() : '') || '';
                       const hasBoth = Boolean(
-                        pickupAddress?.trim() && 
-                        dropoffAddress?.trim() && 
-                        pickupAddress.trim().length >= 3 && 
-                        dropoffAddress.trim().length >= 3
+                        effPickupDisp && 
+                        effDropoffDisp && 
+                        effPickupDisp.length >= 3 && 
+                        effDropoffDisp.length >= 3
                       );
 
                       return (
@@ -2816,12 +3170,12 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config }) => {
                             <Plane size={15} color="#0A192F" style={{ marginTop: '2px', flexShrink: 0 }} />
                             <div style={{ flex: 1 }}>
                               <span style={{ color: '#64748B', fontWeight: 600 }}>Pickup</span>
-                              <div style={{ fontWeight: 700, color: hasBoth ? '#0F172A' : (pickupAddress?.trim() ? '#475569' : '#94A3B8') }}>
+                              <div style={{ fontWeight: 700, color: hasBoth ? '#0F172A' : (effPickupDisp ? '#475569' : '#94A3B8') }}>
                                 {hasBoth 
-                                  ? pickupAddress.split(',')[0] 
-                                  : (pickupAddress?.trim() ? `${pickupAddress.split(',')[0]} (Awaiting destination)` : 'Enter pickup location')}
+                                  ? effPickupDisp.split(',')[0] 
+                                  : (effPickupDisp ? `${effPickupDisp.split(',')[0]} (Awaiting destination)` : 'Enter pickup location')}
                               </div>
-                              {hasBoth && <div style={{ fontSize: '10px', color: '#94A3B8' }}>{pickupAddress}</div>}
+                              {hasBoth && <div style={{ fontSize: '10px', color: '#94A3B8' }}>{effPickupDisp}</div>}
                             </div>
                           </div>
 
@@ -2829,12 +3183,12 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config }) => {
                             <MapPin size={15} color="#0A192F" style={{ marginTop: '2px', flexShrink: 0 }} />
                             <div style={{ flex: 1 }}>
                               <span style={{ color: '#64748B', fontWeight: 600 }}>Destination</span>
-                              <div style={{ fontWeight: 700, color: hasBoth ? '#0F172A' : (dropoffAddress?.trim() ? '#475569' : '#94A3B8') }}>
+                              <div style={{ fontWeight: 700, color: hasBoth ? '#0F172A' : (effDropoffDisp ? '#475569' : '#94A3B8') }}>
                                 {hasBoth 
-                                  ? dropoffAddress.split(',')[0] 
-                                  : (dropoffAddress?.trim() ? `${dropoffAddress.split(',')[0]} (Awaiting pickup)` : 'Enter destination')}
+                                  ? effDropoffDisp.split(',')[0] 
+                                  : (effDropoffDisp ? `${effDropoffDisp.split(',')[0]} (Awaiting pickup)` : 'Enter destination')}
                               </div>
-                              {hasBoth && <div style={{ fontSize: '10px', color: '#94A3B8' }}>{dropoffAddress}</div>}
+                              {hasBoth && <div style={{ fontSize: '10px', color: '#94A3B8' }}>{effDropoffDisp}</div>}
                             </div>
                           </div>
                         </>
@@ -3130,6 +3484,177 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config }) => {
         onClose={() => setShowLookupModal(false)}
         initialQuery={booking?.id || ''}
       />
+
+      {/* TERMS OF SERVICE & CANCELLATION POLICIES MODAL */}
+      {showTermsModal && (
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(10, 25, 47, 0.75)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowTermsModal(false);
+          }}
+        >
+          <div style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '16px',
+            maxWidth: '680px',
+            width: '100%',
+            maxHeight: '85vh',
+            overflowY: 'auto',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
+            border: '1px solid #E2E8F0',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              padding: '20px 24px',
+              borderBottom: '1px solid #E2E8F0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              backgroundColor: '#F8FAFC',
+              borderRadius: '16px 16px 0 0'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#0A192F', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ShieldCheck size={18} color="#C5A880" />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#0A192F' }}>
+                    Authoritative Terms of Carriage &amp; Policies
+                  </h3>
+                  <div style={{ fontSize: '11px', color: '#64748B' }}>
+                    Standard operating contract for passenger safety, guaranteed escrow, and cancellations
+                  </div>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowTermsModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B', padding: '4px' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              {/* 1. Cancellation Policy */}
+              <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '10px', padding: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <CheckCircle2 size={16} color="#16A34A" />
+                  <span style={{ fontSize: '13px', fontWeight: 800, color: '#166534' }}>
+                    1. Complimentary Cancellation &amp; Refund Policy
+                  </span>
+                </div>
+                <p style={{ margin: 0, fontSize: '12px', color: '#14532D', lineHeight: '1.6' }}>
+                  Standard airport transfers and point-to-point bookings may be cancelled free of charge up to <strong>2 hours prior</strong> to the scheduled pickup time with an immediate, full release of the Pre-Authorization hold. Hourly charters and executive Sprinter van bookings require 24 hours advance notice.
+                </p>
+              </div>
+
+              {/* 2. Flight Delay Guarantee */}
+              <div style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '10px', padding: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <Plane size={16} color="#2563EB" />
+                  <span style={{ fontSize: '13px', fontWeight: 800, color: '#1E40AF' }}>
+                    2. Automated Flight Tracking &amp; Wait Time
+                  </span>
+                </div>
+                <p style={{ margin: 0, fontSize: '12px', color: '#1E3A8A', lineHeight: '1.6' }}>
+                  Airport arrivals include real-time transponder radar monitoring. Chauffeur dispatch automatically recalibrates to actual wheels-down time. Commercial flights receive <strong>45 minutes of complimentary wait time</strong> domestic and <strong>60 minutes international</strong> after gate arrival.
+                </p>
+              </div>
+
+              {/* 3. Escrow Pre-Auth Hold */}
+              <div style={{ backgroundColor: '#FAF5FF', border: '1px solid #E9D5FF', borderRadius: '10px', padding: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <CreditCard size={16} color="#9333EA" />
+                  <span style={{ fontSize: '13px', fontWeight: 800, color: '#6B21A8' }}>
+                    3. Secure Pre-Authorization Escrow Hold
+                  </span>
+                </div>
+                <p style={{ margin: 0, fontSize: '12px', color: '#581C87', lineHeight: '1.6' }}>
+                  Your credit card is verified via a temporary pre-authorization hold. Funds remain in secure escrow until your chauffeur mission is successfully completed. Zero charges are settled prior to service delivery.
+                </p>
+              </div>
+
+              {/* 4. Zero Hidden Fees */}
+              <div style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '10px', padding: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <DollarSign size={16} color="#D97706" />
+                  <span style={{ fontSize: '13px', fontWeight: 800, color: '#92400E' }}>
+                    4. Guaranteed All-Inclusive Pricing
+                  </span>
+                </div>
+                <p style={{ margin: 0, fontSize: '12px', color: '#78350F', lineHeight: '1.6' }}>
+                  Your calculated fare includes statutory livery sales taxes, standard 20% chauffeur gratuity, and estimated tolls. No surprise charges will be added at destination.
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{
+              padding: '16px 24px',
+              borderTop: '1px solid #E2E8F0',
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '10px',
+              backgroundColor: '#F8FAFC',
+              borderRadius: '0 0 16px 16px'
+            }}>
+              <button
+                type="button"
+                onClick={() => setShowTermsModal(false)}
+                style={{
+                  padding: '10px 18px',
+                  backgroundColor: '#FFFFFF',
+                  color: '#64748B',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '8px',
+                  fontSize: '12.5px',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAcceptedTerms(true);
+                  setTermsError(null);
+                  setShowTermsModal(false);
+                }}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#16A34A',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '12.5px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Check size={15} />
+                I Agree &amp; Accept Terms
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

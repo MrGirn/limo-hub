@@ -21,7 +21,8 @@ from app.domain_models import (
 )
 from app.database import db
 from app.services.google_maps_service import GoogleMapsService
-from app.services.pricing_service import resolve_transit_info, US_CLASS_TARIFFS
+from app.services.pricing_service import resolve_transit_info
+from app.services.vendor_pricing_ai_service import VendorPricingAIService
 
 logger = logging.getLogger("ItineraryEngine")
 
@@ -73,13 +74,22 @@ class ItineraryEngine:
                 for v_id, vendor in target_db.vendors.items():
                     v_name = getattr(vendor, "name", "").lower()
                     if v_name and (v_name in lower or v_id.lower() in lower):
+                        from app.services.pricing_service import get_regional_tax_and_surcharges
+                        v_depot = getattr(vendor, "depot_address", None) or getattr(vendor, "office_address", "Executive Depot")
+                        tax_pct = getattr(vendor, "local_tax_rate_pct", None) or getattr(vendor, "tax_rate_pct", None)
+                        if tax_pct is not None:
+                            resolved_tax = Decimal(str(round(float(tax_pct) / 100.0 if float(tax_pct) > 1.0 else float(tax_pct), 5)))
+                        else:
+                            reg = get_regional_tax_and_surcharges(v_depot)
+                            resolved_tax = reg.vat_or_sales_tax_rate
+
                         return {
                             "vendor_id": v_id,
                             "vendor_name": getattr(vendor, "name", v_id),
-                            "country": "US",
-                            "currency": "USD",
-                            "depot_address": getattr(vendor, "depot_address", "Executive Depot"),
-                            "tax_rate": Decimal("0.08875"),
+                            "country": getattr(vendor, "country_code", "US"),
+                            "currency": getattr(vendor, "operating_currency", "USD"),
+                            "depot_address": v_depot,
+                            "tax_rate": resolved_tax,
                             "include_gratuity_in_billing": False,
                             "gratuity_rate": Decimal("0.00"),
                             "is_available": getattr(vendor, "is_active", True)
@@ -117,8 +127,6 @@ class ItineraryEngine:
         
         has_pending_sourcing = False
         pending_legs_count = 0
-
-        default_tariffs = US_CLASS_TARIFFS.get(vehicle_class, US_CLASS_TARIFFS[VehicleClass.LUXURY_SUV])
 
         for idx, leg_input in enumerate(raw_legs, 1):
             leg_mode_str = leg_input.get("leg_mode", "CHAUFFEUR_RIDE").upper()
@@ -164,7 +172,7 @@ class ItineraryEngine:
                     }
                 else:
                     effective_hub = {
-                        "vendor_id": "vendor-network-default",
+                        "vendor_id": "vendor-anb-philly",
                         "vendor_name": "Executive Chauffeur Alliance",
                         "country": "US",
                         "currency": "USD",
@@ -175,22 +183,13 @@ class ItineraryEngine:
                         "is_available": True
                     }
 
-            from app.services.pricing_service import get_class_tariff
-            from app.services.vendor_pricing_ai_service import VendorPricingAIService
-            v_id = effective_hub.get("vendor_id")
-            custom_rule = VendorPricingAIService.get_vendor_pricing_rule(v_id, leg_vc) if v_id else None
+            v_id = effective_hub.get("vendor_id") or "vendor-anb-philly"
+            custom_rule = VendorPricingAIService.get_vendor_pricing_rule(v_id, leg_vc)
 
-            if custom_rule:
-                base = custom_rule.base_rate_net
-                per_mi = custom_rule.per_mile_rate_net
-                min_f = custom_rule.minimum_fare_net
-                apt_surcharge = custom_rule.airport_surcharge_net
-            else:
-                tariffs = get_class_tariff(leg_vc)
-                base = tariffs["base_fee"]
-                per_mi = tariffs["per_mile_rate"]
-                min_f = tariffs.get("min_fare", base * Decimal("1.25"))
-                apt_surcharge = Decimal("15.00")
+            base = custom_rule.base_rate_net
+            per_mi = custom_rule.per_mile_rate_net
+            min_f = custom_rule.minimum_fare_net
+            apt_surcharge = custom_rule.airport_surcharge_net
 
             countries_set.add(effective_hub["country"])
             cities_set.add(orig_city)
@@ -220,32 +219,22 @@ class ItineraryEngine:
                     transit_info.transit_type = TransitType.HELICOPTER
                     transit_info.carrier_name = "Blade Executive Helicopter Shuttle"
 
-            # 2. Road Routing via Google Maps
+            # 2. Road & Corridor Routing via Live Google Maps
             leg_distance = Decimal("0.00")
             leg_duration = 45
             leg_tolls = Decimal("0.00")
 
-            if leg_mode in (LegMode.CHAUFFEUR_RIDE, LegMode.CROSS_BORDER_DRIVE):
+            if leg_mode in (LegMode.CHAUFFEUR_RIDE, LegMode.CROSS_BORDER_DRIVE, LegMode.HELICOPTER_TRANSFER):
                 road_calc = GoogleMapsService.calculate_road_distance_and_duration(origin, dest)
                 leg_distance = road_calc["distance_miles"]
-                leg_duration = road_calc["duration_minutes"]
-                
-                # Toll estimation
-                if "jfk" in origin.lower() or "jfk" in dest.lower():
-                    leg_tolls = Decimal("16.00")
-                elif "ewr" in origin.lower() or "ewr" in dest.lower() or "new jersey" in dest.lower():
-                    leg_tolls = Decimal("17.63")
-                elif leg_mode == LegMode.CROSS_BORDER_DRIVE:
-                    leg_tolls = Decimal("45.00")
+                leg_duration = road_calc["duration_minutes"] if leg_mode != LegMode.HELICOPTER_TRANSFER else max(10, int(road_calc["duration_minutes"] * 0.3))
+                leg_tolls = GoogleMapsService.detect_corridor_tolls(origin, dest)
             elif leg_mode == LegMode.FLIGHT:
-                leg_distance = Decimal(str(leg_input.get("distance_miles", 3450)))
-                leg_duration = int(leg_input.get("duration_minutes", 420))
+                leg_distance = Decimal(str(leg_input.get("distance_miles", 500)))
+                leg_duration = int(leg_input.get("duration_minutes", 90))
             elif leg_mode == LegMode.TRAIN:
-                leg_distance = Decimal(str(leg_input.get("distance_miles", 225)))
-                leg_duration = int(leg_input.get("duration_minutes", 150))
-            elif leg_mode == LegMode.HELICOPTER_TRANSFER:
-                leg_distance = Decimal("18.00")
-                leg_duration = 12
+                leg_distance = Decimal(str(leg_input.get("distance_miles", 120)))
+                leg_duration = int(leg_input.get("duration_minutes", 75))
 
             total_distance += leg_distance
             total_duration += leg_duration
@@ -271,7 +260,8 @@ class ItineraryEngine:
                         leg_fare_net += apt_surcharge
 
                     if leg_mode == LegMode.CROSS_BORDER_DRIVE:
-                        leg_fare_net += Decimal("150.00")
+                        cross_border_fee = getattr(custom_rule, "cross_border_surcharge_net", None) or (base * Decimal("1.50"))
+                        leg_fare_net += cross_border_fee
                     leg_gratuity = (leg_fare_net * grat_rate).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if include_grat else Decimal("0.00")
                     leg_tax = (leg_fare_net * effective_hub["tax_rate"]).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
                     total_leg_amt = leg_fare_net + leg_tolls + leg_tax + leg_gratuity
@@ -288,12 +278,14 @@ class ItineraryEngine:
                     # Benchmark projection for internal estimation
                     leg_fare_net = Decimal(str(round(float(base) + (float(leg_distance) * float(per_mi)), 2)))
                     leg_gratuity = (leg_fare_net * grat_rate).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if include_grat else Decimal("0.00")
-                    leg_tax = (leg_fare_net * Decimal("0.08875")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                    leg_tax = (leg_fare_net * effective_hub["tax_rate"]).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
                     total_leg_amt = leg_fare_net + leg_tolls + leg_tax + leg_gratuity
             elif leg_mode == LegMode.HELICOPTER_TRANSFER:
-                leg_fare_net = Decimal("295.00")
+                heli_base = getattr(custom_rule, "helicopter_base_fare", None) or (base * Decimal("3.0"))
+                heli_per_mi = getattr(custom_rule, "helicopter_per_mile", None) or (per_mi * Decimal("2.5"))
+                leg_fare_net = (heli_base + (leg_distance * heli_per_mi)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
                 leg_gratuity = (leg_fare_net * grat_rate).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if include_grat else Decimal("0.00")
-                leg_tax = Decimal("25.00")
+                leg_tax = (leg_fare_net * effective_hub["tax_rate"]).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
                 total_leg_amt = leg_fare_net + leg_tolls + leg_tax + leg_gratuity
                 confirmed_subtotal += total_leg_amt
             elif leg_mode in (LegMode.FLIGHT, LegMode.TRAIN):

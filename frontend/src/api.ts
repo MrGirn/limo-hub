@@ -271,6 +271,28 @@ export async function lookupBookingsApi(query: string): Promise<Booking[]> {
   return res.json();
 }
 
+export async function cancelBookingApi(bookingId: string, reason: string = 'Customer requested cancellation'): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/bookings/${bookingId}/cancel`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason })
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || 'Failed to cancel booking');
+  }
+  return res.json();
+}
+
+export async function fetchBookingTermsVoucher(bookingId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/bookings/${bookingId}/terms-voucher`);
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || 'Failed to fetch booking terms voucher');
+  }
+  return res.json();
+}
+
 export function getBookingCalendarIcsUrl(bookingId: string): string {
   return `${BASE_URL}/api/v1/bookings/${bookingId}/calendar.ics`;
 }
@@ -436,16 +458,35 @@ export async function quoteItinerary(itineraryRequest: any): Promise<any> {
   return res.json();
 }
 
-export async function bookItinerary(masterItineraryId: string, party: BookingParty, paymentToken: string = 'tok_visa_4242'): Promise<any> {
+export async function bookItinerary(
+  masterItineraryId: string,
+  party: BookingParty,
+  paymentToken: string = 'tok_visa_4242',
+  extraDetails?: {
+    itinerary?: any;
+    legs?: any[];
+    pickup_address?: string;
+    dropoff_address?: string;
+    pickup_time?: string;
+    flight_details?: any;
+    flight_number?: string;
+    vehicle_class?: string;
+    total_amount?: number;
+  }
+): Promise<any> {
   const res = await fetch(`${BASE_URL}/api/v1/itineraries/${masterItineraryId}/book`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify({
       party,
-      payment_token: paymentToken
+      payment_token: paymentToken,
+      ...(extraDetails || {})
     })
   });
-  if (!res.ok) throw new Error('Failed to book itinerary');
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || 'Failed to book itinerary');
+  }
   return res.json();
 }
 
@@ -1144,11 +1185,49 @@ export async function updateVendorAffiliatePolicy(vendorId: string, policyPayloa
   return res.json();
 }
 
+export async function evaluateVendorMultilegStrategy(vendorId: string, legs: any[], isVip: boolean = false): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/evaluate-multileg-strategy`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ legs, is_vip: isVip })
+  });
+  if (!res.ok) throw new Error('Failed to evaluate multi-leg strategy');
+  return res.json();
+}
+
 export async function fetchGlobalHubKnowledgeBase(): Promise<any> {
   const res = await fetch(`${BASE_URL}/api/v1/global-hub/affiliates/knowledge-base`, {
     headers: getAuthHeaders()
   });
   if (!res.ok) throw new Error('Failed to fetch Global Hub Knowledge Base');
+  return res.json();
+}
+
+// --- DISPATCHER INBOUND PHONE INTAKE DESK API ---
+
+export async function fetchQuickPhoneQuote(payload: any): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/dispatch/pricing/quick-quote`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to calculate quick quote');
+  }
+  return res.json();
+}
+
+export async function createManualPhoneBooking(payload: any): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/dispatch/bookings/phone-intake`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to create manual phone booking');
+  }
   return res.json();
 }
 
@@ -1575,6 +1654,93 @@ export async function requestVendorAccountDeletion(vendorId: string, reason?: st
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(extractErrorMessage(err, 'Failed to request account deletion'));
+  }
+  return res.json();
+}
+
+export async function createVendorBillingPortalSession(vendorId: string): Promise<{
+  success: boolean;
+  url: string;
+  source?: string;
+  message?: string;
+}> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${encodeURIComponent(vendorId)}/subscription/billing-portal`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to create billing portal session'));
+  }
+  return res.json();
+}
+
+export async function triggerVendorDunningSimulation(vendorId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${encodeURIComponent(vendorId)}/subscription/simulate-dunning`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to simulate dunning alert'));
+  }
+  return res.json();
+}
+
+export async function clearVendorDunning(vendorId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${encodeURIComponent(vendorId)}/subscription/clear-dunning`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to clear dunning'));
+  }
+  return res.json();
+}
+
+export async function updateVendorChargingProfile(vendorId: string, profileData: {
+  plan_name?: string;
+  monthly_price_usd?: number;
+  per_ride_commission_pct?: number;
+  billing_terms?: string;
+  contract_reference?: string;
+  status?: string;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/hub/vendors/${encodeURIComponent(vendorId)}/charging-profile`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(profileData)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to update vendor charging profile'));
+  }
+  return res.json();
+}
+
+export async function sendVendorInvoice(vendorId: string, customAmountUsd?: number, note?: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/hub/vendors/${encodeURIComponent(vendorId)}/send-invoice`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ custom_amount_usd: customAmountUsd, note })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to send vendor invoice'));
+  }
+  return res.json();
+}
+
+export async function chargeVendorAutoPay(vendorId: string, amountUsd?: number): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/hub/vendors/${encodeURIComponent(vendorId)}/charge-auto-pay`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ amount_usd: amountUsd })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to charge vendor auto-pay'));
   }
   return res.json();
 }
