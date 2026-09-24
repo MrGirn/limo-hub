@@ -28,6 +28,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy backend application source, config, and tests
 COPY app/ ./app/
 COPY config/ ./config/
+COPY scripts/ ./scripts/
 COPY tests/ ./tests/
 
 # Copy built frontend assets into static distribution directory

@@ -115,119 +115,6 @@ const PRESET_SCENARIOS: SimulationScenario[] = [
   }
 ];
 
-const DEFAULT_TIER_RULES: Partial<Record<VehicleClass, Partial<VendorPricingRule>>> = {
-  BUSINESS_SEDAN: {
-    vehicle_class: 'BUSINESS_SEDAN',
-    base_rate_net: 65.0,
-    per_mile_rate_net: 3.85,
-    per_km_rate_net: 2.39,
-    per_minute_rate_net: 0.65,
-    hourly_rate_net: 95.0,
-    hourly_minimum_hours: 2,
-    minimum_fare_net: 85.0,
-    deadhead_rate_per_mile: 2.25,
-    deadhead_rate_per_km: 1.40,
-    airport_surcharge_net: 25.0,
-    meet_and_greet_fee_net: 30.0,
-    rush_hour_surcharge_net: 15.0,
-    late_night_surcharge_net: 20.0,
-    free_wait_minutes: 15,
-    wait_minute_rate_net: 1.0,
-    tax_rate: 0.08875,
-    gratuity_rate: 0.20,
-    currency: 'USD',
-    distance_unit: 'MILES'
-  },
-  ELECTRIC_VIP: {
-    vehicle_class: 'ELECTRIC_VIP',
-    base_rate_net: 75.0,
-    per_mile_rate_net: 4.25,
-    per_km_rate_net: 2.64,
-    per_minute_rate_net: 0.75,
-    hourly_rate_net: 110.0,
-    hourly_minimum_hours: 2,
-    minimum_fare_net: 95.0,
-    deadhead_rate_per_mile: 2.50,
-    deadhead_rate_per_km: 1.55,
-    airport_surcharge_net: 25.0,
-    meet_and_greet_fee_net: 35.0,
-    rush_hour_surcharge_net: 15.0,
-    late_night_surcharge_net: 20.0,
-    free_wait_minutes: 15,
-    wait_minute_rate_net: 1.15,
-    tax_rate: 0.08875,
-    gratuity_rate: 0.20,
-    currency: 'USD',
-    distance_unit: 'MILES'
-  },
-  LUXURY_SUV: {
-    vehicle_class: 'LUXURY_SUV',
-    base_rate_net: 95.0,
-    per_mile_rate_net: 4.95,
-    per_km_rate_net: 3.08,
-    per_minute_rate_net: 0.85,
-    hourly_rate_net: 135.0,
-    hourly_minimum_hours: 3,
-    minimum_fare_net: 125.0,
-    deadhead_rate_per_mile: 3.00,
-    deadhead_rate_per_km: 1.86,
-    airport_surcharge_net: 35.0,
-    meet_and_greet_fee_net: 40.0,
-    rush_hour_surcharge_net: 20.0,
-    late_night_surcharge_net: 25.0,
-    free_wait_minutes: 15,
-    wait_minute_rate_net: 1.35,
-    tax_rate: 0.08875,
-    gratuity_rate: 0.20,
-    currency: 'USD',
-    distance_unit: 'MILES'
-  },
-  FIRST_CLASS: {
-    vehicle_class: 'FIRST_CLASS',
-    base_rate_net: 135.0,
-    per_mile_rate_net: 6.50,
-    per_km_rate_net: 4.04,
-    per_minute_rate_net: 1.10,
-    hourly_rate_net: 185.0,
-    hourly_minimum_hours: 3,
-    minimum_fare_net: 175.0,
-    deadhead_rate_per_mile: 4.00,
-    deadhead_rate_per_km: 2.48,
-    airport_surcharge_net: 50.0,
-    meet_and_greet_fee_net: 50.0,
-    rush_hour_surcharge_net: 25.0,
-    late_night_surcharge_net: 35.0,
-    free_wait_minutes: 30,
-    wait_minute_rate_net: 1.75,
-    tax_rate: 0.08875,
-    gratuity_rate: 0.20,
-    currency: 'USD',
-    distance_unit: 'MILES'
-  },
-  BUSINESS_VAN: {
-    vehicle_class: 'BUSINESS_VAN',
-    base_rate_net: 120.0,
-    per_mile_rate_net: 5.75,
-    per_km_rate_net: 3.57,
-    per_minute_rate_net: 0.95,
-    hourly_rate_net: 160.0,
-    hourly_minimum_hours: 4,
-    minimum_fare_net: 150.0,
-    deadhead_rate_per_mile: 3.50,
-    deadhead_rate_per_km: 2.17,
-    airport_surcharge_net: 40.0,
-    meet_and_greet_fee_net: 45.0,
-    rush_hour_surcharge_net: 20.0,
-    late_night_surcharge_net: 30.0,
-    free_wait_minutes: 20,
-    wait_minute_rate_net: 1.50,
-    tax_rate: 0.08875,
-    gratuity_rate: 0.20,
-    currency: 'USD',
-    distance_unit: 'MILES'
-  }
-};
-
 function computeSimulatedQuote(rule: Partial<VendorPricingRule> | null, scenario: SimulationScenario) {
   if (!rule) {
     return {
@@ -371,34 +258,22 @@ export const VendorFleetAndPricingHub: React.FC<VendorFleetAndPricingHubProps> =
       ]);
       setVendors(vList || []);
 
-      const allTiers: VehicleClass[] = ['BUSINESS_SEDAN', 'ELECTRIC_VIP', 'LUXURY_SUV', 'FIRST_CLASS', 'BUSINESS_VAN'];
-      const existingClasses = new Set((rList || []).map((r: any) => r.vehicle_class));
-      const mergedRules: VendorPricingRule[] = [...(rList || [])];
+      const dbRules: VendorPricingRule[] = rList || [];
+      setRules(dbRules);
       
-      allTiers.forEach(tier => {
-        if (!existingClasses.has(tier)) {
-          mergedRules.push({
-            vendor_id: vendorId,
-            ...DEFAULT_TIER_RULES[tier]
-          } as VendorPricingRule);
-        }
-      });
-
-      setRules(mergedRules);
-      
-      // Store baseline copy
+      // Store authoritative database baseline copy
       const baseMap: Record<string, VendorPricingRule> = {};
-      mergedRules.forEach(r => {
+      dbRules.forEach(r => {
         baseMap[r.vehicle_class] = JSON.parse(JSON.stringify(r));
       });
       setBaselineRules(baseMap);
 
       setSelectedRule(prev => {
         if (prev) {
-          const found = mergedRules.find(r => r.vehicle_class === prev.vehicle_class);
-          return found || mergedRules[0];
+          const found = dbRules.find(r => r.vehicle_class === prev.vehicle_class);
+          return found || dbRules[0] || null;
         }
-        return mergedRules[0];
+        return dbRules[0] || null;
       });
 
       setAiMetrics(ai || {

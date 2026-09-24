@@ -180,15 +180,73 @@ class VendorPricingAIService:
 
     @staticmethod
     def save_vendor_pricing_rule(rule: VendorPricingRule) -> VendorPricingRule:
-        """Persist or update vendor pricing rule."""
+        """Persist or update vendor pricing rule to in-memory sovereign store and MySQL database table."""
         if rule.vendor_id not in db.vendor_pricing_rules:
             db.vendor_pricing_rules[rule.vendor_id] = {}
         db.vendor_pricing_rules[rule.vendor_id][rule.vehicle_class.value] = rule
+
+        # Direct MySQL database persistence
+        try:
+            from app.database_mysql import SessionLocal, VendorPricingRuleModel
+            if SessionLocal:
+                with SessionLocal() as session:
+                    row_id = f"{rule.vendor_id}_{rule.vehicle_class.value}"
+                    existing = session.query(VendorPricingRuleModel).filter_by(vendor_id=rule.vendor_id, vehicle_class=rule.vehicle_class.value).first()
+                    if not existing:
+                        existing = session.query(VendorPricingRuleModel).filter_by(id=row_id).first()
+                    
+                    if existing:
+                        existing.base_rate = Decimal(str(rule.base_rate_net))
+                        existing.per_mile_rate = Decimal(str(rule.per_mile_rate_net))
+                        existing.min_fare = Decimal(str(rule.minimum_fare_net))
+                        existing.deadhead_rate_per_mile = Decimal(str(rule.deadhead_rate_per_mile))
+                        existing.tax_rate = Decimal(str(rule.tax_rate))
+                        existing.gratuity_rate = Decimal(str(rule.gratuity_rate))
+                        existing.updated_at = datetime.now(timezone.utc)
+                    else:
+                        new_row = VendorPricingRuleModel(
+                            id=row_id,
+                            vendor_id=rule.vendor_id,
+                            vehicle_class=rule.vehicle_class.value,
+                            base_rate=Decimal(str(rule.base_rate_net)),
+                            per_mile_rate=Decimal(str(rule.per_mile_rate_net)),
+                            min_fare=Decimal(str(rule.minimum_fare_net)),
+                            deadhead_rate_per_mile=Decimal(str(rule.deadhead_rate_per_mile)),
+                            tax_rate=Decimal(str(rule.tax_rate)),
+                            gratuity_rate=Decimal(str(rule.gratuity_rate))
+                        )
+                        session.add(new_row)
+                    session.commit()
+        except Exception:
+            pass
+
         return rule
 
     @staticmethod
     def get_all_vendor_rules(vendor_id: str) -> List[VendorPricingRule]:
-        """Fetch all pricing rules defined for a vendor across all vehicle classes."""
+        """Fetch all authoritative pricing rules from database for a vendor across all vehicle classes."""
+        try:
+            from app.database_mysql import SessionLocal, VendorPricingRuleModel
+            if SessionLocal:
+                with SessionLocal() as session:
+                    db_rows = session.query(VendorPricingRuleModel).filter_by(vendor_id=vendor_id).all()
+                    if db_rows:
+                        if vendor_id not in db.vendor_pricing_rules:
+                            db.vendor_pricing_rules[vendor_id] = {}
+                        for row in db_rows:
+                            v_cls = VehicleClass(row.vehicle_class) if row.vehicle_class in [e.value for e in VehicleClass] else VehicleClass.LUXURY_SUV
+                            r = VendorPricingAIService.get_vendor_pricing_rule(vendor_id, v_cls)
+                            r.base_rate_net = Decimal(str(row.base_rate))
+                            r.per_mile_rate_net = Decimal(str(row.per_mile_rate))
+                            r.minimum_fare_net = Decimal(str(row.min_fare))
+                            r.deadhead_rate_per_mile = Decimal(str(row.deadhead_rate_per_mile))
+                            r.tax_rate = Decimal(str(row.tax_rate))
+                            r.gratuity_rate = Decimal(str(row.gratuity_rate))
+                            db.vendor_pricing_rules[vendor_id][v_cls.value] = r
+                        return list(db.vendor_pricing_rules[vendor_id].values())
+        except Exception:
+            pass
+
         if vendor_id not in db.vendor_pricing_rules:
             for v_class in [VehicleClass.LUXURY_SUV, VehicleClass.FIRST_CLASS, VehicleClass.BUSINESS_VAN, VehicleClass.ELECTRIC_VIP, VehicleClass.BUSINESS_SEDAN]:
                 rule = VendorPricingAIService.get_vendor_pricing_rule(vendor_id, v_class)
