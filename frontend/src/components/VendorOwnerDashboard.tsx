@@ -5965,10 +5965,10 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
 
             {/* TAB 6: DYNAMIC TARIFF MATRIX & PRICING STUDIO */}
             {activeTab === 'pricing' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
                 <VendorFleetAndPricingHub
                   initialVendorId={config.vendor_id || 'vendor-boston-vip'}
-                  hideVendorSelector={false}
+                  hideVendorSelector={true}
                 />
               </div>
             )}
