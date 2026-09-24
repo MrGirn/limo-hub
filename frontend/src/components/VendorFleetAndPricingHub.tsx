@@ -14,12 +14,21 @@ import {
   fetchVendorCommConfig, saveVendorCommConfig
 } from '../api';
 
-export const VendorFleetAndPricingHub: React.FC = () => {
+export interface VendorFleetAndPricingHubProps {
+  initialVendorId?: string;
+  hideVendorSelector?: boolean;
+}
+
+export const VendorFleetAndPricingHub: React.FC<VendorFleetAndPricingHubProps> = ({
+  initialVendorId,
+  hideVendorSelector = false
+}) => {
   const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [selectedVendorId, setSelectedVendorId] = useState<string>('vendor-ny-executive');
+  const [selectedVendorId, setSelectedVendorId] = useState<string>(initialVendorId || 'vendor_anb_philly');
   const [activeTab, setActiveTab] = useState<'PRICING' | 'AI_YIELD' | 'INVENTORY' | 'COMM'>('PRICING');
   const [loading, setLoading] = useState<boolean>(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
 
   // Data states
   const [rules, setRules] = useState<VendorPricingRule[]>([]);

@@ -1007,9 +1007,92 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
               Your Chauffeur Mission is Secured
             </h2>
             
-            <p style={{ color: '#64748B', fontSize: '15px', maxWidth: '580px', margin: '0 auto 28px auto', lineHeight: '1.6' }}>
+            <p style={{ color: '#64748B', fontSize: '15px', maxWidth: '580px', margin: '0 auto 24px auto', lineHeight: '1.6' }}>
               Confirmation reference <strong style={{ color: '#0078D4', fontFamily: 'monospace', fontSize: '16px' }}>#{booking.id}</strong>. Your dedicated chauffeur has been reserved with white-glove meet & greet.
             </p>
+
+            {/* DYNAMIC VENDOR-GOVERNED CANCELLATION POLICY & COUNTDOWN BANNER */}
+            {(() => {
+              const policy = booking.cancellation_policy;
+              const cutoffHours = policy?.cutoff_hours || 2;
+              const vendorName = policy?.vendor_name || 'Operating Carrier';
+              const pickupDate = booking.pickup_time_utc ? new Date(booking.pickup_time_utc) : new Date(Date.now() + 24 * 3600 * 1000);
+              const deadlineDate = policy?.deadline_utc ? new Date(policy.deadline_utc) : new Date(pickupDate.getTime() - cutoffHours * 3600 * 1000);
+              const now = new Date();
+              const diffMs = deadlineDate.getTime() - now.getTime();
+              const isFreeActive = diffMs > 0;
+              const totalHours = Math.floor(diffMs / (1000 * 60 * 60));
+              const remainingMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+              const timeRemainingStr = totalHours > 0 ? `${totalHours}h ${remainingMinutes}m remaining` : `${remainingMinutes}m remaining`;
+              const isUrgent = totalHours === 0 && isFreeActive;
+
+              return (
+                <div style={{
+                  backgroundColor: isFreeActive ? (isUrgent ? '#FEF3C7' : '#F0FDF4') : '#F8FAFC',
+                  border: `1px solid ${isFreeActive ? (isUrgent ? '#FDE68A' : '#BBF7D0') : '#E2E8F0'}`,
+                  borderRadius: '12px',
+                  padding: '16px 20px',
+                  marginBottom: '24px',
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '14px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      backgroundColor: isFreeActive ? (isUrgent ? '#FDE68A' : '#DCFCE7') : '#E2E8F0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <Clock size={18} color={isFreeActive ? (isUrgent ? '#92400E' : '#166534') : '#64748B'} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 800, color: isFreeActive ? (isUrgent ? '#92400E' : '#166534') : '#0F172A' }}>
+                        {isFreeActive 
+                          ? (isUrgent ? `Free Cancellation Ending Soon · ${timeRemainingStr}` : `Complimentary Cancellation Active · ${timeRemainingStr}`)
+                          : 'Free Cancellation Window Closed'}
+                      </div>
+                      <div style={{ fontSize: '11.5px', color: isFreeActive ? (isUrgent ? '#78350F' : '#14532D') : '#64748B', marginTop: '2px' }}>
+                        {isFreeActive 
+                          ? `Cancel free of charge until ${deadlineDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at ${deadlineDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} under ${vendorName}'s ${cutoffHours}-hour business rule (100% Pre-Auth Escrow Release).`
+                          : `Chauffeur has been dispatched. Cancellations are subject to standard late policy under ${vendorName}.`}
+                      </div>
+                    </div>
+                  </div>
+
+                  {isFreeActive && booking.trip?.status !== 'CANCELLED' && (
+                    <button
+                      onClick={() => handleCancelBooking(booking.id)}
+                      disabled={cancellingBooking}
+                      style={{
+                        padding: '8px 14px',
+                        backgroundColor: '#FFFFFF',
+                        border: `1px solid ${isUrgent ? '#F59E0B' : '#86EFAC'}`,
+                        borderRadius: '6px',
+                        color: isUrgent ? '#92400E' : '#166534',
+                        fontSize: '12px',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      <Trash2 size={13} />
+                      <span>{cancellingBooking ? 'Releasing...' : 'Cancel Ride (0 Fees)'}</span>
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* ITINERARY & SUMMARY CARD */}
             <div style={{ backgroundColor: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '24px', textAlign: 'left', marginBottom: '24px' }}>

@@ -19,10 +19,10 @@ from app.database import db
 
 class VoiceStreamSession(BaseModel):
     session_id: str = Field(default_factory=lambda: f"vcall_{uuid.uuid4().hex[:12]}")
-    caller_phone: str = "+1-555-019-2834"
-    passenger_name: str = "VIP Guest"
-    pickup_location: str = "JFK International Terminal 4"
-    dropoff_location: str = "The Plaza Hotel, 768 5th Ave, New York"
+    caller_phone: Optional[str] = None
+    passenger_name: Optional[str] = None
+    pickup_location: Optional[str] = None
+    dropoff_location: Optional[str] = None
     vehicle_tier: str = "FIRST_CLASS"
     state: str = "AWAITING_CONSENT"  # AWAITING_CONSENT, LISTENING, SPEAKING, INTERRUPTED, QUOTE_PRESENTED, HOLD_CONFIRMED, CALL_ENDED
     recording_consent_given: bool = False
@@ -33,6 +33,7 @@ class VoiceStreamSession(BaseModel):
     barge_in_count: int = 0
     last_barge_in_ts: Optional[float] = None
     created_at: float = Field(default_factory=time.time)
+
 
 
 class VoiceStreamEngine:

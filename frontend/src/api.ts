@@ -3,7 +3,8 @@ import {
   ServiceType, VehicleClass, BookingParty, TripStatus, Vendor,
   UserSession, ActorPersonaOption, VendorPortalConfig, SystemRuntimeMode,
   TeamMember, CreateTeamMemberPayload, UpdateTeamMemberPayload, RoleMatrixResponse,
-  CertifiedAffiliatePartner, AffiliateRecommendation, Dispatch24hAlert
+  CertifiedAffiliatePartner, AffiliateRecommendation, Dispatch24hAlert,
+  RegionalStaffingPod, InboundVoiceCallResolution
 } from './types';
 
 
@@ -1784,6 +1785,249 @@ export async function terminateSovereignCell(vendorId: string, reason?: string, 
   }
   return res.json();
 }
+
+// --- GLOBAL SUPPORT DESK AS A SERVICE (SUPPORT-AS-A-SERVICE) ---
+
+export async function fetchSupportDeskPlans(): Promise<{ plans: any[]; global_config: any }> {
+  const res = await fetch(`${BASE_URL}/api/v1/support-desk/plans`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch support desk plans');
+  return res.json();
+}
+
+export async function updateSupportDeskPlan(planId: string, updates: any): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/support-desk/plans/${encodeURIComponent(planId)}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(updates)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to update support desk plan'));
+  }
+  return res.json();
+}
+
+export async function fetchSupportDeskConfig(): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/support-desk/config`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch support desk config');
+  return res.json();
+}
+
+export async function updateSupportDeskConfig(updates: any): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/support-desk/config`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(updates)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to update support desk payment config'));
+  }
+  return res.json();
+}
+
+export async function subscribeVendorSupportDesk(payload: { vendor_id: string; plan_id: string; custom_greeting_script?: string; forwarding_did?: string }): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/support-desk/subscribe`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to subscribe to support desk'));
+  }
+  return res.json();
+}
+
+export async function fetchSupportDeskSubscriptions(): Promise<any[]> {
+  const res = await fetch(`${BASE_URL}/api/v1/support-desk/subscriptions`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch support desk subscriptions');
+  return res.json();
+}
+
+export async function fetchSupportTickets(filters?: { vendor_id?: string; status?: string; channel?: string }): Promise<any[]> {
+  const params = new URLSearchParams();
+  if (filters?.vendor_id) params.append('vendor_id', filters.vendor_id);
+  if (filters?.status) params.append('status', filters.status);
+  if (filters?.channel) params.append('channel', filters.channel);
+
+  const res = await fetch(`${BASE_URL}/api/v1/support-desk/tickets?${params.toString()}`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch support tickets');
+  return res.json();
+}
+
+export async function createSupportTicket(ticketData: any): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/support-desk/tickets`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(ticketData)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to create support ticket'));
+  }
+  return res.json();
+}
+
+export async function updateSupportTicket(ticketId: string, updates: any): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/support-desk/tickets/${encodeURIComponent(ticketId)}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(updates)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to update support ticket'));
+  }
+  return res.json();
+}
+
+export async function mutateSupportTicketBooking(ticketId: string, action: string, params: any = {}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/support-desk/tickets/${encodeURIComponent(ticketId)}/mutate`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ action, params })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to execute support desk mutation'));
+  }
+  return res.json();
+}
+
+export async function fetchSupportDeskOverview(): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/support-desk/overview`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch support desk overview');
+  return res.json();
+}
+
+export async function fetchRegionalStaffingPods(): Promise<RegionalStaffingPod[]> {
+  const res = await fetch(`${BASE_URL}/api/v1/support-desk/pods`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch regional staffing pods');
+  return res.json();
+}
+
+export async function resolveInboundVoiceCall(payload: { caller_phone: string; dialed_number: string; extension_pin?: string }): Promise<InboundVoiceCallResolution> {
+  const res = await fetch(`${BASE_URL}/api/v1/support-desk/voice/resolve-inbound`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to resolve inbound voice call'));
+  }
+  return res.json();
+}
+
+export async function evaluateAutomatedSlaTriggers(): Promise<{ success: boolean; escalations_count: number; escalations: any[] }> {
+  const res = await fetch(`${BASE_URL}/api/v1/support-desk/sla/evaluate-triggers`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to evaluate SLA escalation triggers');
+  return res.json();
+}
+
+// --- HUB HELICOPTER GOVERNANCE & COMPLIANCE APIS ---
+
+export async function fetchHelicopterHubConfig(): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/hub/helicopter-config`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch Helicopter Hub config');
+  return res.json();
+}
+
+export async function updateHelicopterHubConfig(dto: any): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/hub/helicopter-config`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(dto)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to update Helicopter Hub config'));
+  }
+  return res.json();
+}
+
+export async function fetchDomesticHeliports(country?: string): Promise<any[]> {
+  const url = country ? `${BASE_URL}/api/v1/hub/heliports?country=${country}` : `${BASE_URL}/api/v1/hub/heliports`;
+  const res = await fetch(url, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch domestic heliports');
+  return res.json();
+}
+
+export async function validateHelicopterLeg(payload: {
+  origin_address: string;
+  origin_country?: string;
+  destination_address: string;
+  destination_country?: string;
+  total_itinerary_legs?: number;
+  is_fixed_wing?: boolean;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/hub/helicopter/validate`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to validate helicopter leg'));
+  }
+  return res.json();
+}
+
+// --- CHAUFFEUR CREDENTIAL VAULT (GAP-D1) ---
+
+export async function fetchDriverDocuments(driverId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/drivers/${driverId}/documents`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch driver credentials');
+  return res.json();
+}
+
+export async function uploadDriverDocument(
+  driverId: string,
+  payload: {
+    vendor_id: string;
+    document_type: string;
+    document_name: string;
+    base64_data: string;
+    expiry_date?: string;
+    notes?: string;
+  }
+): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/drivers/${driverId}/documents/upload`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to upload driver credential document'));
+  }
+  return res.json();
+}
+
+
+
 
 
 

@@ -460,8 +460,10 @@ Global Chauffeur Dispatch & Affiliate Clearinghouse
         net_fare = override.agreed_net_payout_usd
         margin = (net_fare * Decimal("0.18")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         subtotal_fare = net_fare + margin
+        from app.services.pricing_service import get_regional_tax_and_surcharges
+        reg_tax = get_regional_tax_and_surcharges(rfp.pickup_address or rfp.target_city).vat_or_sales_tax_rate
         gratuity = (subtotal_fare * Decimal("0.20")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        tax = (subtotal_fare * Decimal("0.08875")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        tax = (subtotal_fare * reg_tax).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         passenger_total = subtotal_fare + gratuity + tax
 
         logger.info(f"Manager Phone Override executed for RFP {rfp.rfp_id} by {override.manager_name}: ${passenger_total}")

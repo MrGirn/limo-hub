@@ -32,14 +32,6 @@ def haversine_distance_miles(lat1: float, lon1: float, lat2: float, lon2: float)
 
 
 class GeofenceTelemetryService:
-    # Known reference coordinates for demo geofencing
-    JFK_T4_LAT = 40.6413
-    JFK_T4_LNG = -73.7781
-    PLAZA_HOTEL_LAT = 40.7645
-    PLAZA_HOTEL_LNG = -73.9744
-    DEPOT_LAT = 40.7680
-    DEPOT_LNG = -73.9920
-
     @classmethod
     def process_telemetry_ping(
         cls,
@@ -52,46 +44,69 @@ class GeofenceTelemetryService:
         heading_degrees: float = 90.0
     ) -> Dict[str, Any]:
         """
-        Evaluates GPS ping against active trip coordinates and auto-transitions state.
+        Evaluates real GPS ping against trip pickup/dropoff coordinates and auto-transitions state.
         """
         now_utc = datetime.now(timezone.utc)
         trip = db.trips.get(trip_id)
-        if not trip and db.trips:
-            trip_id = next(iter(db.trips.keys()))
-            trip = db.trips[trip_id]
+
+        # Update driver and vehicle live positions in database
+        driver = db.drivers.get(driver_id)
+        if driver:
+            driver.current_lat = lat
+            driver.current_lng = lng
+
+        vehicle = db.vehicles.get(vehicle_id)
+        if vehicle:
+            vehicle.current_lat = lat
+            vehicle.current_lng = lng
+
+        if not trip:
+            logger.info(f"Telemetry ping for unindexed trip {trip_id} (Driver: {driver_id}, Vehicle: {vehicle_id})")
+            return {
+                "trip_id": trip_id,
+                "driver_id": driver_id,
+                "vehicle_id": vehicle_id,
+                "status": "UNINDEXED_TRIP_RECORDED",
+                "active_zone": f"TRANSIT_CORRIDOR ({speed_mph:.0f} mph)",
+                "transition_note": f"Position recorded at lat={lat:.4f}, lng={lng:.4f}. Trip ID {trip_id} not in active database.",
+                "updated_at": now_utc.isoformat()
+            }
 
         active_zone = "TRANSIT_HIGHWAY"
         new_status: Optional[TripStatus] = None
         transition_note = "Position updated."
 
-        # Distance calculations
-        dist_to_pickup = haversine_distance_miles(lat, lng, cls.JFK_T4_LAT, cls.JFK_T4_LNG)
-        dist_to_dropoff = haversine_distance_miles(lat, lng, cls.PLAZA_HOTEL_LAT, cls.PLAZA_HOTEL_LNG)
-        dist_to_depot = haversine_distance_miles(lat, lng, cls.DEPOT_LAT, cls.DEPOT_LNG)
+        # Dynamically evaluate distance to pickup and dropoff coordinates if available
+        pickup_lat = getattr(trip, "pickup_lat", None)
+        pickup_lng = getattr(trip, "pickup_lng", None)
+        dropoff_lat = getattr(trip, "dropoff_lat", None)
+        dropoff_lng = getattr(trip, "dropoff_lng", None)
 
-        if dist_to_pickup <= 0.35:
-            active_zone = "JFK_AIRPORT_VIP_GEOFENCE"
-            if trip and trip.status in [TripStatus.SCHEDULED, TripStatus.OFFER_SENT, TripStatus.DRIVER_ACCEPTED, TripStatus.EN_ROUTE]:
+        dist_to_pickup = haversine_distance_miles(lat, lng, pickup_lat, pickup_lng) if (pickup_lat and pickup_lng) else None
+        dist_to_dropoff = haversine_distance_miles(lat, lng, dropoff_lat, dropoff_lng) if (dropoff_lat and dropoff_lng) else None
+
+        if dist_to_pickup is not None and dist_to_pickup <= 0.35:
+            active_zone = "PICKUP_VIP_GEOFENCE"
+            if trip.status in [TripStatus.SCHEDULED, TripStatus.OFFER_SENT, TripStatus.DRIVER_ACCEPTED, TripStatus.EN_ROUTE]:
                 new_status = TripStatus.ARRIVED
                 trip.status = TripStatus.ARRIVED
-                transition_note = "Auto-Geofence: Chauffeur crossed JFK Terminal 4 VIP geofence. Status marked ARRIVED."
-        elif dist_to_dropoff <= 0.20 and speed_mph < 10.0:
-            active_zone = "DESTINATION_PLAZA_HOTEL_GEOFENCE"
-            if trip and trip.status in [TripStatus.ARRIVED, TripStatus.IN_PROGRESS]:
+                transition_note = "Auto-Geofence: Chauffeur crossed pickup VIP geofence (within 0.35 mi). Status marked ARRIVED."
+        elif dist_to_dropoff is not None and dist_to_dropoff <= 0.20 and speed_mph < 10.0:
+            active_zone = "DESTINATION_GEOFENCE"
+            if trip.status in [TripStatus.ARRIVED, TripStatus.IN_PROGRESS]:
                 new_status = TripStatus.COMPLETED
                 trip.status = TripStatus.COMPLETED
                 transition_note = "Auto-Geofence: Vehicle arrived at destination. Trip auto-completed & final billing captured."
-                # Auto capture payment
+                # Auto capture payment if hold exists
                 if hasattr(trip, "payment_intent_id") and trip.payment_intent_id:
                     StripePaymentService.capture_final_payment(trip.payment_intent_id)
-        elif dist_to_depot <= 0.50:
-            active_zone = "MANHATTAN_DEPOT_ZONE"
         else:
             active_zone = f"EN_ROUTE ({speed_mph:.0f} mph)"
-            if trip and trip.status == TripStatus.ARRIVED and speed_mph > 15.0:
+            if trip.status == TripStatus.ARRIVED and speed_mph > 15.0:
                 new_status = TripStatus.IN_PROGRESS
                 trip.status = TripStatus.IN_PROGRESS
                 transition_note = "Auto-Geofence: Vehicle departing pickup zone > 15mph. Status marked IN_PROGRESS."
+
 
         if trip and new_status:
             trip.events.append(TripEvent(

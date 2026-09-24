@@ -285,8 +285,67 @@ export const LUXURY_VEHICLE_PROFILES: Record<string, VehicleSpecProfile> = {
         isPrimary: true
       }
     ]
+  },
+  airbush130: {
+    make: 'Airbus Helicopters',
+    model: 'H130 VIP Executive Rotorcraft',
+    vehicleClass: 'HELICOPTER_CHARTER',
+    classNameLabel: 'Executive Helicopter Charter (Airbus H130, Bell 407, Sikorsky S-76)',
+    passengerCapacity: 6,
+    luggageCapacity: 4,
+    hourlyRateUsd: 2650.0,
+    perKmRateUsd: 14.50,
+    perMileRateUsd: 22.50,
+    exteriorColor: 'Executive Pearlescent Slate / Gold Stripe',
+    interiorColor: 'Aviation Club Leather Slate',
+    tagline: 'Rapid Domestic Air Corridor Transfer Bypassing Urban Highway Gridlock in Pure VIP Style',
+    description: 'Premier single-engine VIP turbine helicopter featuring panoramic floor-to-ceiling vista windows, whisper-quiet Fenestron anti-torque tail rotor, Bose A20 noise-cancelling aviation headsets, and dedicated baggage bay.',
+    recommendedAmenities: [
+      '⚡ Ultra-Fast 5G Wi-Fi Hotspot',
+      '🎧 Active Noise Cancellation Sound Architecture',
+      '❄️ Tri-Zone / Quad-Zone Executive Climate',
+      '🥤 Complimentary Chilled Fiji Artesian Water & Mints',
+      '🛄 Massive Dedicated Cargo Bay (6+ Suitcases)'
+    ],
+    stockShowroomPhotos: [
+      {
+        url: 'https://images.unsplash.com/photo-1508614589041-895b88991e3e?auto=format&fit=crop&w=1200&q=80',
+        caption: 'Airbus H130 VIP Executive Helicopter on Helipad',
+        photoType: 'EXTERIOR',
+        isPrimary: true
+      }
+    ]
+  },
+  bell407: {
+    make: 'Bell Flight',
+    model: 'Bell 407 GXi Executive',
+    vehicleClass: 'HELICOPTER_CHARTER',
+    classNameLabel: 'Executive Helicopter Charter (Bell 407)',
+    passengerCapacity: 5,
+    luggageCapacity: 3,
+    hourlyRateUsd: 2350.0,
+    perKmRateUsd: 12.80,
+    perMileRateUsd: 19.50,
+    exteriorColor: 'Jet Black Metallic / Silver Wing',
+    interiorColor: 'Club Leather Espresso',
+    tagline: 'Reliable High-Speed Executive Rotorcraft for Domestic Multi-Leg Transfers',
+    description: 'Rolls-Royce turbine-powered executive rotorcraft delivering rapid point-to-point urban connection with Garmin G1000H glass cockpit and club cabin seating.',
+    recommendedAmenities: [
+      '🎧 Active Noise Cancellation Sound Architecture',
+      '❄️ Tri-Zone / Quad-Zone Executive Climate',
+      '🥤 Complimentary Chilled Fiji Artesian Water & Mints'
+    ],
+    stockShowroomPhotos: [
+      {
+        url: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1200&q=80',
+        caption: 'Bell 407 GXi Executive Rotorcraft',
+        photoType: 'EXTERIOR',
+        isPrimary: true
+      }
+    ]
   }
 };
+
 
 /**
  * Matches input text (make and model) to the best vehicle profile.
@@ -294,9 +353,16 @@ export const LUXURY_VEHICLE_PROFILES: Record<string, VehicleSpecProfile> = {
 export function matchVehicleProfile(query: string): VehicleSpecProfile {
   const q = query.toLowerCase();
 
+  if (q.includes('airbus') || q.includes('h130') || q.includes('h125') || q.includes('sikorsky') || q.includes('s-76') || q.includes('helicopter') || q.includes('heli') || q.includes('blade')) {
+    return LUXURY_VEHICLE_PROFILES.airbush130;
+  }
+  if (q.includes('bell') || q.includes('407') || q.includes('505') || q.includes('agusta') || q.includes('aw109') || q.includes('rotorcraft')) {
+    return LUXURY_VEHICLE_PROFILES.bell407;
+  }
   if (q.includes('maybach') || q.includes('s680') || q.includes('ghost') || q.includes('phantom') || q.includes('rolls')) {
     return LUXURY_VEHICLE_PROFILES.maybach;
   }
+
   if (q.includes('sprinter') || q.includes('van') || q.includes('transit') || q.includes('jetvan')) {
     return LUXURY_VEHICLE_PROFILES.sprinter;
   }

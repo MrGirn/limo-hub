@@ -1,0 +1,2391 @@
+{
+  "total": 374,
+  "by_file": {
+    "app\\business_api.py": [
+      {
+        "file": "app\\business_api.py",
+        "line": 4,
+        "type": "SIMULATION_KEYWORD",
+        "content": "Autonomous Disruption Simulation, and Fleet status."
+      },
+      {
+        "file": "app\\business_api.py",
+        "line": 640,
+        "type": "SIMULATION_KEYWORD",
+        "content": "@router.post(\"/recovery/simulate-flight-delay\")"
+      },
+      {
+        "file": "app\\business_api.py",
+        "line": 654,
+        "type": "SIMULATION_KEYWORD",
+        "content": "@router.post(\"/recovery/simulate-driver-timeout\")"
+      },
+      {
+        "file": "app\\business_api.py",
+        "line": 1223,
+        "type": "SIMULATION_KEYWORD",
+        "content": "@router.post(\"/transit/simulate-radar-delay\", response_model=TransitRadarEvent)"
+      },
+      {
+        "file": "app\\business_api.py",
+        "line": 1634,
+        "type": "SIMULATION_KEYWORD",
+        "content": "@router.post(\"/webhooks/simulate\")"
+      },
+      {
+        "file": "app\\business_api.py",
+        "line": 1682,
+        "type": "SIMULATION_KEYWORD",
+        "content": "return {\"success\": True, \"twiml\": twiml, \"summary\": \"Voice IVR simulation complete.\"}"
+      },
+      {
+        "file": "app\\business_api.py",
+        "line": 1702,
+        "type": "SIMULATION_KEYWORD",
+        "content": "raise HTTPException(status_code=400, detail=f\"Unknown simulation type: {dto.simulation_type}\")"
+      },
+      {
+        "file": "app\\business_api.py",
+        "line": 1943,
+        "type": "SIMULATION_KEYWORD",
+        "content": "@router.post(\"/voice/simulate-call\")"
+      },
+      {
+        "file": "app\\business_api.py",
+        "line": 4819,
+        "type": "SIMULATION_KEYWORD",
+        "content": "@router.post(\"/vendors/{vendor_id}/subscription/simulate-dunning\")"
+      }
+    ],
+    "app\\database.py": [
+      {
+        "file": "app\\database.py",
+        "line": 328,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "tax_rate=Decimal(str(q_model.tax_rate or \"0.08875\")),"
+      },
+      {
+        "file": "app\\database.py",
+        "line": 506,
+        "type": "MOCK_KEYWORD",
+        "content": "3. Corporate Travel Accounts directory without fake dummy trips or mock bookings."
+      },
+      {
+        "file": "app\\database.py",
+        "line": 506,
+        "type": "FAKE_KEYWORD",
+        "content": "3. Corporate Travel Accounts directory without fake dummy trips or mock bookings."
+      },
+      {
+        "file": "app\\database.py",
+        "line": 506,
+        "type": "DUMMY_KEYWORD",
+        "content": "3. Corporate Travel Accounts directory without fake dummy trips or mock bookings."
+      },
+      {
+        "file": "app\\database.py",
+        "line": 566,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "vat_or_sales_tax_rate=Decimal(\"0.08875\"),"
+      }
+    ],
+    "app\\database_mysql.py": [
+      {
+        "file": "app\\database_mysql.py",
+        "line": 222,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "tax_rate = Column(Numeric(6, 4), default=Decimal(\"0.08875\"))"
+      },
+      {
+        "file": "app\\database_mysql.py",
+        "line": 418,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "tax_rate = Column(Numeric(6, 4), default=Decimal(\"0.08875\"))"
+      }
+    ],
+    "app\\domain_models.py": [
+      {
+        "file": "app\\domain_models.py",
+        "line": 137,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "tax_rate: Decimal = Decimal(\"0.08875\")"
+      },
+      {
+        "file": "app\\domain_models.py",
+        "line": 679,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "vat_or_sales_tax_rate: Decimal                  # e.g. 0.08875, 0.20, 0.20, 0.10, 0.05"
+      },
+      {
+        "file": "app\\domain_models.py",
+        "line": 887,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "tax_rate: Decimal = Decimal(\"0.08875\")"
+      },
+      {
+        "file": "app\\domain_models.py",
+        "line": 1052,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "tax_rate: Decimal = Decimal(\"0.08875\")"
+      }
+    ],
+    "app\\model_client.py": [
+      {
+        "file": "app\\model_client.py",
+        "line": 1,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"\"\"Real OpenAI-compatible chat API adapter. No simulated success fallback.\"\"\""
+      }
+    ],
+    "app\\services\\autonomous_vendor_sourcing_service.py": [
+      {
+        "file": "app\\services\\autonomous_vendor_sourcing_service.py",
+        "line": 34,
+        "type": "SIMULATION_KEYWORD",
+        "content": "# Curated Seed Directory for popular uncontracted luxury corridors (Google Places / TLC simulation)"
+      },
+      {
+        "file": "app\\services\\autonomous_vendor_sourcing_service.py",
+        "line": 464,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "tax = (subtotal_fare * Decimal(\"0.08875\")).quantize(Decimal(\"0.01\"), rounding=ROUND_HALF_UP)"
+      }
+    ],
+    "app\\services\\aws_ses_service.py": [
+      {
+        "file": "app\\services\\aws_ses_service.py",
+        "line": 62,
+        "type": "SIMULATION_KEYWORD",
+        "content": "# Log simulated AWS SES delivery"
+      }
+    ],
+    "app\\services\\email_notification_service.py": [
+      {
+        "file": "app\\services\\email_notification_service.py",
+        "line": 224,
+        "type": "SIMULATION_KEYWORD",
+        "content": "logger.info(f\"Email delivery simulated / archived: To={to_email}, Booking={booking_id}\")"
+      }
+    ],
+    "app\\services\\live_flight_tracking_service.py": [
+      {
+        "file": "app\\services\\live_flight_tracking_service.py",
+        "line": 25,
+        "type": "MOCK_KEYWORD",
+        "content": "Otherwise returns clean telemetry object without mock data."
+      }
+    ],
+    "app\\services\\omnichannel_plan_updater_service.py": [
+      {
+        "file": "app\\services\\omnichannel_plan_updater_service.py",
+        "line": 34,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"\"\"Simulate incoming radar telemetry from FlightAware / ADS-B receiver.\"\"\""
+      }
+    ],
+    "app\\services\\pricing_service.py": [
+      {
+        "file": "app\\services\\pricing_service.py",
+        "line": 83,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "vat_or_sales_tax_rate=Decimal(\"0.08875\"), airport_access_fee=Decimal(\"18.00\"), congestion_charge=Decimal(\"0.00\"), currency=\"USD\""
+      }
+    ],
+    "app\\services\\sovereign_cell_infra_service.py": [
+      {
+        "file": "app\\services\\sovereign_cell_infra_service.py",
+        "line": 5,
+        "type": "MOCK_KEYWORD",
+        "content": "Zero static/mock data."
+      }
+    ],
+    "app\\services\\stripe_connect_service.py": [
+      {
+        "file": "app\\services\\stripe_connect_service.py",
+        "line": 24,
+        "type": "MOCK_KEYWORD",
+        "content": "No hardcoded mock dictionaries."
+      },
+      {
+        "file": "app\\services\\stripe_connect_service.py",
+        "line": 133,
+        "type": "SIMULATION_KEYWORD",
+        "content": "logger.info(f\"Stripe API key not configured; generating simulated account: {sim_id}\")"
+      },
+      {
+        "file": "app\\services\\stripe_connect_service.py",
+        "line": 245,
+        "type": "MOCK_KEYWORD",
+        "content": "Never returns hardcoded or fabricated mock values."
+      }
+    ],
+    "app\\services\\stripe_webhook_service.py": [
+      {
+        "file": "app\\services\\stripe_webhook_service.py",
+        "line": 30,
+        "type": "SIMULATION_KEYWORD",
+        "content": "return True  # Dev / Simulation mode"
+      }
+    ],
+    "app\\services\\twilio_notification_service.py": [
+      {
+        "file": "app\\services\\twilio_notification_service.py",
+        "line": 121,
+        "type": "SIMULATION_KEYWORD",
+        "content": "logger.info(f\"[VOICE CALL SIMULATION] To: {to_number} | Message: {message_to_speak}\")"
+      },
+      {
+        "file": "app\\services\\twilio_notification_service.py",
+        "line": 122,
+        "type": "SIMULATION_KEYWORD",
+        "content": "return {\"success\": True, \"simulated\": True, \"to\": to_number}"
+      }
+    ],
+    "app\\services\\vendor_onboarding_service.py": [
+      {
+        "file": "app\\services\\vendor_onboarding_service.py",
+        "line": 343,
+        "type": "SIMULATION_KEYWORD",
+        "content": "# 2. S3 Mirroring (Real Boto3 if configured, or simulated metadata storage)"
+      }
+    ],
+    "app\\services\\vendor_pricing_ai_service.py": [
+      {
+        "file": "app\\services\\vendor_pricing_ai_service.py",
+        "line": 235,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"\"\"Simulate neural telemetry analysis over vendor historical bookings to dynamically optimize pricing curve.\"\"\""
+      }
+    ],
+    "app\\services\\vendor_subscription_service.py": [
+      {
+        "file": "app\\services\\vendor_subscription_service.py",
+        "line": 178,
+        "type": "MOCK_KEYWORD",
+        "content": "database tables and sovereign cell registry. Zero static mock lists."
+      }
+    ],
+    "app\\services\\voice_stream_service.py": [
+      {
+        "file": "app\\services\\voice_stream_service.py",
+        "line": 232,
+        "type": "DUMMY_KEYWORD",
+        "content": "# Synthesize dummy PCM binary header + duration"
+      },
+      {
+        "file": "app\\services\\voice_stream_service.py",
+        "line": 279,
+        "type": "SIMULATION_KEYWORD",
+        "content": "# Simulated audio frame ingestion"
+      }
+    ],
+    "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json": [
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 1487,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 1510,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 1519,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 1528,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 1537,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 1546,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 1555,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 1625,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 1648,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 1657,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 1666,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 1684,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 1693,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 1763,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 1786,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 1795,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 1804,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 1822,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 1831,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 1901,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 1924,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 1933,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 1942,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 1960,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 1969,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 2211,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 2234,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 2243,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 2252,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 2261,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 2270,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 2279,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 2480,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 2503,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 2512,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 2521,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 2539,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 2548,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 2779,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 2802,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 2811,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 2820,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 2838,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 2847,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 3015,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 3038,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 3047,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 3056,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 3074,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172346.json",
+        "line": 3083,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      }
+    ],
+    "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json": [
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 1487,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 1510,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 1519,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 1528,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 1537,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 1546,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 1555,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 1625,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 1648,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 1657,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 1666,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 1684,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 1693,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 1763,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 1786,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 1795,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 1804,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 1822,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 1831,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 1901,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 1924,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 1933,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 1942,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 1960,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 1969,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 2211,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 2234,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 2243,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 2252,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 2261,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 2270,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 2279,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 2480,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 2503,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 2512,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 2521,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 2539,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 2548,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 2779,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 2802,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 2811,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 2820,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 2838,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 2847,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 3015,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 3038,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 3047,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 3056,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 3074,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      },
+      {
+        "file": "data\\backups\\limo_snapshot_readiness_audit_20260921_172725.json",
+        "line": 3083,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"tax_rate\": \"0.08875\","
+      }
+    ],
+    "docs\\agentic-ai-implementation-map.md": [
+      {
+        "file": "docs\\agentic-ai-implementation-map.md",
+        "line": 8,
+        "type": "SIMULATION_KEYWORD",
+        "content": "| **D. LangGraph Workflows** | `app/services/autonomous_recovery_service.py` | `/api/v1/recovery/simulate-flight-delay` | `tests/test_busine"
+      }
+    ],
+    "docs\\AI_COMPLETION_PLAN.md": [
+      {
+        "file": "docs\\AI_COMPLETION_PLAN.md",
+        "line": 3,
+        "type": "SIMULATION_KEYWORD",
+        "content": "The comprehensive target includes every AI area requested. A downloadable local implementation is delivered now; completing the business int"
+      }
+    ],
+    "docs\\BUILD_PLAN.md": [
+      {
+        "file": "docs\\BUILD_PLAN.md",
+        "line": 31,
+        "type": "FAKE_KEYWORD",
+        "content": "Suggested target source folders: backend/app/{identity,tenancy,customers,vendors,fleet,bookings,pricing,dispatch,payments,communications,inc"
+      },
+      {
+        "file": "docs\\BUILD_PLAN.md",
+        "line": 96,
+        "type": "FAKE_KEYWORD",
+        "content": "Three target modes: demo (fixtures/no external side effects), sandbox (provider test accounts), live (verified credentials, supported region"
+      }
+    ],
+    "docs\\Limo-Global-AntiGravity-Build-Prompt.md": [
+      {
+        "file": "docs\\Limo-Global-AntiGravity-Build-Prompt.md",
+        "line": 15,
+        "type": "MOCK_KEYWORD",
+        "content": "No mock operational data, hardcoded customer details, static dates, fake availability, invented provider responses, fake AI analysis, simula"
+      },
+      {
+        "file": "docs\\Limo-Global-AntiGravity-Build-Prompt.md",
+        "line": 15,
+        "type": "SIMULATION_KEYWORD",
+        "content": "No mock operational data, hardcoded customer details, static dates, fake availability, invented provider responses, fake AI analysis, simula"
+      },
+      {
+        "file": "docs\\Limo-Global-AntiGravity-Build-Prompt.md",
+        "line": 15,
+        "type": "FAKE_KEYWORD",
+        "content": "No mock operational data, hardcoded customer details, static dates, fake availability, invented provider responses, fake AI analysis, simula"
+      },
+      {
+        "file": "docs\\Limo-Global-AntiGravity-Build-Prompt.md",
+        "line": 21,
+        "type": "FAKE_KEYWORD",
+        "content": "Create docs/implementation-matrix.md with each requirement, implementation location, test evidence, operational configuration dependency and"
+      },
+      {
+        "file": "docs\\Limo-Global-AntiGravity-Build-Prompt.md",
+        "line": 133,
+        "type": "FAKE_KEYWORD",
+        "content": "Use real backend data for every card, count, status, map point and chart. Fresh installs show empty states and configuration steps. No stati"
+      },
+      {
+        "file": "docs\\Limo-Global-AntiGravity-Build-Prompt.md",
+        "line": 133,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "Use real backend data for every card, count, status, map point and chart. Fresh installs show empty states and configuration steps. No stati"
+      }
+    ],
+    "docs\\VALIDATION.md": [
+      {
+        "file": "docs\\VALIDATION.md",
+        "line": 11,
+        "type": "FAKE_KEYWORD",
+        "content": "Generator/critic unit tests use explicit test fixtures. HTTP adapter verification uses a local protocol fixture. Runtime implementation cont"
+      }
+    ],
+    "frontend\\src\\api.ts": [
+      {
+        "file": "frontend\\src\\api.ts",
+        "line": 395,
+        "type": "SIMULATION_KEYWORD",
+        "content": "const res = await fetch(`${BASE_URL}/api/v1/recovery/simulate-flight-delay`, {"
+      },
+      {
+        "file": "frontend\\src\\api.ts",
+        "line": 403,
+        "type": "SIMULATION_KEYWORD",
+        "content": "if (!res.ok) throw new Error('Failed to simulate flight delay');"
+      },
+      {
+        "file": "frontend\\src\\api.ts",
+        "line": 520,
+        "type": "SIMULATION_KEYWORD",
+        "content": "const res = await fetch(`${BASE_URL}/api/v1/recovery/simulate-driver-timeout`, {"
+      },
+      {
+        "file": "frontend\\src\\api.ts",
+        "line": 528,
+        "type": "SIMULATION_KEYWORD",
+        "content": "if (!res.ok) throw new Error('Failed to simulate driver timeout');"
+      },
+      {
+        "file": "frontend\\src\\api.ts",
+        "line": 680,
+        "type": "SIMULATION_KEYWORD",
+        "content": "const res = await fetch(`${BASE_URL}/api/v1/transit/simulate-radar-delay`, {"
+      },
+      {
+        "file": "frontend\\src\\api.ts",
+        "line": 685,
+        "type": "SIMULATION_KEYWORD",
+        "content": "if (!res.ok) throw new Error('Failed to simulate radar delay');"
+      },
+      {
+        "file": "frontend\\src\\api.ts",
+        "line": 781,
+        "type": "SIMULATION_KEYWORD",
+        "content": "const res = await fetch(`${BASE_URL}/api/v1/webhooks/simulate`, {"
+      },
+      {
+        "file": "frontend\\src\\api.ts",
+        "line": 786,
+        "type": "SIMULATION_KEYWORD",
+        "content": "if (!res.ok) throw new Error('Failed to simulate webhook');"
+      },
+      {
+        "file": "frontend\\src\\api.ts",
+        "line": 1679,
+        "type": "SIMULATION_KEYWORD",
+        "content": "const res = await fetch(`${BASE_URL}/api/v1/vendors/${encodeURIComponent(vendorId)}/subscription/simulate-dunning`, {"
+      },
+      {
+        "file": "frontend\\src\\api.ts",
+        "line": 1685,
+        "type": "SIMULATION_KEYWORD",
+        "content": "throw new Error(extractErrorMessage(err, 'Failed to simulate dunning alert'));"
+      }
+    ],
+    "frontend\\src\\components\\AddressAutocompleteInput.tsx": [
+      {
+        "file": "frontend\\src\\components\\AddressAutocompleteInput.tsx",
+        "line": 20,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder?: string;"
+      },
+      {
+        "file": "frontend\\src\\components\\AddressAutocompleteInput.tsx",
+        "line": 33,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder = \"Enter street address, international airport (e.g. JFK, LHR), hotel...\","
+      },
+      {
+        "file": "frontend\\src\\components\\AddressAutocompleteInput.tsx",
+        "line": 207,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder={placeholder}"
+      }
+    ],
+    "frontend\\src\\components\\AIRecoveryHub.tsx": [
+      {
+        "file": "frontend\\src\\components\\AIRecoveryHub.tsx",
+        "line": 65,
+        "type": "SIMULATION_KEYWORD",
+        "content": "alert('No active trip available to simulate flight delay');"
+      },
+      {
+        "file": "frontend\\src\\components\\AIRecoveryHub.tsx",
+        "line": 74,
+        "type": "SIMULATION_KEYWORD",
+        "content": "alert(err.message || 'Simulation failed');"
+      },
+      {
+        "file": "frontend\\src\\components\\AIRecoveryHub.tsx",
+        "line": 92,
+        "type": "SIMULATION_KEYWORD",
+        "content": "alert(err.message || 'Simulation failed');"
+      },
+      {
+        "file": "frontend\\src\\components\\AIRecoveryHub.tsx",
+        "line": 135,
+        "type": "SIMULATION_KEYWORD",
+        "content": "{/* Simulation 1: Inbound Flight Delay */}"
+      },
+      {
+        "file": "frontend\\src\\components\\AIRecoveryHub.tsx",
+        "line": 176,
+        "type": "SIMULATION_KEYWORD",
+        "content": "{/* Simulation 2: Driver Timeout */}"
+      },
+      {
+        "file": "frontend\\src\\components\\AIRecoveryHub.tsx",
+        "line": 201,
+        "type": "SIMULATION_KEYWORD",
+        "content": "{/* Simulation Output Banner */}"
+      }
+    ],
+    "frontend\\src\\components\\CorporateBookerPortal.tsx": [
+      {
+        "file": "frontend\\src\\components\\CorporateBookerPortal.tsx",
+        "line": 552,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. 200 West St, NYC or London Heathrow Airport\""
+      },
+      {
+        "file": "frontend\\src\\components\\CorporateBookerPortal.tsx",
+        "line": 561,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. JFK Airport Terminal 4 or The Savoy London\""
+      },
+      {
+        "file": "frontend\\src\\components\\CorporateBookerPortal.tsx",
+        "line": 571,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. BA 178, DL 492, Acela 2150\""
+      },
+      {
+        "file": "frontend\\src\\components\\CorporateBookerPortal.tsx",
+        "line": 681,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Code (e.g. M&A-01)\""
+      },
+      {
+        "file": "frontend\\src\\components\\CorporateBookerPortal.tsx",
+        "line": 687,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Department Name\""
+      },
+      {
+        "file": "frontend\\src\\components\\CorporateBookerPortal.tsx",
+        "line": 693,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Budget ($)\""
+      }
+    ],
+    "frontend\\src\\components\\CustomerPortal.tsx": [
+      {
+        "file": "frontend\\src\\components\\CustomerPortal.tsx",
+        "line": 1436,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder={selectedRideType === 'AIRPORT' ? 'Enter airport (e.g. JFK, PHL, EWR) or address' : 'Enter pickup address or landmark'}"
+      },
+      {
+        "file": "frontend\\src\\components\\CustomerPortal.tsx",
+        "line": 1480,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Enter hotel, landmark, or street\""
+      },
+      {
+        "file": "frontend\\src\\components\\CustomerPortal.tsx",
+        "line": 1621,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder={selectedRideType === 'AIRPORT' ? 'e.g. BA 177' : selectedRideType === 'HOURLY' ? 'e.g. Manhattan Financial District & Midtown' "
+      },
+      {
+        "file": "frontend\\src\\components\\CustomerPortal.tsx",
+        "line": 1886,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Enter airport, hotel, or street address\""
+      },
+      {
+        "file": "frontend\\src\\components\\CustomerPortal.tsx",
+        "line": 1896,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Enter destination hotel, landmark, or airport\""
+      },
+      {
+        "file": "frontend\\src\\components\\CustomerPortal.tsx",
+        "line": 1988,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. BA 177\""
+      },
+      {
+        "file": "frontend\\src\\components\\CustomerPortal.tsx",
+        "line": 2637,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. Eleanor Vance\""
+      },
+      {
+        "file": "frontend\\src\\components\\CustomerPortal.tsx",
+        "line": 2653,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. +1 (555) 234-5678\""
+      },
+      {
+        "file": "frontend\\src\\components\\CustomerPortal.tsx",
+        "line": 2683,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. Arthur Davies\""
+      },
+      {
+        "file": "frontend\\src\\components\\CustomerPortal.tsx",
+        "line": 2699,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. billing@executive-corp.com\""
+      },
+      {
+        "file": "frontend\\src\\components\\CustomerPortal.tsx",
+        "line": 2727,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"4242  4242  4242  4242\""
+      },
+      {
+        "file": "frontend\\src\\components\\CustomerPortal.tsx",
+        "line": 2768,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"MM / YY\""
+      },
+      {
+        "file": "frontend\\src\\components\\CustomerPortal.tsx",
+        "line": 2795,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"CVC\""
+      },
+      {
+        "file": "frontend\\src\\components\\CustomerPortal.tsx",
+        "line": 2821,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"ZIP\""
+      },
+      {
+        "file": "frontend\\src\\components\\CustomerPortal.tsx",
+        "line": 2990,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "{/* Live Real Google Map Route Container or Route Preview Placeholder */}"
+      }
+    ],
+    "frontend\\src\\components\\DispatcherPhoneBookingModal.tsx": [
+      {
+        "file": "frontend\\src\\components\\DispatcherPhoneBookingModal.tsx",
+        "line": 660,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. Jonathan Vance\""
+      },
+      {
+        "file": "frontend\\src\\components\\DispatcherPhoneBookingModal.tsx",
+        "line": 671,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"+1 (267) 555-0199\""
+      },
+      {
+        "file": "frontend\\src\\components\\DispatcherPhoneBookingModal.tsx",
+        "line": 682,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"jvance@vanceholdings.com\""
+      },
+      {
+        "file": "frontend\\src\\components\\DispatcherPhoneBookingModal.tsx",
+        "line": 695,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. Vance Holdings Executive Travel\""
+      },
+      {
+        "file": "frontend\\src\\components\\DispatcherPhoneBookingModal.tsx",
+        "line": 705,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. PO-8821\""
+      },
+      {
+        "file": "frontend\\src\\components\\DispatcherPhoneBookingModal.tsx",
+        "line": 831,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. 30 S 17th St, Philadelphia, PA\""
+      },
+      {
+        "file": "frontend\\src\\components\\DispatcherPhoneBookingModal.tsx",
+        "line": 844,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. Philadelphia International Airport (PHL) Terminal D\""
+      },
+      {
+        "file": "frontend\\src\\components\\DispatcherPhoneBookingModal.tsx",
+        "line": 859,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. AA 1842\""
+      },
+      {
+        "file": "frontend\\src\\components\\DispatcherPhoneBookingModal.tsx",
+        "line": 869,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"American Airlines\""
+      }
+    ],
+    "frontend\\src\\components\\FlightAwarePlanUpdaterHub.tsx": [
+      {
+        "file": "frontend\\src\\components\\FlightAwarePlanUpdaterHub.tsx",
+        "line": 73,
+        "type": "SIMULATION_KEYWORD",
+        "content": "alert(err.message || 'Simulation failed');"
+      },
+      {
+        "file": "frontend\\src\\components\\FlightAwarePlanUpdaterHub.tsx",
+        "line": 192,
+        "type": "SIMULATION_KEYWORD",
+        "content": "{/* Left Column: Interactive Simulation Control */}"
+      },
+      {
+        "file": "frontend\\src\\components\\FlightAwarePlanUpdaterHub.tsx",
+        "line": 199,
+        "type": "SIMULATION_KEYWORD",
+        "content": "Simulate FlightAware ADS-B Delay Event"
+      },
+      {
+        "file": "frontend\\src\\components\\FlightAwarePlanUpdaterHub.tsx",
+        "line": 221,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. BA 178, DL 492, AA 100\""
+      },
+      {
+        "file": "frontend\\src\\components\\FlightAwarePlanUpdaterHub.tsx",
+        "line": 248,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. 18:30 UTC\""
+      },
+      {
+        "file": "frontend\\src\\components\\FlightAwarePlanUpdaterHub.tsx",
+        "line": 261,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. ATC Holding Pattern\""
+      }
+    ],
+    "frontend\\src\\components\\GlobalHubAdminPortal.tsx": [
+      {
+        "file": "frontend\\src\\components\\GlobalHubAdminPortal.tsx",
+        "line": 59,
+        "type": "MOCK_KEYWORD",
+        "content": "// Connected Cells with Dynamic Real-Time Backend Telemetry (Zero Static / Mock Data)"
+      },
+      {
+        "file": "frontend\\src\\components\\GlobalHubAdminPortal.tsx",
+        "line": 655,
+        "type": "SIMULATION_KEYWORD",
+        "content": "console.log('Simulation failed:', err);"
+      },
+      {
+        "file": "frontend\\src\\components\\GlobalHubAdminPortal.tsx",
+        "line": 760,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Search sovereign cells, custom domains, AWS regions, and telemetry... (Ctrl + /)\""
+      },
+      {
+        "file": "frontend\\src\\components\\GlobalHubAdminPortal.tsx",
+        "line": 1836,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. vip.nyexecutive.com\""
+      },
+      {
+        "file": "frontend\\src\\components\\GlobalHubAdminPortal.tsx",
+        "line": 2080,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Enter vendor YAML spec...\""
+      },
+      {
+        "file": "frontend\\src\\components\\GlobalHubAdminPortal.tsx",
+        "line": 2511,
+        "type": "SIMULATION_KEYWORD",
+        "content": "No active SLA countdown tickets. Use \"Simulate NYC Round-Robin Booking\" button to test."
+      },
+      {
+        "file": "frontend\\src\\components\\GlobalHubAdminPortal.tsx",
+        "line": 2709,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Search enquiries by passenger, corridor, vendor, or ID...\""
+      },
+      {
+        "file": "frontend\\src\\components\\GlobalHubAdminPortal.tsx",
+        "line": 3367,
+        "type": "SIMULATION_KEYWORD",
+        "content": "{/* 4. Dunning Simulation */}"
+      },
+      {
+        "file": "frontend\\src\\components\\GlobalHubAdminPortal.tsx",
+        "line": 3384,
+        "type": "SIMULATION_KEYWORD",
+        "content": "title=\"Simulate Delinquent Payment Warning\""
+      }
+    ],
+    "frontend\\src\\components\\MicrosoftPortalShell.tsx": [
+      {
+        "file": "frontend\\src\\components\\MicrosoftPortalShell.tsx",
+        "line": 126,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Search resources, trips, drivers, flights, policies (G+/)...\""
+      }
+    ],
+    "frontend\\src\\components\\PublicVendorQuotePortal.tsx": [
+      {
+        "file": "frontend\\src\\components\\PublicVendorQuotePortal.tsx",
+        "line": 241,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"185.00\""
+      },
+      {
+        "file": "frontend\\src\\components\\PublicVendorQuotePortal.tsx",
+        "line": 268,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"+1 (970) 555-0144\""
+      },
+      {
+        "file": "frontend\\src\\components\\PublicVendorQuotePortal.tsx",
+        "line": 281,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. Klaus Vance (Lead Chauffeur)\""
+      },
+      {
+        "file": "frontend\\src\\components\\PublicVendorQuotePortal.tsx",
+        "line": 291,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"2025 Cadillac Escalade ESV\""
+      }
+    ],
+    "frontend\\src\\components\\SourcingConciergeDesk.tsx": [
+      {
+        "file": "frontend\\src\\components\\SourcingConciergeDesk.tsx",
+        "line": 94,
+        "type": "SIMULATION_KEYWORD",
+        "content": "alert(err.message || 'Simulation error');"
+      },
+      {
+        "file": "frontend\\src\\components\\SourcingConciergeDesk.tsx",
+        "line": 356,
+        "type": "SIMULATION_KEYWORD",
+        "content": "title=\"Simulate vendor sending a free-text email reply (auto-parsed by LLM)\""
+      },
+      {
+        "file": "frontend\\src\\components\\SourcingConciergeDesk.tsx",
+        "line": 363,
+        "type": "SIMULATION_KEYWORD",
+        "content": "{/* 1-Click Simulate Vendor Quote Response */}"
+      },
+      {
+        "file": "frontend\\src\\components\\SourcingConciergeDesk.tsx",
+        "line": 368,
+        "type": "SIMULATION_KEYWORD",
+        "content": "title=\"Simulate vendor clicking the 1-click quote link in email\""
+      },
+      {
+        "file": "frontend\\src\\components\\SourcingConciergeDesk.tsx",
+        "line": 371,
+        "type": "SIMULATION_KEYWORD",
+        "content": "Simulate Link Click"
+      },
+      {
+        "file": "frontend\\src\\components\\SourcingConciergeDesk.tsx",
+        "line": 421,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. 195.00\""
+      },
+      {
+        "file": "frontend\\src\\components\\SourcingConciergeDesk.tsx",
+        "line": 431,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. Lead Dispatcher Klaus\""
+      },
+      {
+        "file": "frontend\\src\\components\\SourcingConciergeDesk.tsx",
+        "line": 444,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. Driver Mike\""
+      },
+      {
+        "file": "frontend\\src\\components\\SourcingConciergeDesk.tsx",
+        "line": 454,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. Flight BA 178 VIP Meet & Greet confirmed\""
+      },
+      {
+        "file": "frontend\\src\\components\\SourcingConciergeDesk.tsx",
+        "line": 512,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. Aspen, Vail, Jackson Hole, Scottsdale, Honolulu\""
+      }
+    ],
+    "frontend\\src\\components\\VendorCellAndGlobalHubStudio.tsx": [
+      {
+        "file": "frontend\\src\\components\\VendorCellAndGlobalHubStudio.tsx",
+        "line": 611,
+        "type": "SIMULATION_KEYWORD",
+        "content": "Trip the circuit breaker to simulate total Global Cloud disconnection. The vendor cell will immediately switch to sovereign deterministic fa"
+      },
+      {
+        "file": "frontend\\src\\components\\VendorCellAndGlobalHubStudio.tsx",
+        "line": 914,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. AA 1204 (Free 60-min airport delay protection)\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorCellAndGlobalHubStudio.tsx",
+        "line": 1065,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Ask a question about your trip...\""
+      }
+    ],
+    "frontend\\src\\components\\VendorDispatchPortal.tsx": [
+      {
+        "file": "frontend\\src\\components\\VendorDispatchPortal.tsx",
+        "line": 166,
+        "type": "SIMULATION_KEYWORD",
+        "content": "setSimulationNotification(res.summary || res.transition_note || `Simulated ${type} event successfully.`);"
+      },
+      {
+        "file": "frontend\\src\\components\\VendorDispatchPortal.tsx",
+        "line": 171,
+        "type": "SIMULATION_KEYWORD",
+        "content": "setSimulationNotification(`Simulation error: ${e.message}`);"
+      },
+      {
+        "file": "frontend\\src\\components\\VendorDispatchPortal.tsx",
+        "line": 666,
+        "type": "SIMULATION_KEYWORD",
+        "content": "Simulate customer calling the VIP dispatch line \u2192 Instant binding quote spoken \u2192 Verbal booking confirmation on call."
+      },
+      {
+        "file": "frontend\\src\\components\\VendorDispatchPortal.tsx",
+        "line": 685,
+        "type": "SIMULATION_KEYWORD",
+        "content": "alert(`\ud83d\udcde [LIVE VOICE CALL SIMULATION]\\n\\nAI Spoken Response:\\n\"${data.voice_spoken_response}\"\\n\\nStripe Payment Status: ${data.payment_statu"
+      },
+      {
+        "file": "frontend\\src\\components\\VendorDispatchPortal.tsx",
+        "line": 688,
+        "type": "SIMULATION_KEYWORD",
+        "content": "alert('Phone simulation error: ' + e.message);"
+      },
+      {
+        "file": "frontend\\src\\components\\VendorDispatchPortal.tsx",
+        "line": 855,
+        "type": "SIMULATION_KEYWORD",
+        "content": "{/* Right Column: Selected Booking Detail & Simulated Radar Map */}"
+      },
+      {
+        "file": "frontend\\src\\components\\VendorDispatchPortal.tsx",
+        "line": 866,
+        "type": "SIMULATION_KEYWORD",
+        "content": "{/* Telemetry Simulation Map Box */}"
+      },
+      {
+        "file": "frontend\\src\\components\\VendorDispatchPortal.tsx",
+        "line": 1194,
+        "type": "SIMULATION_KEYWORD",
+        "content": "<Plane size={14} color=\"#2563EB\" /> Simulate Flight Delay (+45m)"
+      },
+      {
+        "file": "frontend\\src\\components\\VendorDispatchPortal.tsx",
+        "line": 1203,
+        "type": "SIMULATION_KEYWORD",
+        "content": "<Plane size={14} color=\"#059669\" /> Simulate Touchdown / Wheels-Down"
+      }
+    ],
+    "frontend\\src\\components\\VendorFleetAndPricingHub.tsx": [
+      {
+        "file": "frontend\\src\\components\\VendorFleetAndPricingHub.tsx",
+        "line": 804,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"smtp.mailgun.org\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorFleetAndPricingHub.tsx",
+        "line": 815,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"dispatch@vendor.com\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorFleetAndPricingHub.tsx",
+        "line": 832,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"+1 800 555 0199\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorFleetAndPricingHub.tsx",
+        "line": 845,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"+1 917 555 0199\""
+      }
+    ],
+    "frontend\\src\\components\\VendorOwnerDashboard.tsx": [
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 2809,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Search bookings by Passenger, Trip ID, Route, Driver...\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 3677,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. 1GYS4HK78R0198...\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 3720,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. Obsidian Black Metallic\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 3732,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. Jet Black Nappa Leather\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 3839,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. The Undisputed American Executive Standard in Chauffeur Luxury\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 4093,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Add custom amenity (e.g. \ud83c\udfa7 Noise Cancelling Bang & Olufsen)...\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 4834,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Add custom amenity...\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 6414,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"dispatch@yourlimo.com\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 6425,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"ANB Executive Transportation Dispatch\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 6437,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"support@yourlimo.com\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 6456,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"smtp.mailgun.org\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 6502,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"postmaster@yourlimo.com\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 6521,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 6555,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"AKIAIOSFODNN7EXAMPLE\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 6574,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 6620,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"SG.\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 6639,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022-\u2022\u2022\u2022\u2022-\u2022\u2022\u2022\u2022-\u2022\u2022\u2022\u2022-\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 6660,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"smtp.gmail.com\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 6682,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"dispatch@yourdomain.com\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 6701,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"xxxx xxxx xxxx xxxx\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 6723,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"smtp.office365.com\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 6745,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"dispatch@yourcompany.com\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 6764,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 6819,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"rfq@yourlimo.com\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 6838,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"imap.mailgun.org or imap.gmail.com\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 6882,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"rfq@yourlimo.com\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 6901,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 6914,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"INBOX\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 7046,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"dispatch-test@limo-ops.com\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 7485,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Search personnel by name or email...\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 7751,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g., Marcus Vance\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 7764,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g., marcus@anblimo.com\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 7775,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"+1 (215) 555-0199\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 8001,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. ANB Limousine sovereign operations: VIP airport and corporate transfers priority.\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 8086,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Write in plain English what jobs your fleet accepts...\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 8286,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Write plain English rules for choosing affiliate partners in other cities...\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 8821,
+        "type": "SIMULATION_KEYWORD",
+        "content": "{/* Simulation Result Output Card */}"
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 8999,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Enter destination address, airport code, or international city (e.g. Heathrow Terminal 5, 50 Hudson Yards NY, CDG Paris, Beverl"
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 9180,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Search by Trip ID, Passenger, Route, Partner Company, or City...\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 9605,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. Johnathan Doe\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 9615,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"+1 (215) 555-0100\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 9668,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. JFK Airport Terminal 4\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 9680,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. The Plaza Hotel, 5th Ave\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 9967,
+        "type": "SIMULATION_KEYWORD",
+        "content": "Simulate Carrier Inbound"
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 10291,
+        "type": "SIMULATION_KEYWORD",
+        "content": "onClick={() => setActionNotice('\u25b6\ufe0f Playing simulated Twilio Voice media recording for call_9821...')}"
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 10291,
+        "type": "SIMULATED_UI_ACTION",
+        "content": "onClick={() => setActionNotice('\u25b6\ufe0f Playing simulated Twilio Voice media recording for call_9821...')}"
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 10310,
+        "type": "SIMULATION_KEYWORD",
+        "content": "onClick={() => setActionNotice('\u25b6\ufe0f Playing simulated Twilio Voice media recording for call_9822...')}"
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 10310,
+        "type": "SIMULATED_UI_ACTION",
+        "content": "onClick={() => setActionNotice('\u25b6\ufe0f Playing simulated Twilio Voice media recording for call_9822...')}"
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 10462,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Type reply to passenger (David Sterling)...\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 10620,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 10631,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\""
+      }
+    ],
+    "frontend\\src\\components\\VendorRegistrationPortal.tsx": [
+      {
+        "file": "frontend\\src\\components\\VendorRegistrationPortal.tsx",
+        "line": 185,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. London Imperial Chauffeur Ltd\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorRegistrationPortal.tsx",
+        "line": 199,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. London Imperial Fleet Services Limited\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorRegistrationPortal.tsx",
+        "line": 214,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. 13-9821764 or GB12345678\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorRegistrationPortal.tsx",
+        "line": 260,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"USD, EUR, GBP, AED, JPY\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorRegistrationPortal.tsx",
+        "line": 275,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. New York, London, Paris, Miami\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorRegistrationPortal.tsx",
+        "line": 288,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. NY, CA, Greater London, \u00cele-de-France\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorRegistrationPortal.tsx",
+        "line": 307,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Enter physical depot address (e.g. 550 W 54th St, New York, NY)\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorRegistrationPortal.tsx",
+        "line": 321,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"dispatch@vendor.com\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorRegistrationPortal.tsx",
+        "line": 335,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"+1 212 555 0199\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorRegistrationPortal.tsx",
+        "line": 350,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. NYC-TLC-B02914 or CPUC-PSG-00124\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorRegistrationPortal.tsx",
+        "line": 364,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. CHUBB-COMM-9812450\""
+      }
+    ],
+    "frontend\\src\\components\\VoiceAIStudio.tsx": [
+      {
+        "file": "frontend\\src\\components\\VoiceAIStudio.tsx",
+        "line": 850,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Speak into microphone or type caller prompt...\""
+      },
+      {
+        "file": "frontend\\src\\components\\VoiceAIStudio.tsx",
+        "line": 999,
+        "type": "SIMULATION_KEYWORD",
+        "content": "Simulate Inbound Twilio Media Stream Call"
+      },
+      {
+        "file": "frontend\\src\\components\\VoiceAIStudio.tsx",
+        "line": 1271,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Enter operational claim to verify against statutory graph...\""
+      }
+    ],
+    "frontend\\src\\components\\public\\CustomerBookingsLookupModal.tsx": [
+      {
+        "file": "frontend\\src\\components\\public\\CustomerBookingsLookupModal.tsx",
+        "line": 159,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Enter Booking Ref (e.g. #itin-bk-), Mobile Phone, or Booker Email...\""
+      }
+    ],
+    "frontend\\src\\components\\public\\GlobalMarketplaceBookingPage.tsx": [
+      {
+        "file": "frontend\\src\\components\\public\\GlobalMarketplaceBookingPage.tsx",
+        "line": 428,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Enter pickup address, FBO, airport, or hotel...\""
+      },
+      {
+        "file": "frontend\\src\\components\\public\\GlobalMarketplaceBookingPage.tsx",
+        "line": 473,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Dropoff address or destination hotel...\""
+      },
+      {
+        "file": "frontend\\src\\components\\public\\GlobalMarketplaceBookingPage.tsx",
+        "line": 487,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. Lord Sterling\""
+      },
+      {
+        "file": "frontend\\src\\components\\public\\GlobalMarketplaceBookingPage.tsx",
+        "line": 497,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. BA 178 / DL 492\""
+      }
+    ],
+    "frontend\\src\\components\\public\\PublicAuthDropdown.tsx": [
+      {
+        "file": "frontend\\src\\components\\public\\PublicAuthDropdown.tsx",
+        "line": 358,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"executive@citadel.com\""
+      },
+      {
+        "file": "frontend\\src\\components\\public\\PublicAuthDropdown.tsx",
+        "line": 408,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. Jordan Belfort\""
+      },
+      {
+        "file": "frontend\\src\\components\\public\\PublicAuthDropdown.tsx",
+        "line": 431,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"client@luxury.com\""
+      }
+    ],
+    "frontend\\src\\components\\public\\PublicAuthModal.tsx": [
+      {
+        "file": "frontend\\src\\components\\public\\PublicAuthModal.tsx",
+        "line": 284,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"executive@citadel.com\""
+      },
+      {
+        "file": "frontend\\src\\components\\public\\PublicAuthModal.tsx",
+        "line": 322,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. Jordan Belfort\""
+      },
+      {
+        "file": "frontend\\src\\components\\public\\PublicAuthModal.tsx",
+        "line": 333,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"client@luxury.com\""
+      }
+    ],
+    "frontend\\src\\components\\public\\PublicContactPage.tsx": [
+      {
+        "file": "frontend\\src\\components\\public\\PublicContactPage.tsx",
+        "line": 205,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. Eleanor Vance\""
+      },
+      {
+        "file": "frontend\\src\\components\\public\\PublicContactPage.tsx",
+        "line": 216,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. e.vance@citadel.com\""
+      },
+      {
+        "file": "frontend\\src\\components\\public\\PublicContactPage.tsx",
+        "line": 229,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"+1 (215) 555-0144\""
+      },
+      {
+        "file": "frontend\\src\\components\\public\\PublicContactPage.tsx",
+        "line": 256,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Provide trip dates, itinerary details, passenger counts, or specific vehicle preferences...\""
+      }
+    ],
+    "frontend\\src\\components\\public\\PublicHomePage.tsx": [
+      {
+        "file": "frontend\\src\\components\\public\\PublicHomePage.tsx",
+        "line": 291,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. AA 1842 / DL 402\""
+      }
+    ],
+    "frontend\\src\\components\\public\\PublicVendorOnboardingPage.tsx": [
+      {
+        "file": "frontend\\src\\components\\public\\PublicVendorOnboardingPage.tsx",
+        "line": 384,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"12-3456789\""
+      },
+      {
+        "file": "frontend\\src\\components\\public\\PublicVendorOnboardingPage.tsx",
+        "line": 702,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. Jean-Pierre Laurent\""
+      },
+      {
+        "file": "frontend\\src\\components\\public\\PublicVendorOnboardingPage.tsx",
+        "line": 713,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"+1 (310) 555-0991\""
+      },
+      {
+        "file": "frontend\\src\\components\\public\\PublicVendorOnboardingPage.tsx",
+        "line": 724,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. Rolls-Royce Ghost\""
+      },
+      {
+        "file": "frontend\\src\\components\\public\\PublicVendorOnboardingPage.tsx",
+        "line": 735,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. CA-ROYAL1\""
+      }
+    ],
+    "packages\\global_hub\\backend\\services\\marketplace_router.py": [
+      {
+        "file": "packages\\global_hub\\backend\\services\\marketplace_router.py",
+        "line": 55,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "tax = fare * Decimal(\"0.08875\")"
+      },
+      {
+        "file": "packages\\global_hub\\backend\\services\\marketplace_router.py",
+        "line": 67,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "leg_total = (sub + (sub * Decimal(\"0.08875\")) + (sub * Decimal(\"0.20\"))).quantize(Decimal(\"0.01\"), rounding=ROUND_HALF_UP)"
+      }
+    ],
+    "packages\\vendor_app\\backend\\api.py": [
+      {
+        "file": "packages\\vendor_app\\backend\\api.py",
+        "line": 119,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "tax = subtotal * Decimal(\"0.08875\")"
+      }
+    ],
+    "packages\\vendor_app\\backend\\services\\auth_service.py": [
+      {
+        "file": "packages\\vendor_app\\backend\\services\\auth_service.py",
+        "line": 62,
+        "type": "SIMULATION_KEYWORD",
+        "content": "# In-memory user database simulation: email -> user record"
+      }
+    ],
+    "packages\\vendor_app\\frontend\\src\\components\\DocumentCenter\\DocumentCenter.tsx": [
+      {
+        "file": "packages\\vendor_app\\frontend\\src\\components\\DocumentCenter\\DocumentCenter.tsx",
+        "line": 110,
+        "type": "SIMULATION_KEYWORD",
+        "content": "Configure vendor cancellation terms, preview dynamic customer confirmation emails, and simulate Stripe refunds."
+      },
+      {
+        "file": "packages\\vendor_app\\frontend\\src\\components\\DocumentCenter\\DocumentCenter.tsx",
+        "line": 347,
+        "type": "SIMULATION_KEYWORD",
+        "content": "<p style={{ fontSize: '13px' }}>Adjust the scenario controls on the left to simulate automated policy evaluation.</p>"
+      }
+    ],
+    "packages\\vendor_app\\frontend\\src\\components\\PassengerLiveTracking\\PassengerLiveTracking.tsx": [
+      {
+        "file": "packages\\vendor_app\\frontend\\src\\components\\PassengerLiveTracking\\PassengerLiveTracking.tsx",
+        "line": 68,
+        "type": "SIMULATION_KEYWORD",
+        "content": "{/* --- INTERACTIVE MAP SIMULATION HUD (LIGHT THEME) --- */}"
+      }
+    ],
+    "packages\\vendor_app\\frontend\\src\\components\\VendorAuth\\VendorLoginModal.tsx": [
+      {
+        "file": "packages\\vendor_app\\frontend\\src\\components\\VendorAuth\\VendorLoginModal.tsx",
+        "line": 253,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"+1 (215) 555-0188\""
+      },
+      {
+        "file": "packages\\vendor_app\\frontend\\src\\components\\VendorAuth\\VendorLoginModal.tsx",
+        "line": 290,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"424242\""
+      },
+      {
+        "file": "packages\\vendor_app\\frontend\\src\\components\\VendorAuth\\VendorLoginModal.tsx",
+        "line": 326,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"dispatch@anblimo-philly.com\""
+      }
+    ],
+    "scratch\\audit_scan.py": [
+      {
+        "file": "scratch\\audit_scan.py",
+        "line": 17,
+        "type": "FAKE_KEYWORD",
+        "content": "(r\"setActionNotice\\([^)]*(?:simulat|dummy|fake|sample)\", \"SIMULATED_UI_ACTION\"),"
+      },
+      {
+        "file": "scratch\\audit_scan.py",
+        "line": 17,
+        "type": "DUMMY_KEYWORD",
+        "content": "(r\"setActionNotice\\([^)]*(?:simulat|dummy|fake|sample)\", \"SIMULATED_UI_ACTION\"),"
+      }
+    ],
+    "scratch\\test_in_app_payout_settings.py": [
+      {
+        "file": "scratch\\test_in_app_payout_settings.py",
+        "line": 72,
+        "type": "SIMULATION_KEYWORD",
+        "content": "# Simulate a completed trip: $200 Subtotal + $40 Gratuity = $240 Total"
+      }
+    ],
+    "tests\\e2e_vendor_suite_verifier.py": [
+      {
+        "file": "tests\\e2e_vendor_suite_verifier.py",
+        "line": 147,
+        "type": "SIMULATION_KEYWORD",
+        "content": "# \ud83e\udd16 TRACK E: VOICE AI, GRAPHRAG & AUTONOMOUS DISRUPTION SIMULATION"
+      },
+      {
+        "file": "tests\\e2e_vendor_suite_verifier.py",
+        "line": 149,
+        "type": "SIMULATION_KEYWORD",
+        "content": "test(\"E. AI & Voice Hub\", \"Voice AI Telephony Call Simulation\", \"POST\", f\"{BASE_PHILLY_URL}/api/v1/voice/simulate-call\", {"
+      },
+      {
+        "file": "tests\\e2e_vendor_suite_verifier.py",
+        "line": 173,
+        "type": "SIMULATION_KEYWORD",
+        "content": "test(\"E. AI & Voice Hub\", \"Simulator Webhook (Wheels-Down Touchdown)\", \"POST\", f\"{BASE_PHILLY_URL}/api/v1/webhooks/simulate\", {"
+      }
+    ],
+    "tests\\test_ai.py": [
+      {
+        "file": "tests\\test_ai.py",
+        "line": 4,
+        "type": "MOCK_KEYWORD",
+        "content": "from unittest.mock import patch, AsyncMock"
+      }
+    ],
+    "tests\\test_business_platform.py": [
+      {
+        "file": "tests\\test_business_platform.py",
+        "line": 161,
+        "type": "SIMULATION_KEYWORD",
+        "content": "# Simulate 45 minute flight delay"
+      }
+    ],
+    "tests\\test_comprehensive_stripe_use_cases.py": [
+      {
+        "file": "tests\\test_comprehensive_stripe_use_cases.py",
+        "line": 102,
+        "type": "SIMULATION_KEYWORD",
+        "content": "# Transfer succeeds with live/simulated connected account"
+      },
+      {
+        "file": "tests\\test_comprehensive_stripe_use_cases.py",
+        "line": 116,
+        "type": "SIMULATION_KEYWORD",
+        "content": "# 1. API Escrow Simulation"
+      },
+      {
+        "file": "tests\\test_comprehensive_stripe_use_cases.py",
+        "line": 118,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"/api/v1/payments/simulate-escrow-settlement\","
+      }
+    ],
+    "tests\\test_golden_template_and_dynamic_db.py": [
+      {
+        "file": "tests\\test_golden_template_and_dynamic_db.py",
+        "line": 80,
+        "type": "MOCK_KEYWORD",
+        "content": "# Verify no mock dummy bookings or trips remain hardcoded at initialization"
+      },
+      {
+        "file": "tests\\test_golden_template_and_dynamic_db.py",
+        "line": 80,
+        "type": "DUMMY_KEYWORD",
+        "content": "# Verify no mock dummy bookings or trips remain hardcoded at initialization"
+      }
+    ],
+    "tests\\test_live_stripe_connect_integration.py": [
+      {
+        "file": "tests\\test_live_stripe_connect_integration.py",
+        "line": 85,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"\"\"Validates the live REST API endpoint POST /api/v1/payments/simulate-escrow-settlement.\"\"\""
+      },
+      {
+        "file": "tests\\test_live_stripe_connect_integration.py",
+        "line": 87,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"/api/v1/payments/simulate-escrow-settlement\","
+      },
+      {
+        "file": "tests\\test_live_stripe_connect_integration.py",
+        "line": 108,
+        "type": "SIMULATION_KEYWORD",
+        "content": "print(f\"\\n[OK] REST API Split Simulated Successfully: Exchange ID={data['exchange_id']}\")"
+      }
+    ],
+    "tests\\test_model_transport.py": [
+      {
+        "file": "tests\\test_model_transport.py",
+        "line": 7,
+        "type": "MOCK_KEYWORD",
+        "content": "from unittest.mock import patch"
+      }
+    ],
+    "tests\\test_no_mock_runtime_guard.py": [
+      {
+        "file": "tests\\test_no_mock_runtime_guard.py",
+        "line": 2,
+        "type": "MOCK_KEYWORD",
+        "content": "Regression Guard Test Suite: Ensures zero mock, fake, demo, or hardcoded business runtime data"
+      },
+      {
+        "file": "tests\\test_no_mock_runtime_guard.py",
+        "line": 2,
+        "type": "FAKE_KEYWORD",
+        "content": "Regression Guard Test Suite: Ensures zero mock, fake, demo, or hardcoded business runtime data"
+      },
+      {
+        "file": "tests\\test_no_mock_runtime_guard.py",
+        "line": 17,
+        "type": "FAKE_KEYWORD",
+        "content": "\"\"\"Verifies that the runtime database instance does not contain fabricated sample invoices or fake seed trips.\"\"\""
+      },
+      {
+        "file": "tests\\test_no_mock_runtime_guard.py",
+        "line": 57,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"\"\"Verifies TwilioNotificationService reports GATEWAY_UNCONFIGURED rather than simulated success.\"\"\""
+      },
+      {
+        "file": "tests\\test_no_mock_runtime_guard.py",
+        "line": 74,
+        "type": "MOCK_KEYWORD",
+        "content": "\"\"\"Scans all Python files under app/ for forbidden mock simulation tokens.\"\"\""
+      },
+      {
+        "file": "tests\\test_no_mock_runtime_guard.py",
+        "line": 74,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"\"\"Scans all Python files under app/ for forbidden mock simulation tokens.\"\"\""
+      },
+      {
+        "file": "tests\\test_no_mock_runtime_guard.py",
+        "line": 80,
+        "type": "SIMULATION_KEYWORD",
+        "content": "r\"\\[SMS SIMULATION\\]\""
+      },
+      {
+        "file": "tests\\test_no_mock_runtime_guard.py",
+        "line": 90,
+        "type": "MOCK_KEYWORD",
+        "content": "assert not violations, f\"Found mock data violations in production code: {violations}\""
+      }
+    ],
+    "tests\\test_production_readiness_audit.py": [
+      {
+        "file": "tests\\test_production_readiness_audit.py",
+        "line": 133,
+        "type": "SIMULATION_KEYWORD",
+        "content": "# Simulate an active trip at that time"
+      }
+    ],
+    "tests\\test_sprint2_webhooks.py": [
+      {
+        "file": "tests\\test_sprint2_webhooks.py",
+        "line": 7,
+        "type": "SIMULATION_KEYWORD",
+        "content": "5. Developer & Dispatcher Simulation API Endpoints"
+      },
+      {
+        "file": "tests\\test_sprint2_webhooks.py",
+        "line": 220,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"\"\"Verifies the developer & dispatcher /api/v1/webhooks/simulate endpoint.\"\"\""
+      },
+      {
+        "file": "tests\\test_sprint2_webhooks.py",
+        "line": 221,
+        "type": "SIMULATION_KEYWORD",
+        "content": "res = client.post(\"/api/v1/webhooks/simulate\", json={"
+      }
+    ],
+    "tests\\test_vendor_cell_and_global_hub.py": [
+      {
+        "file": "tests\\test_vendor_cell_and_global_hub.py",
+        "line": 66,
+        "type": "SIMULATION_KEYWORD",
+        "content": "# Simulate Global Hub outage"
+      }
+    ],
+    "tests\\test_vendor_saas_and_infra_lifecycle.py": [
+      {
+        "file": "tests\\test_vendor_saas_and_infra_lifecycle.py",
+        "line": 74,
+        "type": "SIMULATION_KEYWORD",
+        "content": "# Trigger dunning simulation"
+      }
+    ],
+    "tests\\test_voice_and_graph_rag.py": [
+      {
+        "file": "tests\\test_voice_and_graph_rag.py",
+        "line": 76,
+        "type": "SIMULATION_KEYWORD",
+        "content": "response = client.post(\"/api/v1/voice/simulate-call\", json=payload)"
+      }
+    ]
+  }
+}

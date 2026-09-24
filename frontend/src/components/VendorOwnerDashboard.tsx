@@ -9,12 +9,12 @@ import {
   Send, Volume2, Globe, Key, CheckCircle, ExternalLink, Sparkles, Download, Zap,
   CreditCard, Percent, Banknote, Receipt, ArrowDownRight, UserCheck, Lock, Unlock, UserPlus,
   Copy, Inbox, AtSign, BookOpen, Settings, Trash2, HelpCircle, Edit3, Camera, AlertCircle,
-  Plane, Printer, ChevronUp, PhoneCall
+  Plane, Printer, ChevronUp, PhoneCall, Headphones
 } from 'lucide-react';
 import { 
   VendorPortalConfig, TeamMember, RoleMatrixResponse, CertifiedAffiliatePartner, 
   AffiliateRecommendation, VendorAffiliatePolicyRules, FarmOutPolicy, FarmInPolicy,
-  MultiLegRoutingRules
+  MultiLegRoutingRules, SupportDeskPlan, VendorSupportSubscription
 } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -26,9 +26,11 @@ import {
   fetchVendorOnboardingStatus, sendVendorOnboardingInvite,
   fetchVendorStripeStatus, createVendorStripeConnectLink, createVendorStripeLoginLink,
   fetchVendorPayoutsLedger, VendorPayoutLedgerRecord,
-  fetchVendorSubscription, createVendorBillingPortalSession, clearVendorDunning
+  fetchVendorSubscription, createVendorBillingPortalSession, clearVendorDunning,
+  fetchSupportDeskPlans, fetchSupportDeskSubscriptions, subscribeVendorSupportDesk
 } from '../api';
 import { DispatcherPhoneBookingModal } from './DispatcherPhoneBookingModal';
+import { VendorFleetAndPricingHub } from './VendorFleetAndPricingHub';
 import { 
   compressStudioImage, toggleAiStudioLighting, formatBytes, ProcessedStudioImage 
 } from '../utils/imageStudioCompressor';
@@ -98,12 +100,9 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [omniSubTab, setOmniSubTab] = useState<'10dlc' | 'voice' | 'email' | 'whatsapp' | 'seo' | 'byok'>('10dlc');
 
-  // Omnichannel Live Chat State
-  const [chatMessages, setChatMessages] = useState([
-    { id: '1', sender: 'David Sterling', phone: '+12155550188', channel: 'WHATSAPP', text: 'Hi dispatch, my flight AA1944 just landed at Gate B12. Ready for pickup.', isOutbound: false, time: '10:42 AM' },
-    { id: '2', sender: 'ANB Autonomous Dispatch', phone: '+12155550144', channel: 'WHATSAPP', text: 'Welcome to Philadelphia Mr. Sterling! Chauffeur Marcus is curbside at Zone 4 in a Black Cadillac Escalade (Plate: PA-LM992).', isOutbound: true, time: '10:43 AM' },
-    { id: '3', sender: 'ANB Autonomous Dispatch', phone: '+12155550144', channel: 'SMS', text: 'ANB Limo: Your reservation #RES-9941 is confirmed. Live GPS Radar: https://limo.link/r/live', isOutbound: true, time: '09:15 AM' }
-  ]);
+  // Omnichannel Live Chat & Voice State
+  const [chatMessages, setChatMessages] = useState<Array<{ id: string; sender: string; phone: string; channel: string; text: string; isOutbound: boolean; time: string }>>([]);
+  const [voiceCallRecords, setVoiceCallRecords] = useState<any[]>([]);
   const [newChatText, setNewChatText] = useState('');
   const [softphoneDialNumber, setSoftphoneDialNumber] = useState(config.branding?.contact_phone || '');
   const [tcpaTestKeyword, setTcpaTestKeyword] = useState('STOP');
@@ -569,11 +568,89 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
     }
   };
 
+  const loadOmnichannelDesk = () => {
+    if (!config?.vendor_id) return;
+    fetch(`/api/v1/vendors/${config.vendor_id}/omnichannel/desk`, { headers: getAuthHeaders() })
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.chat_messenger?.messages && Array.isArray(data.chat_messenger.messages)) {
+          setChatMessages(data.chat_messenger.messages.map((m: any) => ({
+            id: m.message_id || String(m.timestamp || Date.now()),
+            sender: m.sender_name || (m.direction === 'OUTBOUND' ? `${config.vendor_name || 'Vendor'} Dispatch` : 'Passenger'),
+            phone: m.direction === 'OUTBOUND' ? m.recipient_phone : m.sender_phone,
+            channel: m.channel || 'WHATSAPP',
+            text: m.body,
+            isOutbound: m.direction === 'OUTBOUND',
+            time: m.timestamp ? new Date(m.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent'
+          })));
+        }
+        if (data && data.voice_studio?.recent_calls && Array.isArray(data.voice_studio.recent_calls)) {
+          setVoiceCallRecords(data.voice_studio.recent_calls);
+        }
+      })
+      .catch(err => console.log('Could not fetch omnichannel desk data:', err));
+  };
+
+  const [supportPlans, setSupportPlans] = useState<SupportDeskPlan[]>([]);
+  const [vendorSupportSub, setVendorSupportSub] = useState<VendorSupportSubscription | null>(null);
+  const [isSupportDeskLoading, setIsSupportDeskLoading] = useState(false);
+  const [selectedSupportPlanId, setSelectedSupportPlanId] = useState<string>('plan_tier2_247');
+  const [forwardingDidInput, setForwardingDidInput] = useState<string>(config?.branding?.contact_phone || config?.telecom_compliance?.contact_phone || '+18005555466');
+  const [escalationPhoneInput, setEscalationPhoneInput] = useState<string>(config?.branding?.contact_phone || config?.telecom_compliance?.contact_phone || '+12155550199');
+  const [customGreetingInput, setCustomGreetingInput] = useState<string>(`Thank you for calling ${config?.vendor_name || 'Executive Chauffeur Service'}. Please hold for concierge.`);
+  const [isEnrollingSupport, setIsEnrollingSupport] = useState(false);
+
+  const loadSupportDeskState = async () => {
+    if (!config?.vendor_id) return;
+    setIsSupportDeskLoading(true);
+    try {
+      const [plansRes, subsRes] = await Promise.all([
+        fetchSupportDeskPlans(),
+        fetchSupportDeskSubscriptions()
+      ]);
+      setSupportPlans(plansRes.plans || []);
+      const subsList = Array.isArray(subsRes) ? subsRes : [];
+      const matchingSub = subsList.find((s: VendorSupportSubscription) => s.vendor_id === config.vendor_id);
+      if (matchingSub) {
+        setVendorSupportSub(matchingSub);
+        setSelectedSupportPlanId(matchingSub.plan_id);
+        if (matchingSub.forwarding_did) setForwardingDidInput(matchingSub.forwarding_did);
+        if (matchingSub.custom_greeting_script) setCustomGreetingInput(matchingSub.custom_greeting_script);
+      }
+    } catch (err) {
+      console.log('Error loading support desk state:', err);
+    } finally {
+      setIsSupportDeskLoading(false);
+    }
+  };
+
+  const handleEnrollSupportPlan = async (planId: string) => {
+    if (!config?.vendor_id) return;
+    setIsEnrollingSupport(true);
+    try {
+      const sub = await subscribeVendorSupportDesk({
+        vendor_id: config.vendor_id,
+        plan_id: planId,
+        forwarding_did: forwardingDidInput,
+        custom_greeting_script: customGreetingInput
+      });
+      setVendorSupportSub(sub);
+      setSelectedSupportPlanId(sub.plan_id);
+      setActionNotice(`🎧 Successfully activated ${sub.plan_name} for ${config.vendor_name || config.vendor_id}! (Status: ${sub.status})`);
+    } catch (err: any) {
+      alert(`Failed to activate support plan: ${err.message}`);
+    } finally {
+      setIsEnrollingSupport(false);
+    }
+  };
+
   React.useEffect(() => {
     loadOnboardingStatus();
     loadSubscription();
     loadStripeStatus();
     loadPayoutLedger();
+    loadOmnichannelDesk();
+    loadSupportDeskState();
   }, [config?.vendor_id]);
 
   React.useEffect(() => {
@@ -1798,7 +1875,7 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
       setActionNotice(`📞 Placing live Twilio call to ${softphoneDialNumber}...`);
       const resp = await fetch(`/api/v1/vendors/${config.vendor_id}/omnichannel/dial-call`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({
           caller_phone: softphoneDialNumber,
           caller_name: 'Executive Passenger',
@@ -1814,8 +1891,39 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
       } else {
         setActionNotice(`📞 Live Softphone Call Dispatched to ${softphoneDialNumber}. Twilio Session active.`);
       }
+      loadOmnichannelDesk();
     } catch (err: any) {
       setActionNotice(`⚠️ Call initiation error: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendLiveChatMessage = async (bodyText: string, channel: 'WHATSAPP' | 'SMS' = 'WHATSAPP', quickAction?: string) => {
+    if (!bodyText.trim()) return;
+    try {
+      setLoading(true);
+      const recipientPhone = softphoneDialNumber || config.telecom_compliance?.contact_phone || '+12155550188';
+      const resp = await fetch(`/api/v1/vendors/${config.vendor_id}/omnichannel/send-message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({
+          recipient_phone: recipientPhone,
+          body: bodyText,
+          channel: channel,
+          quick_action_type: quickAction || null
+        })
+      });
+      if (resp.ok) {
+        setActionNotice(`✅ Message dispatched via ${channel} to ${recipientPhone}`);
+        setNewChatText('');
+        loadOmnichannelDesk();
+      } else {
+        const errData = await resp.json();
+        setActionNotice(`⚠️ Failed to send message: ${errData.detail || 'Carrier rejection'}`);
+      }
+    } catch (err: any) {
+      setActionNotice(`⚠️ Message send error: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -5855,81 +5963,16 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
               </div>
             )}
 
-            {/* TAB 6: DYNAMIC TARIFF MATRIX */}
+            {/* TAB 6: DYNAMIC TARIFF MATRIX & PRICING STUDIO */}
             {activeTab === 'pricing' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '800px' }}>
-                <div>
-                  <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>
-                    Local Dynamic Tariff & Yield Rules
-                  </h2>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#6B7280' }}>
-                    Configure base pricing, per-mile rates, airport terminal surcharges, and hourly minimums for this sovereign cell
-                  </p>
-                </div>
-
-                <div style={{ backgroundColor: '#FFFFFF', borderRadius: '10px', padding: '24px', border: '1px solid #E5E7EB', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                    <div>
-                      <label style={{ fontSize: '12px', color: '#4B5563', fontWeight: 700 }}>Base Flag Drop (USD)</label>
-                      <input
-                        type="number"
-                        value={pricingRules.base_rate_usd}
-                        onChange={(e) => setPricingRules({ ...pricingRules, base_rate_usd: parseFloat(e.target.value) })}
-                        style={{ width: '100%', padding: '10px', backgroundColor: '#F9FAFB', border: '1px solid #D1D5DB', borderRadius: '6px', color: '#0F172A', fontSize: '13px', marginTop: '6px' }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: '12px', color: '#4B5563', fontWeight: 700 }}>Per-KM / Per-Mile Rate (USD)</label>
-                      <input
-                        type="number"
-                        value={pricingRules.per_km_usd}
-                        onChange={(e) => setPricingRules({ ...pricingRules, per_km_usd: parseFloat(e.target.value) })}
-                        style={{ width: '100%', padding: '10px', backgroundColor: '#F9FAFB', border: '1px solid #D1D5DB', borderRadius: '6px', color: '#0F172A', fontSize: '13px', marginTop: '6px' }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: '12px', color: '#4B5563', fontWeight: 700 }}>Airport Commercial Gate Fee (USD)</label>
-                      <input
-                        type="number"
-                        value={pricingRules.airport_terminal_fee_usd}
-                        onChange={(e) => setPricingRules({ ...pricingRules, airport_terminal_fee_usd: parseFloat(e.target.value) })}
-                        style={{ width: '100%', padding: '10px', backgroundColor: '#F9FAFB', border: '1px solid #D1D5DB', borderRadius: '6px', color: '#0F172A', fontSize: '13px', marginTop: '6px' }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: '12px', color: '#4B5563', fontWeight: 700 }}>Peak / Midnight Surge Multiplier</label>
-                      <input
-                        type="number"
-                        step="0.05"
-                        value={pricingRules.midnight_surge_multiplier}
-                        onChange={(e) => setPricingRules({ ...pricingRules, midnight_surge_multiplier: parseFloat(e.target.value) })}
-                        style={{ width: '100%', padding: '10px', backgroundColor: '#F9FAFB', border: '1px solid #D1D5DB', borderRadius: '6px', color: '#0F172A', fontSize: '13px', marginTop: '6px' }}
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => setActionNotice('✅ Local Tariff & Pricing Matrix successfully saved and committed to local database partition.')}
-                    style={{
-                      padding: '12px',
-                      backgroundColor: '#16A34A',
-                      color: '#FFFFFF',
-                      fontWeight: 800,
-                      fontSize: '13px',
-                      borderRadius: '6px',
-                      border: 'none',
-                      cursor: 'pointer',
-                      marginTop: '12px'
-                    }}
-                  >
-                    Save & Commit Local Tariff Matrix
-                  </button>
-                </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <VendorFleetAndPricingHub
+                  initialVendorId={config.vendor_id || 'vendor-boston-vip'}
+                  hideVendorSelector={false}
+                />
               </div>
             )}
+
 
             {/* TAB 7: BYOE EMAIL GATEWAY & INBOUND RFQ SUITE */}
             {activeTab === 'email_rfq' && (
@@ -10278,43 +10321,41 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                       </h3>
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        <div style={{ padding: '10px', backgroundColor: '#F8FAFC', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A' }}>David Sterling (Comcast Exec)</span>
-                            <span style={{ fontSize: '10px', color: '#6B7280' }}>128s • 10:30 AM</span>
+                        {voiceCallRecords.length === 0 ? (
+                          <div style={{ padding: '20px', backgroundColor: '#F8FAFC', borderRadius: '6px', border: '1px solid #E2E8F0', textAlign: 'center', color: '#64748B', fontSize: '12px' }}>
+                            No voice recordings logged yet. Outbound or inbound calls via WebRTC softphone will stream live AI transcripts and audio recordings here.
                           </div>
-                          <div style={{ fontSize: '11px', color: '#334155', marginTop: '4px' }}>
-                            "Booked round-trip transfer from Center City to PHL Terminal D. Assigned driver Marcus Brody. Tariff: $125.00."
-                          </div>
-                          <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <button
-                              onClick={() => setActionNotice('▶️ Playing simulated Twilio Voice media recording for call_9821...')}
-                              style={{ padding: '4px 8px', backgroundColor: '#EFF6FF', color: '#0078D4', border: '1px solid #BFDBFE', borderRadius: '4px', fontSize: '10px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                            >
-                              <Play size={10} /> Play Audio
-                            </button>
-                            <span style={{ fontSize: '10px', color: '#16A34A', fontWeight: 700 }}>● Sentiment: Positive</span>
-                          </div>
-                        </div>
-
-                        <div style={{ padding: '10px', backgroundColor: '#F8FAFC', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A' }}>Sarah Jenkins (Morgan Stanley)</span>
-                            <span style={{ fontSize: '10px', color: '#6B7280' }}>94s • 09:12 AM</span>
-                          </div>
-                          <div style={{ fontSize: '11px', color: '#334155', marginTop: '4px' }}>
-                            "Inquired about Mercedes Sprinter availability for 12 passengers to Atlantic City. Quoted $850."
-                          </div>
-                          <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <button
-                              onClick={() => setActionNotice('▶️ Playing simulated Twilio Voice media recording for call_9822...')}
-                              style={{ padding: '4px 8px', backgroundColor: '#EFF6FF', color: '#0078D4', border: '1px solid #BFDBFE', borderRadius: '4px', fontSize: '10px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                            >
-                              <Play size={10} /> Play Audio
-                            </button>
-                            <span style={{ fontSize: '10px', color: '#16A34A', fontWeight: 700 }}>● Sentiment: Positive</span>
-                          </div>
-                        </div>
+                        ) : (
+                          voiceCallRecords.map((call: any, idx: number) => (
+                            <div key={call.call_sid || idx} style={{ padding: '10px', backgroundColor: '#F8FAFC', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A' }}>{call.caller_name || 'Passenger Call'} ({call.caller_phone || 'Masked Line'})</span>
+                                <span style={{ fontSize: '10px', color: '#6B7280' }}>{call.duration_seconds || 0}s • {call.timestamp ? new Date(call.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent'}</span>
+                              </div>
+                              <div style={{ fontSize: '11px', color: '#334155', marginTop: '4px' }}>
+                                "{call.ai_transcript || call.transcript || 'Call recorded and logged in sovereign compliance vault.'}"
+                              </div>
+                              <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <button
+                                  onClick={() => {
+                                    if (call.recording_url) {
+                                      const audio = new Audio(call.recording_url);
+                                      audio.play().catch(() => setActionNotice(`▶️ Audio stream at ${call.recording_url}`));
+                                    } else {
+                                      setActionNotice(`▶️ Recording SID: ${call.call_sid || 'rec_stream'}`);
+                                    }
+                                  }}
+                                  style={{ padding: '4px 8px', backgroundColor: '#EFF6FF', color: '#0078D4', border: '1px solid #BFDBFE', borderRadius: '4px', fontSize: '10px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                >
+                                  <Play size={10} /> Play Audio
+                                </button>
+                                <span style={{ fontSize: '10px', color: call.sentiment === 'POSITIVE' ? '#16A34A' : '#D97706', fontWeight: 700 }}>
+                                  ● Sentiment: {call.sentiment || 'NEUTRAL'}
+                                </span>
+                              </div>
+                            </div>
+                          ))
+                        )}
                       </div>
                     </div>
                   </div>
@@ -10408,36 +10449,41 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
 
                     {/* Chat Log Window */}
                     <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '14px', height: '240px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {chatMessages.map((msg) => (
-                        <div
-                          key={msg.id}
-                          style={{
-                            alignSelf: msg.isOutbound ? 'flex-end' : 'flex-start',
-                            maxWidth: '75%',
-                            backgroundColor: msg.isOutbound ? '#0078D4' : '#FFFFFF',
-                            color: msg.isOutbound ? '#FFFFFF' : '#0F172A',
-                            padding: '10px 14px',
-                            borderRadius: '10px',
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                            border: msg.isOutbound ? 'none' : '1px solid #E5E7EB'
-                          }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', fontSize: '10px', opacity: 0.85, marginBottom: '4px' }}>
-                            <span>{msg.sender} ({msg.channel})</span>
-                            <span>{msg.time}</span>
-                          </div>
-                          <div style={{ fontSize: '12px', lineHeight: 1.4 }}>{msg.text}</div>
+                      {chatMessages.length === 0 ? (
+                        <div style={{ margin: 'auto', color: '#64748B', fontSize: '12px', textAlign: 'center' }}>
+                          No active chat messages logged. Send an outbound WhatsApp or SMS dispatch to start a live conversation thread.
                         </div>
-                      ))}
+                      ) : (
+                        chatMessages.map((msg) => (
+                          <div
+                            key={msg.id}
+                            style={{
+                              alignSelf: msg.isOutbound ? 'flex-end' : 'flex-start',
+                              maxWidth: '75%',
+                              backgroundColor: msg.isOutbound ? '#0078D4' : '#FFFFFF',
+                              color: msg.isOutbound ? '#FFFFFF' : '#0F172A',
+                              padding: '10px 14px',
+                              borderRadius: '10px',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                              border: msg.isOutbound ? 'none' : '1px solid #E5E7EB'
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', fontSize: '10px', opacity: 0.85, marginBottom: '4px' }}>
+                              <span>{msg.sender} ({msg.channel})</span>
+                              <span>{msg.time}</span>
+                            </div>
+                            <div style={{ fontSize: '12px', lineHeight: 1.4 }}>{msg.text}</div>
+                          </div>
+                        ))
+                      )}
                     </div>
 
                     {/* Quick Action Buttons */}
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                       <button
                         onClick={() => {
-                          const vName = config.vendor_name || 'ANB Limo Company';
-                          const msg = { id: String(Date.now()), sender: `${vName} Autonomous Dispatch`, phone: '+12155550144', channel: 'WHATSAPP', text: '📍 Chauffeur Marcus is curbside at Zone 4. Live GPS Radar: https://limo.link/r/live', isOutbound: true, time: 'Just now' };
-                          setChatMessages([...chatMessages, msg]);
+                          const vName = config.vendor_name || 'Autonomous Livery';
+                          handleSendLiveChatMessage(`📍 ${vName}: Chauffeur is curbside. Live GPS Radar link active.`, 'WHATSAPP', 'GPS_TRACKING');
                         }}
                         style={{ padding: '6px 10px', backgroundColor: '#F0FDF4', color: '#15803D', border: '1px solid #86EFAC', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
                       >
@@ -10445,9 +10491,8 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                       </button>
                       <button
                         onClick={() => {
-                          const vName = config.vendor_name || 'ANB Limo Company';
-                          const msg = { id: String(Date.now()), sender: `${vName} Autonomous Dispatch`, phone: '+12155550144', channel: 'SMS', text: '✈️ Flight delay detected (+20 min). Pickup recalibrated to 11:15 AM with zero extra charge.', isOutbound: true, time: 'Just now' };
-                          setChatMessages([...chatMessages, msg]);
+                          const vName = config.vendor_name || 'Autonomous Livery';
+                          handleSendLiveChatMessage(`✈️ ${vName}: Flight status update detected. Pickup time adjusted with zero penalty.`, 'SMS', 'DELAY_ALERT');
                         }}
                         style={{ padding: '6px 10px', backgroundColor: '#EFF6FF', color: '#0078D4', border: '1px solid #BFDBFE', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
                       >
@@ -10459,15 +10504,12 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <input
                         type="text"
-                        placeholder="Type reply to passenger (David Sterling)..."
+                        placeholder="Type reply to passenger..."
                         value={newChatText}
                         onChange={(e) => setNewChatText(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && newChatText.trim()) {
-                            const vName = config.vendor_name || 'ANB Limo Company';
-                            const msg = { id: String(Date.now()), sender: `${vName} Dispatch`, phone: '+12155550144', channel: 'WHATSAPP', text: newChatText, isOutbound: true, time: 'Just now' };
-                            setChatMessages([...chatMessages, msg]);
-                            setNewChatText('');
+                            handleSendLiveChatMessage(newChatText, 'WHATSAPP');
                           }
                         }}
                         style={{ flex: 1, padding: '10px 12px', border: '1px solid #D1D5DB', borderRadius: '6px', fontSize: '12px' }}
@@ -10475,15 +10517,13 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                       <button
                         onClick={() => {
                           if (newChatText.trim()) {
-                            const vName = config.vendor_name || 'ANB Limo Company';
-                            const msg = { id: String(Date.now()), sender: `${vName} Dispatch`, phone: '+12155550144', channel: 'WHATSAPP', text: newChatText, isOutbound: true, time: 'Just now' };
-                            setChatMessages([...chatMessages, msg]);
-                            setNewChatText('');
+                            handleSendLiveChatMessage(newChatText, 'WHATSAPP');
                           }
                         }}
+                        disabled={loading || !newChatText.trim()}
                         style={{ padding: '10px 18px', backgroundColor: '#0078D4', color: '#FFFFFF', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                       >
-                        <Send size={14} /> Send
+                        <Send size={14} /> {loading ? 'Sending...' : 'Send'}
                       </button>
                     </div>
                   </div>
@@ -11208,6 +11248,210 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                         <FileText size={14} color="#0078D4" />
                         <span>📄 View Invoices & Receipts</span>
                       </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* GLOBAL SUPPORT-AS-A-SERVICE DESK (DUAL B2C PASSENGER & B2B VENDOR OPS CARE) */}
+                <div style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '12px',
+                  border: '1px solid #E2E8F0',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.04)',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    padding: '20px 24px',
+                    borderBottom: '1px solid #F1F5F9',
+                    backgroundColor: '#0F172A',
+                    color: '#FFFFFF',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '12px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{
+                        width: '44px',
+                        height: '44px',
+                        borderRadius: '10px',
+                        backgroundColor: '#9A7B4F',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#FFFFFF'
+                      }}>
+                        <Headphones size={24} />
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#FFFFFF' }}>
+                            Global 24/7 Support Desk as a Service
+                          </h3>
+                          <span style={{
+                            fontSize: '10px',
+                            fontWeight: 800,
+                            padding: '2px 8px',
+                            borderRadius: '10px',
+                            backgroundColor: 'rgba(154, 123, 79, 0.3)',
+                            border: '1px solid rgba(154, 123, 79, 0.6)',
+                            color: '#D4AF37'
+                          }}>
+                            {vendorSupportSub ? `ENROLLED: ${vendorSupportSub.plan_name.toUpperCase()}` : 'PREVIEW / UNENROLLED'}
+                          </span>
+                        </div>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#94A3B8' }}>
+                          Dual-Layer Support: B2C Chauffeur/Passenger Concierge + B2B Fleet Tech &amp; Escrow Mediation
+                        </p>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '12px', color: '#CBD5E1' }}>
+                        Inbound DID: <strong style={{ color: '#F8FAFC' }}>{vendorSupportSub?.forwarding_did || '+1 (800) 555-LIMO'}</strong>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Plan Selection Grid */}
+                  <div style={{ padding: '24px', backgroundColor: '#F8FAFC' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: '14px', letterSpacing: '0.04em' }}>
+                      Select Your Fleet Support Tier (No-Code Dynamic Price Synchronized with Global Hub)
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                      {supportPlans.map((plan) => {
+                        const isCurrent = vendorSupportSub?.plan_id === plan.id || (!vendorSupportSub && plan.id === 'plan_tier2_247');
+                        return (
+                          <div
+                            key={plan.id}
+                            style={{
+                              backgroundColor: '#FFFFFF',
+                              borderRadius: '10px',
+                              border: isCurrent ? '2px solid #0078D4' : '1px solid #E2E8F0',
+                              padding: '18px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              justifyContent: 'space-between',
+                              boxShadow: isCurrent ? '0 4px 12px rgba(0, 120, 212, 0.12)' : 'none',
+                              position: 'relative'
+                            }}
+                          >
+                            {plan.highlight_badge && (
+                              <span style={{
+                                position: 'absolute',
+                                top: '12px',
+                                right: '12px',
+                                fontSize: '9.5px',
+                                fontWeight: 800,
+                                backgroundColor: plan.is_active ? '#EFF6FF' : '#F1F5F9',
+                                color: '#0078D4',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                border: '1px solid #BFDBFE'
+                              }}>
+                                {plan.highlight_badge}
+                              </span>
+                            )}
+
+                            <div>
+                              <div style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>{plan.name}</div>
+                              <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>{plan.description}</div>
+
+                              <div style={{ marginTop: '12px', display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                                <span style={{ fontSize: '24px', fontWeight: 900, color: '#0F172A' }}>
+                                  ${plan.monthly_price_usd}
+                                </span>
+                                <span style={{ fontSize: '12px', color: '#64748B' }}>/mo</span>
+                              </div>
+                              <div style={{ fontSize: '11px', color: '#166534', fontWeight: 700, marginTop: '2px' }}>
+                                Included: {plan.included_voice_minutes} mins/mo (${plan.per_minute_overage_usd}/min overage)
+                              </div>
+
+                              <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                {plan.features.slice(0, 3).map((f, fIdx) => (
+                                  <div key={fIdx} style={{ fontSize: '11px', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <Check size={12} color="#16A34A" />
+                                    <span>{f}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            <button
+                              onClick={() => handleEnrollSupportPlan(plan.id)}
+                              disabled={isEnrollingSupport}
+                              style={{
+                                marginTop: '16px',
+                                width: '100%',
+                                padding: '8px',
+                                borderRadius: '6px',
+                                border: 'none',
+                                backgroundColor: isCurrent ? '#16A34A' : '#0078D4',
+                                color: '#FFFFFF',
+                                fontSize: '12px',
+                                fontWeight: 800,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px'
+                              }}
+                            >
+                              {isCurrent ? <Check size={14} /> : <Headphones size={14} />}
+                              <span>{isCurrent ? 'Active Enrolled Plan' : '1-Click Switch / Enroll'}</span>
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Inbound Telephony Routing & Voice Greeting Config */}
+                    <div style={{ marginTop: '20px', backgroundColor: '#FFFFFF', padding: '16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                      <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', marginBottom: '10px' }}>
+                        📞 Dedicated Telephony &amp; Escalation Routing
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
+                        <div>
+                          <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', display: 'block', marginBottom: '4px' }}>
+                            Customer Inbound DID (Forward to Desk)
+                          </label>
+                          <input
+                            type="text"
+                            value={forwardingDidInput}
+                            onChange={(e) => setForwardingDidInput(e.target.value)}
+                            placeholder="+1 (800) 555-5466"
+                            style={{ width: '100%', padding: '6px 10px', fontSize: '12px', borderRadius: '4px', border: '1px solid #CBD5E1' }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', display: 'block', marginBottom: '4px' }}>
+                            Fleet Escalation Phone (Chauffeur / Owner)
+                          </label>
+                          <input
+                            type="text"
+                            value={escalationPhoneInput}
+                            onChange={(e) => setEscalationPhoneInput(e.target.value)}
+                            placeholder="+1 (215) 555-0199"
+                            style={{ width: '100%', padding: '6px 10px', fontSize: '12px', borderRadius: '4px', border: '1px solid #CBD5E1' }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', display: 'block', marginBottom: '4px' }}>
+                            Custom Voice Greeting (Brand Concierge)
+                          </label>
+                          <input
+                            type="text"
+                            value={customGreetingInput}
+                            onChange={(e) => setCustomGreetingInput(e.target.value)}
+                            placeholder="Thank you for calling..."
+                            style={{ width: '100%', padding: '6px 10px', fontSize: '12px', borderRadius: '4px', border: '1px solid #CBD5E1' }}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

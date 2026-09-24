@@ -264,6 +264,27 @@ class AviationLookupService:
         return results[:limit]
 
     @staticmethod
+    def search_heliports(query: str, limit: int = 15):
+        """Search domestic VIP heliports and vertiports."""
+        from app.services.helicopter_compliance_service import helicopter_compliance_service, DOMESTIC_HELIPORTS
+        if not query or not query.strip():
+            return DOMESTIC_HELIPORTS[:limit]
+        q_lower = query.strip().lower()
+        matches = [
+            h for h in DOMESTIC_HELIPORTS
+            if (
+                q_lower in h.code.lower()
+                or (h.faa_lid and q_lower in h.faa_lid.lower())
+                or (h.icao_code and q_lower in h.icao_code.lower())
+                or q_lower in h.name.lower()
+                or q_lower in h.city.lower()
+                or q_lower in h.state_or_region.lower()
+            )
+        ]
+        return matches[:limit]
+
+
+    @staticmethod
     def search_airlines(query: str, limit: int = 15) -> List[AirlineRecord]:
         """Search airlines by IATA 2-char code, ICAO 3-char code, carrier name, or callsign."""
         if not query or not query.strip():

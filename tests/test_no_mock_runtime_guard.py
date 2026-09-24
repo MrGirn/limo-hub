@@ -71,20 +71,79 @@ def test_twilio_unconfigured_truthfulness():
 
 
 def test_no_prohibited_mock_tokens_in_production_app():
-    """Scans all Python files under app/ for forbidden mock simulation tokens."""
-    app_dir = Path(__file__).parent.parent / "app"
+    """Scans all Python files under app/ and packages/ for forbidden mock simulation tokens."""
+    root_dir = Path(__file__).parent.parent
     prohibited_patterns = [
         r"pi_sim_",
         r"pi_onboard_",
         r"sample_invoice",
-        r"\[SMS SIMULATION\]"
+        r"\[SMS SIMULATION\]",
+        r"ses-[a-f0-9]{16}@email\.amazonses\.com",
+        r"trp-phl-881"
     ]
     
     violations = []
-    for py_file in app_dir.rglob("*.py"):
-        content = py_file.read_text(encoding="utf-8")
-        for pattern in prohibited_patterns:
-            if re.search(pattern, content):
-                violations.append(f"{py_file.name}: matches prohibited pattern '{pattern}'")
+    for check_dir in [root_dir / "app", root_dir / "packages"]:
+        for py_file in check_dir.rglob("*.py"):
+            content = py_file.read_text(encoding="utf-8")
+            for pattern in prohibited_patterns:
+                if re.search(pattern, content):
+                    violations.append(f"{py_file.name}: matches prohibited pattern '{pattern}'")
                 
     assert not violations, f"Found mock data violations in production code: {violations}"
+
+
+def test_packages_vendor_app_radar_empty_without_trips():
+    """Verifies that vendor app radar endpoint does not return hardcoded Sir Arthur Davies trips."""
+    from packages.vendor_app.backend.api import get_vendor_dispatch_radar
+    from packages.shared.domain_models import UserSession, VendorUserRole
+    mock_admin_user = UserSession(user_id="usr_admin", email="admin@test.com", full_name="Admin Test", vendor_id="test_vendor_empty", role=VendorUserRole.ROLE_VENDOR_ADMIN)
+    radar = get_vendor_dispatch_radar("test_vendor_empty", user=mock_admin_user)
+    assert radar["vendor_id"] == "test-vendor-empty"
+    assert radar["radar_feed"] == []
+    assert radar["active_trips_count"] == 0
+
+
+def test_packages_vendor_app_quote_uses_pricing_service():
+    """Verifies vendor app quote uses canonical pricing service calculation."""
+    from packages.vendor_app.backend.api import calculate_vendor_public_quote, VendorPublicQuoteRequest
+    from packages.shared.domain_models import VehicleClass
+    req = VendorPublicQuoteRequest(
+        vendor_id="vendor_anb_philly",
+        pickup_address="100 Market St, Philadelphia, PA",
+        dropoff_address="Philadelphia International Airport, PA",
+        vehicle_class=VehicleClass.FIRST_CLASS,
+        distance_miles=10.0
+    )
+    quote = calculate_vendor_public_quote(req)
+    assert quote["all_inclusive_total_usd"] > 0
+    assert "line_items" in quote
+    assert quote["currency"] == "USD"
+
+
+def test_driver_credential_vault_upload_and_persistence():
+    """Verifies GAP-D1: Chauffeur mobile credential document uploads persist to Sovereign S3 / media vault."""
+    import base64
+    from app.services.s3_storage_service import s3_storage_service
+    from app.domain_models import Driver, DriverCredentialDocument, DriverDocumentType
+
+    driver_id = "drv_test_vault_01"
+    vendor_id = "vendor_anb_philly"
+    sample_jpeg_bytes = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xff\xdb\x00C\x00"
+    b64_str = "data:image/jpeg;base64," + base64.b64encode(sample_jpeg_bytes).decode("ascii")
+
+    res = s3_storage_service.upload_base64_driver_document(
+        driver_id=driver_id,
+        vendor_id=vendor_id,
+        base64_data=b64_str,
+        document_type="COMMERCIAL_CHAUFFEUR_LICENSE",
+        document_name="PA TLC Chauffeur License",
+        expiry_date="2028-05-30"
+    )
+
+    assert res["document_id"].startswith("doc_drv_test_vault_01_")
+    assert res["status"] == "VERIFIED"
+    assert res["expiry_date"] == "2028-05-30"
+    assert "file_url" in res and len(res["file_url"]) > 5
+
+

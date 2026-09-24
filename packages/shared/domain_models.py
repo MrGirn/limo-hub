@@ -22,6 +22,8 @@ class VehicleClass(str, Enum):
     ELECTRIC_VIP = "ELECTRIC_VIP"      # e.g., Lucid Air Grand Touring, Porsche Taycan, Tesla Model S Plaid
     BUSINESS_SEDAN = "BUSINESS_SEDAN"  # e.g., Mercedes-Benz E-Class, BMW 5 Series
     ULTRA_LUXURY = "ULTRA_LUXURY"      # e.g., Rolls-Royce Ghost, Bentley Flying Spur
+    HELICOPTER_CHARTER = "HELICOPTER_CHARTER" # e.g., Airbus H130 VIP, Bell 407 GXi, Sikorsky S-76D (Domestic Multi-Leg Only)
+
 
 
 class LegMode(str, Enum):

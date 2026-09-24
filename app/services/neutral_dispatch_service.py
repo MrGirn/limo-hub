@@ -65,8 +65,23 @@ class NeutralDispatchService:
                 eligible_vendors.append(vendor)
 
         if not eligible_vendors:
-            # Fallback to any active vendor if in test/demo
-            eligible_vendors = list(db.vendors.values())[:2]
+            # Honest uncontracted market state: Return None with structured audit trail
+            audit = AssignmentAuditRecord(
+                trip_id=trip_id,
+                leg_id=leg_id,
+                city_name=city_name,
+                assigned_vendor_id="sourcing-in-progress",
+                assigned_vendor_name=f"Provisional Partner Sourcing ({city_name})",
+                competing_candidates_count=0,
+                proximity_score=0.0,
+                quality_rating_score=0.0,
+                price_competitiveness_score=0.0,
+                neutrality_load_balance_score=0.0,
+                total_composite_score=0.0,
+                justification_summary=f"No in-network active sovereign vendor in {city_name}. Sourcing inquiry initiated via Affiliate Exchange."
+            )
+            return None, audit
+
 
         scored_candidates = []
         for v in eligible_vendors:

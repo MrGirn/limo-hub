@@ -59,14 +59,22 @@ class AWSSESService:
         use_aws = cfg.use_global_aws_ses if cfg else True
         sender = cfg.custom_sender_email if (cfg and not use_aws and cfg.custom_sender_email) else "confirmations@global-executive-limo.com"
 
-        # Log simulated AWS SES delivery
-        print(f"[AWS SES / Vendor Mailer] Delivering email to {recipient_email} from {sender} via {'Global AWS SES (us-east-1)' if use_aws else 'Custom Vendor SMTP'}")
+        from app.services.email_notification_service import EmailNotificationService
         
+        # Dispatch via authoritative EmailNotificationService SMTP/SES transport
+        dispatched = EmailNotificationService.send_email_via_smtp(
+            to_email=recipient_email,
+            subject=subject,
+            html_content=html_body,
+            sender_name="Executive Chauffeur Dispatch",
+            sender_email=sender
+        )
+
         return {
-            "status": "SENT",
+            "status": "DELIVERED" if dispatched else "ARCHIVED_LOCAL",
             "provider": "AWS_SES" if use_aws else "VENDOR_CUSTOM_SMTP",
             "sender": sender,
             "recipient": recipient_email,
             "subject": subject,
-            "message_id": f"ses-{os.urandom(8).hex()}@email.amazonses.com"
+            "transport_dispatched": dispatched
         }

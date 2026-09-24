@@ -77,19 +77,7 @@ class GlobalHubRelayService:
         self.processed_outbox_events: Dict[str, Dict[str, Any]] = {}
         self.flight_radar_events: List[FlightRadarBroadcastEvent] = []
         self.llm_query_history: List[SharedLLMResponse] = []
-        self._init_demo_hub_state()
 
-    def _init_demo_hub_state(self):
-        # Pre-seed flight radar event
-        self.flight_radar_events.append(FlightRadarBroadcastEvent(
-            flight_number="BA 178",
-            carrier="British Airways",
-            origin_airport="JFK",
-            destination_airport="LHR",
-            delay_minutes=45,
-            updated_eta_utc="2026-09-16T08:30:00Z",
-            affected_vendors=["vendor_ny_executive", "vendor_london_royal"]
-        ))
 
     def sync_vendor_outbox_events(self, vendor_id: str) -> Dict[str, Any]:
         """

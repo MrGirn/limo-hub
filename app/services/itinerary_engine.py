@@ -281,13 +281,32 @@ class ItineraryEngine:
                     leg_tax = (leg_fare_net * effective_hub["tax_rate"]).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
                     total_leg_amt = leg_fare_net + leg_tolls + leg_tax + leg_gratuity
             elif leg_mode == LegMode.HELICOPTER_TRANSFER:
-                heli_base = getattr(custom_rule, "helicopter_base_fare", None) or (base * Decimal("3.0"))
-                heli_per_mi = getattr(custom_rule, "helicopter_per_mile", None) or (per_mi * Decimal("2.5"))
-                leg_fare_net = (heli_base + (leg_distance * heli_per_mi)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-                leg_gratuity = (leg_fare_net * grat_rate).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if include_grat else Decimal("0.00")
-                leg_tax = (leg_fare_net * effective_hub["tax_rate"]).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-                total_leg_amt = leg_fare_net + leg_tolls + leg_tax + leg_gratuity
-                confirmed_subtotal += total_leg_amt
+                from app.services.helicopter_compliance_service import helicopter_compliance_service
+                heli_val = helicopter_compliance_service.validate_helicopter_operation(
+                    origin_address=origin,
+                    origin_country=effective_hub.get("country", "US"),
+                    destination_address=dest,
+                    destination_country=effective_hub.get("country", "US"),
+                    total_itinerary_legs=len(raw_legs),
+                    is_fixed_wing=False
+                )
+                if not heli_val["allowed"]:
+                    leg_price_status = LegPriceStatus.FAILED_NO_SUPPLY
+                    pending_msg = f"Aviation Compliance Hold: {heli_val['reason']}"
+                    leg_fare_net = Decimal("0.00")
+                    leg_gratuity = Decimal("0.00")
+                    leg_tax = Decimal("0.00")
+                    total_leg_amt = Decimal("0.00")
+                else:
+                    heli_cfg = helicopter_compliance_service.get_config()
+                    heli_landing_fee = heli_cfg.default_heliport_fee_usd
+                    heli_base = getattr(custom_rule, "helicopter_base_fare", None) or (base * Decimal("3.0")) + heli_landing_fee
+                    heli_per_mi = getattr(custom_rule, "helicopter_per_mile", None) or (per_mi * Decimal("2.5"))
+                    leg_fare_net = (heli_base + (leg_distance * heli_per_mi)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                    leg_gratuity = (leg_fare_net * grat_rate).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if include_grat else Decimal("0.00")
+                    leg_tax = (leg_fare_net * effective_hub["tax_rate"]).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                    total_leg_amt = leg_fare_net + leg_tolls + leg_tax + leg_gratuity
+                    confirmed_subtotal += total_leg_amt
             elif leg_mode in (LegMode.FLIGHT, LegMode.TRAIN):
                 leg_fare_net = Decimal("0.00")
                 leg_gratuity = Decimal("0.00")

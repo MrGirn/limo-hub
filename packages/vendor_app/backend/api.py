@@ -96,11 +96,11 @@ def register_vendor_custom_domain(
 
 
 class VendorPublicQuoteRequest(BaseModel):
-    vendor_id: str = "vendor_anb_philly"
+    vendor_id: str = "vendor-anb-philly"
     pickup_address: str
     dropoff_address: str
     vehicle_class: VehicleClass = VehicleClass.LUXURY_SUV
-    distance_miles: float = 18.5
+    distance_miles: Optional[float] = None
     flight_number: Optional[str] = None
     is_late_night: bool = False
     is_meet_and_greet: bool = False
@@ -108,34 +108,40 @@ class VendorPublicQuoteRequest(BaseModel):
 
 @router.post("/public/quote")
 def calculate_vendor_public_quote(dto: VendorPublicQuoteRequest):
-    """Calculates deterministic quote based on this sovereign vendor's tariff rules."""
-    base_rate = Decimal("85.00") if dto.vehicle_class == VehicleClass.LUXURY_SUV else Decimal("65.00")
-    mileage_fare = Decimal(str(dto.distance_miles)) * Decimal("4.25")
-    late_night = Decimal("35.00") if dto.is_late_night else Decimal("0.00")
-    meet_and_greet = Decimal("45.00") if dto.is_meet_and_greet else Decimal("0.00")
-    tolls = Decimal("16.50")
+    """Calculates deterministic quote based on this sovereign vendor's active pricing engine rules."""
+    from app.services.pricing_service import PricingService
+    from app.domain_models import ServiceType, VehicleClass as DomainVehicleClass
+    from app.database import db
+
+    v_id = dto.vendor_id.replace("_", "-")
+    vendor = db.vendors.get(v_id)
+    vc_mapped = DomainVehicleClass(dto.vehicle_class.value)
     
-    subtotal = base_rate + mileage_fare + late_night + meet_and_greet + tolls
-    tax = subtotal * Decimal("0.08875")
-    gratuity = subtotal * Decimal("0.20")
-    total = subtotal + tax + gratuity
-    
+    quote = PricingService.calculate_quote(
+        tenant_id="tenant-us-east",
+        vendor_id=v_id,
+        service_type=ServiceType.AIRPORT_TRANSFER if dto.flight_number else ServiceType.POINT_TO_POINT,
+        vehicle_class=vc_mapped,
+        pickup_address=dto.pickup_address,
+        dropoff_address=dto.dropoff_address,
+        flight_number=dto.flight_number,
+        distance_miles=Decimal(str(dto.distance_miles)) if dto.distance_miles else None,
+        meet_and_greet_inside=dto.is_meet_and_greet
+    )
+
     return {
-        "vendor_id": dto.vendor_id,
-        "vendor_name": "ANB Limo Executive Chauffeurs (Philly)",
-        "currency": "USD",
-        "subtotal_usd": float(subtotal),
-        "tax_usd": float(tax),
-        "gratuity_usd": float(gratuity),
-        "all_inclusive_total_usd": float(total),
-        "distance_miles": dto.distance_miles,
+        "vendor_id": v_id,
+        "vendor_name": getattr(vendor, "name", "Executive Chauffeur Alliance"),
+        "currency": quote.currency,
+        "subtotal_usd": float(quote.subtotal_net),
+        "tax_usd": float(quote.tax_amount),
+        "gratuity_usd": float(quote.gratuity_amount),
+        "all_inclusive_total_usd": float(quote.final_payable_amount),
+        "distance_miles": float(quote.distance_miles),
         "vehicle_class": dto.vehicle_class.value,
         "line_items": [
-            {"name": "Base Fleet Reservation", "amount": float(base_rate)},
-            {"name": f"Mileage ({dto.distance_miles} mi @ $4.25/mi)", "amount": float(mileage_fare)},
-            {"name": "Tolls & Port Fees", "amount": float(tolls)},
-            {"name": "Late-Night Chauffeur Window (23:00-05:30)", "amount": float(late_night)} if dto.is_late_night else None,
-            {"name": "Meet & Greet with iPad Sign", "amount": float(meet_and_greet)} if dto.is_meet_and_greet else None
+            {"name": item.description, "amount": float(item.total_net)}
+            for item in quote.line_items
         ]
     }
 
@@ -148,31 +154,38 @@ def get_vendor_dispatch_radar(
     user: UserSession = Depends(get_current_user)
 ):
     require_vendor_scope(vendor_id, user)
+    from app.database import db
+
+    v_id = vendor_id.replace("_", "-")
+    active_trips = [
+        t for t in db.trips.values() 
+        if getattr(t, "vendor_id", v_id) == v_id or v_id in ("vendor-anb-philly", "vendor_anb_philly")
+    ]
+    on_duty_drivers = [
+        d for d in db.drivers.values() 
+        if getattr(d, "vendor_id", v_id) == v_id or v_id in ("vendor-anb-philly", "vendor_anb_philly")
+    ]
+
+    feed = []
+    for trip in active_trips[:10]:
+        driver = db.drivers.get(trip.driver_id) if trip.driver_id else None
+        vehicle = db.vehicles.get(trip.vehicle_id) if trip.vehicle_id else None
+        feed.append({
+            "trip_id": trip.id,
+            "passenger_name": getattr(trip, "passenger_name", "Executive VIP Guest"),
+            "driver_name": driver.name if driver else "Auto-Assigning",
+            "vehicle": f"{vehicle.make} {vehicle.model} (Plate: {vehicle.license_plate})" if vehicle else "VIP Fleet Staged",
+            "status": trip.status.value,
+            "pickup": trip.pickup_address,
+            "dropoff": trip.dropoff_address,
+            "flight_radar": getattr(trip, "flight_number", None)
+        })
+
     return {
-        "vendor_id": vendor_id,
-        "active_trips_count": 4,
-        "on_duty_drivers_count": 6,
-        "radar_feed": [
-            {
-                "trip_id": "trp-phl-881",
-                "passenger_name": "Sir Arthur Davies",
-                "driver_name": "Dave Miller",
-                "vehicle": "Cadillac Escalade ESV (Plate: PA-LIMO-01)",
-                "status": "EN_ROUTE_TO_PICKUP",
-                "pickup": "The Ritz-Carlton, Philadelphia",
-                "dropoff": "Philadelphia International Airport (PHL) Terminal A",
-                "flight_radar": "BA 178 (Touchdown On-Time)"
-            },
-            {
-                "trip_id": "trp-phl-882",
-                "passenger_name": "Eleanor Roosevelt",
-                "driver_name": "Marcus Vance",
-                "vehicle": "Mercedes-Benz S 580 (Plate: PA-LIMO-02)",
-                "status": "PASSENGER_ONBOARD",
-                "pickup": "30th Street Amtrak Station",
-                "dropoff": "Comcast Technology Center, Philadelphia"
-            }
-        ]
+        "vendor_id": v_id,
+        "active_trips_count": len(active_trips),
+        "on_duty_drivers_count": len(on_duty_drivers),
+        "radar_feed": feed
     }
 
 
@@ -202,9 +215,14 @@ def get_vendor_payroll_settings(
 ):
     """Allows vendor owner/billing admin to view their custom driver pay percentages."""
     require_vendor_scope(vendor_id, user)
+    from app.database import db
+    v_id = vendor_id.replace("_", "-")
+    vendor = db.vendors.get(v_id)
+    payout_pct = getattr(vendor, "driver_payout_pct", 70.0) if vendor else 70.0
+
     return {
-        "vendor_id": vendor_id,
-        "default_driver_payout_pct": 70.0,
+        "vendor_id": v_id,
+        "default_driver_payout_pct": float(payout_pct),
         "gratuity_pass_through_pct": 100.0,
         "flat_vehicle_fee_deduction_usd": 0.0,
         "payout_trigger_mode": "INSTANT_ON_COMPLETION",
@@ -220,9 +238,15 @@ def update_vendor_payroll_settings(
 ):
     """Updates driver payout percentage and gratuity policy in real-time."""
     require_vendor_scope(vendor_id, user)
+    from app.database import db
+    v_id = vendor_id.replace("_", "-")
+    vendor = db.vendors.get(v_id)
+    if vendor:
+        vendor.driver_payout_pct = dto.default_driver_payout_pct
+
     return {
         "success": True,
-        "vendor_id": vendor_id,
+        "vendor_id": v_id,
         "updated_settings": dto.model_dump(),
         "message": f"Driver payout split updated to {dto.default_driver_payout_pct}% (Instant Stripe Transfers Active)."
     }
@@ -241,21 +265,34 @@ def settle_driver_trip_payout(
     dto: SettleDriverPayoutRequest,
     user: UserSession = Depends(get_current_user)
 ):
-    """Simulates or triggers instant Stripe Connect transfer to chauffeur upon ride dropoff."""
-    import uuid
-    driver_share = (dto.subtotal_usd * 0.70) + dto.gratuity_usd # 70% + 100% tip = $180
-    company_share = dto.total_fare_usd - driver_share # $60
-    transfer_id = f"tr_drv_{uuid.uuid4().hex[:8]}"
+    """Triggers real driver earnings computation and Stripe Connect settlement."""
+    from app.database import db
+    from app.services.driver_payroll_service import driver_payroll_service
+
+    v_id = getattr(user, "vendor_id", "vendor-anb-philly").replace("_", "-")
+    vendor = db.vendors.get(v_id)
+    payout_pct = (getattr(vendor, "driver_payout_pct", 70.0) or 70.0) / 100.0
+    
+    driver_share = round((dto.subtotal_usd * payout_pct) + dto.gratuity_usd, 2)
+    company_share = round(dto.total_fare_usd - driver_share, 2)
+    
+    record = driver_payroll_service.process_instant_trip_payout(
+        vendor_id=v_id,
+        driver_id=dto.assigned_chauffeur_id or "drv-anb-01",
+        trip_id=dto.trip_id,
+        fare_net=Decimal(str(dto.subtotal_usd)),
+        gratuity=Decimal(str(dto.gratuity_usd))
+    )
 
     return {
         "success": True,
         "trip_id": dto.trip_id,
         "total_fare_usd": dto.total_fare_usd,
-        "driver_payout_usd": driver_share,
+        "driver_payout_usd": float(record.total_payout_usd) if hasattr(record, "total_payout_usd") else driver_share,
         "vendor_company_share_usd": company_share,
-        "driver_stripe_transfer_id": transfer_id,
-        "payout_status": "TRANSFERRED_INSTANT",
-        "message": f"${driver_share:.2f} transferred instantly to Chauffeur bank card ({transfer_id})."
+        "driver_stripe_transfer_id": getattr(record, "transfer_sid", f"tr_{dto.trip_id}"),
+        "payout_status": getattr(record, "status", "TRANSFERRED_INSTANT"),
+        "message": f"${driver_share:.2f} transferred to Chauffeur account."
     }
 
 
@@ -266,17 +303,32 @@ from packages.shared.location_tax_service import LocationTaxService, LocationTax
 @router.post("/public/quote-with-taxes", response_model=LocationTaxBreakdown)
 def calculate_quote_with_location_taxes(dto: VendorPublicQuoteRequest):
     """Calculates granular location taxes, airport concession fees, and regulatory surcharges."""
-    base_rate = Decimal("85.00") if dto.vehicle_class == VehicleClass.LUXURY_SUV else Decimal("65.00")
-    meet_and_greet = Decimal("45.00") if dto.is_meet_and_greet else Decimal("0.00")
+    from app.services.pricing_service import PricingService, get_regional_tax_and_surcharges
+    from app.domain_models import ServiceType, VehicleClass as DomainVehicleClass
     
+    v_id = dto.vendor_id.replace("_", "-")
+    vc_mapped = DomainVehicleClass(dto.vehicle_class.value)
+    
+    quote = PricingService.calculate_quote(
+        tenant_id="tenant-us-east",
+        vendor_id=v_id,
+        service_type=ServiceType.AIRPORT_TRANSFER if dto.flight_number else ServiceType.POINT_TO_POINT,
+        vehicle_class=vc_mapped,
+        pickup_address=dto.pickup_address,
+        dropoff_address=dto.dropoff_address,
+        flight_number=dto.flight_number,
+        distance_miles=Decimal(str(dto.distance_miles)) if dto.distance_miles else None,
+        meet_and_greet_inside=dto.is_meet_and_greet
+    )
+
     return LocationTaxService.calculate_tax_breakdown(
         pickup_address=dto.pickup_address,
         dropoff_address=dto.dropoff_address,
-        base_tariff=base_rate,
-        distance_miles=dto.distance_miles,
-        meet_and_greet=meet_and_greet,
-        tolls=Decimal("16.50"),
-        gratuity_pct=Decimal("20.0")
+        base_tariff=quote.base_net,
+        distance_miles=float(quote.distance_miles),
+        meet_and_greet=Decimal("45.00") if dto.is_meet_and_greet else Decimal("0.00"),
+        tolls=quote.estimated_tolls_net,
+        gratuity_pct=quote.gratuity_rate * Decimal("100.0") if quote.gratuity_rate else Decimal("20.0")
     )
 
 

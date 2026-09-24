@@ -3,7 +3,10 @@ export type VehicleClass =
   | 'FIRST_CLASS'
   | 'BUSINESS_VAN'
   | 'ELECTRIC_VIP'
-  | 'BUSINESS_SEDAN';
+  | 'BUSINESS_SEDAN'
+  | 'ULTRA_LUXURY'
+  | 'HELICOPTER_CHARTER';
+
 
 export type ServiceType = 
   | 'AIRPORT_TRANSFER'
@@ -107,11 +110,22 @@ export interface Quote {
   gratuity_amount: number;
   total_gross: number;
   final_payable_amount: number;
-  deposit_hold_amount: number;
   line_items: QuoteLineItem[];
   is_binding: boolean;
+  cancellation_policy?: CancellationPolicy;
   expires_at: string;
   created_at: string;
+}
+
+export interface CancellationPolicy {
+  vendor_id: string;
+  vendor_name?: string;
+  cutoff_hours: number;
+  deadline_utc: string;
+  is_free_cancellation_active: boolean;
+  policy_description: string;
+  late_fee_description: string;
+  late_cancellation_fee_pct: number;
 }
 
 export interface BookingParty {
@@ -209,6 +223,7 @@ export interface Booking {
   quote: Quote;
   trip?: Trip;
   payment?: PaymentAttempt;
+  cancellation_policy?: CancellationPolicy;
   created_at: string;
 }
 
@@ -1066,6 +1081,198 @@ export interface PhoneBookingResult {
   calendar_invite_url: string;
   message: string;
 }
+
+export interface SupportDeskPlan {
+  id: string;
+  name: string;
+  tier_code: string;
+  description: string;
+  monthly_price_usd: number;
+  included_voice_minutes: number;
+  per_minute_overage_usd: number;
+  per_ride_managed_fee_usd: number;
+  features: string[];
+  is_active: boolean;
+  highlight_badge?: string;
+  updated_at?: string;
+}
+
+export interface SupportDeskGlobalConfig {
+  is_payment_required: boolean;
+  billing_mode: string;
+  announcement_banner: string;
+  default_sla_minutes: number;
+  emergency_sla_minutes: number;
+  driver_unconfirmed_warning_minutes?: number;
+  driver_emergency_recovery_minutes?: number;
+  flight_delay_recalibration_threshold_minutes?: number;
+  breakdown_immediate_escalation?: boolean;
+  owner_overnight_sms_enabled?: boolean;
+  global_toll_free_hotline?: string;
+  toll_free_ivr_enabled?: boolean;
+  updated_at?: string;
+}
+
+export interface RegionalStaffingPod {
+  id: string;
+  code: 'US_EAST' | 'US_WEST' | 'EMEA' | 'GLOBAL';
+  name: string;
+  territory_description: string;
+  covered_airports: string[];
+  languages: string[];
+  supervisor_name: string;
+  active_agents_count: number;
+  current_queue_depth: number;
+  avg_pickup_sla_seconds: number;
+  operating_hours: string;
+  radar_feed_status: string;
+}
+
+export interface InboundVoiceCallResolution {
+  caller_phone: string;
+  dialed_number: string;
+  routing_strategy: 'DEDICATED_LOCAL_DID' | 'CENTRAL_TOLL_FREE_EXTENSION';
+  matched_vendor_id: string;
+  matched_vendor_name: string;
+  matched_pod_id: string;
+  matched_pod_name: string;
+  voice_greeting_script: string;
+  active_booking_id?: string;
+  passenger_name?: string;
+  flight_number?: string;
+  total_escrow_usd?: number;
+  assigned_chauffeur?: string;
+  assigned_chauffeur_phone?: string;
+}
+
+export interface VendorSupportSubscription {
+  id: string;
+  vendor_id: string;
+  vendor_name: string;
+  plan_id: string;
+  plan_name: string;
+  monthly_price_usd: number;
+  status: string;
+  is_payment_required_at_enrollment: boolean;
+  custom_greeting_script: string;
+  forwarding_did?: string;
+  dedicated_support_email?: string;
+  assigned_pod_id?: string;
+  vendor_extension_pin?: string;
+  included_voice_minutes: number;
+  used_voice_minutes: number;
+  total_tickets_handled: number;
+  created_at: string;
+}
+
+export interface SupportTicket {
+  id: string;
+  tenant_id: string;
+  vendor_id: string;
+  vendor_name: string;
+  pod_id?: string;
+  ticket_type: 'CUSTOMER_CONCIERGE' | 'VENDOR_TECH_OPS';
+  customer_name: string;
+  customer_phone: string;
+  customer_email?: string;
+  booking_id?: string;
+  channel: 'VOICE_CALL' | 'WHATSAPP' | 'SMS' | 'EMAIL' | 'WEB_PORTAL';
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL_FLIGHT_DELAY' | 'CRITICAL_DRIVER_NO_SHOW' | 'EMERGENCY_ROADSIDE_BREAKDOWN';
+  status: 'OPEN' | 'IN_PROGRESS' | 'PENDING_VENDOR' | 'RESOLVED' | 'ESCALATED';
+  subject: string;
+  description: string;
+  assigned_agent?: string;
+  resolution_notes?: string;
+  flight_number?: string;
+  pickup_address?: string;
+  dropoff_address?: string;
+  total_amount_usd?: number;
+  escalation_triggered?: boolean;
+  escalation_reason?: string;
+  created_at: string;
+  resolved_at?: string;
+}
+
+export interface SupportOverviewMetrics {
+  global_config: SupportDeskGlobalConfig;
+  regional_pods?: RegionalStaffingPod[];
+  total_tickets: number;
+  open_tickets: number;
+  resolved_tickets: number;
+  urgent_tickets: number;
+  active_subscribed_vendors: number;
+  avg_response_time_seconds: number;
+  first_contact_resolution_rate_pct: number;
+  active_plans_count: number;
+}
+
+export interface HelicopterHubFeatureConfig {
+  is_enabled: boolean;
+  allow_in_development: boolean;
+  domestic_only_enforced: boolean;
+  multi_leg_only_enforced: boolean;
+  require_faa_part135: boolean;
+  rotorcraft_only_enforced: boolean;
+  default_hourly_rate_usd: number;
+  default_heliport_fee_usd: number;
+  max_payload_limit_lbs: number;
+  compliance_audit_notes: string;
+  last_compliance_review: string;
+  updated_by: string;
+}
+
+export interface DomesticHeliportRecord {
+  code: string;
+  faa_lid?: string;
+  icao_code?: string;
+  name: string;
+  city: string;
+  state_or_region: string;
+  country: string;
+  latitude: number;
+  longitude: number;
+  standard_landing_fee_usd: number;
+  has_vip_lounge: boolean;
+  noise_curfew_hours?: string;
+  operator_name: string;
+}
+
+export interface HelicopterValidationResult {
+  allowed: boolean;
+  status_code: string;
+  reason: string;
+  remediation?: string;
+}
+
+export type DriverDocumentType = 
+  | 'COMMERCIAL_CHAUFFEUR_LICENSE'
+  | 'DOT_MEDICAL_CERTIFICATE'
+  | 'AIRPORT_SECURITY_BADGE'
+  | 'BACKGROUND_CHECK_CERTIFICATE'
+  | 'COMMERCIAL_INSURANCE_CARD'
+  | 'VEHICLE_REGISTRATION';
+
+export interface DriverCredentialDocument {
+  document_id: string;
+  driver_id: string;
+  vendor_id: string;
+  document_type: DriverDocumentType;
+  document_name: string;
+  file_url: string;
+  s3_uri?: string;
+  file_size_bytes: number;
+  mime_type: string;
+  issue_date?: string;
+  expiry_date?: string;
+  status: 'VERIFIED' | 'PENDING_REVIEW' | 'EXPIRING_SOON' | 'EXPIRED';
+  is_primary: boolean;
+  uploaded_at_utc: string;
+  verified_by_actor?: string;
+}
+
+
+
+
 
 
 

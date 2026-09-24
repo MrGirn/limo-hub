@@ -273,7 +273,13 @@ class BookingService:
             currency=quote.currency,
             quote=quote,
             trip=trip,
-            payment=payment
+            payment=payment,
+            cancellation_policy=PricingService.resolve_cancellation_policy(
+                vendor_id=quote.vendor_id,
+                service_type=quote.service_type,
+                vehicle_class=quote.vehicle_class,
+                pickup_time_utc=pickup_time_utc
+            )
         )
         db.bookings[booking.id] = booking
 

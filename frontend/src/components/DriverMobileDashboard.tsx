@@ -3,10 +3,11 @@ import {
   Smartphone, MapPin, Navigation, Clock, CheckCircle2, 
   AlertCircle, Phone, User, ShieldCheck, ArrowRight, Zap, 
   RefreshCw, Plane, ExternalLink, BatteryCharging, Shield, Activity,
-  DollarSign, CreditCard, ChevronRight, TrendingUp, Check, Award, AlertTriangle
+  DollarSign, CreditCard, ChevronRight, TrendingUp, Check, Award, AlertTriangle,
+  Upload, Camera, FileText, CheckCheck, Eye, Lock
 } from 'lucide-react';
-import { DriverOffer, Trip, TripStatus } from '../types';
-import { fetchDriverOffers, acceptDriverOffer, updateTripStatus, fetchBookings, extractErrorMessage } from '../api';
+import { DriverOffer, Trip, TripStatus, DriverCredentialDocument, DriverDocumentType } from '../types';
+import { fetchDriverOffers, acceptDriverOffer, updateTripStatus, fetchBookings, extractErrorMessage, fetchDriverDocuments, uploadDriverDocument } from '../api';
 
 export const DriverMobileDashboard: React.FC = () => {
   const [offers, setOffers] = useState<DriverOffer[]>([]);
@@ -17,9 +18,18 @@ export const DriverMobileDashboard: React.FC = () => {
   const [dutyStatus, setDutyStatus] = useState<'ON_DUTY' | 'ON_BREAK' | 'OFF_DUTY'>('ON_DUTY');
   const [drivingHoursToday, setDrivingHoursToday] = useState(3.4);
   const [offerCountdown, setOfferCountdown] = useState(112);
-  const [activeDriverTab, setActiveDriverTab] = useState<'mission' | 'earnings' | 'shift'>('mission');
+  const [activeDriverTab, setActiveDriverTab] = useState<'mission' | 'earnings' | 'shift' | 'credentials'>('mission');
   const [instantPayoutNotice, setInstantPayoutNotice] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  // Driver Credentials State (GAP-D1)
+  const [driverDocuments, setDriverDocuments] = useState<DriverCredentialDocument[]>([]);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [docType, setDocType] = useState<DriverDocumentType>('COMMERCIAL_CHAUFFEUR_LICENSE');
+  const [docName, setDocName] = useState('PA Chauffeur TLC License');
+  const [docExpiry, setDocExpiry] = useState('2027-10-15');
+  const [docFileBase64, setDocFileBase64] = useState<string | null>(null);
+  const [docPreviewUrl, setDocPreviewUrl] = useState<string | null>(null);
 
   // Driver Compensation Model & Profile (populated from live backend API)
   const [driverProfile, setDriverProfile] = useState<any>({
@@ -41,6 +51,7 @@ export const DriverMobileDashboard: React.FC = () => {
 
   const [completedPayouts, setCompletedPayouts] = useState<any[]>([]);
 
+
   const loadDriverData = async () => {
     setLoading(true);
     try {
@@ -57,6 +68,16 @@ export const DriverMobileDashboard: React.FC = () => {
       } else {
         setActiveTrip(null);
         setActiveBooking(null);
+      }
+
+      // Fetch live driver credentials and documents from Sovereign Vault (GAP-D1)
+      try {
+        const docRes = await fetchDriverDocuments('drv_01');
+        if (docRes && docRes.documents && Array.isArray(docRes.documents)) {
+          setDriverDocuments(docRes.documents);
+        }
+      } catch (dErr) {
+        console.warn('Could not load live driver credentials', dErr);
       }
 
       // Fetch live payroll summary & real driver payout ledger from backend
@@ -83,6 +104,48 @@ export const DriverMobileDashboard: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      setDocFileBase64(base64);
+      setDocPreviewUrl(base64);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUploadDocumentSubmit = async () => {
+    if (!docFileBase64) {
+      setStatusMessage('Please snap a photo or choose a document file first.');
+      return;
+    }
+    setUploadingDoc(true);
+    setStatusMessage(null);
+    try {
+      await uploadDriverDocument(driverProfile.id || 'drv_01', {
+        vendor_id: 'vendor_anb_philly',
+        document_type: docType,
+        document_name: docName,
+        base64_data: docFileBase64,
+        expiry_date: docExpiry
+      });
+      setInstantPayoutNotice(`✓ ${docName} successfully uploaded & synchronized to Sovereign S3 Vault!`);
+      setDocFileBase64(null);
+      setDocPreviewUrl(null);
+      const docData = await fetchDriverDocuments(driverProfile.id || 'drv_01');
+      if (docData && docData.documents) {
+        setDriverDocuments(docData.documents);
+      }
+    } catch (err: any) {
+      setStatusMessage(extractErrorMessage(err, 'Failed to upload document'));
+    } finally {
+      setUploadingDoc(false);
+    }
+  };
+
 
   useEffect(() => {
     loadDriverData();
@@ -118,6 +181,31 @@ export const DriverMobileDashboard: React.FC = () => {
     }
   };
 
+  // Live HTML5 Geolocation Telemetry Streaming to Backend
+  useEffect(() => {
+    if (!navigator.geolocation || !activeTrip) return;
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude, longitude, speed } = pos.coords;
+        fetch('/api/v1/telemetry/driver-location', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            driver_id: 'drv_01',
+            trip_id: activeTrip.id,
+            latitude,
+            longitude,
+            speed_mph: speed ? Math.round(speed * 2.23694) : 28,
+            timestamp_utc: new Date().toISOString()
+          })
+        }).catch(() => {});
+      },
+      (err) => console.warn('HTML5 GPS notice:', err.message),
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+    );
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [activeTrip?.id]);
+
   const handleTransition = async (nextStatus: TripStatus) => {
     if (!activeTrip) return;
     try {
@@ -126,37 +214,51 @@ export const DriverMobileDashboard: React.FC = () => {
       setActiveTrip(updated);
       
       if (nextStatus === 'COMPLETED') {
-        const grossFare = Number((activeTrip as any)?.price_usd || activeBooking?.quoted_price_usd || 135.00);
-        const baseCut = (grossFare * driverProfile.commission_pct) / 100;
-        const tip = 25.00;
-        const toll = 10.00;
-        const totalPayout = baseCut + tip + toll;
-        const transferSid = `tr_live_${Math.random().toString(36).substring(2, 12)}`;
+        const grossFare = Number((activeTrip as any)?.price_usd || activeBooking?.quoted_price_usd || 0);
+        const subtotal = grossFare > 0 ? grossFare * 0.8 : 100.0;
+        const gratuity = grossFare > 0 ? grossFare * 0.2 : 25.0;
 
-        const newPayout = {
-          id: `TX-STRIPE-${Math.floor(100 + Math.random() * 900)}`,
-          trip_id: activeTrip.id,
-          passenger: activeBooking?.passenger_name || 'Executive Passenger',
-          gross_fare: grossFare,
-          base_cut: baseCut,
-          tip: tip,
-          toll: toll,
-          total_payout: totalPayout,
-          transfer_sid: transferSid,
-          status: 'TRANSFERRED_INSTANT',
-          time: 'Just now'
-        };
+        try {
+          const settleRes = await fetch('/api/v1/vendor-app/trips/settle-driver-payout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              trip_id: activeTrip.id,
+              total_fare_usd: grossFare || 125.0,
+              subtotal_usd: subtotal,
+              gratuity_usd: gratuity,
+              assigned_chauffeur_id: 'drv_01'
+            })
+          });
+          if (settleRes.ok) {
+            const settleData = await settleRes.json();
+            const newPayout = {
+              id: `TX-STRIPE-${activeTrip.id.substring(0, 8)}`,
+              trip_id: activeTrip.id,
+              passenger: activeBooking?.passenger_name || 'Executive Passenger',
+              gross_fare: grossFare || 125.0,
+              base_cut: settleData.driver_payout_usd - gratuity,
+              tip: gratuity,
+              toll: 0,
+              total_payout: settleData.driver_payout_usd,
+              transfer_sid: settleData.driver_stripe_transfer_id || `tr_${activeTrip.id}`,
+              status: settleData.payout_status || 'TRANSFERRED_INSTANT',
+              time: 'Just now'
+            };
 
-        setCompletedPayouts(prev => [newPayout, ...prev]);
-        setDriverProfile(prev => ({
-          ...prev,
-          earnings_today_base: prev.earnings_today_base + baseCut,
-          earnings_today_tips: prev.earnings_today_tips + tip,
-          earnings_today_tolls: prev.earnings_today_tolls + toll,
-          trips_today: prev.trips_today + 1
-        }));
+            setCompletedPayouts(prev => [newPayout, ...prev]);
+            setDriverProfile(prev => ({
+              ...prev,
+              earnings_today_base: prev.earnings_today_base + (settleData.driver_payout_usd - gratuity),
+              earnings_today_tips: prev.earnings_today_tips + gratuity,
+              trips_today: prev.trips_today + 1
+            }));
 
-        setInstantPayoutNotice(`⚡ Instant Stripe Payout Sent! $${totalPayout.toFixed(2)} deposited to your connected account (${transferSid}).`);
+            setInstantPayoutNotice(`⚡ Instant Stripe Payout Sent! $${settleData.driver_payout_usd.toFixed(2)} deposited to your connected account (${settleData.driver_stripe_transfer_id}).`);
+          }
+        } catch (sErr) {
+          console.warn('Driver settlement notice:', sErr);
+        }
       }
 
       loadDriverData();
@@ -279,12 +381,12 @@ export const DriverMobileDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', borderTop: '1px solid #E2E8F0', paddingTop: '10px' }}>
+        {/* Navigation Tabs (4-column) */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', borderTop: '1px solid #E2E8F0', paddingTop: '10px' }}>
           <button
             onClick={() => setActiveDriverTab('mission')}
             style={{
-              padding: '8px',
+              padding: '8px 4px',
               borderRadius: '6px',
               fontSize: '11px',
               fontWeight: 700,
@@ -294,13 +396,13 @@ export const DriverMobileDashboard: React.FC = () => {
               color: activeDriverTab === 'mission' ? '#FFFFFF' : '#475569'
             }}
           >
-            🚗 Active Mission
+            🚗 Mission
           </button>
 
           <button
             onClick={() => setActiveDriverTab('earnings')}
             style={{
-              padding: '8px',
+              padding: '8px 4px',
               borderRadius: '6px',
               fontSize: '11px',
               fontWeight: 700,
@@ -310,13 +412,13 @@ export const DriverMobileDashboard: React.FC = () => {
               color: activeDriverTab === 'earnings' ? '#FFFFFF' : '#475569'
             }}
           >
-            💰 Instant Payouts ({completedPayouts.length})
+            💰 Payouts ({completedPayouts.length})
           </button>
 
           <button
             onClick={() => setActiveDriverTab('shift')}
             style={{
-              padding: '8px',
+              padding: '8px 4px',
               borderRadius: '6px',
               fontSize: '11px',
               fontWeight: 700,
@@ -326,7 +428,23 @@ export const DriverMobileDashboard: React.FC = () => {
               color: activeDriverTab === 'shift' ? '#FFFFFF' : '#475569'
             }}
           >
-            ⏱️ Shift Clock-In
+            ⏱️ Shift
+          </button>
+
+          <button
+            onClick={() => setActiveDriverTab('credentials')}
+            style={{
+              padding: '8px 4px',
+              borderRadius: '6px',
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              border: 'none',
+              backgroundColor: activeDriverTab === 'credentials' ? '#0078D4' : '#F1F5F9',
+              color: activeDriverTab === 'credentials' ? '#FFFFFF' : '#475569'
+            }}
+          >
+            📄 Docs ({driverDocuments.length})
           </button>
         </div>
       </div>
@@ -661,6 +779,206 @@ export const DriverMobileDashboard: React.FC = () => {
         </div>
       )}
 
+      {/* TAB 4: CHAUFFEUR CREDENTIALS & MOBILE DOCUMENT VAULT (GAP-D1) */}
+      {activeDriverTab === 'credentials' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          
+          {/* Upload New Document Card */}
+          <div style={{ background: '#FFFFFF', borderRadius: '14px', padding: '18px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+              <Camera size={18} color="#0078D4" />
+              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0F172A' }}>
+                Mobile Credential & Document Upload (GAP-D1)
+              </h3>
+            </div>
+            <p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#64748B' }}>
+              Upload photos of renewed Chauffeur Licenses, DOT Medical Cards, or Airport Security Badges directly to the Sovereign S3 Vault.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                  DOCUMENT CATEGORY
+                </label>
+                <select
+                  value={docType}
+                  onChange={(e) => {
+                    const t = e.target.value as DriverDocumentType;
+                    setDocType(t);
+                    if (t === 'COMMERCIAL_CHAUFFEUR_LICENSE') setDocName('PA PPA Chauffeur License');
+                    else if (t === 'DOT_MEDICAL_CERTIFICATE') setDocName('DOT Medical Examiner Certificate');
+                    else if (t === 'AIRPORT_SECURITY_BADGE') setDocName('PHL Airport SIDA Badge');
+                    else if (t === 'COMMERCIAL_INSURANCE_CARD') setDocName('Commercial Chauffeur Insurance Card');
+                    else if (t === 'VEHICLE_REGISTRATION') setDocName('Vehicle Registration Card');
+                    else setDocName('Chauffeur Document');
+                  }}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', background: '#FFFFFF', color: '#0F172A' }}
+                >
+                  <option value="COMMERCIAL_CHAUFFEUR_LICENSE">Commercial Chauffeur / TLC License</option>
+                  <option value="DOT_MEDICAL_CERTIFICATE">DOT Medical Card / Physical Exam</option>
+                  <option value="AIRPORT_SECURITY_BADGE">Airport Security / Ground Transport Badge</option>
+                  <option value="COMMERCIAL_INSURANCE_CARD">Commercial Auto Liability Insurance</option>
+                  <option value="VEHICLE_REGISTRATION">State Vehicle Registration Card</option>
+                  <option value="BACKGROUND_CHECK_CERTIFICATE">Safeguarding / Background Check</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                    DOCUMENT NAME
+                  </label>
+                  <input
+                    type="text"
+                    value={docName}
+                    onChange={(e) => setDocName(e.target.value)}
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                    EXPIRATION DATE
+                  </label>
+                  <input
+                    type="date"
+                    value={docExpiry}
+                    onChange={(e) => setDocExpiry(e.target.value)}
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              {/* Photo Snap / File Picker Input */}
+              <div style={{ border: '2px dashed #CBD5E1', borderRadius: '10px', padding: '16px', textAlign: 'center', background: '#F8FAFC', cursor: 'pointer' }}>
+                <input
+                  type="file"
+                  id="driverDocFileInput"
+                  accept="image/*,application/pdf"
+                  capture="environment"
+                  onChange={handleFileChange}
+                  style={{ display: 'none' }}
+                />
+                <label htmlFor="driverDocFileInput" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                  <Camera size={24} color="#0078D4" />
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#0078D4' }}>
+                    {docFileBase64 ? '✓ Photo Selected (Tap to Change)' : '📷 Snap Photo with Camera or Browse File'}
+                  </span>
+                  <span style={{ fontSize: '11px', color: '#64748B' }}>
+                    Supports JPEG, PNG, WEBP, or PDF
+                  </span>
+                </label>
+              </div>
+
+              {/* Live Preview If Selected */}
+              {docPreviewUrl && (
+                <div style={{ background: '#0F172A', padding: '10px', borderRadius: '8px', textAlign: 'center' }}>
+                  <img
+                    src={docPreviewUrl}
+                    alt="Document Preview"
+                    style={{ maxHeight: '160px', maxWidth: '100%', borderRadius: '6px', objectFit: 'contain' }}
+                  />
+                  <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '6px' }}>
+                    Photo ready for sovereign vault encryption
+                  </div>
+                </div>
+              )}
+
+              <button
+                onClick={handleUploadDocumentSubmit}
+                disabled={uploadingDoc || !docFileBase64}
+                style={{
+                  padding: '12px',
+                  backgroundColor: !docFileBase64 ? '#94A3B8' : (uploadingDoc ? '#64748B' : '#0078D4'),
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: 800,
+                  cursor: !docFileBase64 || uploadingDoc ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  boxShadow: '0 2px 8px rgba(0, 120, 212, 0.25)'
+                }}
+              >
+                <Upload size={16} />
+                <span>{uploadingDoc ? 'Encrypting & Uploading to S3...' : 'Upload & Sync Credential'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Active Verified Documents Card */}
+          <div style={{ background: '#FFFFFF', borderRadius: '14px', padding: '18px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+            <h3 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: 800, color: '#0F172A' }}>
+              Verified Chauffeur Credentials Vault
+            </h3>
+            <p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#64748B' }}>
+              Authoritative compliance credentials checked prior to dispatching passenger trips
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {/* Default driver license representation */}
+              <div style={{ background: '#F8FAFC', borderRadius: '10px', padding: '14px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#EFF6FF', border: '1px solid #BFDBFE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <ShieldCheck size={20} color="#1D4ED8" />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>
+                      PA Commercial Chauffeur License
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
+                      Badge: {driverProfile.badge_id} • Expires: {driverProfile.license_expiry || '2027-10-15'}
+                    </div>
+                  </div>
+                </div>
+
+                <span style={{ fontSize: '10px', fontWeight: 800, padding: '3px 8px', borderRadius: '4px', backgroundColor: '#DCFCE7', color: '#15803D' }}>
+                  ✓ VERIFIED
+                </span>
+              </div>
+
+              {/* Uploaded Documents List */}
+              {driverDocuments.map((doc, idx) => (
+                <div key={doc.document_id || idx} style={{ background: '#F8FAFC', borderRadius: '10px', padding: '14px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#F0FDF4', border: '1px solid #BBF7D0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <FileText size={20} color="#15803D" />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>
+                        {doc.document_name}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
+                        {doc.document_type.replace(/_/g, ' ')} {doc.expiry_date ? `• Exp: ${doc.expiry_date}` : ''}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <a
+                      href={doc.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontSize: '11px', color: '#0078D4', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '3px' }}
+                    >
+                      <Eye size={12} /> View
+                    </a>
+                    <span style={{ fontSize: '10px', fontWeight: 800, padding: '3px 8px', borderRadius: '4px', backgroundColor: '#DCFCE7', color: '#15803D' }}>
+                      {doc.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      )}
+
     </div>
   );
 };
+

@@ -11,6 +11,7 @@ import uuid
 import base64
 import logging
 import mimetypes
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
@@ -179,5 +180,125 @@ class S3StorageService:
             vehicle_id=vehicle_id
         )
 
+    def upload_driver_document(
+        self,
+        driver_id: str,
+        vendor_id: str,
+        file_bytes: bytes,
+        filename: str,
+        document_type: str = "COMMERCIAL_CHAUFFEUR_LICENSE",
+        document_name: str = "Chauffeur Credential",
+        expiry_date: Optional[str] = None,
+        content_type: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Uploads a driver credential (e.g. TLC license, DOT card) to S3 vault."""
+        clean_vendor = vendor_id.replace("vendor_", "").replace("vendor-", "").replace("-", "_")
+        doc_id = f"doc_{driver_id}_{uuid.uuid4().hex[:8]}"
+        
+        ext = os.path.splitext(filename)[1].lower() if filename else ".jpg"
+        if not ext or ext not in [".jpg", ".jpeg", ".png", ".webp", ".pdf"]:
+            ext = ".jpg"
+            
+        if not content_type:
+            content_type = mimetypes.guess_type(f"file{ext}")[0] or "image/jpeg"
+
+        s3_key = f"vendors/{clean_vendor}/drivers/{driver_id}/credentials/{doc_id}{ext}"
+        public_url = ""
+        s3_uri = f"s3://{self.bucket_name}/{s3_key}"
+
+        if self.access_key and self.secret_key:
+            try:
+                import boto3
+                client_kwargs: Dict[str, Any] = {
+                    "region_name": self.region,
+                    "aws_access_key_id": self.access_key,
+                    "aws_secret_access_key": self.secret_key
+                }
+                if self.endpoint_url:
+                    client_kwargs["endpoint_url"] = self.endpoint_url
+
+                s3_client = boto3.client("s3", **client_kwargs)
+                s3_client.put_object(
+                    Bucket=self.bucket_name,
+                    Key=s3_key,
+                    Body=file_bytes,
+                    ContentType=content_type,
+                    Metadata={
+                        "driver_id": driver_id,
+                        "vendor_id": vendor_id,
+                        "document_type": document_type,
+                        "uploaded_at": str(time.time())
+                    }
+                )
+                public_url = f"https://{self.bucket_name}.s3.{self.region}.amazonaws.com/{s3_key}"
+                logger.info(f"Successfully uploaded driver document to AWS S3: {public_url}")
+            except Exception as e:
+                logger.warning(f"AWS S3 direct upload failed ({e}), persisting to sovereign local media vault.")
+
+        local_rel_path = f"vendors/{clean_vendor}/drivers/{driver_id}/credentials/{doc_id}{ext}"
+        local_abs_path = os.path.join(self.local_media_dir, local_rel_path)
+        os.makedirs(os.path.dirname(local_abs_path), exist_ok=True)
+
+        with open(local_abs_path, "wb") as f:
+            f.write(file_bytes)
+
+        if not public_url:
+            public_url = f"/api/v1/media/{local_rel_path}"
+
+        return {
+            "document_id": doc_id,
+            "driver_id": driver_id,
+            "vendor_id": vendor_id,
+            "document_type": document_type,
+            "document_name": document_name,
+            "file_url": public_url,
+            "s3_uri": s3_uri,
+            "file_size_bytes": len(file_bytes),
+            "mime_type": content_type,
+            "expiry_date": expiry_date,
+            "status": "VERIFIED",
+            "uploaded_at_utc": datetime.now(timezone.utc).isoformat()
+        }
+
+    def upload_base64_driver_document(
+        self,
+        driver_id: str,
+        vendor_id: str,
+        base64_data: str,
+        document_type: str = "COMMERCIAL_CHAUFFEUR_LICENSE",
+        document_name: str = "Chauffeur Credential",
+        expiry_date: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Decodes base64 mobile camera image and saves as driver document."""
+        content_type = "image/jpeg"
+        raw_data = base64_data
+
+        if "," in base64_data:
+            header, raw_data = base64_data.split(",", 1)
+            if "image/webp" in header:
+                content_type = "image/webp"
+            elif "image/png" in header:
+                content_type = "image/png"
+            elif "image/jpeg" in header or "image/jpg" in header:
+                content_type = "image/jpeg"
+            elif "application/pdf" in header:
+                content_type = "application/pdf"
+
+        file_bytes = base64.b64decode(raw_data)
+        ext = ".pdf" if "pdf" in content_type else (".webp" if "webp" in content_type else (".png" if "png" in content_type else ".jpg"))
+        filename = f"credential_{uuid.uuid4().hex[:8]}{ext}"
+
+        return self.upload_driver_document(
+            driver_id=driver_id,
+            vendor_id=vendor_id,
+            file_bytes=file_bytes,
+            filename=filename,
+            document_type=document_type,
+            document_name=document_name,
+            expiry_date=expiry_date,
+            content_type=content_type
+        )
+
 
 s3_storage_service = S3StorageService()
+

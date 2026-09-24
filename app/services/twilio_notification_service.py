@@ -118,8 +118,8 @@ class TwilioNotificationService:
         Initiates a live outbound phone call via Twilio Calls REST API with TwiML speech synthesis.
         """
         if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN:
-            logger.info(f"[VOICE CALL SIMULATION] To: {to_number} | Message: {message_to_speak}")
-            return {"success": True, "simulated": True, "to": to_number}
+            logger.warning(f"[TWILIO UNCONFIGURED] Outbound call to {to_number} skipped: TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN missing.")
+            return {"success": False, "status": "SETUP_REQUIRED", "error": "Twilio credentials unconfigured", "to": to_number}
 
         clean_to = to_number.strip().replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
         if not clean_to.startswith("+"):

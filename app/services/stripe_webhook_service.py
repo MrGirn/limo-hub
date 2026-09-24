@@ -59,13 +59,13 @@ class StripeWebhookService:
 
         now_utc = datetime.now(timezone.utc)
         settlement_record: Optional[SplitSettlementRecord] = None
-        action_summary = "Processed successfully."
-
-        if not booking_id and db.bookings:
-            booking_id = next(iter(db.bookings.keys()))
-
         booking = db.bookings.get(booking_id) if booking_id else None
         trip = db.trips.get(booking_id) if booking_id else None
+
+        if not booking and not trip:
+            logger.info(f"Stripe webhook {event_type} received without associated booking metadata: event_id={event_id}")
+            action_summary = f"Event recorded. No active local booking matched metadata: {booking_id or 'none'}."
+
 
         if event_type == "payment_intent.amount_capturable_updated":
             action_summary = f"Pre-authorization hold confirmed for booking {booking_id}."

@@ -23,6 +23,8 @@ class VehicleClass(str, Enum):
     ELECTRIC_VIP = "ELECTRIC_VIP"      # e.g., Lucid Air Grand Touring, Porsche Taycan, Tesla Model S Plaid
     BUSINESS_SEDAN = "BUSINESS_SEDAN"  # e.g., Mercedes-Benz E-Class, BMW 5 Series
     ULTRA_LUXURY = "ULTRA_LUXURY"      # e.g., Rolls-Royce Ghost, Bentley Flying Spur
+    HELICOPTER_CHARTER = "HELICOPTER_CHARTER" # e.g., Airbus H130 VIP, Bell 407 GXi, Sikorsky S-76D (Domestic Multi-Leg Only)
+
 
 
 class LegMode(str, Enum):
@@ -139,6 +141,16 @@ class VendorPricingRule(BaseModel):
     gratuity_rate: Decimal = Decimal("0.00")
     currency: str = "USD"
     distance_unit: DistanceUnit = DistanceUnit.MILES
+    child_seat_fee_net: Decimal = Decimal("25.00")
+    wheelchair_lift_surcharge_net: Decimal = Decimal("45.00")
+
+    
+    # Authoritative Vendor Cancellation Policy Rules
+    cancellation_lead_hours_standard: int = 2
+    cancellation_lead_hours_hourly: int = 24
+    cancellation_lead_hours_sprinter: int = 24
+    late_cancellation_fee_pct: Decimal = Decimal("100.00")
+    
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -842,6 +854,33 @@ class DriverPayoutRecord(BaseModel):
     created_at_utc: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class DriverDocumentType(str, Enum):
+    COMMERCIAL_CHAUFFEUR_LICENSE = "COMMERCIAL_CHAUFFEUR_LICENSE"
+    DOT_MEDICAL_CERTIFICATE = "DOT_MEDICAL_CERTIFICATE"
+    AIRPORT_SECURITY_BADGE = "AIRPORT_SECURITY_BADGE"
+    BACKGROUND_CHECK_CERTIFICATE = "BACKGROUND_CHECK_CERTIFICATE"
+    COMMERCIAL_INSURANCE_CARD = "COMMERCIAL_INSURANCE_CARD"
+    VEHICLE_REGISTRATION = "VEHICLE_REGISTRATION"
+
+
+class DriverCredentialDocument(BaseModel):
+    document_id: str
+    driver_id: str
+    vendor_id: str
+    document_type: DriverDocumentType
+    document_name: str
+    file_url: str
+    s3_uri: Optional[str] = None
+    file_size_bytes: int = 0
+    mime_type: str = "image/jpeg"
+    issue_date: Optional[str] = None
+    expiry_date: Optional[str] = None
+    status: str = "VERIFIED"  # VERIFIED, PENDING_REVIEW, EXPIRING_SOON, EXPIRED
+    is_primary: bool = True
+    uploaded_at_utc: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    verified_by_actor: Optional[str] = "FLEET_SAFETY_OFFICER"
+
+
 class Driver(BaseModel):
     id: str
     tenant_id: str
@@ -877,6 +916,8 @@ class Driver(BaseModel):
     monthly_salary_usd: Decimal = Decimal("4500.00")
     stripe_connect_account_id: Optional[str] = None
     stripe_payout_method: str = "INSTANT_DEBIT_CARD"
+    documents: List[DriverCredentialDocument] = Field(default_factory=list)
+
 
 
 class QuoteLineItem(BaseModel):
@@ -1008,6 +1049,17 @@ class MasterItinerary(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class CancellationPolicy(BaseModel):
+    vendor_id: str
+    vendor_name: Optional[str] = None
+    cutoff_hours: int = 2
+    deadline_utc: datetime
+    is_free_cancellation_active: bool = True
+    policy_description: str
+    late_fee_description: str
+    late_cancellation_fee_pct: float = 100.0
+
+
 class Quote(BaseModel):
     id: str
     tenant_id: str
@@ -1062,6 +1114,9 @@ class Quote(BaseModel):
     tax_jurisdiction: Optional[str] = "US_NY"
     corporate_account_id: Optional[str] = None
     cost_center_code: Optional[str] = None
+    
+    # Dynamic Vendor-Governed Cancellation Policy
+    cancellation_policy: Optional[CancellationPolicy] = None
     
     line_items: List[QuoteLineItem] = []
     is_binding: bool = False
@@ -1171,6 +1226,7 @@ class Booking(BaseModel):
     master_itinerary: Optional[MasterItinerary] = None
     corporate_account_id: Optional[str] = None
     cost_center_code: Optional[str] = None
+    cancellation_policy: Optional[CancellationPolicy] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 

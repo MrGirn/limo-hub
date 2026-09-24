@@ -40,26 +40,30 @@ export const PublicAuthModal: React.FC<PublicAuthModalProps> = ({
     setErrorMessage(null);
     setSuccessStatus(`Connecting to ${provider === 'apple' ? 'Apple ID / FaceID' : 'Google Identity Secure SSO'}...`);
 
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 600));
+    if (!emailInput || !emailInput.includes('@')) {
+      setIsProcessing(false);
+      setAuthProvider(null);
+      setErrorMessage(`Please enter your valid passenger email address below to sign in with ${provider === 'apple' ? 'Apple ID' : 'Google'}.`);
+      return;
+    }
 
-      const simulatedEmail = provider === 'apple' 
-        ? (emailInput || 'vip.executive@icloud.com') 
-        : (emailInput || 'vip.traveler@gmail.com');
-      
-      const simulatedName = nameInput || (provider === 'apple' ? 'Apple VIP Guest' : 'Google Travel Executive');
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+
+      const userEmail = emailInput.trim().toLowerCase();
+      const userName = nameInput.trim() || userEmail.split('@')[0];
 
       const res = await oauthLoginApi({
         provider,
-        email: simulatedEmail,
-        full_name: simulatedName,
+        email: userEmail,
+        full_name: userName,
         id_token: `jwt_${provider}_token_assertion_${Date.now()}`,
         role: selectedRole,
         vendor_id: vendorId
       });
 
-      setSuccessStatus(`Verified! Welcome ${res.user.full_name || 'VIP Guest'}`);
-      await new Promise((resolve) => setTimeout(resolve, 400));
+      setSuccessStatus(`Verified! Welcome ${res.user.full_name || userName}`);
+      await new Promise((resolve) => setTimeout(resolve, 300));
       onAuthSuccess(res.user, res.token);
       onClose();
     } catch (err: any) {

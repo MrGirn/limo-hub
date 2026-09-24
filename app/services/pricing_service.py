@@ -21,7 +21,8 @@ from typing import Optional, List, Dict, Any, Tuple
 
 from app.domain_models import (
     VehicleClass, ServiceType, TransitType, TransitDetails, 
-    RouteMetrics, Quote, QuoteLineItem, RegionalTaxRule, FXRateSnapshot
+    RouteMetrics, Quote, QuoteLineItem, RegionalTaxRule, FXRateSnapshot,
+    CancellationPolicy
 )
 from app.database import db
 from app.services.google_maps_service import GoogleMapsService
@@ -252,7 +253,9 @@ class PricingService:
         wait_minutes: int = 0,
         currency: str = "USD",
         pickup_time_utc: Optional[datetime] = None,
-        meet_and_greet_inside: bool = False
+        meet_and_greet_inside: bool = False,
+        child_seats: Optional[Any] = None,
+        accessibility: Optional[Any] = None
     ) -> Quote:
         from app.services.vendor_pricing_ai_service import VendorPricingAIService
 
@@ -529,9 +532,43 @@ class PricingService:
                     total_gross=round_cur(wait_net * (Decimal("1.00") + tax_rate))
                 ))
 
+            # Child Safety & Booster Seats
+            if child_seats:
+                rear = getattr(child_seats, "infant_rear_facing", 0) or 0
+                forward = getattr(child_seats, "toddler_forward_facing", 0) or 0
+                booster = getattr(child_seats, "booster_seat", 0) or 0
+                total_seats = rear + forward + booster
+                if total_seats > 0:
+                    seat_rate = getattr(custom_rule, "child_seat_fee_net", Decimal("25.00")) * fx_multiplier
+                    seat_total_net = round_cur(Decimal(total_seats) * seat_rate)
+                    line_items.append(QuoteLineItem(
+                        description=f"Sanitized Child Safety & Booster Seats ({total_seats} Dedicated Units Installed)",
+                        quantity=total_seats,
+                        unit_price_net=round_cur(seat_rate),
+                        total_net=seat_total_net,
+                        tax_rate=tax_rate,
+                        tax_amount=round_cur(seat_total_net * tax_rate),
+                        total_gross=round_cur(seat_total_net * (Decimal("1.00") + tax_rate))
+                    ))
+
+            # Wheelchair Accessibility & Hydraulic Ramp Staging
+            if accessibility and (getattr(accessibility, "wheelchair_accessible_vehicle_needed", False) or getattr(accessibility, "requires_ramp_or_lift", False)):
+                ramp_rate = getattr(custom_rule, "wheelchair_lift_surcharge_net", Decimal("45.00")) * fx_multiplier
+                ramp_total_net = round_cur(ramp_rate)
+                line_items.append(QuoteLineItem(
+                    description="Wheelchair Accessible Vehicle (WAV) Hydraulic Lift Staging & Certified Securement",
+                    quantity=1,
+                    unit_price_net=ramp_total_net,
+                    total_net=ramp_total_net,
+                    tax_rate=tax_rate,
+                    tax_amount=round_cur(ramp_total_net * tax_rate),
+                    total_gross=round_cur(ramp_total_net * (Decimal("1.00") + tax_rate))
+                ))
+
             core_transportation_subtotal = (
                 base_fee + passenger_distance_net + outbound_positioning_net + return_deadhead_net
             )
+
             est_duration = maps_calc["passenger_duration_minutes"]
 
         # 6. Dynamic Fuel Surcharge (% of base transportation fare)
@@ -646,10 +683,70 @@ class PricingService:
             deposit_hold_amount=Decimal("0.00"),
             fx_snapshot=fx_snap,
             tax_jurisdiction=regional_rule.jurisdiction_code,
+            cancellation_policy=PricingService.resolve_cancellation_policy(
+                vendor_id=vendor_id,
+                service_type=service_type,
+                vehicle_class=vehicle_class,
+                pickup_time_utc=pickup_time_utc
+            ),
             line_items=line_items,
             is_binding=True,
             expires_at=now + timedelta(hours=2),
             created_at=now
+        )
+
+    @staticmethod
+    def resolve_cancellation_policy(
+        vendor_id: str,
+        service_type: ServiceType,
+        vehicle_class: VehicleClass,
+        pickup_time_utc: Optional[datetime] = None
+    ) -> CancellationPolicy:
+        """
+        Authoritative Vendor Business Rules Evaluation for Booking Cancellations:
+        - Resolves specific vendor's configured cancellation lead hours (Standard / Hourly / Sprinter).
+        - Computes dynamic deadline UTC timestamp against scheduled pickup time.
+        - Evaluates if complimentary free cancellation window is currently active.
+        """
+        from app.services.vendor_pricing_ai_service import VendorPricingAIService
+        from app.services.vendor_spinup_service import vendor_spinup_service
+
+        custom_rule = VendorPricingAIService.get_vendor_pricing_rule(vendor_id, vehicle_class)
+        branding = vendor_spinup_service.get_portal_branding(vendor_id) or {}
+        b_obj = branding.get("branding") or {}
+        vendor_name = b_obj.get("company_name") or "ANB Limo Executive Chauffeur"
+
+        # Determine cutoff hours based on vehicle tier & service type from vendor's custom rules
+        is_sprinter = vehicle_class in (VehicleClass.BUSINESS_VAN,) or "VAN" in str(vehicle_class) or "SPRINTER" in str(vehicle_class)
+        is_hourly = service_type in (ServiceType.HOURLY_AS_DIRECTED,)
+
+        if is_sprinter:
+            cutoff_hours = getattr(custom_rule, "cancellation_lead_hours_sprinter", 24) or 24
+            policy_desc = f"Complimentary free cancellation with 100% pre-authorization escrow release up to {cutoff_hours} hours prior to scheduled departure for executive Sprinter/Van bookings."
+        elif is_hourly:
+            cutoff_hours = getattr(custom_rule, "cancellation_lead_hours_hourly", 24) or 24
+            policy_desc = f"Complimentary free cancellation with 100% pre-authorization escrow release up to {cutoff_hours} hours prior to scheduled departure for hourly charter bookings."
+        else:
+            cutoff_hours = getattr(custom_rule, "cancellation_lead_hours_standard", 2) or 2
+            policy_desc = f"Complimentary free cancellation with 100% pre-authorization escrow release up to {cutoff_hours} hours prior to scheduled pickup time."
+
+        pickup_ref = pickup_time_utc or (datetime.now(timezone.utc) + timedelta(hours=24))
+        deadline_utc = pickup_ref - timedelta(hours=cutoff_hours)
+        now_utc = datetime.now(timezone.utc)
+        is_free_active = now_utc < deadline_utc
+        late_fee_pct = float(getattr(custom_rule, "late_cancellation_fee_pct", Decimal("100.00")) or 100.0)
+
+        late_fee_desc = f"Cancellations within {cutoff_hours} hours of scheduled pickup are subject to standard late cancellation fees per {vendor_name} operating policy."
+
+        return CancellationPolicy(
+            vendor_id=vendor_id,
+            vendor_name=vendor_name,
+            cutoff_hours=cutoff_hours,
+            deadline_utc=deadline_utc,
+            is_free_cancellation_active=is_free_active,
+            policy_description=policy_desc,
+            late_fee_description=late_fee_desc,
+            late_cancellation_fee_pct=late_fee_pct
         )
 
     @staticmethod

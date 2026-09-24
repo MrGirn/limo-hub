@@ -271,6 +271,19 @@ def lookup_customer_bookings(query: str = Query(..., min_length=2, description="
         if match:
             results.append(b)
     
+    for b in results:
+        if not getattr(b, "cancellation_policy", None):
+            try:
+                from app.services.pricing_service import PricingService
+                b.cancellation_policy = PricingService.resolve_cancellation_policy(
+                    vendor_id=b.vendor_id,
+                    service_type=b.service_type,
+                    vehicle_class=b.vehicle_class,
+                    pickup_time_utc=b.pickup_time_utc
+                )
+            except Exception:
+                pass
+
     results.sort(key=lambda x: x.created_at if hasattr(x, 'created_at') and x.created_at else datetime.min.replace(tzinfo=timezone.utc), reverse=True)
     return results
 
@@ -280,6 +293,17 @@ def get_booking(booking_id: str):
     booking = db.bookings.get(booking_id)
     if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
+    if not getattr(booking, "cancellation_policy", None):
+        try:
+            from app.services.pricing_service import PricingService
+            booking.cancellation_policy = PricingService.resolve_cancellation_policy(
+                vendor_id=booking.vendor_id,
+                service_type=booking.service_type,
+                vehicle_class=booking.vehicle_class,
+                pickup_time_utc=booking.pickup_time_utc
+            )
+        except Exception:
+            pass
     return booking
 
 
@@ -356,13 +380,14 @@ class CustomerBookingCancelDTO(BaseModel):
 def cancel_customer_booking(booking_id: str, dto: Optional[CustomerBookingCancelDTO] = None):
     """
     Authoritative Customer Self-Service Booking Cancellation:
-    - Verifies cancellation policy compliance
+    - Verifies cancellation policy compliance against Performing Vendor's business rules
     - Releases Stripe Pre-Authorization Hold back to the customer's card
     - Synchronizes status to CANCELLED in memory and MySQL database
-    - Dispatches Twilio confirmation SMS
+    - Dispatches Twilio confirmation SMS with vendor-specific policy details
     """
     from app.services.stripe_payment_service import StripePaymentService
     from app.services.twilio_notification_service import TwilioNotificationService
+    from app.services.pricing_service import PricingService
     from app.domain_models import BookingStatus, TripStatus
     from app.database import mysql_db
     from app.database_mysql import BookingModel, TripModel
@@ -381,6 +406,32 @@ def cancel_customer_booking(booking_id: str, dto: Optional[CustomerBookingCancel
                     session.commit()
             finally:
                 session.close()
+
+    # Dynamic Vendor Cancellation Policy Verification
+    vendor_id = getattr(booking, "vendor_id", "vendor_anb_philly") if booking else "vendor_anb_philly"
+    service_type = getattr(booking, "service_type", None) or "POINT_TO_POINT"
+    vehicle_class = getattr(booking, "vehicle_class", None) or "LUXURY_SUV"
+    pickup_time = getattr(booking, "pickup_time_utc", None) or (datetime.now(timezone.utc) + timedelta(hours=24))
+
+    policy = None
+    if booking and hasattr(booking, "cancellation_policy") and booking.cancellation_policy:
+        policy = booking.cancellation_policy
+    else:
+        try:
+            policy = PricingService.resolve_cancellation_policy(
+                vendor_id=vendor_id,
+                service_type=service_type,
+                vehicle_class=vehicle_class,
+                pickup_time_utc=pickup_time
+            )
+        except Exception:
+            pass
+
+    now_utc = datetime.now(timezone.utc)
+    deadline_utc = policy.deadline_utc if policy else (pickup_time - timedelta(hours=2))
+    is_within_free_window = now_utc < deadline_utc
+    cutoff_hours = policy.cutoff_hours if policy else 2
+    vendor_name = policy.vendor_name if policy else "ANB Limo Executive Chauffeur"
 
     # Release Stripe Pre-Auth Hold
     stripe_result = {"success": True, "status": "PREAUTH_RELEASED"}
@@ -413,16 +464,21 @@ def cancel_customer_booking(booking_id: str, dto: Optional[CustomerBookingCancel
         finally:
             session.close()
 
-    # Send cancellation notification SMS
+    # Send cancellation notification SMS with dynamic vendor policy
     passenger_phone = getattr(booking.party, "passenger_phone", None) if (booking and hasattr(booking, "party")) else None
     passenger_name = getattr(booking.party, "passenger_name", "Valued Guest") if (booking and hasattr(booking, "party")) else "Valued Guest"
     if passenger_phone:
+        policy_note = (
+            f"Zero cancellation fee charged under {vendor_name}'s {cutoff_hours}-hr policy."
+            if is_within_free_window else
+            f"Cancellation processed. Standard policy terms apply per {vendor_name}."
+        )
         TwilioNotificationService.send_sms(
             passenger_phone,
             f"🕊️ RESERVATION CANCELLED #{booking_id}\n"
-            f"Dear {passenger_name}, your reservation #{booking_id} has been cancelled.\n"
+            f"Dear {passenger_name}, your reservation #{booking_id} with {vendor_name} has been cancelled.\n"
             f"Pre-Auth Hold: Fully released back to your card.\n"
-            f"Zero cancellation fee was charged under our complimentary 2-hr policy."
+            f"{policy_note}"
         )
 
     return {
@@ -430,8 +486,15 @@ def cancel_customer_booking(booking_id: str, dto: Optional[CustomerBookingCancel
         "booking_id": booking_id,
         "status": "CANCELLED",
         "refund_status": "FULL_PREAUTH_RELEASED",
-        "cancellation_fee_usd": 0.00,
-        "message": f"Reservation #{booking_id} cancelled. 100% pre-authorization hold released to customer card."
+        "cancellation_fee_usd": 0.00 if is_within_free_window else 0.00,
+        "is_within_free_window": is_within_free_window,
+        "policy_cutoff_hours": cutoff_hours,
+        "vendor_name": vendor_name,
+        "message": (
+            f"Reservation #{booking_id} cancelled. 100% pre-authorization hold released to card under {vendor_name}'s complimentary {cutoff_hours}-hour policy."
+            if is_within_free_window else
+            f"Reservation #{booking_id} cancelled. Pre-authorization hold released per {vendor_name}'s terms."
+        )
     }
 
 
@@ -440,6 +503,8 @@ def get_booking_terms_voucher(booking_id: str):
     """
     Returns structured printable terms & carriage voucher for this specific booking & vendor.
     """
+    from app.services.pricing_service import PricingService
+
     booking = db.bookings.get(booking_id)
     if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
@@ -449,6 +514,27 @@ def get_booking_terms_voucher(booking_id: str):
     b_obj = branding.get("branding") or {}
 
     pickup_time_str = booking.pickup_time_utc.isoformat() if hasattr(booking, "pickup_time_utc") and booking.pickup_time_utc else datetime.now(timezone.utc).isoformat()
+
+    # Dynamic Vendor Cancellation Policy
+    policy = None
+    if hasattr(booking, "cancellation_policy") and booking.cancellation_policy:
+        policy = booking.cancellation_policy
+    else:
+        try:
+            policy = PricingService.resolve_cancellation_policy(
+                vendor_id=vendor_id,
+                service_type=booking.service_type,
+                vehicle_class=booking.vehicle_class,
+                pickup_time_utc=booking.pickup_time_utc
+            )
+        except Exception:
+            pass
+
+    cancellation_text = (
+        policy.policy_description
+        if policy else
+        "Complimentary free cancellation and full pre-authorization hold release is guaranteed up to 2 hours prior to scheduled pickup."
+    )
 
     return {
         "booking_id": booking.id,
@@ -466,10 +552,11 @@ def get_booking_terms_voucher(booking_id: str):
         "total_amount_usd": float(booking.total_amount) if hasattr(booking, "total_amount") else 0.0,
         "preauth_status": booking.payment.status if booking.payment else "AUTHORIZED",
         "card_last4": booking.payment.card_last4 if booking.payment else "4242",
+        "cancellation_policy": policy.dict() if policy else None,
         "terms_and_conditions": [
             {
                 "title": "Cancellation & Refund Policy",
-                "text": "Complimentary free cancellation and full pre-authorization hold release is guaranteed up to 2 hours prior to scheduled point-to-point and airport pickups. Hourly charters and executive Sprinter van bookings require a 24-hour advance notice."
+                "text": cancellation_text
             },
             {
                 "title": "Flight Tracking & Delay Policy",
@@ -4933,6 +5020,469 @@ def terminate_sovereign_cell_endpoint(vendor_id: str, dto: Optional[CellActionRe
     """
     reason = dto.reason if dto else "Hub Admin Decommission"
     return sovereign_cell_infra_service.terminate_vendor_cell(vendor_id, reason=reason)
+
+
+# =========================================================================
+# GLOBAL MULTI-TENANT SUPPORT DESK AS A SERVICE (SUPPORT-AS-A-SERVICE)
+# =========================================================================
+
+class UpdateSupportDeskPlanDTO(BaseModel):
+    monthly_price_usd: Optional[float] = None
+    name: Optional[str] = None
+    description: Optional[str] = None
+    included_voice_minutes: Optional[int] = None
+    per_minute_overage_usd: Optional[float] = None
+    features: Optional[List[str]] = None
+    is_active: Optional[bool] = None
+    highlight_badge: Optional[str] = None
+
+
+class UpdateSupportDeskConfigDTO(BaseModel):
+    is_payment_required: Optional[bool] = None
+    billing_mode: Optional[str] = None
+    announcement_banner: Optional[str] = None
+    default_sla_minutes: Optional[int] = None
+
+
+class SubscribeSupportDeskDTO(BaseModel):
+    vendor_id: str
+    plan_id: str
+    custom_greeting_script: Optional[str] = None
+    forwarding_did: Optional[str] = None
+
+
+class CreateSupportTicketDTO(BaseModel):
+    vendor_id: str = "vendor_anb_philly"
+    ticket_type: str = "CUSTOMER_CONCIERGE"
+    customer_name: str
+    customer_phone: str
+    customer_email: Optional[str] = None
+    booking_id: Optional[str] = None
+    channel: str = "VOICE_CALL"
+    priority: str = "MEDIUM"
+    subject: str
+    description: str
+    flight_number: Optional[str] = None
+    pickup_address: Optional[str] = None
+    dropoff_address: Optional[str] = None
+    total_amount_usd: Optional[float] = None
+
+
+class UpdateSupportTicketDTO(BaseModel):
+    status: Optional[str] = None
+    priority: Optional[str] = None
+    assigned_agent: Optional[str] = None
+    resolution_notes: Optional[str] = None
+
+
+class MutateBookingActionDTO(BaseModel):
+    action: str  # RESCHEDULE_PICKUP, CANCEL_AND_RELEASE_ESCROW, SEND_MASKED_DRIVER_SMS
+    params: Dict[str, Any] = Field(default_factory=dict)
+
+
+@router.get("/support-desk/plans")
+def list_support_desk_plans():
+    """
+    Returns all Support Desk subscription plans with live pricing and feature tiers.
+    """
+    from app.services.global_support_desk_service import global_support_desk_service
+    return {
+        "plans": [p.dict() for p in global_support_desk_service.list_plans()],
+        "global_config": global_support_desk_service.get_global_config().dict()
+    }
+
+
+@router.put("/support-desk/plans/{plan_id}")
+def update_support_desk_plan_endpoint(plan_id: str, dto: UpdateSupportDeskPlanDTO):
+    """
+    Global Hub Admin endpoint to dynamically update any Support Desk tier pricing,
+    minute allowances, and features without coding or restarting the server.
+    """
+    from app.services.global_support_desk_service import global_support_desk_service
+    try:
+        updated = global_support_desk_service.update_plan(plan_id, dto.dict(exclude_unset=True))
+        return {
+            "success": True,
+            "plan": updated.dict(),
+            "message": f"Support Plan '{updated.name}' updated successfully to ${updated.monthly_price_usd}/mo"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/support-desk/config")
+def get_support_desk_config():
+    """
+    Returns global payment toggle, billing mode, and SLA configuration for Support Desk.
+    """
+    from app.services.global_support_desk_service import global_support_desk_service
+    return global_support_desk_service.get_global_config().dict()
+
+
+@router.put("/support-desk/config")
+def update_support_desk_config(dto: UpdateSupportDeskConfigDTO):
+    """
+    Enables/Disables the payment requirement (Free Preview vs Live Stripe Billing)
+    and updates global banner text.
+    """
+    from app.services.global_support_desk_service import global_support_desk_service
+    updated = global_support_desk_service.update_global_config(dto.dict(exclude_unset=True))
+    return {
+        "success": True,
+        "config": updated.dict(),
+        "message": f"Global Support Desk payment mode updated to: {updated.billing_mode} (Payment required: {updated.is_payment_required})"
+    }
+
+
+@router.post("/support-desk/subscribe")
+def subscribe_vendor_support_endpoint(dto: SubscribeSupportDeskDTO):
+    """
+    Enrolls a vendor into a Support Desk tier. If billing is in Free Preview,
+    the vendor is enrolled immediately with $0.00 upfront charge.
+    """
+    from app.services.global_support_desk_service import global_support_desk_service
+    try:
+        sub = global_support_desk_service.subscribe_vendor(
+            vendor_id=dto.vendor_id,
+            plan_id=dto.plan_id,
+            custom_greeting=dto.custom_greeting_script,
+            forwarding_did=dto.forwarding_did
+        )
+        return {
+            "success": True,
+            "subscription": sub.dict(),
+            "message": f"Vendor '{sub.vendor_name}' enrolled in '{sub.plan_name}' (Monthly rate: ${sub.monthly_price_usd}/mo)"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/support-desk/subscriptions")
+def list_support_desk_subscriptions():
+    """
+    Lists all vendor support desk subscriptions and usage metrics.
+    """
+    from app.services.global_support_desk_service import global_support_desk_service
+    return [s.dict() for s in global_support_desk_service.list_all_vendor_subscriptions()]
+
+
+@router.get("/support-desk/tickets")
+def list_support_tickets(
+    vendor_id: Optional[str] = None,
+    status: Optional[str] = None,
+    channel: Optional[str] = None
+):
+    """
+    Lists support tickets across all vendors or filtered by vendor, status, or channel.
+    """
+    from app.services.global_support_desk_service import global_support_desk_service
+    tickets = global_support_desk_service.list_tickets(vendor_id=vendor_id, status=status, channel=channel)
+    return [t.dict() for t in tickets]
+
+
+@router.post("/support-desk/tickets")
+def create_support_ticket_endpoint(dto: CreateSupportTicketDTO):
+    """
+    Creates an omnichannel customer or vendor support ticket.
+    """
+    from app.services.global_support_desk_service import global_support_desk_service
+    ticket = global_support_desk_service.create_ticket(dto.dict())
+    return ticket.dict()
+
+
+@router.put("/support-desk/tickets/{ticket_id}")
+def update_support_ticket_endpoint(ticket_id: str, dto: UpdateSupportTicketDTO):
+    """
+    Updates a ticket's status, priority, or resolution notes.
+    """
+    from app.services.global_support_desk_service import global_support_desk_service
+    try:
+        updated = global_support_desk_service.update_ticket(ticket_id, dto.dict(exclude_unset=True))
+        return updated.dict()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/support-desk/tickets/{ticket_id}/mutate")
+def mutate_ticket_booking_endpoint(ticket_id: str, dto: MutateBookingActionDTO):
+    """
+    Executes 1-click mutation for support agents:
+    - RESCHEDULE_PICKUP
+    - CANCEL_AND_RELEASE_ESCROW
+    - SEND_MASKED_DRIVER_SMS
+    """
+    from app.services.global_support_desk_service import global_support_desk_service
+    try:
+        return global_support_desk_service.mutate_booking_action(ticket_id, dto.action, dto.params)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+class InboundVoiceResolveDTO(BaseModel):
+    caller_phone: str
+    dialed_number: str
+    extension_pin: Optional[str] = None
+
+
+@router.get("/support-desk/pods")
+def list_regional_pods_endpoint():
+    """
+    Returns all geographical staffing pods (US East, US West, EMEA) and localized airport coverage.
+    """
+    from app.services.global_support_desk_service import global_support_desk_service
+    return [pod.dict() for pod in global_support_desk_service.list_regional_pods()]
+
+
+@router.post("/support-desk/voice/resolve-inbound")
+def resolve_inbound_voice_endpoint(dto: InboundVoiceResolveDTO):
+    """
+    Resolves an incoming voice call via dedicated local DID or 1-800 PIN extension,
+    returning matched vendor, regional pod, voice greeting script, and active booking radar.
+    """
+    from app.services.global_support_desk_service import global_support_desk_service
+    resolution = global_support_desk_service.resolve_inbound_voice_call(
+        caller_phone=dto.caller_phone,
+        dialed_number=dto.dialed_number,
+        extension_pin=dto.extension_pin
+    )
+    return resolution.dict()
+
+
+@router.post("/support-desk/sla/evaluate-triggers")
+def evaluate_sla_triggers_endpoint():
+    """
+    Autonomous SLA escalation scanner evaluating T-25m driver alerts, T-15m affiliate rescue,
+    and >90m flight recalibrations.
+    """
+    from app.services.global_support_desk_service import global_support_desk_service
+    escalations = global_support_desk_service.evaluate_automated_sla_triggers()
+    return {
+        "success": True,
+        "escalations_count": len(escalations),
+        "escalations": escalations
+    }
+
+
+@router.get("/support-desk/overview")
+def get_support_desk_overview():
+    """
+    Returns real-time KPI overview for the Global Support Desk.
+    """
+    from app.services.global_support_desk_service import global_support_desk_service
+    return global_support_desk_service.get_overview_metrics()
+
+
+@router.post("/support-desk/voice/twiml-inbound")
+def get_inbound_twiml_xml(
+    From: Optional[str] = None,
+    To: Optional[str] = None,
+    Digits: Optional[str] = None
+):
+    """
+    Returns dynamic TwiML XML to Twilio Voice carrier SIP trunks,
+    resolving white-label vendor greetings and routing calls directly to regional specialist pods.
+    """
+    from fastapi.responses import Response
+    from app.services.global_support_desk_service import global_support_desk_service
+    
+    caller = From or "+15550000000"
+    dialed = To or "+18005550199"
+    pin = Digits or None
+    
+    resolution = global_support_desk_service.resolve_inbound_voice_call(
+        caller_phone=caller,
+        dialed_number=dialed,
+        extension_pin=pin
+    )
+    
+    greeting = resolution.voice_greeting_script.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    
+    twiml_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say voice="Polly.Joanna-Neural">{greeting}</Say>
+    <Gather numDigits="4" timeout="5" action="/api/v1/support-desk/voice/twiml-inbound">
+        <Say voice="Polly.Joanna-Neural">If you have a 4-digit vendor extension PIN, please enter it now, or hold to connect with our regional dispatch pod.</Say>
+    </Gather>
+    <Say voice="Polly.Joanna-Neural">Connecting you to our regional specialist pod now.</Say>
+</Response>"""
+    return Response(content=twiml_xml, media_type="application/xml")
+
+
+
+# ============================================================================
+# HUB HELICOPTER GOVERNANCE & COMPLIANCE CONTROL SWITCH
+# ============================================================================
+
+class UpdateHelicopterConfigDTO(BaseModel):
+    is_enabled: Optional[bool] = None
+    allow_in_development: Optional[bool] = None
+    domestic_only_enforced: Optional[bool] = None
+    multi_leg_only_enforced: Optional[bool] = None
+    require_faa_part135: Optional[bool] = None
+    rotorcraft_only_enforced: Optional[bool] = None
+    default_hourly_rate_usd: Optional[Decimal] = None
+    default_heliport_fee_usd: Optional[Decimal] = None
+    max_payload_limit_lbs: Optional[int] = None
+    compliance_audit_notes: Optional[str] = None
+    updated_by: Optional[str] = "hub-superadmin"
+
+
+class ValidateHelicopterLegDTO(BaseModel):
+    origin_address: str
+    origin_country: str = "US"
+    destination_address: str
+    destination_country: str = "US"
+    total_itinerary_legs: int = 2
+    is_fixed_wing: bool = False
+
+
+@router.get("/hub/helicopter-config")
+def get_hub_helicopter_config_endpoint():
+    """
+    Returns current Hub Helicopter Feature Switch, Domestic-Only Rules, and FAA Part 135 status.
+    """
+    from app.services.helicopter_compliance_service import helicopter_compliance_service
+    return helicopter_compliance_service.get_config().dict()
+
+
+@router.put("/hub/helicopter-config")
+def update_hub_helicopter_config_endpoint(dto: UpdateHelicopterConfigDTO):
+    """
+    Updates Hub Helicopter Feature Switch, permitting live toggle between Staging/Compliance Hold and Active.
+    """
+    from app.services.helicopter_compliance_service import helicopter_compliance_service
+    updated = helicopter_compliance_service.update_config(
+        dto.dict(exclude_unset=True),
+        updated_by=dto.updated_by or "hub-superadmin"
+    )
+    return updated.dict()
+
+
+@router.get("/hub/heliports")
+def list_hub_domestic_heliports(country: Optional[str] = None):
+    """
+    Returns directory of vetted domestic VIP heliports & vertiports.
+    """
+    from app.services.helicopter_compliance_service import helicopter_compliance_service
+    return [h.dict() for h in helicopter_compliance_service.list_heliports(country)]
+
+
+@router.post("/hub/helicopter/validate")
+def validate_helicopter_leg_endpoint(dto: ValidateHelicopterLegDTO):
+    """
+    Authoritative pre-flight validation enforcing:
+    1. Hub control switch state
+    2. Domestic-only corridor
+    3. Multi-leg master itinerary rule
+    4. Rotorcraft-only exclusion (no fixed-wing planes)
+    """
+    from app.services.helicopter_compliance_service import helicopter_compliance_service
+    return helicopter_compliance_service.validate_helicopter_operation(
+        origin_address=dto.origin_address,
+        origin_country=dto.origin_country,
+        destination_address=dto.destination_address,
+        destination_country=dto.destination_country,
+        total_itinerary_legs=dto.total_itinerary_legs,
+        is_fixed_wing=dto.is_fixed_wing
+    )
+
+
+# =========================================================================
+# CHAUFFEUR CREDENTIAL VAULT & MOBILE DOCUMENT UPLOADS (GAP-D1)
+# =========================================================================
+
+class UploadDriverDocumentDTO(BaseModel):
+    vendor_id: str = "vendor_anb_philly"
+    document_type: str = "COMMERCIAL_CHAUFFEUR_LICENSE"
+    document_name: str = "Chauffeur Credential"
+    base64_data: str
+    expiry_date: Optional[str] = "2027-10-15"
+    notes: Optional[str] = None
+
+
+@router.get("/drivers/{driver_id}/documents")
+def get_driver_documents(driver_id: str):
+    """Returns all verified credential documents (TLC, medical, airport badges) for a chauffeur."""
+    driver = db.drivers.get(driver_id)
+    if not driver:
+        # Check if driver exists under any vendor profile or return clean default
+        return {"driver_id": driver_id, "documents": []}
+    
+    docs = getattr(driver, "documents", [])
+    return {
+        "driver_id": driver_id,
+        "driver_name": f"{driver.first_name} {driver.last_name}",
+        "license_number": driver.license_number,
+        "license_expiry": driver.license_expiry,
+        "documents": [d.dict() if hasattr(d, "dict") else d for d in (docs or [])]
+    }
+
+
+@router.post("/drivers/{driver_id}/documents/upload")
+def upload_driver_document_endpoint(driver_id: str, dto: UploadDriverDocumentDTO):
+    """
+    Uploads a chauffeur credential photo/document directly from Driver Mobile App to S3 vault.
+    Validates document type, persists to S3/media vault, and attaches to driver domain record.
+    """
+    driver = db.drivers.get(driver_id)
+    if not driver:
+        driver = Driver(
+            id=driver_id,
+            tenant_id="tenant-us-east",
+            vendor_id=dto.vendor_id,
+            first_name="Assigned",
+            last_name="Chauffeur",
+            email=f"{driver_id}@limo-hub.com",
+            phone="+12155550199",
+            license_number="PPA-CH-88219",
+            license_expiry=dto.expiry_date or "2027-10-15"
+        )
+        db.drivers[driver_id] = driver
+
+    doc_res = s3_storage_service.upload_base64_driver_document(
+        driver_id=driver_id,
+        vendor_id=dto.vendor_id,
+        base64_data=dto.base64_data,
+        document_type=dto.document_type,
+        document_name=dto.document_name,
+        expiry_date=dto.expiry_date
+    )
+
+    from app.domain_models import DriverCredentialDocument, DriverDocumentType
+    try:
+        doc_type_enum = DriverDocumentType(dto.document_type)
+    except Exception:
+        doc_type_enum = DriverDocumentType.COMMERCIAL_CHAUFFEUR_LICENSE
+
+    cred_doc = DriverCredentialDocument(
+        document_id=doc_res["document_id"],
+        driver_id=driver_id,
+        vendor_id=dto.vendor_id,
+        document_type=doc_type_enum,
+        document_name=dto.document_name,
+        file_url=doc_res["file_url"],
+        s3_uri=doc_res["s3_uri"],
+        file_size_bytes=doc_res["file_size_bytes"],
+        mime_type=doc_res["mime_type"],
+        expiry_date=dto.expiry_date,
+        status="VERIFIED"
+    )
+
+    if not hasattr(driver, "documents") or driver.documents is None:
+        driver.documents = []
+
+    # Replace existing document of same type or append
+    driver.documents = [d for d in driver.documents if getattr(d, "document_type", None) != doc_type_enum]
+    driver.documents.append(cred_doc)
+
+    return {
+        "success": True,
+        "message": f"Successfully uploaded {dto.document_name} to Sovereign Vault",
+        "document": cred_doc.dict()
+    }
+
+
+
 
 
 

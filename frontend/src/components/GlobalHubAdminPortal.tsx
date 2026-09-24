@@ -8,13 +8,15 @@ import {
   Filter, Download, Plus, ShieldCheck, Clock, Radio, BarChart3,
   ExternalLink, Terminal, HardDrive, Share2, CreditCard,
   ChevronDown, ChevronUp, MapPin, Copy, AlertCircle, CheckCircle,
-  FileCode, CheckSquare, Square, Pause, Power, Trash2
+  FileCode, CheckSquare, Square, Pause, Power, Trash2, Headphones
 } from 'lucide-react';
 import { 
   stopSovereignCell, startSovereignCell, terminateSovereignCell, 
   fetchHubSubscriptionsOverview, updateVendorChargingProfile,
   sendVendorInvoice, chargeVendorAutoPay 
 } from '../api';
+import { GlobalSupportDeskHub } from './GlobalSupportDeskHub';
+import { HelicopterComplianceHubControl } from './HelicopterComplianceHubControl';
 
 interface GlobalHubAdminPortalProps {
   onNavigateToGlobalBooking: () => void;
@@ -24,7 +26,7 @@ export const GlobalHubAdminPortal: React.FC<GlobalHubAdminPortalProps> = ({
   onNavigateToGlobalBooking
 }) => {
   const [activeTab, setActiveTab] = useState<
-    'cells' | 'spinup' | 'round_robin' | 'payments' | 'compliance' | 'settings'
+    'cells' | 'spinup' | 'round_robin' | 'payments' | 'compliance' | 'support_desk' | 'helicopter_hub' | 'settings'
   >('cells');
   const [settingsSubTab, setSettingsSubTab] = useState<'fx' | 'ai' | 'graphrag' | 'outbox' | 'clearing'>('fx');
   const [paymentViewTab, setPaymentViewTab] = useState<'activity' | 'subscriptions' | 'stripe_model'>('activity');
@@ -114,13 +116,7 @@ depot:
   const [hasDoubleChecked, setHasDoubleChecked] = useState(false);
 
   // AI Router Models
-  const [aiModels, setAiModels] = useState([
-    { name: 'gemini-3.8-flash', tier: 'GA (Production Default)', status: 'ACTIVE_HEALTHY', latency_ms: 220, tokens_today: 48200 },
-    { name: 'gemini-3.7-flash', tier: 'GA (Fallback Target)', status: 'STANDBY_HEALTHY', latency_ms: 245, tokens_today: 12300 },
-    { name: 'gemini-3.5-flash', tier: 'GA (Cost Optimized)', status: 'STANDBY_HEALTHY', latency_ms: 190, tokens_today: 8900 },
-    { name: 'gemini-3.1-flash-lite', tier: 'GA (High Throughput)', status: 'STANDBY_HEALTHY', latency_ms: 110, tokens_today: 23100 },
-    { name: 'gemma-4', tier: 'Open Weights GA Target', status: 'AVAILABLE_LOCAL', latency_ms: 85, tokens_today: 0 }
-  ]);
+  const [aiModels, setAiModels] = useState<any[]>([]);
 
   // Selected cells for batch operations
   const [selectedCellIds, setSelectedCellIds] = useState<string[]>([]);
@@ -938,7 +934,9 @@ depot:
 
             {[
               { id: 'payments', label: 'Payments & Card Escrow', icon: <CreditCard size={16} />, badge: 'Card' },
-              { id: 'compliance', label: 'Legal, KYB & COI Vault', icon: <FileText size={16} />, badge: '100% COI' }
+              { id: 'compliance', label: 'Legal, KYB & COI Vault', icon: <FileText size={16} />, badge: '100% COI' },
+              { id: 'support_desk', label: 'Global 24/7 Support Desk', icon: <Headphones size={16} />, badge: 'Live 24/7' },
+              { id: 'helicopter_hub', label: 'Domestic Helicopter Hub', icon: <Plane size={16} />, badge: 'Part 135' }
             ].map((item) => {
               const isActive = activeTab === item.id;
               return (
@@ -4088,34 +4086,40 @@ depot:
 
                   {/* Model Cards Grid */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
-                    {(aiLifecycleData?.active_models || aiModels).map((m: any) => (
-                      <div key={m.name} style={{ backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                        <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#0078D4' }}>{m.name}</h4>
-                            <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#DCFCE7', color: '#15803D', fontWeight: 800 }}>
-                              {m.status}
-                            </span>
-                          </div>
-                          <div style={{ fontSize: '11px', color: '#64748B', marginTop: '4px' }}>{m.tier}</div>
-
-                          <div style={{ marginTop: '10px', padding: '6px 8px', backgroundColor: '#EFF6FF', borderRadius: '4px', border: '1px solid #DBEAFE', fontSize: '10px', color: '#1E40AF' }}>
-                            🔄 <strong>Auto-Successor:</strong> <code>{m.auto_successor || 'gemini-4.0-flash'}</code> (Sunset: {m.sunset_date || '2029-12-31'})
-                          </div>
-                        </div>
-
-                        <div style={{ marginTop: '14px', padding: '10px', backgroundColor: '#F8FAFC', borderRadius: '6px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
-                          <div>
-                            <div style={{ color: '#64748B' }}>LATENCY</div>
-                            <div style={{ fontWeight: 800, color: '#0F172A' }}>{m.latency_ms || 220} ms</div>
-                          </div>
-                          <div>
-                            <div style={{ color: '#64748B' }}>TOKENS TODAY</div>
-                            <div style={{ fontWeight: 800, color: '#16A34A' }}>{(m.tokens_today || 48200).toLocaleString()}</div>
-                          </div>
-                        </div>
+                    {(aiLifecycleData?.active_models || aiModels).length === 0 ? (
+                      <div style={{ padding: '24px', backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #E2E8F0', gridColumn: '1 / -1', textAlign: 'center', color: '#64748B', fontSize: '13px' }}>
+                        Loading AI model registry and telemetry from backend orchestrator...
                       </div>
-                    ))}
+                    ) : (
+                      (aiLifecycleData?.active_models || aiModels).map((m: any) => (
+                        <div key={m.name} style={{ backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                          <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#0078D4' }}>{m.name}</h4>
+                              <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#DCFCE7', color: '#15803D', fontWeight: 800 }}>
+                                {m.status}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#64748B', marginTop: '4px' }}>{m.tier}</div>
+
+                            <div style={{ marginTop: '10px', padding: '6px 8px', backgroundColor: '#EFF6FF', borderRadius: '4px', border: '1px solid #DBEAFE', fontSize: '10px', color: '#1E40AF' }}>
+                              🔄 <strong>Auto-Successor:</strong> <code>{m.auto_successor || 'gemini-4.0-flash'}</code> (Sunset: {m.sunset_date || '2029-12-31'})
+                            </div>
+                          </div>
+
+                          <div style={{ marginTop: '14px', padding: '10px', backgroundColor: '#F8FAFC', borderRadius: '6px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+                            <div>
+                              <div style={{ color: '#64748B' }}>LATENCY</div>
+                              <div style={{ fontWeight: 800, color: '#0F172A' }}>{m.latency_ms || 0} ms</div>
+                            </div>
+                            <div>
+                              <div style={{ color: '#64748B' }}>TOKENS TODAY</div>
+                              <div style={{ fontWeight: 800, color: '#16A34A' }}>{(m.tokens_today || 0).toLocaleString()}</div>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
 
                   {/* Auto-Migration History Log */}
@@ -4239,6 +4243,17 @@ depot:
 
             </div>
           )}
+
+          {/* TAB: GLOBAL 24/7 SUPPORT-AS-A-SERVICE DESK */}
+          {activeTab === 'support_desk' && (
+            <GlobalSupportDeskHub />
+          )}
+
+          {/* TAB: DOMESTIC HELICOPTER & ROTORCRAFT HUB GOVERNANCE */}
+          {activeTab === 'helicopter_hub' && (
+            <HelicopterComplianceHubControl />
+          )}
+
 
         </main>
 

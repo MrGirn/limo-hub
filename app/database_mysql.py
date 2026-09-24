@@ -453,6 +453,149 @@ class ChauffeurPayoutModel(Base):
 
 
 # ==============================================================================
+# 6. SUPPORT DESK, HELICOPTER GOVERNANCE & REGIONAL COMPLIANCE
+# ==============================================================================
+
+class SupportDeskPlanModel(Base):
+    __tablename__ = "support_desk_plans"
+
+    id = Column(String(64), primary_key=True)
+    name = Column(String(128), nullable=False)
+    tier = Column(String(64), nullable=False)
+    monthly_price_usd = Column(Numeric(10, 2), default=Decimal("99.00"))
+    included_voice_minutes = Column(Integer, default=500)
+    overage_minute_rate_usd = Column(Numeric(6, 2), default=Decimal("0.45"))
+    features = Column(Text, nullable=True)
+    is_active = Column(Boolean, default=True)
+
+
+class SupportDeskSubscriptionModel(Base):
+    __tablename__ = "support_desk_subscriptions"
+
+    id = Column(String(64), primary_key=True)
+    vendor_id = Column(String(64), ForeignKey("vendors.id"), nullable=False, unique=True)
+    vendor_name = Column(String(255), nullable=False)
+    plan_id = Column(String(64), ForeignKey("support_desk_plans.id"), nullable=False)
+    plan_name = Column(String(128), nullable=False)
+    monthly_price_usd = Column(Numeric(10, 2), default=Decimal("99.00"))
+    status = Column(String(32), default="ACTIVE")
+    is_payment_required_at_enrollment = Column(Boolean, default=False)
+    custom_greeting_script = Column(Text, nullable=True)
+    forwarding_did = Column(String(64), nullable=True)
+    dedicated_support_email = Column(String(255), nullable=True)
+    vendor_extension_pin = Column(String(8), nullable=True)
+    included_voice_minutes = Column(Integer, default=500)
+    used_voice_minutes = Column(Integer, default=0)
+    total_tickets_handled = Column(Integer, default=0)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class SupportTicketModel(Base):
+    __tablename__ = "support_tickets"
+
+    id = Column(String(64), primary_key=True)
+    tenant_id = Column(String(64), default="tenant-us-east")
+    vendor_id = Column(String(64), ForeignKey("vendors.id"), nullable=False)
+    vendor_name = Column(String(255), nullable=False)
+    pod_id = Column(String(64), nullable=True)
+    ticket_type = Column(String(64), default="CUSTOMER_CONCIERGE")
+    customer_name = Column(String(255), nullable=False)
+    customer_phone = Column(String(64), nullable=False)
+    customer_email = Column(String(255), nullable=True)
+    booking_id = Column(String(64), nullable=True)
+    channel = Column(String(32), default="VOICE_CALL")
+    priority = Column(String(64), default="MEDIUM")
+    status = Column(String(32), default="OPEN")
+    subject = Column(String(255), nullable=False)
+    description = Column(Text, nullable=False)
+    assigned_agent = Column(String(128), nullable=True)
+    resolution_notes = Column(Text, nullable=True)
+    flight_number = Column(String(64), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    resolved_at = Column(DateTime, nullable=True)
+
+
+class RegionalPodModel(Base):
+    __tablename__ = "regional_staffing_pods"
+
+    id = Column(String(64), primary_key=True)
+    code = Column(String(32), nullable=False, unique=True)
+    name = Column(String(128), nullable=False)
+    territory_description = Column(Text, nullable=False)
+    covered_airports = Column(Text, nullable=False)
+    languages = Column(String(255), default="English (US)")
+    supervisor_name = Column(String(128), nullable=False)
+    active_agents_count = Column(Integer, default=12)
+
+
+class HelicopterHubFeatureConfigModel(Base):
+    __tablename__ = "helicopter_hub_feature_configs"
+
+    id = Column(String(64), primary_key=True, default="hub_default_helicopter_config")
+    is_enabled = Column(Boolean, default=False)
+    allow_in_development = Column(Boolean, default=True)
+    domestic_only_enforced = Column(Boolean, default=True)
+    multi_leg_only_enforced = Column(Boolean, default=True)
+    require_faa_part135 = Column(Boolean, default=True)
+    rotorcraft_only_enforced = Column(Boolean, default=True)
+    default_hourly_rate_usd = Column(Numeric(10, 2), default=Decimal("2450.00"))
+    default_heliport_fee_usd = Column(Numeric(10, 2), default=Decimal("225.00"))
+    max_payload_limit_lbs = Column(Integer, default=1400)
+    compliance_audit_notes = Column(Text, nullable=True)
+    last_compliance_review = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_by = Column(String(128), default="hub-governance-officer")
+
+
+class DomesticHeliportModel(Base):
+    __tablename__ = "domestic_heliports"
+
+    code = Column(String(32), primary_key=True)
+    faa_lid = Column(String(32), nullable=True)
+    icao_code = Column(String(32), nullable=True)
+    name = Column(String(255), nullable=False)
+    city = Column(String(128), nullable=False)
+    state_or_region = Column(String(64), nullable=False)
+    country = Column(String(8), default="US")
+    latitude = Column(Float, nullable=False)
+    longitude = Column(Float, nullable=False)
+    standard_landing_fee_usd = Column(Numeric(10, 2), default=Decimal("225.00"))
+    has_vip_lounge = Column(Boolean, default=True)
+    operator_name = Column(String(255), nullable=False)
+
+
+class DriverPayrollAccrualModel(Base):
+    __tablename__ = "driver_payroll_accruals"
+
+    accrual_id = Column(String(64), primary_key=True)
+    vendor_id = Column(String(64), ForeignKey("vendors.id"), nullable=False)
+    driver_id = Column(String(64), ForeignKey("drivers.id"), nullable=False)
+    driver_name = Column(String(255), nullable=False)
+    compensation_model = Column(String(64), default="W2_HOURLY")
+    pay_period_start = Column(String(32), nullable=False)
+    pay_period_end = Column(String(32), nullable=False)
+    regular_hours = Column(Float, default=0.0)
+    overtime_hours = Column(Float, default=0.0)
+    hourly_rate_usd = Column(Numeric(10, 2), default=Decimal("28.50"))
+    gross_total_usd = Column(Numeric(10, 2), default=Decimal("0.00"))
+    trips_count = Column(Integer, default=0)
+    status = Column(String(32), default="ACCRUING")
+    last_updated_utc = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class RegionalTaxRuleModel(Base):
+    __tablename__ = "regional_tax_rules"
+
+    jurisdiction_code = Column(String(64), primary_key=True)
+    country = Column(String(64), nullable=False)
+    city_or_region = Column(String(128), nullable=False)
+    vat_or_sales_tax_rate = Column(Numeric(6, 4), nullable=False)
+    airport_access_fee = Column(Numeric(10, 2), default=Decimal("0.00"))
+    congestion_charge = Column(Numeric(10, 2), default=Decimal("0.00"))
+    currency = Column(String(8), default="USD")
+
+
+
+# ==============================================================================
 # DATABASE ENGINE AND SESSION FACTORY
 # ==============================================================================
 
