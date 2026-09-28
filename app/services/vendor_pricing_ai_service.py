@@ -12,7 +12,8 @@ from datetime import datetime, timezone
 from app.domain_models import (
     VehicleClass, DistanceUnit, VendorPricingRule,
     VendorAIDynamicPricingMetrics, RouteMetrics,
-    AIPricingValidationResult, AIPricingRecommendationRequest
+    AIPricingValidationResult, AIPricingRecommendationRequest,
+    PricingSimulationScenario
 )
 from app.database import db
 
@@ -195,25 +196,52 @@ class VendorPricingAIService:
                     if not existing:
                         existing = session.query(VendorPricingRuleModel).filter_by(id=row_id).first()
                     
+                    p_model = rule.pricing_model_type.value if hasattr(rule.pricing_model_type, "value") else str(rule.pricing_model_type)
+                    tg_mode = rule.tax_gratuity_display_mode.value if hasattr(rule.tax_gratuity_display_mode, "value") else str(rule.tax_gratuity_display_mode)
+
                     if existing:
+                        existing.pricing_model_type = p_model
+                        existing.tax_gratuity_display_mode = tg_mode
+                        existing.flat_per_mile_all_inclusive = Decimal(str(rule.flat_per_mile_all_inclusive))
+                        existing.flat_per_km_all_inclusive = Decimal(str(rule.flat_per_km_all_inclusive))
                         existing.base_rate = Decimal(str(rule.base_rate_net))
                         existing.per_mile_rate = Decimal(str(rule.per_mile_rate_net))
+                        existing.hourly_rate = Decimal(str(rule.hourly_rate_net))
+                        existing.hourly_minimum_hours = int(rule.hourly_minimum_hours)
                         existing.min_fare = Decimal(str(rule.minimum_fare_net))
                         existing.deadhead_rate_per_mile = Decimal(str(rule.deadhead_rate_per_mile))
                         existing.tax_rate = Decimal(str(rule.tax_rate))
                         existing.gratuity_rate = Decimal(str(rule.gratuity_rate))
+                        if hasattr(existing, "enable_out_of_town_stay"):
+                            existing.enable_out_of_town_stay = bool(rule.enable_out_of_town_stay)
+                        if hasattr(existing, "out_of_town_stay_rate_net"):
+                            existing.out_of_town_stay_rate_net = Decimal(str(rule.out_of_town_stay_rate_net))
+                        if hasattr(existing, "overnight_distance_threshold_miles"):
+                            existing.overnight_distance_threshold_miles = Decimal(str(rule.overnight_distance_threshold_miles))
+                        if hasattr(existing, "daily_standby_min_hours"):
+                            existing.daily_standby_min_hours = int(rule.daily_standby_min_hours)
                         existing.updated_at = datetime.now(timezone.utc)
                     else:
                         new_row = VendorPricingRuleModel(
                             id=row_id,
                             vendor_id=rule.vendor_id,
                             vehicle_class=rule.vehicle_class.value,
+                            pricing_model_type=p_model,
+                            tax_gratuity_display_mode=tg_mode,
+                            flat_per_mile_all_inclusive=Decimal(str(rule.flat_per_mile_all_inclusive)),
+                            flat_per_km_all_inclusive=Decimal(str(rule.flat_per_km_all_inclusive)),
                             base_rate=Decimal(str(rule.base_rate_net)),
                             per_mile_rate=Decimal(str(rule.per_mile_rate_net)),
+                            hourly_rate=Decimal(str(rule.hourly_rate_net)),
+                            hourly_minimum_hours=int(rule.hourly_minimum_hours),
                             min_fare=Decimal(str(rule.minimum_fare_net)),
                             deadhead_rate_per_mile=Decimal(str(rule.deadhead_rate_per_mile)),
                             tax_rate=Decimal(str(rule.tax_rate)),
-                            gratuity_rate=Decimal(str(rule.gratuity_rate))
+                            gratuity_rate=Decimal(str(rule.gratuity_rate)),
+                            enable_out_of_town_stay=bool(rule.enable_out_of_town_stay),
+                            out_of_town_stay_rate_net=Decimal(str(rule.out_of_town_stay_rate_net)),
+                            overnight_distance_threshold_miles=Decimal(str(rule.overnight_distance_threshold_miles)),
+                            daily_standby_min_hours=int(rule.daily_standby_min_hours)
                         )
                         session.add(new_row)
                     session.commit()
@@ -227,6 +255,7 @@ class VendorPricingAIService:
         """Fetch all authoritative pricing rules from database for a vendor across all vehicle classes."""
         try:
             from app.database_mysql import SessionLocal, VendorPricingRuleModel
+            from app.domain_models import PricingModelType, TaxGratuityDisplayMode
             if SessionLocal:
                 with SessionLocal() as session:
                     db_rows = session.query(VendorPricingRuleModel).filter_by(vendor_id=vendor_id).all()
@@ -236,6 +265,32 @@ class VendorPricingAIService:
                         for row in db_rows:
                             v_cls = VehicleClass(row.vehicle_class) if row.vehicle_class in [e.value for e in VehicleClass] else VehicleClass.LUXURY_SUV
                             r = VendorPricingAIService.get_vendor_pricing_rule(vendor_id, v_cls)
+                            if hasattr(row, "pricing_model_type") and row.pricing_model_type:
+                                try:
+                                    r.pricing_model_type = PricingModelType(row.pricing_model_type)
+                                except Exception:
+                                    pass
+                            if hasattr(row, "tax_gratuity_display_mode") and row.tax_gratuity_display_mode:
+                                try:
+                                    r.tax_gratuity_display_mode = TaxGratuityDisplayMode(row.tax_gratuity_display_mode)
+                                except Exception:
+                                    pass
+                            if hasattr(row, "flat_per_mile_all_inclusive") and row.flat_per_mile_all_inclusive is not None:
+                                r.flat_per_mile_all_inclusive = Decimal(str(row.flat_per_mile_all_inclusive))
+                            if hasattr(row, "flat_per_km_all_inclusive") and row.flat_per_km_all_inclusive is not None:
+                                r.flat_per_km_all_inclusive = Decimal(str(row.flat_per_km_all_inclusive))
+                            if hasattr(row, "hourly_rate") and row.hourly_rate is not None:
+                                r.hourly_rate_net = Decimal(str(row.hourly_rate))
+                            if hasattr(row, "hourly_minimum_hours") and row.hourly_minimum_hours is not None:
+                                r.hourly_minimum_hours = int(row.hourly_minimum_hours)
+                            if hasattr(row, "enable_out_of_town_stay") and row.enable_out_of_town_stay is not None:
+                                r.enable_out_of_town_stay = bool(row.enable_out_of_town_stay)
+                            if hasattr(row, "out_of_town_stay_rate_net") and row.out_of_town_stay_rate_net is not None:
+                                r.out_of_town_stay_rate_net = Decimal(str(row.out_of_town_stay_rate_net))
+                            if hasattr(row, "overnight_distance_threshold_miles") and row.overnight_distance_threshold_miles is not None:
+                                r.overnight_distance_threshold_miles = Decimal(str(row.overnight_distance_threshold_miles))
+                            if hasattr(row, "daily_standby_min_hours") and row.daily_standby_min_hours is not None:
+                                r.daily_standby_min_hours = int(row.daily_standby_min_hours)
                             r.base_rate_net = Decimal(str(row.base_rate))
                             r.per_mile_rate_net = Decimal(str(row.per_mile_rate))
                             r.minimum_fare_net = Decimal(str(row.min_fare))
@@ -252,6 +307,174 @@ class VendorPricingAIService:
                 rule = VendorPricingAIService.get_vendor_pricing_rule(vendor_id, v_class)
                 VendorPricingAIService.save_vendor_pricing_rule(rule)
         return list(db.vendor_pricing_rules.get(vendor_id, {}).values())
+
+    @staticmethod
+    def get_simulation_scenarios(vendor_id: Optional[str] = None) -> List[PricingSimulationScenario]:
+        """Fetch authoritative simulation benchmark scenarios from MySQL database."""
+        scenarios: List[PricingSimulationScenario] = []
+        try:
+            from app.database_mysql import SessionLocal, PricingSimulationScenarioModel
+            if SessionLocal:
+                with SessionLocal() as session:
+                    # Query global scenarios (vendor_id is None) and vendor-specific scenarios
+                    query = session.query(PricingSimulationScenarioModel)
+                    if vendor_id:
+                        query = query.filter((PricingSimulationScenarioModel.vendor_id == vendor_id) | (PricingSimulationScenarioModel.vendor_id == None))
+                    else:
+                        query = query.filter(PricingSimulationScenarioModel.vendor_id == None)
+                    rows = query.order_by(PricingSimulationScenarioModel.sort_order).all()
+                    for r in rows:
+                        scenarios.append(PricingSimulationScenario(
+                            id=r.id,
+                            vendor_id=r.vendor_id,
+                            name=r.name,
+                            description=r.description,
+                            icon=r.icon or "✈️",
+                            distance_miles=float(r.distance_miles),
+                            is_hourly=bool(r.is_hourly),
+                            hourly_hours=int(r.hourly_hours),
+                            deadhead_miles=float(r.deadhead_miles),
+                            is_airport=bool(r.is_airport),
+                            meet_and_greet=bool(r.meet_and_greet),
+                            is_rush_hour=bool(r.is_rush_hour),
+                            is_late_night=bool(r.is_late_night),
+                            extra_wait_minutes=int(r.extra_wait_minutes),
+                            sort_order=int(r.sort_order)
+                        ))
+                    if scenarios:
+                        return scenarios
+        except Exception:
+            pass
+
+        # Fallback database defaults if MySQL session was offline
+        return [
+            PricingSimulationScenario(
+                id="airport_vip",
+                name="Airport VIP Arrival",
+                description="Logan Intl (BOS) -> Financial District with Terminal Meet & Greet",
+                icon="✈️",
+                distance_miles=22.0,
+                is_hourly=False,
+                hourly_hours=3,
+                deadhead_miles=6.0,
+                is_airport=True,
+                meet_and_greet=True,
+                is_rush_hour=False,
+                is_late_night=False,
+                extra_wait_minutes=15,
+                sort_order=1
+            ),
+            PricingSimulationScenario(
+                id="intercity_exec",
+                name="Intercity Executive",
+                description="Boston, MA -> Providence, RI Corporate HQ Transfer",
+                icon="🏙️",
+                distance_miles=65.0,
+                is_hourly=False,
+                hourly_hours=3,
+                deadhead_miles=14.0,
+                is_airport=False,
+                meet_and_greet=False,
+                is_rush_hour=False,
+                is_late_night=False,
+                extra_wait_minutes=0,
+                sort_order=2
+            ),
+            PricingSimulationScenario(
+                id="hourly_as_directed",
+                name="As-Directed Hourly",
+                description="4-Hour Executive Roadshow / Multi-Stop Board Meeting",
+                icon="⏱️",
+                distance_miles=35.0,
+                is_hourly=True,
+                hourly_hours=4,
+                deadhead_miles=8.0,
+                is_airport=False,
+                meet_and_greet=False,
+                is_rush_hour=False,
+                is_late_night=False,
+                extra_wait_minutes=0,
+                sort_order=3
+            ),
+            PricingSimulationScenario(
+                id="rush_hour_peak",
+                name="Peak Rush Hour",
+                description="Morning Rush Gridlock (8:30 AM) with Peak Surcharge",
+                icon="🚦",
+                distance_miles=18.0,
+                is_hourly=False,
+                hourly_hours=3,
+                deadhead_miles=8.0,
+                is_airport=False,
+                meet_and_greet=False,
+                is_rush_hour=True,
+                is_late_night=False,
+                extra_wait_minutes=10,
+                sort_order=4
+            ),
+            PricingSimulationScenario(
+                id="late_night_flight",
+                name="Late Night Red-Eye",
+                description="Midnight Arrival (1:30 AM) with Red-Eye Chauffeur Differential",
+                icon="🌙",
+                distance_miles=28.0,
+                is_hourly=False,
+                hourly_hours=3,
+                deadhead_miles=10.0,
+                is_airport=True,
+                meet_and_greet=True,
+                is_rush_hour=False,
+                is_late_night=True,
+                extra_wait_minutes=20,
+                sort_order=5
+            )
+        ]
+
+    @staticmethod
+    def save_simulation_scenario(scenario: PricingSimulationScenario) -> PricingSimulationScenario:
+        """Persist a custom or modified simulation scenario to MySQL database."""
+        try:
+            from app.database_mysql import SessionLocal, PricingSimulationScenarioModel
+            if SessionLocal:
+                with SessionLocal() as session:
+                    existing = session.query(PricingSimulationScenarioModel).filter_by(id=scenario.id).first()
+                    if existing:
+                        existing.name = scenario.name
+                        existing.description = scenario.description
+                        existing.icon = scenario.icon
+                        existing.distance_miles = Decimal(str(scenario.distance_miles))
+                        existing.is_hourly = scenario.is_hourly
+                        existing.hourly_hours = scenario.hourly_hours
+                        existing.deadhead_miles = Decimal(str(scenario.deadhead_miles))
+                        existing.is_airport = scenario.is_airport
+                        existing.meet_and_greet = scenario.meet_and_greet
+                        existing.is_rush_hour = scenario.is_rush_hour
+                        existing.is_late_night = scenario.is_late_night
+                        existing.extra_wait_minutes = scenario.extra_wait_minutes
+                        existing.sort_order = scenario.sort_order
+                    else:
+                        new_row = PricingSimulationScenarioModel(
+                            id=scenario.id,
+                            vendor_id=scenario.vendor_id,
+                            name=scenario.name,
+                            description=scenario.description,
+                            icon=scenario.icon,
+                            distance_miles=Decimal(str(scenario.distance_miles)),
+                            is_hourly=scenario.is_hourly,
+                            hourly_hours=scenario.hourly_hours,
+                            deadhead_miles=Decimal(str(scenario.deadhead_miles)),
+                            is_airport=scenario.is_airport,
+                            meet_and_greet=scenario.meet_and_greet,
+                            is_rush_hour=scenario.is_rush_hour,
+                            is_late_night=scenario.is_late_night,
+                            extra_wait_minutes=scenario.extra_wait_minutes,
+                            sort_order=scenario.sort_order
+                        )
+                        session.add(new_row)
+                    session.commit()
+        except Exception:
+            pass
+        return scenario
 
     @staticmethod
     def get_ai_yield_metrics(vendor_id: str) -> VendorAIDynamicPricingMetrics:

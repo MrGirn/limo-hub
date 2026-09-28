@@ -1,0 +1,35 @@
+# =============================================================
+# Caddyfile: Automated SSL & Domain Routing for Limo Platform
+# =============================================================
+
+# 1. Catch-all / IP Address Direct Access (HTTP port 80)
+:80 {
+    # Default landing to Primary Sovereign Cell (ANB Philly) or Hub
+    reverse_proxy limo-cell-anb-philly:8000
+}
+
+# 2. Global Federation Hub (e.g. hub.staging.yourdomain.com or :8000)
+# Replace {$STAGING_HUB_DOMAIN:staging-hub.limo.network} with your real domain
+{$STAGING_HUB_DOMAIN:staging-hub.limo.network} {
+    reverse_proxy limo-global-hub:8000
+}
+
+# 3. ANB Philly Sovereign Operator (e.g. philly.staging.yourdomain.com)
+{$STAGING_PHILLY_DOMAIN:staging-philly.limo.network} {
+    reverse_proxy limo-cell-anb-philly:8000
+}
+
+# 4. NY Executive Sovereign Operator (e.g. ny.staging.yourdomain.com)
+{$STAGING_NY_DOMAIN:staging-ny.limo.network} {
+    reverse_proxy limo-cell-ny-executive:8000
+}
+
+# 5. Boston VIP Chauffeur (e.g. boston.staging.yourdomain.com)
+{$STAGING_BOSTON_DOMAIN:staging-boston.limo.network} {
+    reverse_proxy limo-cell-boston-vip:8000
+}
+
+# 6. Miami Prestige Limousine (e.g. miami.staging.yourdomain.com)
+{$STAGING_MIAMI_DOMAIN:staging-miami.limo.network} {
+    reverse_proxy limo-cell-miami-prestige:8000
+}

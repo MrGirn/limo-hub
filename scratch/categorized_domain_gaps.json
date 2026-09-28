@@ -1,0 +1,3834 @@
+{
+  "domains": {
+    "1. Public White-Label Site & Self-Service Booking": [
+      {
+        "path": "",
+        "methods": [
+          "WS/MOUNT"
+        ],
+        "func_name": "static_frontend",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/bookings",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "list_bookings",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [
+          {
+            "file": "components/public/GlobalMarketplaceBookingPage.tsx",
+            "type": "DIRECT_PATH_MATCH",
+            "symbol": "/api/v1/bookings"
+          }
+        ],
+        "status": "UI_EXISTS_USES_DIRECT_FETCH"
+      },
+      {
+        "path": "/api/v1/bookings/lookup",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "lookup_customer_bookings",
+        "summary": "Customer Self-Service Lookup:",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/bookings/{booking_id}",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_booking",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [
+          {
+            "file": "components/public/GlobalMarketplaceBookingPage.tsx",
+            "type": "DIRECT_PATH_MATCH",
+            "symbol": "/api/v1/bookings"
+          }
+        ],
+        "status": "UI_EXISTS_USES_DIRECT_FETCH"
+      },
+      {
+        "path": "/api/v1/bookings/{booking_id}/calendar.ics",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_booking_calendar_ics",
+        "summary": "Generates standard RFC 5545 iCalendar (.ics) file for 1-click import into",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/bookings/{booking_id}/cancel",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "cancel_customer_booking",
+        "summary": "Authoritative Customer Self-Service Booking Cancellation:",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/bookings/{booking_id}/email-receipt",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_booking_email_receipt",
+        "summary": "Returns the rendered luxury HTML payment authorization email for a booking.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/bookings/{booking_id}/live-tracking",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_booking_live_tracking",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/bookings/{booking_id}/live-tracking",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_booking_live_tracking",
+        "summary": "Returns live tracking for a booking by reference ID.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/bookings/{booking_id}/master-invoice/html",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_master_invoice_html",
+        "summary": "Renders the official Master Consolidated Multi-Leg Tax Invoice (HTML / Print PDF).",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/bookings/{booking_id}/master-receipt/html",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_master_receipt_html",
+        "summary": "Renders the official Card Payment Receipt (HTML / Print PDF).",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/bookings/{booking_id}/terms-voucher",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_booking_terms_voucher",
+        "summary": "Returns structured printable terms & carriage voucher for this specific booking & vendor.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/quotes",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "request_quote",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [
+          {
+            "file": "components/CorporateBookerPortal.tsx",
+            "type": "DIRECT_PATH_MATCH",
+            "symbol": "/api/v1/quotes"
+          },
+          {
+            "file": "components/MultiVendorComparisonStudio.tsx",
+            "type": "DIRECT_PATH_MATCH",
+            "symbol": "/api/v1/quotes"
+          },
+          {
+            "file": "components/public/GlobalMarketplaceBookingPage.tsx",
+            "type": "DIRECT_PATH_MATCH",
+            "symbol": "/api/v1/quotes"
+          }
+        ],
+        "status": "UI_EXISTS_USES_DIRECT_FETCH"
+      },
+      {
+        "path": "/api/v1/vendor-portal/resolve-domain",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "resolve_vendor_domain",
+        "summary": "Resolves white-label branding, tariff card, and metadata from incoming domain/subdomain or encrypted token.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendor-portal/resolve-token",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "resolve_vendor_token",
+        "summary": "Decrypts and authenticates a secure vendor token and returns its white-label branding profile.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendor-portal/token/{vendor_id}",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "generate_vendor_token",
+        "summary": "Generates an encrypted, obfuscated URL token for a sovereign vendor cell.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "list_vendors",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [
+          {
+            "file": "components/CustomerPortal.tsx",
+            "type": "DIRECT_PATH_MATCH",
+            "symbol": "/api/v1/vendors"
+          },
+          {
+            "file": "components/DriverMobileDashboard.tsx",
+            "type": "DIRECT_PATH_MATCH",
+            "symbol": "/api/v1/vendors"
+          },
+          {
+            "file": "components/VendorDispatchPortal.tsx",
+            "type": "DIRECT_PATH_MATCH",
+            "symbol": "/api/v1/vendors"
+          },
+          {
+            "file": "components/VendorOwnerDashboard.tsx",
+            "type": "DIRECT_PATH_MATCH",
+            "symbol": "/api/v1/vendors"
+          },
+          {
+            "file": "components/public/PublicFleetPage.tsx",
+            "type": "DIRECT_PATH_MATCH",
+            "symbol": "/api/v1/vendors"
+          }
+        ],
+        "status": "UI_EXISTS_USES_DIRECT_FETCH"
+      },
+      {
+        "path": "/api/v1/vendors/register",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "register_vendor",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/account/delete-request",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "request_vendor_account_deletion",
+        "summary": "Submits a vendor account deletion request, decommission the cell, and halts traffic routing.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/affiliates/directory",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_global_affiliate_directory",
+        "summary": "Returns the Global Hub certified affiliate partner directory across all cities/countries.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/affiliates/farm-out",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "farm_out_ride_to_affiliate",
+        "summary": "Farms out a ride to another sovereign vendor cell with atomic clearinghouse split.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/affiliates/policy",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_vendor_affiliate_policy",
+        "summary": "Returns sovereign vendor farm-in and farm-out business policies.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/affiliates/policy",
+        "methods": [
+          "PUT"
+        ],
+        "func_name": "update_vendor_affiliate_policy",
+        "summary": "Updates vendor's sovereign business rules and broadcasts them to Global Hub Knowledge Base.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/affiliates/recommendations",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_affiliate_recommendations_for_ride",
+        "summary": "Algorithm: Matches out-of-market jobs to top certified affiliate partners",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/affiliates/records",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_vendor_affiliate_records",
+        "summary": "Returns farmed-in and farmed-out affiliate rides with 85%/10%/5% revenue split ledger.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/ai-validate-pricing",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "ai_validate_vendor_pricing",
+        "summary": "Leverage Google Gemini / AI Market Intelligence to validate a specific vendor's quote.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/ai-yield",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_vendor_ai_yield",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/ai-yield/apply",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "apply_vendor_ai_yield",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/ai-yield/train",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "train_vendor_ai_yield",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/availability/check",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "check_fleet_availability",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/bookings",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "list_vendor_bookings",
+        "summary": "Returns rich, authoritative bookings for this specific vendor cell from MySQL + in-memory store.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/branding",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_vendor_branding_settings",
+        "summary": "Retrieves white-label logo, operating code, and invoice custom footer for a vendor.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/branding",
+        "methods": [
+          "PUT"
+        ],
+        "func_name": "update_vendor_branding_settings",
+        "summary": "Updates vendor logo URL, brand color, operating code, and custom invoice footer.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/comm-config",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_vendor_comm_config",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/comm-config",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "save_vendor_comm_config",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/config",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_vendor_intake_config",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/config",
+        "methods": [
+          "PUT"
+        ],
+        "func_name": "update_vendor_intake_config",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/customers",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "list_vendor_customers",
+        "summary": "Returns the authoritative customer directory and VIP profiles for a vendor cell.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/customers",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "create_or_register_customer",
+        "summary": "Creates a new customer profile or updates existing by phone/email.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/drivers",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "list_vendor_drivers",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/drivers",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "list_vendor_drivers",
+        "summary": "Returns the chauffeur roster strictly belonging to this specific vendor cell.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/drivers",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "create_vendor_driver",
+        "summary": "Enrolls a new chauffeur strictly scoped to this vendor cell.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/drivers/{driver_id}/compensation-model",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "update_driver_compensation_model",
+        "summary": "Updates a chauffeur's compensation structure (1099 Contractor split vs W-2 hourly vs salaried).",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/evaluate-multileg-strategy",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "evaluate_vendor_multileg_strategy",
+        "summary": "Evaluates an itinerary against vendor's sovereign multi-leg routing rules.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/fleet-inventory",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "list_vendor_fleet_inventory",
+        "summary": "Returns the exclusive, isolated fleet inventory strictly owned by this specific vendor cell.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/fleet-inventory",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "create_vendor_vehicle",
+        "summary": "Registers a new vehicle strictly bound to this sovereign vendor's fleet inventory with S3 photos.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/fleet-inventory/{vehicle_id}",
+        "methods": [
+          "DELETE"
+        ],
+        "func_name": "delete_vendor_vehicle",
+        "summary": "Decommissions and removes a vehicle from this vendor's inventory.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/fleet-inventory/{vehicle_id}",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_vendor_vehicle_detail",
+        "summary": "Retrieves detailed specifications for a vehicle in this vendor's inventory.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/fleet-inventory/{vehicle_id}",
+        "methods": [
+          "PUT"
+        ],
+        "func_name": "update_vendor_vehicle",
+        "summary": "Updates vehicle specifications, tariffs, amenities, photos, and operational status for this vendor's vehicle.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/fleet-inventory/{vehicle_id}/toggle-active",
+        "methods": [
+          "PATCH"
+        ],
+        "func_name": "toggle_vendor_vehicle_active",
+        "summary": "Enables or disables a vehicle from active fleet and customer rental showroom.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/fleet-inventory/{vehicle_id}/toggle-network",
+        "methods": [
+          "PATCH"
+        ],
+        "func_name": "toggle_vendor_vehicle_network",
+        "summary": "Toggles between GLOBAL_NETWORK_CONNECTED and LOCAL_PRIVATE_ONLY for this vendor's vehicle.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/inquiries",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "list_vendor_inquiries",
+        "summary": "Returns all inquiries logged for a specific vendor cell.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/media/upload-s3",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "upload_vendor_media_to_s3",
+        "summary": "Uploads vehicle showroom media to S3 (or authoritative sovereign media vault)",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/omnichannel/config",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "update_vendor_omnichannel_config",
+        "summary": "Configures BYOK custom keys vs Turnkey SaaS Gateway with automatic fail-safe fallback.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/omnichannel/desk",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_vendor_omnichannel_desk",
+        "summary": "Retrieves consolidated omnichannel workspace (Voice Studio, WhatsApp/SMS chat, Email desk, SEO engine).",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/omnichannel/dial-call",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "record_voice_studio_call",
+        "summary": "Triggers a live outbound Twilio phone call and logs the voice session.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/omnichannel/send-message",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "send_omnichannel_chat_message",
+        "summary": "Dispatches an outbound SMS or WhatsApp message with TCPA compliance checks.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/outbox/flush",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "flush_vendor_outbox_queue",
+        "summary": "Triggers immediate background worker flush of queued outbox events.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/outbox/telemetry",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_vendor_outbox_telemetry",
+        "summary": "Returns live transactional outbox queue statistics and zero-loss status.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/payouts/ledger",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_vendor_payouts_ledger",
+        "summary": "Returns live dynamic payout transfers, settled customer ride fares, and affiliate cleared splits",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/payroll/export",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "export_vendor_payroll_csv",
+        "summary": "Generates and downloads a payroll CSV formatted for Gusto, ADP, or Standard accounting systems.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/payroll/process-trip",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "process_trip_payout",
+        "summary": "Processes driver earnings upon trip completion: triggers Stripe instant transfer if 1099, or logs shift accrual if W-2.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/payroll/record-shift",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "record_driver_shift",
+        "summary": "Records driving shift hours and tips into the active pay period payroll ledger for W-2/salaried chauffeurs.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/payroll/summary",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_vendor_payroll_summary",
+        "summary": "Retrieves live driver compensation summary, contractor payouts, and W-2 payroll accruals.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/pricing-rules",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_vendor_pricing_rules",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/pricing-rules",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "save_vendor_pricing_rule",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/schedule",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_vendor_schedule",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/schedule",
+        "methods": [
+          "PUT"
+        ],
+        "func_name": "update_vendor_schedule",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/seo-schema",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_vendor_seo_schema",
+        "summary": "Generates dynamic JSON-LD Schema.org structured data for Google Search rich snippets.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/simulation-scenarios",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_vendor_simulation_scenarios",
+        "summary": "Fetch vendor-specific and global benchmark scenarios from MySQL database.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/stripe/connect-link",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "create_vendor_stripe_connect_link",
+        "summary": "Generates a secure, 1-click Stripe-hosted onboarding / KYC / bank verification link for a vendor.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/stripe/connect-status",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_vendor_stripe_connect_status",
+        "summary": "Returns live Stripe Connect verification, payout status, and requirements for a vendor.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/stripe/login-link",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "create_vendor_stripe_login_link",
+        "summary": "Generates a Single Sign-On link for the vendor to open their Stripe Express Dashboard.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/subscription",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_vendor_subscription_details",
+        "summary": "Returns current subscription plan, billing cycle, invoice history, and dunning status for a vendor.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/subscription/billing-portal",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "create_vendor_billing_portal_session",
+        "summary": "Creates a direct 1-click Stripe Customer Billing Portal session for updating payment methods and downloading invoices.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/subscription/cancel",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "cancel_vendor_subscription",
+        "summary": "Cancels the vendor's recurring SaaS subscription.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/subscription/clear-dunning",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "clear_vendor_dunning_alert",
+        "summary": "Clears past-due dunning state, restores account to good standing, and resets grace period.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/subscription/pay-as-you-go",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "switch_vendor_to_pay_as_you_go",
+        "summary": "Switches the vendor to the Pay-As-You-Go ($0/mo fixed + 5% per ride) model.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/subscription/simulate-dunning",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "trigger_dunning_test_alert",
+        "summary": "Simulates a delinquent payment event and triggers warning alerts / grace period.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/subscription/upgrade",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "upgrade_vendor_subscription",
+        "summary": "Upgrades or switches the vendor's subscription plan.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/support/tickets",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "list_vendor_support_tickets",
+        "summary": "Returns all support tickets assigned to a specific carrier with SLA status.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/support/tickets/{ticket_id}/reply",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "reply_to_vendor_ticket",
+        "summary": "Allows a vendor dispatcher to reply to a customer ticket or record internal notes.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/support/tickets/{ticket_id}/resolve",
+        "methods": [
+          "PUT"
+        ],
+        "func_name": "resolve_vendor_ticket",
+        "summary": "Marks a vendor support ticket as RESOLVED.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/team",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "list_vendor_team",
+        "summary": "Retrieves active team personnel roster (Owners, Dispatchers, Chauffeurs, Corporate Bookers).",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/team",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "create_vendor_team_member",
+        "summary": "Creates/invites a new team member with assigned role and granular permissions.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/team/{user_id}",
+        "methods": [
+          "DELETE"
+        ],
+        "func_name": "delete_vendor_team_member",
+        "summary": "Revokes access and removes a team member from the sovereign vendor cell.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/team/{user_id}",
+        "methods": [
+          "PUT"
+        ],
+        "func_name": "update_vendor_team_member",
+        "summary": "Updates team member role, permissions, status, or details.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/telecom-compliance",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_vendor_telecom_compliance",
+        "summary": "Retrieves live A2P 10DLC Brand, Campaign, STIR/SHAKEN, and TCPA compliance status.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/telecom-compliance/inbound-sms",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "process_inbound_sms_compliance",
+        "summary": "Processes inbound SMS against TCPA opt-out keywords (STOP/HELP/START).",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/telecom-compliance/register-brand",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "register_vendor_brand",
+        "summary": "Submits A2P 10DLC Brand registration to carrier vetting in-process.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/vendors/{vendor_id}/voice-call-intake",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "execute_voice_call_intake",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      }
+    ],
+    "7. Corporate Booker & Expense Account Portal": [
+      {
+        "path": "/api/v1/corporate/accounts",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_corporate_accounts",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [
+          {
+            "file": "components/CorporateBookerPortal.tsx",
+            "type": "DIRECT_PATH_MATCH",
+            "symbol": "/api/v1/corporate/accounts"
+          }
+        ],
+        "status": "UI_EXISTS_USES_DIRECT_FETCH"
+      },
+      {
+        "path": "/api/v1/corporate/accounts",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "create_corporate_account",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [
+          {
+            "file": "components/CorporateBookerPortal.tsx",
+            "type": "DIRECT_PATH_MATCH",
+            "symbol": "/api/v1/corporate/accounts"
+          }
+        ],
+        "status": "UI_EXISTS_USES_DIRECT_FETCH"
+      },
+      {
+        "path": "/api/v1/corporate/accounts/{account_id}",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_corporate_account",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [
+          {
+            "file": "components/CorporateBookerPortal.tsx",
+            "type": "DIRECT_PATH_MATCH",
+            "symbol": "/api/v1/corporate/accounts"
+          }
+        ],
+        "status": "UI_EXISTS_USES_DIRECT_FETCH"
+      },
+      {
+        "path": "/api/v1/corporate/accounts/{account_id}/cost-centers",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "add_cost_center",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      }
+    ],
+    "5. Dispatcher & Operations Control Studio": [
+      {
+        "path": "/api/v1/dispatch/assign-24h-driver",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "assign_24h_chauffeur",
+        "summary": "Assigns recommended or chosen chauffeur to a scheduled trip in the 24-hour dispatch window.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/dispatch/assignment-audits/{trip_id}",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_assignment_audit",
+        "summary": "Returns the transparent assignment score breakdown and neutrality justification.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      }
+    ],
+    "6. Chauffeur / Driver Mobile Portal": [
+      {
+        "path": "/api/v1/driver/trips/{trip_id}/events",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "update_trip_event",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      }
+    ],
+    "3. Global Central Hub Marketplace & SuperAdmin Portal": [
+      {
+        "path": "/api/v1/global-hub/analytics",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_global_hub_analytics",
+        "summary": "Retrieves aggregated multi-cell analytics, pooled AI token metrics, and cloud cost savings.",
+        "api_wrapper": null,
+        "ui_components": [
+          {
+            "file": "components/VendorCellAndGlobalHubStudio.tsx",
+            "type": "DIRECT_PATH_MATCH",
+            "symbol": "/api/v1/global-hub/analytics"
+          }
+        ],
+        "status": "UI_EXISTS_USES_DIRECT_FETCH"
+      },
+      {
+        "path": "/api/v1/global-hub/support/tickets",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "list_global_hub_support_tickets",
+        "summary": "Global Hub SuperAdmin Observability: Network-wide ticket monitoring and SLA radar.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/global-hub/support/tickets/{ticket_id}/escalate",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "escalate_ticket_to_global_hub",
+        "summary": "Escalates an unassigned or contentious ticket directly to the Central Global Hub clearinghouse.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      }
+    ],
+    "10. Global Affiliate Farm-Out & Network Exchange": [
+      {
+        "path": "/api/v1/vendor-network/exchange/ledger",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_vendor_network_exchange_ledger",
+        "summary": "Returns array of affiliate exchange records for dashboard ledgers.",
+        "api_wrapper": null,
+        "ui_components": [
+          {
+            "file": "components/VendorOwnerDashboard.tsx",
+            "type": "DIRECT_PATH_MATCH",
+            "symbol": "/api/v1/vendor-network/exchange/ledger"
+          }
+        ],
+        "status": "UI_EXISTS_USES_DIRECT_FETCH"
+      }
+    ],
+    "8. Voice AI Concierge, Twilio & Omnichannel Telephony": [
+      {
+        "path": "/api/v1/voice/barge-in",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "trigger_voice_barge_in",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [
+          {
+            "file": "components/VoiceAIStudio.tsx",
+            "type": "DIRECT_PATH_MATCH",
+            "symbol": "/api/v1/voice/barge-in"
+          }
+        ],
+        "status": "UI_EXISTS_USES_DIRECT_FETCH"
+      },
+      {
+        "path": "/api/v1/voice/consent",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "submit_voice_consent",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [
+          {
+            "file": "components/VoiceAIStudio.tsx",
+            "type": "DIRECT_PATH_MATCH",
+            "symbol": "/api/v1/voice/consent"
+          }
+        ],
+        "status": "UI_EXISTS_USES_DIRECT_FETCH"
+      },
+      {
+        "path": "/api/v1/voice/session/{session_id}",
+        "methods": [
+          "GET"
+        ],
+        "func_name": "get_voice_session",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/voice/simulate-call",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "simulate_voice_call",
+        "summary": "Simulates an end-to-end voice telephony call session with consent, quoting, and hold pre-auth.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/api/v1/voice/utterance",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "process_voice_utterance",
+        "summary": "No docstring",
+        "api_wrapper": null,
+        "ui_components": [
+          {
+            "file": "components/VoiceAIStudio.tsx",
+            "type": "DIRECT_PATH_MATCH",
+            "symbol": "/api/v1/voice/utterance"
+          }
+        ],
+        "status": "UI_EXISTS_USES_DIRECT_FETCH"
+      },
+      {
+        "path": "/api/v1/webhooks/twilio/voice",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "webhook_twilio_voice",
+        "summary": "Ingests Twilio Voice IVR inbound calls and returns TwiML speech XML with dynamic quote.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      },
+      {
+        "path": "/ws/voice/stream",
+        "methods": [
+          "WS/MOUNT"
+        ],
+        "func_name": "voice_websocket_stream",
+        "summary": "Bi-directional real-time WebSocket audio & turn-taking stream for Voice AI Concierge.",
+        "api_wrapper": null,
+        "ui_components": [
+          {
+            "file": "components/VoiceAIStudio.tsx",
+            "type": "DIRECT_PATH_MATCH",
+            "symbol": "/ws/voice/stream"
+          }
+        ],
+        "status": "UI_EXISTS_USES_DIRECT_FETCH"
+      },
+      {
+        "path": "/ws/voice/twilio/media",
+        "methods": [
+          "WS/MOUNT"
+        ],
+        "func_name": "twilio_voice_media_stream",
+        "summary": "Twilio Media Streams bi-directional audio WebSocket gateway.",
+        "api_wrapper": null,
+        "ui_components": [
+          {
+            "file": "components/VoiceAIStudio.tsx",
+            "type": "DIRECT_PATH_MATCH",
+            "symbol": "/ws/voice/twilio/media"
+          }
+        ],
+        "status": "UI_EXISTS_USES_DIRECT_FETCH"
+      }
+    ],
+    "9. FlightAware & Autonomous Recovery Engine": [
+      {
+        "path": "/api/v1/webhooks/flightaware",
+        "methods": [
+          "POST"
+        ],
+        "func_name": "webhook_flightaware",
+        "summary": "Ingests live FlightAware/Radar flight status updates and recalibrates chauffeur pickup times.",
+        "api_wrapper": null,
+        "ui_components": [],
+        "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+      }
+    ]
+  },
+  "unassigned": [
+    {
+      "path": "/api/ai/capabilities",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "capabilities",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/VendorOwnerDashboard.tsx",
+          "type": "FUNCTION_NAME_MATCH",
+          "symbol": "capabilities"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/ai/documents",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "documents",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/DriverMobileDashboard.tsx",
+          "type": "FUNCTION_NAME_MATCH",
+          "symbol": "documents"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/ai/documents",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "add_document",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/ai/documents/{identifier}",
+      "methods": [
+        "DELETE"
+      ],
+      "func_name": "delete",
+      "summary": "No docstring",
+      "api_wrapper": "delete",
+      "ui_components": [
+        {
+          "file": "App.tsx",
+          "type": "API_WRAPPER_CALL",
+          "symbol": "delete"
+        },
+        {
+          "file": "components/VendorOwnerDashboard.tsx",
+          "type": "API_WRAPPER_CALL",
+          "symbol": "delete"
+        }
+      ],
+      "status": "COMPLETED_WIRED_TO_UI"
+    },
+    {
+      "path": "/api/ai/evaluate",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "evaluate",
+      "summary": "No docstring",
+      "api_wrapper": "evaluate",
+      "ui_components": [
+        {
+          "file": "components/VendorOwnerDashboard.tsx",
+          "type": "API_WRAPPER_CALL",
+          "symbol": "evaluate"
+        }
+      ],
+      "status": "COMPLETED_WIRED_TO_UI"
+    },
+    {
+      "path": "/api/ai/graph/edges",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "edge",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/GlobalHubAdminPortal.tsx",
+          "type": "FUNCTION_NAME_MATCH",
+          "symbol": "edge"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/ai/retrieve",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "search",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "App.tsx",
+          "type": "FUNCTION_NAME_MATCH",
+          "symbol": "search"
+        },
+        {
+          "file": "components/CustomerPortal.tsx",
+          "type": "FUNCTION_NAME_MATCH",
+          "symbol": "search"
+        },
+        {
+          "file": "components/GlobalHubAdminPortal.tsx",
+          "type": "FUNCTION_NAME_MATCH",
+          "symbol": "search"
+        },
+        {
+          "file": "components/VendorCommercialGuideModal.tsx",
+          "type": "FUNCTION_NAME_MATCH",
+          "symbol": "search"
+        },
+        {
+          "file": "components/VendorOwnerDashboard.tsx",
+          "type": "FUNCTION_NAME_MATCH",
+          "symbol": "search"
+        },
+        {
+          "file": "components/public/CustomerBookingsLookupModal.tsx",
+          "type": "FUNCTION_NAME_MATCH",
+          "symbol": "search"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/ai/run",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "run",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/GlobalHubAdminPortal.tsx",
+          "type": "FUNCTION_NAME_MATCH",
+          "symbol": "run"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/ai/runs",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "history",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "App.tsx",
+          "type": "FUNCTION_NAME_MATCH",
+          "symbol": "history"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/demo/policy",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "policy",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/AIRecoveryHub.tsx",
+          "type": "FUNCTION_NAME_MATCH",
+          "symbol": "policy"
+        },
+        {
+          "file": "components/CorporateBookerPortal.tsx",
+          "type": "FUNCTION_NAME_MATCH",
+          "symbol": "policy"
+        },
+        {
+          "file": "components/CustomerPortal.tsx",
+          "type": "FUNCTION_NAME_MATCH",
+          "symbol": "policy"
+        },
+        {
+          "file": "components/VendorCellAndGlobalHubStudio.tsx",
+          "type": "FUNCTION_NAME_MATCH",
+          "symbol": "policy"
+        },
+        {
+          "file": "components/VendorOwnerDashboard.tsx",
+          "type": "FUNCTION_NAME_MATCH",
+          "symbol": "policy"
+        },
+        {
+          "file": "components/public/CustomerBookingsLookupModal.tsx",
+          "type": "FUNCTION_NAME_MATCH",
+          "symbol": "policy"
+        },
+        {
+          "file": "components/public/PublicHomePage.tsx",
+          "type": "FUNCTION_NAME_MATCH",
+          "symbol": "policy"
+        },
+        {
+          "file": "components/public/PublicPoliciesPage.tsx",
+          "type": "FUNCTION_NAME_MATCH",
+          "symbol": "policy"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/demo/quotes",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "quote",
+      "summary": "No docstring",
+      "api_wrapper": "quote",
+      "ui_components": [
+        {
+          "file": "types.ts",
+          "type": "API_WRAPPER_CALL",
+          "symbol": "quote"
+        },
+        {
+          "file": "components/AIRecoveryHub.tsx",
+          "type": "API_WRAPPER_CALL",
+          "symbol": "quote"
+        },
+        {
+          "file": "components/CorporateBookerPortal.tsx",
+          "type": "API_WRAPPER_CALL",
+          "symbol": "quote"
+        },
+        {
+          "file": "components/CustomerPortal.tsx",
+          "type": "API_WRAPPER_CALL",
+          "symbol": "quote"
+        },
+        {
+          "file": "components/DispatcherPhoneBookingModal.tsx",
+          "type": "API_WRAPPER_CALL",
+          "symbol": "quote"
+        },
+        {
+          "file": "components/PublicVendorQuotePortal.tsx",
+          "type": "API_WRAPPER_CALL",
+          "symbol": "quote"
+        },
+        {
+          "file": "components/SourcingConciergeDesk.tsx",
+          "type": "API_WRAPPER_CALL",
+          "symbol": "quote"
+        },
+        {
+          "file": "components/VendorCommercialGuideModal.tsx",
+          "type": "API_WRAPPER_CALL",
+          "symbol": "quote"
+        },
+        {
+          "file": "components/VendorDispatchPortal.tsx",
+          "type": "API_WRAPPER_CALL",
+          "symbol": "quote"
+        },
+        {
+          "file": "components/VendorFleetAndPricingHub.tsx",
+          "type": "API_WRAPPER_CALL",
+          "symbol": "quote"
+        },
+        {
+          "file": "components/public/GlobalMarketplaceBookingPage.tsx",
+          "type": "API_WRAPPER_CALL",
+          "symbol": "quote"
+        },
+        {
+          "file": "components/public/PublicContactPage.tsx",
+          "type": "API_WRAPPER_CALL",
+          "symbol": "quote"
+        }
+      ],
+      "status": "COMPLETED_WIRED_TO_UI"
+    },
+    {
+      "path": "/api/v1/ai/model-lifecycle",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_ai_model_lifecycle",
+      "summary": "Returns the automated model lifecycle registry, deprecation schedule,",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/GlobalHubAdminPortal.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/ai/model-lifecycle"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/ai/model-lifecycle/audit-sync",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "run_ai_model_lifecycle_audit",
+      "summary": "Triggers an on-demand monthly model deprecation audit and automatically",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/GlobalHubAdminPortal.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/ai/model-lifecycle/audit-sync"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/auth/me",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_current_session",
+      "summary": "Returns the authenticated user's session profile and permissions.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/auth/oauth-login",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "oauth_login",
+      "summary": "Processes verified Apple Sign-In and Google 1-Tap OAuth assertions.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/auth/passkey/auth-challenge",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "passkey_auth_challenge",
+      "summary": "Generates a secure WebAuthn authentication assertion challenge.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/auth/passkey/register-challenge",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "passkey_register_challenge",
+      "summary": "Generates a secure FIDO2/WebAuthn registration challenge for TouchID/FaceID/Windows Hello.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/auth/passkey/verify-auth",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "passkey_verify_auth",
+      "summary": "Verifies the biometric Passkey assertion and logs the user in.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/auth/passkey/verify-registration",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "passkey_verify_registration",
+      "summary": "Validates and stores the client WebAuthn public key credential.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/auth/personas",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "list_available_personas",
+      "summary": "Lists standard personas available for fast role demonstration and testing.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/auth/switch-persona",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "switch_persona",
+      "summary": "Generates a signed JWT token for the requested actor persona or role name.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/chauffeur/{driver_id}/duty-status",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_chauffeur_duty_status",
+      "summary": "Returns chauffeur shift hours and fatigue / rest compliance status.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/compliance/alerts",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_compliance_alerts",
+      "summary": "Fetches active compliance alerts for expiring driver licenses and insurance COIs.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/compliance/scan",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "trigger_compliance_scan",
+      "summary": "Triggers an on-demand fleet compliance expiration scan.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/corporate/bookings",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "create_corporate_booking",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/CorporateBookerPortal.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/corporate/bookings"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/corporate/invoices/{account_id}",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_corporate_invoices",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/CorporateBookerPortal.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/corporate/invoices"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/corporate/invoices/{invoice_id}/csv",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "export_invoice_csv",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/corporate/validate-policy",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "validate_corporate_policy",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/CorporateBookerPortal.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/corporate/validate-policy"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/coverage/evaluate",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "evaluate_coverage",
+      "summary": "Evaluates 4-state corridor coverage (BOOKABLE vs REQUEST_ONLY).",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/coverage/inquiry",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "submit_sourcing_inquiry",
+      "summary": "Submits a sourcing inquiry ticket for an uncontracted REQUEST_ONLY corridor.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/customers/lookup",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "lookup_customer_for_intake",
+      "summary": "Sub-20ms Caller Intake Lookup.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/customers/{customer_id}",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_customer_profile",
+      "summary": "Returns complete customer CRM profile including VIP preferences and saved addresses.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/customers/{customer_id}/addresses",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "add_customer_saved_address",
+      "summary": "Adds a frequent VIP destination for instant 1-click booking.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/customers/{customer_id}/preferences",
+      "methods": [
+        "PATCH"
+      ],
+      "func_name": "update_customer_preferences",
+      "summary": "Updates 5-star VIP service preferences for consistent luxury experience.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/dispatch/bookings/phone-intake",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "create_phone_intake_booking",
+      "summary": "Creates authoritative reservation booked over the telephone by dispatcher.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/dispatch/bookings/{booking_id}/pod",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_booking_proof_of_delivery",
+      "summary": "Fetches the Digital Proof of Execution (POD) certificate, GPS log, and 24h Escrow status.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/dispatch/bookings/{booking_id}/pod/dispute",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "dispute_booking_delivery",
+      "summary": "Originating vendor pauses 24h escrow settlement due to customer quality dispute.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/dispatch/bookings/{booking_id}/pod/incidentals/approve",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "approve_booking_incidentals",
+      "summary": "Originating vendor approves incidentals and captures supplementary charge.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/dispatch/bookings/{booking_id}/pod/incidentals/request",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "request_booking_incidentals",
+      "summary": "Performing vendor requests extra wait time, tolls, or stops.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/dispatch/bookings/{booking_id}/process-payment",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "process_booking_payment_operations",
+      "summary": "Operations Team Fallback Payment Processor:",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/dispatch/bookings/{booking_id}/refund",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "process_booking_refund_operations",
+      "summary": "Operations Team Refund, Discount & Return Processor:",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/dispatch/pending-24h-alerts",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_pending_24h_dispatch_alerts",
+      "summary": "Returns real-time 24-Hour Just-In-Time Dispatch Alerts:",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/dispatch/pricing/quick-quote",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "dispatch_quick_quote",
+      "summary": "Calculates instantaneous live quote for dispatch phone intake orders.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/dispatch/verify-eligibility",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "verify_pre_dispatch_eligibility",
+      "summary": "Performs live date-aware credential validation on the scheduled trip date.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/driver/my-offers",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_driver_offers",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/driver/offers/{offer_id}/accept",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "accept_offer",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/drivers/{driver_id}/documents",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_driver_documents",
+      "summary": "Returns all verified credential documents (TLC, medical, airport badges) for a chauffeur.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/drivers/{driver_id}/documents/upload",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "upload_driver_document_endpoint",
+      "summary": "Uploads a chauffeur credential photo/document directly from Driver Mobile App to S3 vault.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/fleet/drivers",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "list_drivers",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/fleet/vehicle-options",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "list_vehicle_options",
+      "summary": "Authoritative Vehicle Class & Fleet Showroom Options from MySQL Database.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/fleet/vehicles",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "list_vehicles",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/flights/{flight_ident}/live-status",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_live_flight_status",
+      "summary": "Fetches real-time flight radar status, delay, terminal, and gate from FlightAware / AviationStack.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/global-hub/affiliates/knowledge-base",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_global_hub_affiliates_knowledge_base",
+      "summary": "Returns the central Global Hub Knowledge Base indexing all sovereign vendor availability & rules.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/global-hub/clearinghouse/ledger",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_global_hub_clearinghouse_ledger",
+      "summary": "Returns the Global Hub central clearinghouse ledger across all federation cells.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/global-hub/dispatch-metrics",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_global_hub_dispatch_metrics",
+      "summary": "SuperAdmin & Dispatcher Observability: Returns live allocation counters, active tickets, and SLA timers.",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/GlobalHubAdminPortal.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/global-hub/dispatch-metrics"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/global-hub/dispatch-route",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "route_global_hub_booking",
+      "summary": "Autonomously routes an incoming Global Hub booking across verified city vendors",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/GlobalHubAdminPortal.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/global-hub/dispatch-route"
+        },
+        {
+          "file": "components/public/GlobalMarketplaceBookingPage.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/global-hub/dispatch-route"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/global-hub/dispatch-sla-sweep",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "trigger_dispatch_sla_sweep",
+      "summary": "Background worker evaluation: Sweeps active dispatch tickets and auto-rolls unaccepted jobs or posts to The Wall.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/global-hub/radar/broadcast",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "broadcast_flight_radar_event",
+      "summary": "Multiplexes single incoming flight radar event to all affected vendor cells.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/global-hub/shared-ai/invoke",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "invoke_shared_ai_gateway",
+      "summary": "Invokes centralized AI gateway with token pooling and prompt caching.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/global-hub/support/sla-sweep",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "sweep_support_sla",
+      "summary": "Background worker evaluation: Sweeps all open tickets, detects SLA breaches, and auto-escalates to Hub.",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/hub/GlobalHubSupportTab.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/global-hub/support/sla-sweep"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/graph-rag/export",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "export_graph_rag",
+      "summary": "Exports full knowledge graph nodes and relation edges for visualizer.",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/VoiceAIStudio.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/graph-rag/export"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/graph-rag/neo4j/cypher",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "execute_cypher_query",
+      "summary": "Executes Cypher query on grounded graph nodes.",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/VoiceAIStudio.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/graph-rag/neo4j/cypher"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/graph-rag/neo4j/sync",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "sync_neo4j_aura",
+      "summary": "Syncs regulatory graph nodes and relations into Neo4j Aura database with Cypher statements.",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/VoiceAIStudio.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/graph-rag/neo4j/sync"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/graph-rag/paths",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "query_graph_rag_paths",
+      "summary": "Computes multi-hop paths with provenance citation chains.",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/VoiceAIStudio.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/graph-rag/paths"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/graph-rag/verify",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "verify_regulatory_claim",
+      "summary": "Tests claim against grounded citations and rejects hallucinations.",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/VoiceAIStudio.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/graph-rag/verify"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/hub/helicopter-config",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_hub_helicopter_config_endpoint",
+      "summary": "Returns current Hub Helicopter Feature Switch, Domestic-Only Rules, and FAA Part 135 status.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/hub/helicopter-config",
+      "methods": [
+        "PUT"
+      ],
+      "func_name": "update_hub_helicopter_config_endpoint",
+      "summary": "Updates Hub Helicopter Feature Switch, permitting live toggle between Staging/Compliance Hold and Active.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/hub/helicopter/validate",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "validate_helicopter_leg_endpoint",
+      "summary": "Authoritative pre-flight validation enforcing:",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/hub/heliports",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "list_hub_domestic_heliports",
+      "summary": "Returns directory of vetted domestic VIP heliports & vertiports.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/hub/subscriptions/overview",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_hub_subscriptions_overview",
+      "summary": "Returns total Monthly Recurring Revenue (MRR), subscriber metrics, and all vendor subscription statuses.",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/GlobalHubAdminPortal.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/hub/subscriptions/overview"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/hub/subscriptions/{vendor_id}/trigger-dunning-test",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "trigger_dunning_test_alert",
+      "summary": "Simulates a delinquent payment event and triggers warning alerts / grace period.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/hub/toll-registry",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_central_toll_registry",
+      "summary": "Centralized Global Hub Toll Rate Registry:",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/vendor/OperationsPricingResearchStudio.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/hub/toll-registry"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/hub/vendors/{vendor_id}/charge-auto-pay",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "charge_vendor_auto_pay_endpoint",
+      "summary": "Triggers direct Stripe card / ACH auto-debit against the vendor's primary payment method.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/hub/vendors/{vendor_id}/charging-profile",
+      "methods": [
+        "PUT"
+      ],
+      "func_name": "update_vendor_charging_profile_endpoint",
+      "summary": "Global Hub Admin endpoint to configure customized monthly fees, per-ride take rates,",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/hub/vendors/{vendor_id}/send-invoice",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "send_vendor_invoice_endpoint",
+      "summary": "Generates and emails an official itemized monthly statement / invoice to the vendor.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/infrastructure/cells",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "list_infrastructure_cells",
+      "summary": "Returns full infrastructure telemetry (CPU, Memory, Latency, Storage, AWS Region, Custom Domain, SSL, AWS Sync Status)",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/GlobalHubAdminPortal.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/infrastructure/cells"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/infrastructure/cells/bulk-push-aws",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "bulk_push_cells_to_aws",
+      "summary": "Bulk deploys multiple sovereign cells to AWS Cloud.",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/GlobalHubAdminPortal.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/infrastructure/cells/bulk-push-aws"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/infrastructure/cells/{vendor_id}",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_cell_infrastructure",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/GlobalHubAdminPortal.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/infrastructure/cells"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/infrastructure/cells/{vendor_id}/compliance-vault",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_cell_compliance_vault",
+      "summary": "Returns the legal and compliance documents (COI, Operating Authority, KYB, TCR) for a vendor cell.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/infrastructure/cells/{vendor_id}/domain-mapping",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_cell_domain_mapping",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/infrastructure/cells/{vendor_id}/domain-mapping",
+      "methods": [
+        "PUT"
+      ],
+      "func_name": "update_cell_domain_mapping",
+      "summary": "Updates the custom domain for a cell and creates Route53 CNAME + ACM validation records.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/infrastructure/cells/{vendor_id}/lifecycle",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "execute_cell_lifecycle",
+      "summary": "Controls sovereign cell container/pod lifecycle: start, stop, restart, suspend, scale.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/infrastructure/cells/{vendor_id}/push-to-aws",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "push_cell_infrastructure_to_aws",
+      "summary": "Automated One-Click AWS Cloud Push:",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/infrastructure/cells/{vendor_id}/start",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "start_sovereign_cell_endpoint",
+      "summary": "Restarts and re-enables traffic routing to the sovereign cell (ONLINE_HEALTHY).",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/infrastructure/cells/{vendor_id}/stop",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "stop_sovereign_cell_endpoint",
+      "summary": "Pauses and stops public traffic routing to the sovereign cell (SUSPENDED / STOPPED).",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/infrastructure/cells/{vendor_id}/terminate",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "terminate_sovereign_cell_endpoint",
+      "summary": "Permanently terminates the sovereign cell container, deregisters port, and decommissions cell.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/infrastructure/compliance-vault",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "list_compliance_vaults",
+      "summary": "Returns the authoritative compliance, licensing, and insurance audit vault for all sovereign cells.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/inquiries",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "create_inquiry_endpoint",
+      "summary": "Ingests public storefront VIP Inquiries & Quote Requests.",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/VendorDispatchPortal.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/inquiries"
+        },
+        {
+          "file": "components/public/PublicContactPage.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/inquiries"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/inquiries/{inquiry_id}",
+      "methods": [
+        "PATCH"
+      ],
+      "func_name": "update_inquiry_status",
+      "summary": "Updates status and notes for a VIP inquiry.",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/VendorDispatchPortal.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/inquiries"
+        },
+        {
+          "file": "components/public/PublicContactPage.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/inquiries"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/inquiries/{inquiry_id}/convert-booking",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "convert_inquiry_to_booking",
+      "summary": "Directly converts a VIP Inquiry into a real authoritative Booking and Trip in the database.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/inquiries/{inquiry_id}/trigger-drip",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "trigger_inquiry_drip",
+      "summary": "Advances the Autonomous Multi-Touch Follow-Up Drip pipeline for unconverted inquiries.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/intake/parse-enquiry",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "parse_omnichannel_enquiry",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/itineraries/quote",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "quote_multi_modal_itinerary",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/itineraries/quote-matrix",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "quote_multi_modal_itinerary_matrix",
+      "summary": "Single-Pass Multi-Class Multi-Modal Itinerary Quoting:",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/itineraries/{itinerary_id}/book",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "book_multi_modal_itinerary",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/maps/calculate-route",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "calculate_route_matrix",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/maps/places-autocomplete",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "places_autocomplete",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/AddressAutocompleteInput.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/maps/places-autocomplete"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/maps/validate-address",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "validate_address",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/media/{file_path:path}",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "serve_media_vault_file",
+      "summary": "Serves stored media assets from the sovereign media vault with high-speed streaming.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/network/jobs",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_network_jobs",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/payments/global-settlements",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_global_settlement_ledger",
+      "summary": "Returns real-time payment transactions, escrow records, and farm-in/farm-out settlements",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/GlobalHubAdminPortal.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/payments/global-settlements"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/payments/simulate-escrow-settlement",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "simulate_escrow_settlement_api",
+      "summary": "Simulates and executes a multi-vendor 85/10/5 escrow settlement via Stripe Connect clearinghouse.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/payments/stripe-architecture",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_stripe_architecture_status",
+      "summary": "Returns the comprehensive Stripe Connect multi-tenant setup,",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/GlobalHubAdminPortal.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/payments/stripe-architecture"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/pricing/fx-rates",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_fx_rates",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/GlobalHubAdminPortal.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/pricing/fx-rates"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/pricing/fx-rates/sync",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "sync_live_fx_rates",
+      "summary": "Synchronizes live daily mid-market FX rates from European Central Bank / Open Exchange Feed.",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/GlobalHubAdminPortal.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/pricing/fx-rates/sync"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/pricing/research-simulate",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "run_pricing_research_simulation",
+      "summary": "Operations Pricing Research & Dynamic Comparison Simulation:",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/vendor/OperationsPricingResearchStudio.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/pricing/research-simulate"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/pricing/simulation-scenarios",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_pricing_simulation_scenarios",
+      "summary": "Fetch authoritative benchmark trip scenarios for quote calculation from MySQL database.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/pricing/simulation-scenarios",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "save_pricing_simulation_scenario",
+      "summary": "Persist a benchmark scenario to the MySQL database.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/pricing/tax-rules",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_regional_tax_rules",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/public/vendor-onboarding/submit",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "submit_public_vendor_onboarding",
+      "summary": "Executes full automated onboarding:",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/public/vendor-onboarding/validate",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "validate_public_vendor_onboarding",
+      "summary": "Pre-flight validation for new black car operators applying via the public SaaS portal.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/quotes/ai-validate-pricing",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "ai_validate_pricing_quote",
+      "summary": "Leverage Google Gemini / AI Market Intelligence to validate proposed quotes against regional benchmarks.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/quotes/compare",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "compare_market_quotes",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/MultiVendorComparisonStudio.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/quotes/compare"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/quotes/matrix",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "request_quote_matrix",
+      "summary": "Lightning-Fast Single-Pass Multi-Class Vehicle Pricing Matrix (<50ms):",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/quotes/{quote_id}/book",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "accept_and_book",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/recovery/incidents",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "list_incidents",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/recovery/simulate-driver-timeout",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "simulate_driver_timeout",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/recovery/simulate-flight-delay",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "simulate_flight_delay",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/settlements/split-records",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "list_split_settlements",
+      "summary": "Fetches 85/10/5 inter-vendor split escrow settlements.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/sourcing/inbound-email-webhook",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "receive_inbound_vendor_email_webhook",
+      "summary": "Ingests raw inbound email responses from AWS SES / SendGrid / Mailgun or test payloads.",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/SourcingConciergeDesk.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/sourcing/inbound-email-webhook"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/sourcing/manager-override",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "manager_phone_quote_override",
+      "summary": "Dispatcher phones vendor directly, agrees on net rate, and locks leg.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/sourcing/opportunities",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_all_sourcing_opportunities",
+      "summary": "Returns all active out-of-market vendor sourcing tickets with live countdown timers,",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/sourcing/rfp-details/{quote_token}",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_rfp_details_by_token",
+      "summary": "Public endpoint for external vendor quote submission landing page.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/sourcing/submit-quote",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "submit_vendor_quote",
+      "summary": "Called when an external discovered vendor submits their rate via 1-click quote link.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/sourcing/trigger-rfp",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "trigger_manual_sourcing_rfp",
+      "summary": "Manually triggers autonomous AI discovery and dual-delivery RFP for an out-of-market location.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/support-desk/config",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_support_desk_config",
+      "summary": "Returns global payment toggle, billing mode, and SLA configuration for Support Desk.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/support-desk/config",
+      "methods": [
+        "PUT"
+      ],
+      "func_name": "update_support_desk_config",
+      "summary": "Enables/Disables the payment requirement (Free Preview vs Live Stripe Billing)",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/support-desk/overview",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_support_desk_overview",
+      "summary": "Returns real-time KPI overview for the Global Support Desk.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/support-desk/plans",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "list_support_desk_plans",
+      "summary": "Returns all Support Desk subscription plans with live pricing and feature tiers.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/support-desk/plans/{plan_id}",
+      "methods": [
+        "PUT"
+      ],
+      "func_name": "update_support_desk_plan_endpoint",
+      "summary": "Global Hub Admin endpoint to dynamically update any Support Desk tier pricing,",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/support-desk/pods",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "list_regional_pods_endpoint",
+      "summary": "Returns all geographical staffing pods (US East, US West, EMEA) and localized airport coverage.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/support-desk/sla/evaluate-triggers",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "evaluate_sla_triggers_endpoint",
+      "summary": "Autonomous SLA escalation scanner evaluating T-25m driver alerts, T-15m affiliate rescue,",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/support-desk/subscribe",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "subscribe_vendor_support_endpoint",
+      "summary": "Enrolls a vendor into a Support Desk tier. If billing is in Free Preview,",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/support-desk/subscriptions",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "list_support_desk_subscriptions",
+      "summary": "Lists all vendor support desk subscriptions and usage metrics.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/support-desk/tickets",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "list_support_tickets",
+      "summary": "Lists support tickets across all vendors or filtered by vendor, status, or channel.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/support-desk/tickets",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "create_support_ticket_endpoint",
+      "summary": "Creates an omnichannel customer or vendor support ticket.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/support-desk/tickets/{ticket_id}",
+      "methods": [
+        "PUT"
+      ],
+      "func_name": "update_support_ticket_endpoint",
+      "summary": "Updates a ticket's status, priority, or resolution notes.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/support-desk/tickets/{ticket_id}/mutate",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "mutate_ticket_booking_endpoint",
+      "summary": "Executes 1-click mutation for support agents:",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/support-desk/voice/resolve-inbound",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "resolve_inbound_voice_endpoint",
+      "summary": "Resolves an incoming voice call via dedicated local DID or 1-800 PIN extension,",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/support-desk/voice/twiml-inbound",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "get_inbound_twiml_xml",
+      "summary": "Returns dynamic TwiML XML to Twilio Voice carrier SIP trunks,",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/support/tickets",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "create_customer_support_ticket",
+      "summary": "Creates an authoritative customer support ticket, attaches live booking/flight context,",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/support/tickets/lookup",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "lookup_customer_support_tickets",
+      "summary": "Searches customer support tickets by phone, email, booking reference, or ticket number.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/support/tickets/{ticket_id}",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_support_ticket",
+      "summary": "Retrieves full ticket details, live SLA countdown timer, and message thread.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/support/tickets/{ticket_id}/messages",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "add_ticket_message",
+      "summary": "Appends a new message to a ticket thread and dynamically updates status.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/system-summary",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_system_summary",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/system/runtime-mode",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_system_runtime_mode",
+      "summary": "Returns the container's operational mode and sovereign vendor isolation state.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/telemetry/driver-location",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "ingest_driver_location_ping",
+      "summary": "Ingests live GPS coordinates from the Driver Mobile Web App and persists real-time telemetry.",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/DriverMobileDashboard.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/telemetry/driver-location"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/telemetry/location",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "ingest_telemetry_ping",
+      "summary": "Ingests high-frequency chauffeur GPS coordinates and evaluates automated geofence transitions.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/transit/inbound-plan-update",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "execute_inbound_plan_update",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/transit/radar-stream",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "list_radar_stream",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/transit/simulate-radar-delay",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "simulate_radar_delay",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/trips/{trip_id}",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_trip",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/trips/{trip_id}/live-tracking",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_trip_live_tracking",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/trips/{trip_id}/live-tracking",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_trip_live_tracking",
+      "summary": "Returns real-time chauffeur telemetry, ETA countdown, vehicle details, and route coordinates.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/vendor-app/trips/settle-driver-payout",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "settle_driver_payout_endpoint",
+      "summary": "Processes driver compensation split, logs to MySQL payout ledger, and simulates instant Stripe transfer.",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/DriverMobileDashboard.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/vendor-app/trips/settle-driver-payout"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/vendor-cell/cells",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "list_vendor_cells",
+      "summary": "Lists all dynamically provisioned sovereign vendor cells.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/vendor-cell/manifest-template",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_vendor_manifest_template",
+      "summary": "Returns the authoritative declarative YAML schema template for provisioning a new vendor cell.",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/GlobalHubAdminPortal.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/vendor-cell/manifest-template"
+        },
+        {
+          "file": "components/VendorCellAndGlobalHubStudio.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/vendor-cell/manifest-template"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/vendor-cell/spin-up",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "spin_up_vendor_cell",
+      "summary": "Declaratively spins up an isolated vendor cell with private partition, rate card & branding.",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/GlobalHubAdminPortal.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/vendor-cell/spin-up"
+        },
+        {
+          "file": "components/VendorCellAndGlobalHubStudio.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/vendor-cell/spin-up"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/vendor-cell/validate-yaml",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "validate_vendor_yaml",
+      "summary": "Validates declarative vendor YAML manifest against schema, integrity, and collision checks.",
+      "api_wrapper": null,
+      "ui_components": [
+        {
+          "file": "components/GlobalHubAdminPortal.tsx",
+          "type": "DIRECT_PATH_MATCH",
+          "symbol": "/api/v1/vendor-cell/validate-yaml"
+        }
+      ],
+      "status": "UI_EXISTS_USES_DIRECT_FETCH"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/affiliate/farm-out",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "farm_out_affiliate_ride",
+      "summary": "Cross-dispatches overflow ride to an affiliated partner cell with 85/10/5 escrow clearing.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/affiliate/records",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_vendor_affiliate_records",
+      "summary": "Retrieves all farmed-in, farmed-out, and earned commission records for a vendor cell.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/booking/direct",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "create_vendor_cell_direct_booking",
+      "summary": "Executes direct booking inside the vendor's isolated cellular engine and queues outbox event.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/circuit-breaker",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "toggle_vendor_cell_circuit_breaker",
+      "summary": "Sets circuit breaker status for graceful local fallback during upstream outages.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/email/config",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_vendor_email_config",
+      "summary": "Retrieves vendor's active BYOE email gateway settings.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/email/config",
+      "methods": [
+        "PUT"
+      ],
+      "func_name": "update_vendor_email_config",
+      "summary": "Updates vendor's custom SMTP / AWS SES / SendGrid / Postmark configuration.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/email/inbound-parse",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "parse_vendor_inbound_email",
+      "summary": "Parses inbound travel desk email RFQ and calculates instant sovereign quote.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/email/inbox",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_vendor_email_inbox",
+      "summary": "Retrieves full email telemetry: Inbound RFQs, Outbound confirmations, and active BYOE config.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/email/outbound-dispatch",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "dispatch_vendor_outbound_email",
+      "summary": "Generates and dispatches branded outbound booking confirmation email with DKIM/SPF.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/email/rfqs/{rfq_id}/convert-booking",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "convert_email_rfq_to_booking",
+      "summary": "1-Click converts an Inbound Email RFQ directly into a confirmed reservation with Stripe Pre-Auth hold.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/email/send-invoice",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "send_vendor_trip_invoice",
+      "summary": "Dispatches branded final PDF tax invoice and Stripe charge receipt upon ride completion.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/email/test",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "test_vendor_email_connection",
+      "summary": "Sends a live test verification email ping using the vendor's active email gateway.",
+      "api_wrapper": "passkeyVerifyRegistrationApi",
+      "ui_components": [
+        {
+          "file": "components/public/PublicAuthModal.tsx",
+          "type": "API_WRAPPER_CALL",
+          "symbol": "passkeyVerifyRegistrationApi"
+        }
+      ],
+      "status": "COMPLETED_WIRED_TO_UI"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/email/test-inbound",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "test_vendor_inbound_email_connection",
+      "summary": "Tests inbound IMAP/POP3 host, port, credentials, and mailbox polling readiness.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/onboarding-invite",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "send_vendor_onboarding_invite",
+      "summary": "Dispatches a setup guidance email to the vendor owner with direct links to remaining milestones.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/onboarding-status",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_vendor_onboarding_status",
+      "summary": "Retrieves the 7-milestone progressive onboarding readiness score and setup checklist.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/outbox/sync",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "sync_vendor_outbox_to_global_hub",
+      "summary": "Asynchronously syncs queued outbox events from the vendor cell into the Global Hub.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/portal-config",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_vendor_portal_config",
+      "summary": "Retrieves white-label customer portal branding, colors, tariffs, and phone numbers.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/status",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_vendor_cell_status",
+      "summary": "Retrieves isolated cell status, circuit breaker health, outbox queue depth, and DB partition.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/team",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "list_vendor_team",
+      "summary": "Retrieves active team personnel roster (Owners, Dispatchers, Chauffeurs, Corporate Bookers).",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/team",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "create_vendor_team_member",
+      "summary": "Creates/invites a new team member with assigned role and granular permissions.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/team/roles-matrix",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "get_vendor_roles_matrix",
+      "summary": "Returns the platform-wide RBAC role hierarchy, allowed capabilities, and default permission sets.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/team/{user_id}",
+      "methods": [
+        "DELETE"
+      ],
+      "func_name": "delete_vendor_team_member",
+      "summary": "Revokes access and removes a team member from the sovereign vendor cell.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/team/{user_id}",
+      "methods": [
+        "PUT"
+      ],
+      "func_name": "update_vendor_team_member",
+      "summary": "Updates team member role, permissions, status, or details.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/team/{user_id}/impersonate-token",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "generate_team_member_impersonate_token",
+      "summary": "Generates an instant signed JWT access token for testing or direct persona switching.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/webhooks/events",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "list_webhook_events",
+      "summary": "Fetches chronological list of ingested external webhook and telemetry events.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/webhooks/simulate",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "simulate_webhook_event",
+      "summary": "Developer & Dispatcher one-click simulator for all live external webhook events.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/webhooks/stripe",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "webhook_stripe",
+      "summary": "Ingests live Stripe Connect webhook lifecycle events (pre-auth, capture, 85/10/5 split).",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/api/v1/webhooks/twilio/whatsapp",
+      "methods": [
+        "POST"
+      ],
+      "func_name": "webhook_twilio_whatsapp",
+      "summary": "Ingests Twilio WhatsApp inbound chat and returns quote text with deep-link checkout.",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    },
+    {
+      "path": "/health",
+      "methods": [
+        "GET"
+      ],
+      "func_name": "health",
+      "summary": "No docstring",
+      "api_wrapper": null,
+      "ui_components": [],
+      "status": "CRITICAL_GAP_MISSING_API_AND_UI"
+    }
+  ]
+}

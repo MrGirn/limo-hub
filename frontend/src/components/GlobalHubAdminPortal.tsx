@@ -13,9 +13,11 @@ import {
 import { 
   stopSovereignCell, startSovereignCell, terminateSovereignCell, 
   fetchHubSubscriptionsOverview, updateVendorChargingProfile,
-  sendVendorInvoice, chargeVendorAutoPay 
+  sendVendorInvoice, chargeVendorAutoPay, fetchAllVehicles,
+  simulateStripeWebhookApi 
 } from '../api';
 import { GlobalSupportDeskHub } from './GlobalSupportDeskHub';
+import { GlobalHubSupportTab } from './hub/GlobalHubSupportTab';
 import { HelicopterComplianceHubControl } from './HelicopterComplianceHubControl';
 
 interface GlobalHubAdminPortalProps {
@@ -62,48 +64,8 @@ export const GlobalHubAdminPortal: React.FC<GlobalHubAdminPortalProps> = ({
   const [cells, setCells] = useState<any[]>([]);
 
   // Spin-Up State with Complete Production Spec (Vendor, Owner, Legal Compliance, Depot)
-  const [newVendorYaml, setNewVendorYaml] = useState<string>(
-`vendor:
-  id: "vendor_paris_etoile"
-  name: "Chauffeurs de l'Étoile (Paris, FR)"
-  tier: "AUTONOMOUS_T1"
-  region: "Paris / Île-de-France (CDG/ORY)"
-  currency: "EUR"
-  currency_symbol: "€"
-  base_rate_usd: 90.00
-  per_km_usd: 3.80
-  tax_rate_pct: 10.00
-  domain: "paris-etoile-limo.com"
-  inbound_email: "dispatch@paris-etoile-limo.com"
-  contact_phone: "+33140550199"
-
-owner:
-  full_name: "Henri de Saint-Germain"
-  email: "owner@paris-etoile-limo.com"
-  initial_password: "ParisVIPChauffeur2026!"
-  phone: "+33612345678"
-  role: "ROLE_VENDOR_ADMIN"
-
-compliance_and_licensing:
-  legal_business_name: "Chauffeurs de l'Étoile SAS"
-  ein_tax_id: "FR-882918239"
-  regulatory_authority: "FR_VTC_REGISTRY"
-  license_number: "EVTC075210984"
-  license_expiry: "2028-12-31"
-  coi_insurance_carrier: "AXA Corporate Livery Underwriters"
-  coi_policy_number: "POL-AXA-992184"
-  coi_coverage_amount_usd: 5000000
-  coi_expiry_date: "2027-06-30"
-  kyb_audit_status: "VERIFIED"
-
-depot:
-  office_address: "12 Avenue Montaigne"
-  city: "Paris"
-  state: "Île-de-France"
-  country: "France"
-  country_code: "FR"
-  service_radius_km: 75.0`
-  );
+  const [newVendorYaml, setNewVendorYaml] = useState<string>('');
+  const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
   const [spinUpResult, setSpinUpResult] = useState<any>(null);
   const [isValidatingYaml, setIsValidatingYaml] = useState(false);
   const [validationResult, setValidationResult] = useState<{
@@ -303,6 +265,9 @@ depot:
         }
       })
       .catch(err => console.log('Could not fetch Hub subscriptions:', err));
+
+    // 9. Fetch Global Fleet Vehicles across All Sovereign Cells
+    fetchAllVehicles().catch(err => console.log('Could not fetch global vehicles:', err));
   };
 
   const handleStopCell = async (vendorId: string) => {
@@ -565,6 +530,26 @@ depot:
       setSelectedCellIds([]);
     } else {
       setSelectedCellIds(filteredCells.map(c => c.id));
+    }
+  };
+
+  const handleLoadTemplate = async () => {
+    setIsLoadingTemplate(true);
+    try {
+      const resp = await fetch('/api/v1/vendor-cell/manifest-template');
+      if (resp.ok) {
+        const data = await resp.json();
+        setNewVendorYaml(data.template_yaml || '');
+        setValidationResult(null);
+        setHasDoubleChecked(false);
+        setActionNotice('📋 Authoritative starter YAML manifest template loaded from backend schema.');
+      } else {
+        setActionNotice('⚠️ Could not fetch starter manifest template from server.');
+      }
+    } catch (err: any) {
+      setActionNotice(`⚠️ Template fetch error: ${err.message}`);
+    } finally {
+      setIsLoadingTemplate(false);
     }
   };
 
@@ -2049,9 +2034,51 @@ depot:
                       <FileCode size={16} color="#0078D4" />
                       <label style={{ fontSize: '13px', color: '#0F172A', fontWeight: 800 }}>Declarative Vendor Manifest (YAML Spec)</label>
                     </div>
-                    <span style={{ fontSize: '11px', color: '#64748B', backgroundColor: '#F1F5F9', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>
-                      Infrastructure-as-Code (IaC)
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <button
+                        onClick={handleLoadTemplate}
+                        disabled={isLoadingTemplate}
+                        style={{
+                          fontSize: '11px',
+                          color: '#0078D4',
+                          backgroundColor: '#EFF6FF',
+                          border: '1px solid #BFDBFE',
+                          padding: '3px 10px',
+                          borderRadius: '4px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        {isLoadingTemplate ? 'Loading Template...' : '📋 Load Starter Template'}
+                      </button>
+                      {newVendorYaml && (
+                        <button
+                          onClick={() => {
+                            setNewVendorYaml('');
+                            setValidationResult(null);
+                            setHasDoubleChecked(false);
+                          }}
+                          style={{
+                            fontSize: '11px',
+                            color: '#64748B',
+                            backgroundColor: '#F1F5F9',
+                            border: '1px solid #E2E8F0',
+                            padding: '3px 8px',
+                            borderRadius: '4px',
+                            fontWeight: 600,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Clear
+                        </button>
+                      )}
+                      <span style={{ fontSize: '11px', color: '#64748B', backgroundColor: '#F1F5F9', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>
+                        Infrastructure-as-Code (IaC)
+                      </span>
+                    </div>
                   </div>
 
                   <textarea
@@ -3595,7 +3622,31 @@ depot:
                       <div style={{ padding: '12px', backgroundColor: '#F8FAFC', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
                         <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 700 }}>WEBHOOK LISTENER HEALTH</div>
                         <div style={{ fontSize: '12px', fontWeight: 800, color: '#16A34A', marginTop: '4px' }}>HEALTHY (42ms Latency)</div>
-                        <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>5 core Card events bound</div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+                          <span style={{ fontSize: '10px', color: '#64748B' }}>5 core Card events bound</span>
+                          <button
+                            onClick={async () => {
+                              try {
+                                const res = await simulateStripeWebhookApi();
+                                setActionNotice(`⚡ Ingested test Stripe Connect webhook event: ${res.event_type || 'payment_intent.succeeded'} (Escrow Handled)`);
+                              } catch (err: any) {
+                                setActionNotice(`⚠️ Stripe webhook error: ${err.message}`);
+                              }
+                            }}
+                            style={{
+                              fontSize: '10px',
+                              fontWeight: 700,
+                              color: '#0078D4',
+                              background: '#EFF6FF',
+                              border: '1px solid #BFDBFE',
+                              borderRadius: '4px',
+                              padding: '2px 6px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Ping Webhook
+                          </button>
+                        </div>
                       </div>
 
                       <div style={{ padding: '12px', backgroundColor: '#F8FAFC', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
@@ -4244,9 +4295,14 @@ depot:
             </div>
           )}
 
-          {/* TAB: GLOBAL 24/7 SUPPORT-AS-A-SERVICE DESK */}
+          {/* TAB: GLOBAL 24/7 SUPPORT & LIVE SLA RADAR */}
           {activeTab === 'support_desk' && (
-            <GlobalSupportDeskHub />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+              <GlobalHubSupportTab />
+              <div style={{ borderTop: '2px dashed #E2E8F0', paddingTop: '24px' }}>
+                <GlobalSupportDeskHub />
+              </div>
+            </div>
           )}
 
           {/* TAB: DOMESTIC HELICOPTER & ROTORCRAFT HUB GOVERNANCE */}

@@ -1,12 +1,16 @@
 import json
 import os
 import secrets
+import time
+from collections import defaultdict
 from contextlib import asynccontextmanager
-from pathlib import Path
 from decimal import Decimal
+from pathlib import Path
 from typing import Annotated
 
-from fastapi import FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
+from fastapi import Request, FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.security import APIKeyHeader
@@ -38,12 +42,78 @@ app = FastAPI(
     description='Comprehensive Autonomous Limo Fleet & Operations Platform: Booking, Pricing, Dispatch, Driver App, Autonomous Recovery, and AI Services.'
 )
 
-# Enable CORS for local development and web frontend
+# 1. Anti-Bot & DDoS Rate Limiting Middleware
+class AntiBotRateLimitMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app):
+        super().__init__(app)
+        self.ip_request_history = defaultdict(list)
+
+    async def dispatch(self, request: Request, call_next):
+        # Ignore static assets and health checks
+        path = request.url.path
+        if path.startswith("/static") or path == "/health" or path == "/":
+            return await call_next(request)
+
+        client_ip = request.client.host if request.client else "127.0.0.1"
+        now = time.time()
+
+        # Sensitive paths (auth, inquiries, quotes, bookings)
+        is_sensitive = any(path.startswith(p) for p in ["/api/auth", "/api/inquiries", "/api/quotes", "/api/bookings"])
+        max_requests = 20 if is_sensitive else 100
+        window_sec = 10.0
+
+        # Clean old timestamps
+        history = [t for t in self.ip_request_history[client_ip] if now - t < window_sec]
+        if len(history) >= max_requests:
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Too many requests. Automated rate limiting active to protect dispatch infrastructure."}
+            )
+
+        history.append(now)
+        self.ip_request_history[client_ip] = history
+
+        return await call_next(request)
+
+app.add_middleware(AntiBotRateLimitMiddleware)
+
+# 2. Defensive HTTP Security Headers Middleware (OWASP ASVS L2 / PCI-DSS)
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        return response
+
+app.add_middleware(SecurityHeadersMiddleware)
+
+# 3. Secure Multi-Tenant CORS Configuration
+raw_origins = os.getenv("ALLOWED_ORIGINS", "")
+if raw_origins:
+    allowed_origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
+    allow_credentials = True
+else:
+    # Default explicit local development & cell network origins
+    allowed_origins = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://localhost:5175",
+        "http://localhost:5176",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://localhost:3000",
+    ]
+    allow_credentials = True
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=allowed_origins,
+    allow_credentials=allow_credentials,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 

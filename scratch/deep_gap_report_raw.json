@@ -1,0 +1,2952 @@
+[
+  {
+    "path": "/api/v1/quotes",
+    "method": "POST",
+    "backend_func": "request_quote",
+    "api_functions": [
+      "requestQuote"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\CorporateBookerPortal.tsx",
+        "via_path": "/api/v1/quotes"
+      },
+      {
+        "file": "components\\CustomerPortal.tsx",
+        "via_func": "requestQuote"
+      },
+      {
+        "file": "components\\MultiVendorComparisonStudio.tsx",
+        "via_path": "/api/v1/quotes"
+      },
+      {
+        "file": "components\\public\\GlobalMarketplaceBookingPage.tsx",
+        "via_path": "/api/v1/quotes"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/quotes/matrix",
+    "method": "POST",
+    "backend_func": "request_quote_matrix",
+    "api_functions": [
+      "requestQuoteMatrix"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\CustomerPortal.tsx",
+        "via_func": "requestQuoteMatrix"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/quotes/compare",
+    "method": "POST",
+    "backend_func": "compare_market_quotes",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\MultiVendorComparisonStudio.tsx",
+        "via_path": "/api/v1/quotes/compare"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/hub/toll-registry",
+    "method": "GET",
+    "backend_func": "get_central_toll_registry",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\vendor\\OperationsPricingResearchStudio.tsx",
+        "via_path": "/api/v1/hub/toll-registry"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/pricing/research-simulate",
+    "method": "POST",
+    "backend_func": "run_pricing_research_simulation",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\vendor\\OperationsPricingResearchStudio.tsx",
+        "via_path": "/api/v1/pricing/research-simulate"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/quotes/{quote_id}/book",
+    "method": "POST",
+    "backend_func": "accept_and_book",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/bookings",
+    "method": "GET",
+    "backend_func": "list_bookings",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\public\\GlobalMarketplaceBookingPage.tsx",
+        "via_path": "/api/v1/bookings"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/bookings/lookup",
+    "method": "GET",
+    "backend_func": "lookup_customer_bookings",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/bookings/{booking_id}",
+    "method": "GET",
+    "backend_func": "get_booking",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\public\\GlobalMarketplaceBookingPage.tsx",
+        "via_path": "/api/v1/bookings"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/bookings/{booking_id}/calendar.ics",
+    "method": "GET",
+    "backend_func": "get_booking_calendar_ics",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/bookings/{booking_id}/cancel",
+    "method": "POST",
+    "backend_func": "cancel_customer_booking",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/dispatch/bookings/{booking_id}/process-payment",
+    "method": "POST",
+    "backend_func": "process_booking_payment_operations",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/dispatch/bookings/{booking_id}/refund",
+    "method": "POST",
+    "backend_func": "process_booking_refund_operations",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/bookings/{booking_id}/terms-voucher",
+    "method": "GET",
+    "backend_func": "get_booking_terms_voucher",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/branding",
+    "method": "GET",
+    "backend_func": "get_vendor_branding_settings",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/branding",
+    "method": "PUT",
+    "backend_func": "update_vendor_branding_settings",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/dispatch/bookings/{booking_id}/pod",
+    "method": "GET",
+    "backend_func": "get_booking_proof_of_delivery",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/dispatch/bookings/{booking_id}/pod/incidentals/request",
+    "method": "POST",
+    "backend_func": "request_booking_incidentals",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/dispatch/bookings/{booking_id}/pod/incidentals/approve",
+    "method": "POST",
+    "backend_func": "approve_booking_incidentals",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/dispatch/bookings/{booking_id}/pod/dispute",
+    "method": "POST",
+    "backend_func": "dispute_booking_delivery",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/bookings/{booking_id}/master-invoice/html",
+    "method": "GET",
+    "backend_func": "get_master_invoice_html",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/bookings/{booking_id}/master-receipt/html",
+    "method": "GET",
+    "backend_func": "get_master_receipt_html",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/fleet/vehicles",
+    "method": "GET",
+    "backend_func": "list_vehicles",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/fleet/drivers",
+    "method": "GET",
+    "backend_func": "list_drivers",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/fleet/vehicle-options",
+    "method": "GET",
+    "backend_func": "list_vehicle_options",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/dispatch/pending-24h-alerts",
+    "method": "GET",
+    "backend_func": "get_pending_24h_dispatch_alerts",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/dispatch/assign-24h-driver",
+    "method": "POST",
+    "backend_func": "assign_24h_chauffeur",
+    "api_functions": [
+      "assign24hChauffeur"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\VendorDispatchPortal.tsx",
+        "via_func": "assign24hChauffeur"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/dispatch/pricing/quick-quote",
+    "method": "POST",
+    "backend_func": "dispatch_quick_quote",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/dispatch/bookings/phone-intake",
+    "method": "POST",
+    "backend_func": "create_phone_intake_booking",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/bookings/{booking_id}/email-receipt",
+    "method": "GET",
+    "backend_func": "get_booking_email_receipt",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/driver/my-offers",
+    "method": "GET",
+    "backend_func": "get_driver_offers",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/driver/offers/{offer_id}/accept",
+    "method": "POST",
+    "backend_func": "accept_offer",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/driver/trips/{trip_id}/events",
+    "method": "POST",
+    "backend_func": "update_trip_event",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/trips/{trip_id}",
+    "method": "GET",
+    "backend_func": "get_trip",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/trips/{trip_id}/live-tracking",
+    "method": "GET",
+    "backend_func": "get_trip_live_tracking",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/bookings/{booking_id}/live-tracking",
+    "method": "GET",
+    "backend_func": "get_booking_live_tracking",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/recovery/simulate-flight-delay",
+    "method": "POST",
+    "backend_func": "simulate_flight_delay",
+    "api_functions": [
+      "simulateFlightDelay"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\AIRecoveryHub.tsx",
+        "via_func": "simulateFlightDelay"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/recovery/simulate-driver-timeout",
+    "method": "POST",
+    "backend_func": "simulate_driver_timeout",
+    "api_functions": [
+      "simulateDriverTimeout"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\AIRecoveryHub.tsx",
+        "via_func": "simulateDriverTimeout"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/recovery/incidents",
+    "method": "GET",
+    "backend_func": "list_incidents",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors",
+    "method": "GET",
+    "backend_func": "list_vendors",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\CustomerPortal.tsx",
+        "via_path": "/api/v1/vendors"
+      },
+      {
+        "file": "components\\DriverMobileDashboard.tsx",
+        "via_path": "/api/v1/vendors"
+      },
+      {
+        "file": "components\\VendorDispatchPortal.tsx",
+        "via_path": "/api/v1/vendors"
+      },
+      {
+        "file": "components\\VendorOwnerDashboard.tsx",
+        "via_path": "/api/v1/vendors"
+      },
+      {
+        "file": "components\\public\\PublicFleetPage.tsx",
+        "via_path": "/api/v1/vendors"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/schedule",
+    "method": "GET",
+    "backend_func": "get_vendor_schedule",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/schedule",
+    "method": "PUT",
+    "backend_func": "update_vendor_schedule",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/availability/check",
+    "method": "POST",
+    "backend_func": "check_fleet_availability",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/system-summary",
+    "method": "GET",
+    "backend_func": "get_system_summary",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/maps/validate-address",
+    "method": "GET",
+    "backend_func": "validate_address",
+    "api_functions": [
+      "validateAddress"
+    ],
+    "ui_components": [],
+    "status": "API_CLIENT_EXISTS_BUT_NO_UI_CALL"
+  },
+  {
+    "path": "/api/v1/maps/calculate-route",
+    "method": "GET",
+    "backend_func": "calculate_route_matrix",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/maps/places-autocomplete",
+    "method": "GET",
+    "backend_func": "places_autocomplete",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\AddressAutocompleteInput.tsx",
+        "via_path": "/api/v1/maps/places-autocomplete"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/itineraries/quote",
+    "method": "POST",
+    "backend_func": "quote_multi_modal_itinerary",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/itineraries/quote-matrix",
+    "method": "POST",
+    "backend_func": "quote_multi_modal_itinerary_matrix",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/itineraries/{itinerary_id}/book",
+    "method": "POST",
+    "backend_func": "book_multi_modal_itinerary",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/intake/parse-enquiry",
+    "method": "POST",
+    "backend_func": "parse_omnichannel_enquiry",
+    "api_functions": [
+      "parseOmnichannelEnquiry"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\OmnichannelPortal.tsx",
+        "via_func": "parseOmnichannelEnquiry"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/vendors/register",
+    "method": "POST",
+    "backend_func": "register_vendor",
+    "api_functions": [
+      "registerVendor"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\VendorRegistrationPortal.tsx",
+        "via_func": "registerVendor"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/config",
+    "method": "GET",
+    "backend_func": "get_vendor_intake_config",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/config",
+    "method": "PUT",
+    "backend_func": "update_vendor_intake_config",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/voice-call-intake",
+    "method": "POST",
+    "backend_func": "execute_voice_call_intake",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/network/jobs",
+    "method": "GET",
+    "backend_func": "get_network_jobs",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/pricing-rules",
+    "method": "GET",
+    "backend_func": "get_vendor_pricing_rules",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/pricing-rules",
+    "method": "POST",
+    "backend_func": "save_vendor_pricing_rule",
+    "api_functions": [
+      "saveVendorPricingRule"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\VendorFleetAndPricingHub.tsx",
+        "via_func": "saveVendorPricingRule"
+      },
+      {
+        "file": "components\\vendor\\OperationsPricingResearchStudio.tsx",
+        "via_func": "saveVendorPricingRule"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/ai-yield",
+    "method": "GET",
+    "backend_func": "get_vendor_ai_yield",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/ai-yield/train",
+    "method": "POST",
+    "backend_func": "train_vendor_ai_yield",
+    "api_functions": [
+      "trainVendorAIYield"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\VendorFleetAndPricingHub.tsx",
+        "via_func": "trainVendorAIYield"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/ai-yield/apply",
+    "method": "POST",
+    "backend_func": "apply_vendor_ai_yield",
+    "api_functions": [
+      "applyVendorAIYield"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\VendorFleetAndPricingHub.tsx",
+        "via_func": "applyVendorAIYield"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/quotes/ai-validate-pricing",
+    "method": "POST",
+    "backend_func": "ai_validate_pricing_quote",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/pricing/simulation-scenarios",
+    "method": "GET",
+    "backend_func": "get_pricing_simulation_scenarios",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/simulation-scenarios",
+    "method": "GET",
+    "backend_func": "get_vendor_simulation_scenarios",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/pricing/simulation-scenarios",
+    "method": "POST",
+    "backend_func": "save_pricing_simulation_scenario",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/ai-validate-pricing",
+    "method": "POST",
+    "backend_func": "ai_validate_vendor_pricing",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/drivers",
+    "method": "GET",
+    "backend_func": "list_vendor_drivers",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/comm-config",
+    "method": "GET",
+    "backend_func": "get_vendor_comm_config",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/comm-config",
+    "method": "POST",
+    "backend_func": "save_vendor_comm_config",
+    "api_functions": [
+      "saveVendorCommConfig"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\VendorFleetAndPricingHub.tsx",
+        "via_func": "saveVendorCommConfig"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/transit/radar-stream",
+    "method": "GET",
+    "backend_func": "list_radar_stream",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/transit/simulate-radar-delay",
+    "method": "POST",
+    "backend_func": "simulate_radar_delay",
+    "api_functions": [
+      "simulateRadarDelay"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\FlightAwarePlanUpdaterHub.tsx",
+        "via_func": "simulateRadarDelay"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/transit/inbound-plan-update",
+    "method": "POST",
+    "backend_func": "execute_inbound_plan_update",
+    "api_functions": [
+      "executeInboundPlanUpdate"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\FlightAwarePlanUpdaterHub.tsx",
+        "via_func": "executeInboundPlanUpdate"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/auth/personas",
+    "method": "GET",
+    "backend_func": "list_available_personas",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/auth/me",
+    "method": "GET",
+    "backend_func": "get_current_session",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/auth/switch-persona",
+    "method": "POST",
+    "backend_func": "switch_persona",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/auth/oauth-login",
+    "method": "POST",
+    "backend_func": "oauth_login",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/coverage/evaluate",
+    "method": "POST",
+    "backend_func": "evaluate_coverage",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/coverage/inquiry",
+    "method": "POST",
+    "backend_func": "submit_sourcing_inquiry",
+    "api_functions": [
+      "submitSourcingInquiry"
+    ],
+    "ui_components": [],
+    "status": "API_CLIENT_EXISTS_BUT_NO_UI_CALL"
+  },
+  {
+    "path": "/api/v1/compliance/alerts",
+    "method": "GET",
+    "backend_func": "get_compliance_alerts",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/compliance/scan",
+    "method": "POST",
+    "backend_func": "trigger_compliance_scan",
+    "api_functions": [
+      "triggerComplianceScan"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\VendorDispatchPortal.tsx",
+        "via_func": "triggerComplianceScan"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/dispatch/verify-eligibility",
+    "method": "POST",
+    "backend_func": "verify_pre_dispatch_eligibility",
+    "api_functions": [
+      "verifyPreDispatchEligibility"
+    ],
+    "ui_components": [],
+    "status": "API_CLIENT_EXISTS_BUT_NO_UI_CALL"
+  },
+  {
+    "path": "/api/v1/dispatch/assignment-audits/{trip_id}",
+    "method": "GET",
+    "backend_func": "get_assignment_audit",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/chauffeur/{driver_id}/duty-status",
+    "method": "GET",
+    "backend_func": "get_chauffeur_duty_status",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/flights/{flight_ident}/live-status",
+    "method": "GET",
+    "backend_func": "get_live_flight_status",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/webhooks/flightaware",
+    "method": "POST",
+    "backend_func": "webhook_flightaware",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/webhooks/stripe",
+    "method": "POST",
+    "backend_func": "webhook_stripe",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/webhooks/twilio/voice",
+    "method": "POST",
+    "backend_func": "webhook_twilio_voice",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/webhooks/twilio/whatsapp",
+    "method": "POST",
+    "backend_func": "webhook_twilio_whatsapp",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/telemetry/location",
+    "method": "POST",
+    "backend_func": "ingest_telemetry_ping",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/telemetry/driver-location",
+    "method": "POST",
+    "backend_func": "ingest_driver_location_ping",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\DriverMobileDashboard.tsx",
+        "via_path": "/api/v1/telemetry/driver-location"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/vendor-app/trips/settle-driver-payout",
+    "method": "POST",
+    "backend_func": "settle_driver_payout_endpoint",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\DriverMobileDashboard.tsx",
+        "via_path": "/api/v1/vendor-app/trips/settle-driver-payout"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/trips/{trip_id}/live-tracking",
+    "method": "GET",
+    "backend_func": "get_trip_live_tracking",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/bookings/{booking_id}/live-tracking",
+    "method": "GET",
+    "backend_func": "get_booking_live_tracking",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/webhooks/events",
+    "method": "GET",
+    "backend_func": "list_webhook_events",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/settlements/split-records",
+    "method": "GET",
+    "backend_func": "list_split_settlements",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/webhooks/simulate",
+    "method": "POST",
+    "backend_func": "simulate_webhook_event",
+    "api_functions": [
+      "simulateWebhookEvent"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\VendorDispatchPortal.tsx",
+        "via_func": "simulateWebhookEvent"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/pricing/fx-rates",
+    "method": "GET",
+    "backend_func": "get_fx_rates",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\GlobalHubAdminPortal.tsx",
+        "via_path": "/api/v1/pricing/fx-rates"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/pricing/fx-rates/sync",
+    "method": "POST",
+    "backend_func": "sync_live_fx_rates",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\GlobalHubAdminPortal.tsx",
+        "via_path": "/api/v1/pricing/fx-rates/sync"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/pricing/tax-rules",
+    "method": "GET",
+    "backend_func": "get_regional_tax_rules",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/corporate/accounts",
+    "method": "GET",
+    "backend_func": "get_corporate_accounts",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\CorporateBookerPortal.tsx",
+        "via_path": "/api/v1/corporate/accounts"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/corporate/accounts/{account_id}",
+    "method": "GET",
+    "backend_func": "get_corporate_account",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\CorporateBookerPortal.tsx",
+        "via_path": "/api/v1/corporate/accounts"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/corporate/accounts",
+    "method": "POST",
+    "backend_func": "create_corporate_account",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\CorporateBookerPortal.tsx",
+        "via_path": "/api/v1/corporate/accounts"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/corporate/accounts/{account_id}/cost-centers",
+    "method": "POST",
+    "backend_func": "add_cost_center",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/corporate/validate-policy",
+    "method": "POST",
+    "backend_func": "validate_corporate_policy",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\CorporateBookerPortal.tsx",
+        "via_path": "/api/v1/corporate/validate-policy"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/corporate/bookings",
+    "method": "POST",
+    "backend_func": "create_corporate_booking",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\CorporateBookerPortal.tsx",
+        "via_path": "/api/v1/corporate/bookings"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/corporate/invoices/{account_id}",
+    "method": "GET",
+    "backend_func": "get_corporate_invoices",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\CorporateBookerPortal.tsx",
+        "via_path": "/api/v1/corporate/invoices"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/corporate/invoices/{invoice_id}/csv",
+    "method": "GET",
+    "backend_func": "export_invoice_csv",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/voice/simulate-call",
+    "method": "POST",
+    "backend_func": "simulate_voice_call",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/voice/consent",
+    "method": "POST",
+    "backend_func": "submit_voice_consent",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\VoiceAIStudio.tsx",
+        "via_path": "/api/v1/voice/consent"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/voice/barge-in",
+    "method": "POST",
+    "backend_func": "trigger_voice_barge_in",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\VoiceAIStudio.tsx",
+        "via_path": "/api/v1/voice/barge-in"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/voice/utterance",
+    "method": "POST",
+    "backend_func": "process_voice_utterance",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\VoiceAIStudio.tsx",
+        "via_path": "/api/v1/voice/utterance"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/voice/session/{session_id}",
+    "method": "GET",
+    "backend_func": "get_voice_session",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/graph-rag/export",
+    "method": "GET",
+    "backend_func": "export_graph_rag",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\VoiceAIStudio.tsx",
+        "via_path": "/api/v1/graph-rag/export"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/graph-rag/paths",
+    "method": "POST",
+    "backend_func": "query_graph_rag_paths",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\VoiceAIStudio.tsx",
+        "via_path": "/api/v1/graph-rag/paths"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/graph-rag/verify",
+    "method": "POST",
+    "backend_func": "verify_regulatory_claim",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\VoiceAIStudio.tsx",
+        "via_path": "/api/v1/graph-rag/verify"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/graph-rag/neo4j/sync",
+    "method": "POST",
+    "backend_func": "sync_neo4j_aura",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\VoiceAIStudio.tsx",
+        "via_path": "/api/v1/graph-rag/neo4j/sync"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/graph-rag/neo4j/cypher",
+    "method": "POST",
+    "backend_func": "execute_cypher_query",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\VoiceAIStudio.tsx",
+        "via_path": "/api/v1/graph-rag/neo4j/cypher"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/vendor-cell/{vendor_id}/booking/direct",
+    "method": "POST",
+    "backend_func": "create_vendor_cell_direct_booking",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendor-cell/{vendor_id}/status",
+    "method": "GET",
+    "backend_func": "get_vendor_cell_status",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendor-cell/{vendor_id}/circuit-breaker",
+    "method": "POST",
+    "backend_func": "toggle_vendor_cell_circuit_breaker",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendor-cell/{vendor_id}/outbox/sync",
+    "method": "POST",
+    "backend_func": "sync_vendor_outbox_to_global_hub",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/global-hub/analytics",
+    "method": "GET",
+    "backend_func": "get_global_hub_analytics",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\VendorCellAndGlobalHubStudio.tsx",
+        "via_path": "/api/v1/global-hub/analytics"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/global-hub/shared-ai/invoke",
+    "method": "POST",
+    "backend_func": "invoke_shared_ai_gateway",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/global-hub/radar/broadcast",
+    "method": "POST",
+    "backend_func": "broadcast_flight_radar_event",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendor-cell/cells",
+    "method": "GET",
+    "backend_func": "list_vendor_cells",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendor-cell/manifest-template",
+    "method": "GET",
+    "backend_func": "get_vendor_manifest_template",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\GlobalHubAdminPortal.tsx",
+        "via_path": "/api/v1/vendor-cell/manifest-template"
+      },
+      {
+        "file": "components\\VendorCellAndGlobalHubStudio.tsx",
+        "via_path": "/api/v1/vendor-cell/manifest-template"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/vendor-cell/validate-yaml",
+    "method": "POST",
+    "backend_func": "validate_vendor_yaml",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\GlobalHubAdminPortal.tsx",
+        "via_path": "/api/v1/vendor-cell/validate-yaml"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/vendor-cell/spin-up",
+    "method": "POST",
+    "backend_func": "spin_up_vendor_cell",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\GlobalHubAdminPortal.tsx",
+        "via_path": "/api/v1/vendor-cell/spin-up"
+      },
+      {
+        "file": "components\\VendorCellAndGlobalHubStudio.tsx",
+        "via_path": "/api/v1/vendor-cell/spin-up"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/vendor-cell/{vendor_id}/onboarding-status",
+    "method": "GET",
+    "backend_func": "get_vendor_onboarding_status",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendor-cell/{vendor_id}/onboarding-invite",
+    "method": "POST",
+    "backend_func": "send_vendor_onboarding_invite",
+    "api_functions": [
+      "sendVendorOnboardingInvite"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\VendorOwnerDashboard.tsx",
+        "via_func": "sendVendorOnboardingInvite"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/vendor-cell/{vendor_id}/email/config",
+    "method": "GET",
+    "backend_func": "get_vendor_email_config",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendor-cell/{vendor_id}/email/config",
+    "method": "PUT",
+    "backend_func": "update_vendor_email_config",
+    "api_functions": [
+      "updateVendorEmailConfig"
+    ],
+    "ui_components": [],
+    "status": "API_CLIENT_EXISTS_BUT_NO_UI_CALL"
+  },
+  {
+    "path": "/api/v1/vendor-cell/{vendor_id}/email/test",
+    "method": "POST",
+    "backend_func": "test_vendor_email_connection",
+    "api_functions": [
+      "testVendorEmailConnection"
+    ],
+    "ui_components": [],
+    "status": "API_CLIENT_EXISTS_BUT_NO_UI_CALL"
+  },
+  {
+    "path": "/api/v1/vendor-cell/{vendor_id}/email/test-inbound",
+    "method": "POST",
+    "backend_func": "test_vendor_inbound_email_connection",
+    "api_functions": [
+      "testVendorInboundEmailConnection"
+    ],
+    "ui_components": [],
+    "status": "API_CLIENT_EXISTS_BUT_NO_UI_CALL"
+  },
+  {
+    "path": "/api/v1/vendor-cell/{vendor_id}/email/inbox",
+    "method": "GET",
+    "backend_func": "get_vendor_email_inbox",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendor-cell/{vendor_id}/email/rfqs/{rfq_id}/convert-booking",
+    "method": "POST",
+    "backend_func": "convert_email_rfq_to_booking",
+    "api_functions": [
+      "convertEmailRfqToBooking"
+    ],
+    "ui_components": [],
+    "status": "API_CLIENT_EXISTS_BUT_NO_UI_CALL"
+  },
+  {
+    "path": "/api/v1/vendor-cell/{vendor_id}/email/send-invoice",
+    "method": "POST",
+    "backend_func": "send_vendor_trip_invoice",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendor-cell/{vendor_id}/email/inbound-parse",
+    "method": "POST",
+    "backend_func": "parse_vendor_inbound_email",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendor-cell/{vendor_id}/email/outbound-dispatch",
+    "method": "POST",
+    "backend_func": "dispatch_vendor_outbound_email",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendor-cell/{vendor_id}/affiliate/farm-out",
+    "method": "POST",
+    "backend_func": "farm_out_affiliate_ride",
+    "api_functions": [
+      "farmOutAffiliateRide"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\VendorOwnerDashboard.tsx",
+        "via_func": "farmOutAffiliateRide"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/vendor-cell/{vendor_id}/affiliate/records",
+    "method": "GET",
+    "backend_func": "get_vendor_affiliate_records",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/team",
+    "method": "GET",
+    "backend_func": "list_vendor_team",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendor-cell/{vendor_id}/team",
+    "method": "GET",
+    "backend_func": "list_vendor_team",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/team",
+    "method": "POST",
+    "backend_func": "create_vendor_team_member",
+    "api_functions": [
+      "createVendorTeamMember"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\VendorOwnerDashboard.tsx",
+        "via_func": "createVendorTeamMember"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/vendor-cell/{vendor_id}/team",
+    "method": "POST",
+    "backend_func": "create_vendor_team_member",
+    "api_functions": [
+      "createVendorTeamMember"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\VendorOwnerDashboard.tsx",
+        "via_func": "createVendorTeamMember"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/team/{user_id}",
+    "method": "PUT",
+    "backend_func": "update_vendor_team_member",
+    "api_functions": [
+      "updateVendorTeamMember"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\VendorOwnerDashboard.tsx",
+        "via_func": "updateVendorTeamMember"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/vendor-cell/{vendor_id}/team/{user_id}",
+    "method": "PUT",
+    "backend_func": "update_vendor_team_member",
+    "api_functions": [
+      "updateVendorTeamMember"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\VendorOwnerDashboard.tsx",
+        "via_func": "updateVendorTeamMember"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/team/{user_id}",
+    "method": "DELETE",
+    "backend_func": "delete_vendor_team_member",
+    "api_functions": [
+      "deleteVendorTeamMember"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\VendorOwnerDashboard.tsx",
+        "via_func": "deleteVendorTeamMember"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/vendor-cell/{vendor_id}/team/{user_id}",
+    "method": "DELETE",
+    "backend_func": "delete_vendor_team_member",
+    "api_functions": [
+      "deleteVendorTeamMember"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\VendorOwnerDashboard.tsx",
+        "via_func": "deleteVendorTeamMember"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/vendor-cell/{vendor_id}/team/{user_id}/impersonate-token",
+    "method": "POST",
+    "backend_func": "generate_team_member_impersonate_token",
+    "api_functions": [
+      "generateTeamMemberImpersonateToken"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\VendorOwnerDashboard.tsx",
+        "via_func": "generateTeamMemberImpersonateToken"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/vendor-cell/{vendor_id}/team/roles-matrix",
+    "method": "GET",
+    "backend_func": "get_vendor_roles_matrix",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendor-cell/{vendor_id}/portal-config",
+    "method": "GET",
+    "backend_func": "get_vendor_portal_config",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendor-portal/resolve-domain",
+    "method": "GET",
+    "backend_func": "resolve_vendor_domain",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendor-portal/resolve-token",
+    "method": "GET",
+    "backend_func": "resolve_vendor_token",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendor-portal/token/{vendor_id}",
+    "method": "GET",
+    "backend_func": "generate_vendor_token",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/system/runtime-mode",
+    "method": "GET",
+    "backend_func": "get_system_runtime_mode",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/telecom-compliance",
+    "method": "GET",
+    "backend_func": "get_vendor_telecom_compliance",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/telecom-compliance/inbound-sms",
+    "method": "POST",
+    "backend_func": "process_inbound_sms_compliance",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/telecom-compliance/register-brand",
+    "method": "POST",
+    "backend_func": "register_vendor_brand",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/omnichannel/desk",
+    "method": "GET",
+    "backend_func": "get_vendor_omnichannel_desk",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/omnichannel/send-message",
+    "method": "POST",
+    "backend_func": "send_omnichannel_chat_message",
+    "api_functions": [
+      "sendOmnichannelChatMessage"
+    ],
+    "ui_components": [],
+    "status": "API_CLIENT_EXISTS_BUT_NO_UI_CALL"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/omnichannel/dial-call",
+    "method": "POST",
+    "backend_func": "record_voice_studio_call",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/omnichannel/config",
+    "method": "POST",
+    "backend_func": "update_vendor_omnichannel_config",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/seo-schema",
+    "method": "GET",
+    "backend_func": "get_vendor_seo_schema",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/public/vendor-onboarding/validate",
+    "method": "POST",
+    "backend_func": "validate_public_vendor_onboarding",
+    "api_functions": [
+      "validatePublicVendorOnboarding"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\public\\PublicVendorOnboardingPage.tsx",
+        "via_func": "validatePublicVendorOnboarding"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/public/vendor-onboarding/submit",
+    "method": "POST",
+    "backend_func": "submit_public_vendor_onboarding",
+    "api_functions": [
+      "submitPublicVendorOnboarding"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\public\\PublicVendorOnboardingPage.tsx",
+        "via_func": "submitPublicVendorOnboarding"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/payroll/summary",
+    "method": "GET",
+    "backend_func": "get_vendor_payroll_summary",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/payroll/export",
+    "method": "GET",
+    "backend_func": "export_vendor_payroll_csv",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/drivers/{driver_id}/compensation-model",
+    "method": "POST",
+    "backend_func": "update_driver_compensation_model",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/payroll/process-trip",
+    "method": "POST",
+    "backend_func": "process_trip_payout",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/payroll/record-shift",
+    "method": "POST",
+    "backend_func": "record_driver_shift",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/customers/lookup",
+    "method": "GET",
+    "backend_func": "lookup_customer_for_intake",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/customers",
+    "method": "GET",
+    "backend_func": "list_vendor_customers",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/customers/{customer_id}",
+    "method": "GET",
+    "backend_func": "get_customer_profile",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/customers",
+    "method": "POST",
+    "backend_func": "create_or_register_customer",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/customers/{customer_id}/preferences",
+    "method": "PATCH",
+    "backend_func": "update_customer_preferences",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/customers/{customer_id}/addresses",
+    "method": "POST",
+    "backend_func": "add_customer_saved_address",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/outbox/telemetry",
+    "method": "GET",
+    "backend_func": "get_vendor_outbox_telemetry",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/outbox/flush",
+    "method": "POST",
+    "backend_func": "flush_vendor_outbox_queue",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/affiliates/records",
+    "method": "GET",
+    "backend_func": "get_vendor_affiliate_records",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/affiliates/farm-out",
+    "method": "POST",
+    "backend_func": "farm_out_ride_to_affiliate",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/affiliates/directory",
+    "method": "GET",
+    "backend_func": "get_global_affiliate_directory",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/affiliates/recommendations",
+    "method": "GET",
+    "backend_func": "get_affiliate_recommendations_for_ride",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/affiliates/policy",
+    "method": "GET",
+    "backend_func": "get_vendor_affiliate_policy",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/affiliates/policy",
+    "method": "PUT",
+    "backend_func": "update_vendor_affiliate_policy",
+    "api_functions": [
+      "updateVendorAffiliatePolicy"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\VendorOwnerDashboard.tsx",
+        "via_func": "updateVendorAffiliatePolicy"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/evaluate-multileg-strategy",
+    "method": "POST",
+    "backend_func": "evaluate_vendor_multileg_strategy",
+    "api_functions": [
+      "evaluateVendorMultilegStrategy"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\VendorOwnerDashboard.tsx",
+        "via_func": "evaluateVendorMultilegStrategy"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/global-hub/affiliates/knowledge-base",
+    "method": "GET",
+    "backend_func": "get_global_hub_affiliates_knowledge_base",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/global-hub/clearinghouse/ledger",
+    "method": "GET",
+    "backend_func": "get_global_hub_clearinghouse_ledger",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendor-network/exchange/ledger",
+    "method": "GET",
+    "backend_func": "get_vendor_network_exchange_ledger",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\VendorOwnerDashboard.tsx",
+        "via_path": "/api/v1/vendor-network/exchange/ledger"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/media/upload-s3",
+    "method": "POST",
+    "backend_func": "upload_vendor_media_to_s3",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/media/{file_path:path}",
+    "method": "GET",
+    "backend_func": "serve_media_vault_file",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/fleet-inventory",
+    "method": "GET",
+    "backend_func": "list_vendor_fleet_inventory",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/fleet-inventory",
+    "method": "POST",
+    "backend_func": "create_vendor_vehicle",
+    "api_functions": [
+      "createVendorVehicle"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\VendorOwnerDashboard.tsx",
+        "via_func": "createVendorVehicle"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/fleet-inventory/{vehicle_id}",
+    "method": "GET",
+    "backend_func": "get_vendor_vehicle_detail",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/fleet-inventory/{vehicle_id}",
+    "method": "PUT",
+    "backend_func": "update_vendor_vehicle",
+    "api_functions": [
+      "updateVendorVehicle"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\VendorOwnerDashboard.tsx",
+        "via_func": "updateVendorVehicle"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/fleet-inventory/{vehicle_id}",
+    "method": "DELETE",
+    "backend_func": "delete_vendor_vehicle",
+    "api_functions": [
+      "deleteVendorVehicle"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\VendorOwnerDashboard.tsx",
+        "via_func": "deleteVendorVehicle"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/fleet-inventory/{vehicle_id}/toggle-network",
+    "method": "PATCH",
+    "backend_func": "toggle_vendor_vehicle_network",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/fleet-inventory/{vehicle_id}/toggle-active",
+    "method": "PATCH",
+    "backend_func": "toggle_vendor_vehicle_active",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/drivers",
+    "method": "GET",
+    "backend_func": "list_vendor_drivers",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/drivers",
+    "method": "POST",
+    "backend_func": "create_vendor_driver",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/bookings",
+    "method": "GET",
+    "backend_func": "list_vendor_bookings",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/sourcing/opportunities",
+    "method": "GET",
+    "backend_func": "get_all_sourcing_opportunities",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/sourcing/trigger-rfp",
+    "method": "POST",
+    "backend_func": "trigger_manual_sourcing_rfp",
+    "api_functions": [
+      "triggerManualSourcingRfp"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\SourcingConciergeDesk.tsx",
+        "via_func": "triggerManualSourcingRfp"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/sourcing/rfp-details/{quote_token}",
+    "method": "GET",
+    "backend_func": "get_rfp_details_by_token",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/sourcing/submit-quote",
+    "method": "POST",
+    "backend_func": "submit_vendor_quote",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/sourcing/manager-override",
+    "method": "POST",
+    "backend_func": "manager_phone_quote_override",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/sourcing/inbound-email-webhook",
+    "method": "POST",
+    "backend_func": "receive_inbound_vendor_email_webhook",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\SourcingConciergeDesk.tsx",
+        "via_path": "/api/v1/sourcing/inbound-email-webhook"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/global-hub/dispatch-route",
+    "method": "POST",
+    "backend_func": "route_global_hub_booking",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\GlobalHubAdminPortal.tsx",
+        "via_path": "/api/v1/global-hub/dispatch-route"
+      },
+      {
+        "file": "components\\public\\GlobalMarketplaceBookingPage.tsx",
+        "via_path": "/api/v1/global-hub/dispatch-route"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/global-hub/dispatch-metrics",
+    "method": "GET",
+    "backend_func": "get_global_hub_dispatch_metrics",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\GlobalHubAdminPortal.tsx",
+        "via_path": "/api/v1/global-hub/dispatch-metrics"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/global-hub/dispatch-sla-sweep",
+    "method": "POST",
+    "backend_func": "trigger_dispatch_sla_sweep",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/infrastructure/cells",
+    "method": "GET",
+    "backend_func": "list_infrastructure_cells",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\GlobalHubAdminPortal.tsx",
+        "via_path": "/api/v1/infrastructure/cells"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/infrastructure/cells/{vendor_id}",
+    "method": "GET",
+    "backend_func": "get_cell_infrastructure",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\GlobalHubAdminPortal.tsx",
+        "via_path": "/api/v1/infrastructure/cells"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/infrastructure/cells/{vendor_id}/lifecycle",
+    "method": "POST",
+    "backend_func": "execute_cell_lifecycle",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/infrastructure/cells/{vendor_id}/domain-mapping",
+    "method": "GET",
+    "backend_func": "get_cell_domain_mapping",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/infrastructure/cells/{vendor_id}/domain-mapping",
+    "method": "PUT",
+    "backend_func": "update_cell_domain_mapping",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/infrastructure/cells/{vendor_id}/push-to-aws",
+    "method": "POST",
+    "backend_func": "push_cell_infrastructure_to_aws",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/infrastructure/cells/bulk-push-aws",
+    "method": "POST",
+    "backend_func": "bulk_push_cells_to_aws",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\GlobalHubAdminPortal.tsx",
+        "via_path": "/api/v1/infrastructure/cells/bulk-push-aws"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/infrastructure/compliance-vault",
+    "method": "GET",
+    "backend_func": "list_compliance_vaults",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/infrastructure/cells/{vendor_id}/compliance-vault",
+    "method": "GET",
+    "backend_func": "get_cell_compliance_vault",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/payments/global-settlements",
+    "method": "GET",
+    "backend_func": "get_global_settlement_ledger",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\GlobalHubAdminPortal.tsx",
+        "via_path": "/api/v1/payments/global-settlements"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/payments/simulate-escrow-settlement",
+    "method": "POST",
+    "backend_func": "simulate_escrow_settlement_api",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/payments/stripe-architecture",
+    "method": "GET",
+    "backend_func": "get_stripe_architecture_status",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\GlobalHubAdminPortal.tsx",
+        "via_path": "/api/v1/payments/stripe-architecture"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/ai/model-lifecycle",
+    "method": "GET",
+    "backend_func": "get_ai_model_lifecycle",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\GlobalHubAdminPortal.tsx",
+        "via_path": "/api/v1/ai/model-lifecycle"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/ai/model-lifecycle/audit-sync",
+    "method": "POST",
+    "backend_func": "run_ai_model_lifecycle_audit",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\GlobalHubAdminPortal.tsx",
+        "via_path": "/api/v1/ai/model-lifecycle/audit-sync"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/stripe/connect-link",
+    "method": "POST",
+    "backend_func": "create_vendor_stripe_connect_link",
+    "api_functions": [
+      "createVendorStripeConnectLink"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\VendorOwnerDashboard.tsx",
+        "via_func": "createVendorStripeConnectLink"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/stripe/connect-status",
+    "method": "GET",
+    "backend_func": "get_vendor_stripe_connect_status",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/payouts/ledger",
+    "method": "GET",
+    "backend_func": "get_vendor_payouts_ledger",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/stripe/login-link",
+    "method": "POST",
+    "backend_func": "create_vendor_stripe_login_link",
+    "api_functions": [
+      "createVendorStripeLoginLink"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\VendorOwnerDashboard.tsx",
+        "via_func": "createVendorStripeLoginLink"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/hub/subscriptions/overview",
+    "method": "GET",
+    "backend_func": "get_hub_subscriptions_overview",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\GlobalHubAdminPortal.tsx",
+        "via_path": "/api/v1/hub/subscriptions/overview"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/subscription",
+    "method": "GET",
+    "backend_func": "get_vendor_subscription_details",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/subscription/upgrade",
+    "method": "POST",
+    "backend_func": "upgrade_vendor_subscription",
+    "api_functions": [
+      "upgradeVendorSubscription"
+    ],
+    "ui_components": [],
+    "status": "API_CLIENT_EXISTS_BUT_NO_UI_CALL"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/subscription/pay-as-you-go",
+    "method": "POST",
+    "backend_func": "switch_vendor_to_pay_as_you_go",
+    "api_functions": [
+      "switchVendorToPayAsYouGo"
+    ],
+    "ui_components": [],
+    "status": "API_CLIENT_EXISTS_BUT_NO_UI_CALL"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/subscription/cancel",
+    "method": "POST",
+    "backend_func": "cancel_vendor_subscription",
+    "api_functions": [
+      "cancelVendorSubscription"
+    ],
+    "ui_components": [],
+    "status": "API_CLIENT_EXISTS_BUT_NO_UI_CALL"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/account/delete-request",
+    "method": "POST",
+    "backend_func": "request_vendor_account_deletion",
+    "api_functions": [
+      "requestVendorAccountDeletion"
+    ],
+    "ui_components": [],
+    "status": "API_CLIENT_EXISTS_BUT_NO_UI_CALL"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/subscription/simulate-dunning",
+    "method": "POST",
+    "backend_func": "trigger_dunning_test_alert",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/hub/subscriptions/{vendor_id}/trigger-dunning-test",
+    "method": "POST",
+    "backend_func": "trigger_dunning_test_alert",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/subscription/billing-portal",
+    "method": "POST",
+    "backend_func": "create_vendor_billing_portal_session",
+    "api_functions": [
+      "createVendorBillingPortalSession"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\VendorOwnerDashboard.tsx",
+        "via_func": "createVendorBillingPortalSession"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/subscription/clear-dunning",
+    "method": "POST",
+    "backend_func": "clear_vendor_dunning_alert",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/hub/vendors/{vendor_id}/charging-profile",
+    "method": "PUT",
+    "backend_func": "update_vendor_charging_profile_endpoint",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/hub/vendors/{vendor_id}/send-invoice",
+    "method": "POST",
+    "backend_func": "send_vendor_invoice_endpoint",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/hub/vendors/{vendor_id}/charge-auto-pay",
+    "method": "POST",
+    "backend_func": "charge_vendor_auto_pay_endpoint",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/infrastructure/cells/{vendor_id}/stop",
+    "method": "POST",
+    "backend_func": "stop_sovereign_cell_endpoint",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/infrastructure/cells/{vendor_id}/start",
+    "method": "POST",
+    "backend_func": "start_sovereign_cell_endpoint",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/infrastructure/cells/{vendor_id}/terminate",
+    "method": "POST",
+    "backend_func": "terminate_sovereign_cell_endpoint",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/support-desk/plans",
+    "method": "GET",
+    "backend_func": "list_support_desk_plans",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/support-desk/plans/{plan_id}",
+    "method": "PUT",
+    "backend_func": "update_support_desk_plan_endpoint",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/support-desk/config",
+    "method": "GET",
+    "backend_func": "get_support_desk_config",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/support-desk/config",
+    "method": "PUT",
+    "backend_func": "update_support_desk_config",
+    "api_functions": [
+      "updateSupportDeskConfig"
+    ],
+    "ui_components": [
+      {
+        "file": "components\\GlobalSupportDeskHub.tsx",
+        "via_func": "updateSupportDeskConfig"
+      }
+    ],
+    "status": "WIRED_TO_UI"
+  },
+  {
+    "path": "/api/v1/support-desk/subscribe",
+    "method": "POST",
+    "backend_func": "subscribe_vendor_support_endpoint",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/support-desk/subscriptions",
+    "method": "GET",
+    "backend_func": "list_support_desk_subscriptions",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/support-desk/tickets",
+    "method": "GET",
+    "backend_func": "list_support_tickets",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/support-desk/tickets",
+    "method": "POST",
+    "backend_func": "create_support_ticket_endpoint",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/support-desk/tickets/{ticket_id}",
+    "method": "PUT",
+    "backend_func": "update_support_ticket_endpoint",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/support-desk/tickets/{ticket_id}/mutate",
+    "method": "POST",
+    "backend_func": "mutate_ticket_booking_endpoint",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/support-desk/pods",
+    "method": "GET",
+    "backend_func": "list_regional_pods_endpoint",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/support-desk/voice/resolve-inbound",
+    "method": "POST",
+    "backend_func": "resolve_inbound_voice_endpoint",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/support-desk/sla/evaluate-triggers",
+    "method": "POST",
+    "backend_func": "evaluate_sla_triggers_endpoint",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/support-desk/overview",
+    "method": "GET",
+    "backend_func": "get_support_desk_overview",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/support-desk/voice/twiml-inbound",
+    "method": "POST",
+    "backend_func": "get_inbound_twiml_xml",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/hub/helicopter-config",
+    "method": "GET",
+    "backend_func": "get_hub_helicopter_config_endpoint",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/hub/helicopter-config",
+    "method": "PUT",
+    "backend_func": "update_hub_helicopter_config_endpoint",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/hub/heliports",
+    "method": "GET",
+    "backend_func": "list_hub_domestic_heliports",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/hub/helicopter/validate",
+    "method": "POST",
+    "backend_func": "validate_helicopter_leg_endpoint",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/drivers/{driver_id}/documents",
+    "method": "GET",
+    "backend_func": "get_driver_documents",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/drivers/{driver_id}/documents/upload",
+    "method": "POST",
+    "backend_func": "upload_driver_document_endpoint",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/inquiries",
+    "method": "POST",
+    "backend_func": "create_inquiry_endpoint",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\VendorDispatchPortal.tsx",
+        "via_path": "/api/v1/inquiries"
+      },
+      {
+        "file": "components\\public\\PublicContactPage.tsx",
+        "via_path": "/api/v1/inquiries"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/inquiries",
+    "method": "GET",
+    "backend_func": "list_vendor_inquiries",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/inquiries/{inquiry_id}",
+    "method": "PATCH",
+    "backend_func": "update_inquiry_status",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\VendorDispatchPortal.tsx",
+        "via_path": "/api/v1/inquiries"
+      },
+      {
+        "file": "components\\public\\PublicContactPage.tsx",
+        "via_path": "/api/v1/inquiries"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/v1/auth/passkey/register-challenge",
+    "method": "POST",
+    "backend_func": "passkey_register_challenge",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/auth/passkey/verify-registration",
+    "method": "POST",
+    "backend_func": "passkey_verify_registration",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/auth/passkey/auth-challenge",
+    "method": "POST",
+    "backend_func": "passkey_auth_challenge",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/auth/passkey/verify-auth",
+    "method": "POST",
+    "backend_func": "passkey_verify_auth",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/inquiries/{inquiry_id}/trigger-drip",
+    "method": "POST",
+    "backend_func": "trigger_inquiry_drip",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/inquiries/{inquiry_id}/convert-booking",
+    "method": "POST",
+    "backend_func": "convert_inquiry_to_booking",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/support/tickets",
+    "method": "POST",
+    "backend_func": "create_customer_support_ticket",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/support/tickets/lookup",
+    "method": "GET",
+    "backend_func": "lookup_customer_support_tickets",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/support/tickets/{ticket_id}",
+    "method": "GET",
+    "backend_func": "get_support_ticket",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/support/tickets/{ticket_id}/messages",
+    "method": "POST",
+    "backend_func": "add_ticket_message",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/support/tickets",
+    "method": "GET",
+    "backend_func": "list_vendor_support_tickets",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/support/tickets/{ticket_id}/reply",
+    "method": "POST",
+    "backend_func": "reply_to_vendor_ticket",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/vendors/{vendor_id}/support/tickets/{ticket_id}/resolve",
+    "method": "PUT",
+    "backend_func": "resolve_vendor_ticket",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/global-hub/support/tickets",
+    "method": "GET",
+    "backend_func": "list_global_hub_support_tickets",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/global-hub/support/tickets/{ticket_id}/escalate",
+    "method": "POST",
+    "backend_func": "escalate_ticket_to_global_hub",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/v1/global-hub/support/sla-sweep",
+    "method": "POST",
+    "backend_func": "sweep_support_sla",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\hub\\GlobalHubSupportTab.tsx",
+        "via_path": "/api/v1/global-hub/support/sla-sweep"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/api/ai/capabilities",
+    "method": "GET",
+    "backend_func": "capabilities",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/ai/documents",
+    "method": "POST",
+    "backend_func": "add_document",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/ai/documents",
+    "method": "GET",
+    "backend_func": "documents",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/ai/documents/{identifier}",
+    "method": "DELETE",
+    "backend_func": "delete",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/ai/graph/edges",
+    "method": "POST",
+    "backend_func": "edge",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/ai/retrieve",
+    "method": "POST",
+    "backend_func": "search",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/ai/run",
+    "method": "POST",
+    "backend_func": "run",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/ai/runs",
+    "method": "GET",
+    "backend_func": "history",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/ai/evaluate",
+    "method": "POST",
+    "backend_func": "evaluate",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/ws/voice/stream",
+    "method": "WS/MOUNT",
+    "backend_func": "",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\VoiceAIStudio.tsx",
+        "via_path": "/ws/voice/stream"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/ws/voice/twilio/media",
+    "method": "WS/MOUNT",
+    "backend_func": "",
+    "api_functions": [],
+    "ui_components": [
+      {
+        "file": "components\\VoiceAIStudio.tsx",
+        "via_path": "/ws/voice/twilio/media"
+      }
+    ],
+    "status": "RAW_FETCH_IN_UI"
+  },
+  {
+    "path": "/health",
+    "method": "GET",
+    "backend_func": "health",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/demo/policy",
+    "method": "GET",
+    "backend_func": "policy",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "/api/demo/quotes",
+    "method": "POST",
+    "backend_func": "quote",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  },
+  {
+    "path": "",
+    "method": "WS/MOUNT",
+    "backend_func": "",
+    "api_functions": [],
+    "ui_components": [],
+    "status": "MISSING_API_AND_UI"
+  }
+]

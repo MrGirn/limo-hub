@@ -12,6 +12,7 @@ interface PublicHomePageProps {
   onNavigateToBooking: (initialDetails?: any) => void;
   onNavigateToFleet: () => void;
   onOpenAuthModal?: () => void;
+  onOpenLookupModal?: () => void;
 }
 
 export const PublicHomePage: React.FC<PublicHomePageProps> = ({
@@ -19,7 +20,8 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
   vendorName,
   onNavigateToBooking,
   onNavigateToFleet,
-  onOpenAuthModal
+  onOpenAuthModal,
+  onOpenLookupModal
 }) => {
   const [serviceType, setServiceType] = useState<ServiceType>('AIRPORT_TRANSFER');
   const [vehicleClass, setVehicleClass] = useState<VehicleClass>('LUXURY_SUV');
@@ -51,19 +53,10 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '48px', paddingBottom: '60px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div className="public-homepage-root">
       
       {/* --- 1. ULTRA-LUXURY EXECUTIVE HERO BANNER (PURE LIGHT MODE) --- */}
-      <div style={{
-        position: 'relative',
-        overflow: 'hidden',
-        borderRadius: '24px',
-        background: 'linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)',
-        border: '1px solid #E5E8ED',
-        padding: '52px 40px',
-        boxShadow: '0 10px 30px rgba(16, 37, 63, 0.06)',
-        color: '#10253F'
-      }}>
+      <div className="public-hero-section">
         {/* Subtle Ambient Gold Accent */}
         <div style={{
           position: 'absolute',
@@ -77,178 +70,171 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
           pointerEvents: 'none'
         }} />
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))',
-          gap: '44px',
-          alignItems: 'center',
-          position: 'relative',
-          zIndex: 10
-        }}>
+        <div className="public-hero-grid">
           
           {/* Left Hero Content */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0 }}>
             <div style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
-              padding: '6px 14px',
+              padding: '5px 12px',
               borderRadius: '6px',
               background: '#FDFBF7',
               border: '1px solid #EADBBE',
               color: '#806734',
-              fontSize: '12px',
+              fontSize: '11px',
               fontWeight: 700,
-              letterSpacing: '0.08em',
+              letterSpacing: '0.06em',
               textTransform: 'uppercase',
               width: 'fit-content'
             }}>
-              <Crown size={14} color="#967B42" />
-              <span>{branding.company_tagline || `${vendorName} · Premier Executive Chauffeur Fleet`}</span>
+              <Crown size={13} color="#967B42" />
+              <span>{branding.company_tagline || `${vendorName} · Premier Executive Fleet`}</span>
             </div>
 
-            <h1 style={{
-              fontFamily: '"Libre Baskerville", Georgia, serif',
-              fontSize: '44px',
-              fontWeight: 400,
-              color: '#0B1B2D',
-              letterSpacing: '-0.02em',
-              lineHeight: '1.2',
-              margin: 0
-            }}>
+            <h1 className="public-hero-title">
               Your journey.<br />
               <span style={{ color: '#967B42', fontStyle: 'italic' }}>Exceptionally driven.</span>
             </h1>
 
-            <p style={{ fontSize: '15px', color: '#586579', lineHeight: '1.65', margin: 0, fontFamily: 'var(--font-ui)' }}>
-              Welcome to <strong style={{ color: '#0B1B2D' }}>{vendorName}</strong>. Flagship Cadillac Escalade ESVs, GMC Yukon Denali XLs, and executive diplomatic sedans. Backed by guaranteed zero-wait FlightRadar24 airport telemetry and strict <strong>$5,000,000 livery insurance</strong>.
+            <p style={{ fontSize: '14px', color: '#586579', lineHeight: '1.6', margin: 0, fontFamily: 'var(--font-ui)' }}>
+              Welcome to <strong style={{ color: '#0B1B2D' }}>{vendorName}</strong>. Flagship Cadillac Escalade ESVs, GMC Yukon Denali XLs, and executive diplomatic sedans. Backed by zero-wait FlightRadar24 airport telemetry and verified <strong>$5,000,000 livery insurance</strong>.
             </p>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', paddingTop: '6px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', paddingTop: '4px' }}>
               <button
                 onClick={onNavigateToFleet}
                 style={{
-                  padding: '13px 24px',
+                  padding: '11px 20px',
                   background: '#967B42',
                   color: '#FFFFFF',
-                  fontWeight: 600,
-                  fontSize: '14px',
-                  borderRadius: '5px',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  borderRadius: '6px',
                   border: 'none',
                   cursor: 'pointer',
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  boxShadow: '0 4px 14px rgba(150, 123, 66, 0.25)',
-                  transition: 'all 0.16s ease'
+                  gap: '6px',
+                  boxShadow: '0 3px 10px rgba(150, 123, 66, 0.25)'
                 }}
               >
-                <Car size={16} color="#FFFFFF" />
-                <span>Explore Escalade &amp; Denali Fleet</span>
-                <ArrowRight size={16} />
+                <Car size={15} color="#FFFFFF" />
+                <span>Explore Fleet</span>
+                <ArrowRight size={14} />
               </button>
 
-              <button
-                onClick={onOpenAuthModal}
-                style={{
-                  padding: '13px 20px',
-                  background: '#FFFFFF',
-                  color: '#10253F',
-                  fontWeight: 600,
-                  fontSize: '14px',
-                  borderRadius: '5px',
-                  border: '1px solid #CBD5E1',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  transition: 'all 0.16s ease'
-                }}
-              >
-                <span>VIP Client Sign In</span>
-              </button>
+              {onOpenLookupModal && (
+                <button
+                  onClick={onOpenLookupModal}
+                  style={{
+                    padding: '11px 18px',
+                    background: '#FFFFFF',
+                    color: '#967B42',
+                    fontWeight: 700,
+                    fontSize: '13px',
+                    borderRadius: '6px',
+                    border: '1px solid #EADBBE',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
+                  }}
+                >
+                  <Calendar size={14} color="#967B42" />
+                  <span>Track My Ride</span>
+                </button>
+              )}
+
+              {onOpenAuthModal && (
+                <button
+                  onClick={onOpenAuthModal}
+                  style={{
+                    padding: '11px 16px',
+                    background: '#FFFFFF',
+                    color: '#10253F',
+                    fontWeight: 600,
+                    fontSize: '13px',
+                    borderRadius: '6px',
+                    border: '1px solid #CBD5E1',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <span>VIP Sign In</span>
+                </button>
+              )}
             </div>
 
             {/* Prestige Badges */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-              gap: '14px',
-              paddingTop: '18px',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+              gap: '10px',
+              paddingTop: '14px',
               borderTop: '1px solid #E5E8ED',
-              fontSize: '12px',
+              fontSize: '11.5px',
               color: '#586579'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <ShieldCheck size={16} color="#059669" />
-                <span>$5M Livery Coverage</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <ShieldCheck size={14} color="#059669" />
+                <span>$5M Livery Policy</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Plane size={16} color="#2563EB" />
-                <span>FlightRadar24 Synced</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <Plane size={14} color="#2563EB" />
+                <span>FlightRadar24 Live</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Award size={16} color="#967B42" />
-                <span>Secret Service Vetted</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <Award size={14} color="#967B42" />
+                <span>Executive Vetted</span>
               </div>
             </div>
           </div>
 
           {/* Right Hero Booking Card (Crisp Executive Light Surface) */}
-          <div>
-            <div style={{
-              background: '#FFFFFF',
-              border: '1px solid #CBD5E1',
-              borderRadius: '24px',
-              padding: '28px',
-              boxShadow: '0 20px 45px rgba(0, 0, 0, 0.35)',
-              color: '#0F172A'
-            }}>
+          <div style={{ width: '100%', minWidth: 0 }}>
+            <div className="public-hero-booking-card">
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                paddingBottom: '14px',
-                marginBottom: '16px',
+                paddingBottom: '12px',
+                marginBottom: '14px',
                 borderBottom: '1px solid #F1F5F9'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Navigation size={18} color="#D97706" />
-                  <h3 style={{ fontSize: '13px', fontWeight: 900, color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Navigation size={16} color="#D97706" />
+                  <h3 style={{ fontSize: '12px', fontWeight: 900, color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em', margin: 0 }}>
                     Instant Ride Quote & Reservation
                   </h3>
                 </div>
-                <span style={{ fontSize: '11px', background: 'rgba(16, 185, 129, 0.12)', color: '#047857', border: '1px solid rgba(16, 185, 129, 0.35)', padding: '2px 8px', borderRadius: '6px', fontWeight: 800 }}>
-                  Live Dispatch Available
+                <span style={{ fontSize: '10px', background: 'rgba(16, 185, 129, 0.12)', color: '#047857', border: '1px solid rgba(16, 185, 129, 0.35)', padding: '2px 6px', borderRadius: '4px', fontWeight: 800, whiteSpace: 'nowrap' }}>
+                  Live Dispatch
                 </span>
               </div>
 
-              <form onSubmit={handleInstantQuote} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <form onSubmit={handleInstantQuote} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 
                 {/* Service Type Selection */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                <div className="hero-service-selector-grid">
                   {[
-                    { id: 'AIRPORT_TRANSFER', label: 'Airport', icon: <Plane size={13} /> },
-                    { id: 'POINT_TO_POINT', label: 'Point to Point', icon: <MapPin size={13} /> },
-                    { id: 'HOURLY_AS_DIRECTED', label: 'Hourly', icon: <Clock size={13} /> },
+                    { id: 'AIRPORT_TRANSFER', label: 'Airport', icon: <Plane size={12} /> },
+                    { id: 'POINT_TO_POINT', label: 'Point to Point', icon: <MapPin size={12} /> },
+                    { id: 'HOURLY_AS_DIRECTED', label: 'Hourly', icon: <Clock size={12} /> },
                   ].map((st) => (
                     <button
                       type="button"
                       key={st.id}
                       onClick={() => setServiceType(st.id as ServiceType)}
+                      className="hero-service-btn"
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                        padding: '10px 6px',
-                        fontSize: '12px',
-                        fontWeight: 800,
-                        borderRadius: '8px',
                         border: serviceType === st.id ? '2px solid #D97706' : '1px solid #CBD5E1',
                         background: serviceType === st.id ? '#FFFBEB' : '#F8FAFC',
-                        color: serviceType === st.id ? '#B45309' : '#475569',
-                        cursor: 'pointer'
+                        color: serviceType === st.id ? '#B45309' : '#475569'
                       }}
                     >
                       {st.icon}
@@ -258,69 +244,71 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
                 </div>
 
                 {/* Pickup & Destination */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#334155', marginBottom: '4px' }}>Pickup Location</label>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#334155', marginBottom: '3px' }}>Pickup Location</label>
                     <input
                       type="text"
                       required
+                      placeholder="e.g. Philadelphia Int'l Airport (PHL)"
                       value={pickupLocation}
                       onChange={(e) => setPickupLocation(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', fontSize: '12px', borderRadius: '8px', background: '#FFFFFF', color: '#0F172A', border: '1px solid #CBD5E1', fontWeight: 600 }}
+                      style={{ width: '100%', padding: '8px 10px', fontSize: '12px', borderRadius: '6px', background: '#FFFFFF', color: '#0F172A', border: '1px solid #CBD5E1', fontWeight: 600, boxSizing: 'border-box' }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#334155', marginBottom: '4px' }}>Destination</label>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#334155', marginBottom: '3px' }}>Destination</label>
                     <input
                       type="text"
                       required
+                      placeholder="e.g. The Ritz-Carlton, Center City"
                       value={dropoffLocation}
                       onChange={(e) => setDropoffLocation(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', fontSize: '12px', borderRadius: '8px', background: '#FFFFFF', color: '#0F172A', border: '1px solid #CBD5E1', fontWeight: 600 }}
+                      style={{ width: '100%', padding: '8px 10px', fontSize: '12px', borderRadius: '6px', background: '#FFFFFF', color: '#0F172A', border: '1px solid #CBD5E1', fontWeight: 600, boxSizing: 'border-box' }}
                     />
                   </div>
 
                   {serviceType === 'AIRPORT_TRANSFER' && (
                     <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#334155', marginBottom: '4px' }}>Flight Number (Radar Tracked)</label>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#334155', marginBottom: '3px' }}>Flight Number (Radar Tracked)</label>
                       <input
                         type="text"
                         value={flightNumber}
                         onChange={(e) => setFlightNumber(e.target.value)}
                         placeholder="e.g. AA 1842 / DL 402"
-                        style={{ width: '100%', padding: '10px 12px', fontSize: '12px', borderRadius: '8px', textTransform: 'uppercase', background: '#FFFFFF', color: '#0F172A', border: '1px solid #CBD5E1', fontWeight: 700 }}
+                        style={{ width: '100%', padding: '8px 10px', fontSize: '12px', borderRadius: '6px', textTransform: 'uppercase', background: '#FFFFFF', color: '#0F172A', border: '1px solid #CBD5E1', fontWeight: 700, boxSizing: 'border-box' }}
                       />
                     </div>
                   )}
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div className="hero-datetime-grid">
                     <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#334155', marginBottom: '4px' }}>Date</label>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#334155', marginBottom: '3px' }}>Date</label>
                       <input
                         type="date"
                         value={pickupDate}
                         onChange={(e) => setPickupDate(e.target.value)}
-                        style={{ width: '100%', padding: '9px 10px', fontSize: '12px', borderRadius: '8px', background: '#FFFFFF', color: '#0F172A', border: '1px solid #CBD5E1', fontWeight: 600 }}
+                        style={{ width: '100%', padding: '8px 6px', fontSize: '12px', borderRadius: '6px', background: '#FFFFFF', color: '#0F172A', border: '1px solid #CBD5E1', fontWeight: 600, boxSizing: 'border-box', minWidth: 0 }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#334155', marginBottom: '4px' }}>Time</label>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#334155', marginBottom: '3px' }}>Time</label>
                       <input
                         type="time"
                         value={pickupTime}
                         onChange={(e) => setPickupTime(e.target.value)}
-                        style={{ width: '100%', padding: '9px 10px', fontSize: '12px', borderRadius: '8px', background: '#FFFFFF', color: '#0F172A', border: '1px solid #CBD5E1', fontWeight: 600 }}
+                        style={{ width: '100%', padding: '8px 6px', fontSize: '12px', borderRadius: '6px', background: '#FFFFFF', color: '#0F172A', border: '1px solid #CBD5E1', fontWeight: 600, boxSizing: 'border-box', minWidth: 0 }}
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#334155', marginBottom: '4px' }}>Vehicle Class</label>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#334155', marginBottom: '3px' }}>Vehicle Class</label>
                     <select
                       value={vehicleClass}
                       onChange={(e) => setVehicleClass(e.target.value as VehicleClass)}
-                      style={{ width: '100%', padding: '10px 12px', fontSize: '12px', borderRadius: '8px', background: '#FFFFFF', color: '#0F172A', border: '1px solid #CBD5E1', fontWeight: 700 }}
+                      style={{ width: '100%', padding: '8px 10px', fontSize: '12px', borderRadius: '6px', background: '#FFFFFF', color: '#0F172A', border: '1px solid #CBD5E1', fontWeight: 700, boxSizing: 'border-box' }}
                     >
                       <option value="LUXURY_SUV">Flagship Luxury SUV (Cadillac Escalade ESV / Lincoln Navigator L)</option>
                       <option value="FIRST_CLASS">First Class Diplomatic Sedan (Mercedes-Maybach S 580 / S-Class)</option>
@@ -330,28 +318,10 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
                   </div>
                 </div>
 
-                <button
-                  type="submit"
-                  style={{
-                    marginTop: '6px',
-                    padding: '14px',
-                    background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
-                    color: '#FFFFFF',
-                    fontWeight: 900,
-                    fontSize: '14px',
-                    borderRadius: '12px',
-                    border: '1px solid #D97706',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    boxShadow: '0 6px 16px rgba(15, 23, 42, 0.25)'
-                  }}
-                >
-                  <Sparkles size={16} color="#F59E0B" />
+                <button type="submit" className="hero-submit-btn">
+                  <Sparkles size={15} color="#F59E0B" />
                   <span>Compute Guaranteed Quote & Reserve</span>
-                  <ArrowRight size={16} color="#F59E0B" />
+                  <ArrowRight size={15} color="#F59E0B" />
                 </button>
               </form>
             </div>

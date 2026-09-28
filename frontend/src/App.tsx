@@ -21,6 +21,9 @@ import { PublicPoliciesPage } from './components/public/PublicPoliciesPage';
 import { PublicContactPage } from './components/public/PublicContactPage';
 import { PublicVendorQuotePortal } from './components/PublicVendorQuotePortal';
 import { MultiVendorComparisonStudio } from './components/MultiVendorComparisonStudio';
+import { VendorCommercialGuideModal } from './components/VendorCommercialGuideModal';
+import { CustomerBookingsLookupModal } from './components/public/CustomerBookingsLookupModal';
+import { CustomerSupportChatWidget } from './components/public/CustomerSupportChatWidget';
 import { VendorBrandingProfile, VendorPortalConfig, SystemRuntimeMode } from './types';
 import { fetchVendorPortalConfig, resolveVendorByDomain, fetchSystemRuntimeMode } from './api';
 
@@ -34,7 +37,8 @@ type PortalView =
   | 'DRIVER_APP'
   | 'CORPORATE_PORTAL'
   | 'CUSTOMER_BOOKING'
-  | 'PUBLIC_VENDOR_QUOTE';
+  | 'PUBLIC_VENDOR_QUOTE'
+  | 'COMMERCIAL_GUIDE';
 
 const DEFAULT_BRANDING: VendorBrandingProfile = {
   primary_color: '#0F172A',
@@ -51,6 +55,7 @@ const MainLayout: React.FC = () => {
   const [publicPage, setPublicPage] = useState<PublicPage>('HOME');
   const [pendingBookingDetails, setPendingBookingDetails] = useState<any>(null);
   const [runtimeMode, setRuntimeMode] = useState<SystemRuntimeMode | null>(null);
+  const [isCustomerLookupOpen, setIsCustomerLookupOpen] = useState(false);
   
   // Active Vendor White-Label Configuration Profile
   const [vendorConfig, setVendorConfig] = useState<VendorPortalConfig>({
@@ -98,6 +103,52 @@ const MainLayout: React.FC = () => {
   useEffect(() => {
     const initModeAndDomain = async () => {
       try {
+        const searchParams = new URLSearchParams(window.location.search);
+        const viewParam = searchParams.get('view')?.toLowerCase();
+        const pageParam = searchParams.get('page')?.toUpperCase();
+
+        if (searchParams.get('lookup') === 'true') {
+          setIsCustomerLookupOpen(true);
+        }
+
+        if (viewParam === 'driver' || viewParam === 'chauffeur') {
+          setActiveView('DRIVER_APP');
+          return;
+        }
+        if (viewParam === 'vendor' || viewParam === 'owner' || viewParam === 'dispatch') {
+          setActiveView('VENDOR_OWNER_DASHBOARD');
+          return;
+        }
+        if (viewParam === 'corporate' || viewParam === 'b2b') {
+          setActiveView('CORPORATE_PORTAL');
+          return;
+        }
+        if (viewParam === 'admin' || viewParam === 'hub') {
+          setActiveView('GLOBAL_HUB_ADMIN');
+          return;
+        }
+        if (viewParam === 'marketplace') {
+          setActiveView('GLOBAL_MARKETPLACE');
+          return;
+        }
+        if (viewParam === 'comparison' || viewParam === 'studio') {
+          setActiveView('MULTI_VENDOR_STUDIO');
+          return;
+        }
+        if (viewParam === 'onboarding') {
+          setActiveView('OPERATOR_ONBOARDING');
+          return;
+        }
+        if (viewParam === 'commercial-guide' || searchParams.get('guide') === 'true') {
+          setActiveView('COMMERCIAL_GUIDE');
+          return;
+        }
+        if (pageParam && ['HOME', 'FLEET', 'SERVICES', 'ABOUT', 'POLICIES', 'CONTACT', 'BOOKING'].includes(pageParam)) {
+          setActiveView('PUBLIC_WEBSITE');
+          setPublicPage(pageParam as any);
+          return;
+        }
+
         const mode = await fetchSystemRuntimeMode();
         setRuntimeMode(mode);
 
@@ -133,7 +184,6 @@ const MainLayout: React.FC = () => {
         }
 
         const hostname = window.location.hostname;
-        const searchParams = new URLSearchParams(window.location.search);
         const encryptedToken = searchParams.get('vt') || searchParams.get('token') || searchParams.get('cell_token');
         const queryDomain = searchParams.get('domain') || searchParams.get('vendor_domain');
         const targetValue = encryptedToken || queryDomain || hostname;
@@ -330,6 +380,15 @@ const MainLayout: React.FC = () => {
       );
     }
 
+    // --- 2c. STANDALONE COMMERCIAL OPERATIONS PLAYBOOK VIEW ---
+    if (activeView === 'COMMERCIAL_GUIDE') {
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#F8FAFC' }}>
+          <VendorCommercialGuideModal isOpen={true} isStandalone={true} />
+        </div>
+      );
+    }
+
     // --- 3. GLOBAL HUB WORLDWIDE MARKETPLACE VIEW (Port 8000) ---
     if (isGlobalHub && activeView === 'GLOBAL_MARKETPLACE') {
       return (
@@ -421,7 +480,7 @@ const MainLayout: React.FC = () => {
         />
 
         {/* Main Multi-Page Container */}
-        <main style={{ flex: 1, maxWidth: '1440px', width: '100%', margin: '0 auto', padding: '32px 24px' }}>
+        <main className="public-main-content">
           {publicPage === 'HOME' && (
             <PublicHomePage
               branding={vendorConfig.branding}
@@ -431,6 +490,7 @@ const MainLayout: React.FC = () => {
                 setPublicPage('BOOKING');
               }}
               onNavigateToFleet={() => setPublicPage('FLEET')}
+              onOpenLookupModal={() => setIsCustomerLookupOpen(true)}
             />
           )}
 
@@ -531,6 +591,18 @@ const MainLayout: React.FC = () => {
           config={vendorConfig}
           onSelectTab={(page) => setPublicPage(page)}
           onOpenOperatorOnboarding={() => setActiveView('OPERATOR_ONBOARDING')}
+        />
+
+        {/* Customer Self-Service Booking Lookup & Ride Status Modal */}
+        <CustomerBookingsLookupModal
+          isOpen={isCustomerLookupOpen}
+          onClose={() => setIsCustomerLookupOpen(false)}
+        />
+
+        {/* Global Floating Customer Support & 2-Tier AI Concierge Widget */}
+        <CustomerSupportChatWidget
+          vendorId={vendorConfig.vendor_id}
+          vendorName={vendorConfig.vendor_name}
         />
       </div>
     );

@@ -538,19 +538,10 @@ export const DispatcherPhoneBookingModal: React.FC<DispatcherPhoneBookingModalPr
           </div>
         ) : (
           /* MAIN INTAKE FORM — LIGHT LUXURY SHELL WITH CANONICAL ENGINE PARITY */
-          <form onSubmit={handleSubmitBooking} style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+          <form onSubmit={handleSubmitBooking} className="phone-booking-modal-form">
             
             {/* LEFT COLUMN: CALLER DETAILS & ROUTING */}
-            <div style={{
-              flex: 1,
-              padding: '20px 24px',
-              overflowY: 'auto',
-              borderRight: '1px solid #E2E8F0',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px',
-              backgroundColor: '#FAFAFA'
-            }}>
+            <div className="phone-booking-left-col">
               
               {/* QUICK PRESETS */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -1058,14 +1049,7 @@ export const DispatcherPhoneBookingModal: React.FC<DispatcherPhoneBookingModalPr
             </div>
 
             {/* RIGHT COLUMN: LIVE RATE CALCULATION & SUBMIT */}
-            <div style={{
-              width: '380px',
-              backgroundColor: '#FFFFFF',
-              padding: '24px 20px',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between'
-            }}>
+            <div className="phone-booking-right-col">
               
               <div>
                 <div style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>

@@ -9,10 +9,14 @@ import {
   fetchFleetVehicles, fetchDrivers, fetchBookings, fetchSystemSummary, fetchVendors, 
   fetchComplianceAlerts, triggerComplianceScan, fetchAssignmentAudit,
   fetchWebhookEvents, fetchSplitSettlements, simulateWebhookEvent,
-  fetchPending24hDispatchAlerts, assign24hChauffeur
+  fetchPending24hDispatchAlerts, assign24hChauffeur,
+  triggerInquiryDripApi, convertInquiryToBookingApi, fetchVendorInquiriesApi,
+  fetchVendorBookingsApi
 } from '../api';
 import { SourcingConciergeDesk } from './SourcingConciergeDesk';
 import { DispatcherPhoneBookingModal } from './DispatcherPhoneBookingModal';
+import { BookingOperationsModal } from './BookingOperationsModal';
+import { DriverManagementModal } from './DriverManagementModal';
 
 export const VendorDispatchPortal: React.FC = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -25,6 +29,13 @@ export const VendorDispatchPortal: React.FC = () => {
   const [killSwitchActive, setKillSwitchActive] = useState(false);
   const [selectedVendorId, setSelectedVendorId] = useState<string>('vendor-ny-executive');
   const [showPhoneBookingModal, setShowPhoneBookingModal] = useState(false);
+
+  // Booking Operations & Invoicing Modal State
+  const [showBookingOpsModal, setShowBookingOpsModal] = useState(false);
+  const [bookingOpsInitialTab, setBookingOpsInitialTab] = useState<'invoice' | 'receipt' | 'pod' | 'cancel' | 'payment' | 'refund'>('invoice');
+
+  // Driver Management & Compensation Modal State
+  const [showDriverMgmtModal, setShowDriverMgmtModal] = useState(false);
 
   const [pending24hAlerts, setPending24hAlerts] = useState<Dispatch24hAlert[]>([]);
   const [assigning24hTripId, setAssigning24hTripId] = useState<string | null>(null);
@@ -42,6 +53,11 @@ export const VendorDispatchPortal: React.FC = () => {
   const [simulatingWebhook, setSimulatingWebhook] = useState(false);
   const [simulationNotification, setSimulationNotification] = useState<string | null>(null);
 
+  // VIP Lead Inquiries & AI Follow-Up State
+  const [vipInquiries, setVipInquiries] = useState<any[]>([]);
+  const [activeDeskView, setActiveDeskView] = useState<'DISPATCH_QUEUE' | 'VIP_INQUIRIES'>('DISPATCH_QUEUE');
+  const [inquiryActionNotice, setInquiryActionNotice] = useState<string | null>(null);
+
   const activeVendor = vendors.find(v => v.id === selectedVendorId) || vendors[0];
   const vendorVehicles = vehicles.filter(v => !selectedVendorId || v.vendor_id === selectedVendorId);
   const vendorDrivers = drivers.filter(d => !selectedVendorId || d.vendor_id === selectedVendorId);
@@ -50,16 +66,17 @@ export const VendorDispatchPortal: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [v, d, b, s, vnd] = await Promise.all([
+      const [v, d, b, s, vnd, vBookings] = await Promise.all([
         fetchFleetVehicles(),
         fetchDrivers(),
         fetchBookings(),
         fetchSystemSummary(),
-        fetchVendors()
+        fetchVendors(),
+        selectedVendorId ? fetchVendorBookingsApi(selectedVendorId).catch(() => []) : Promise.resolve([])
       ]);
       setVehicles(v);
       setDrivers(d);
-      setBookings(b);
+      setBookings(vBookings && vBookings.length > 0 ? vBookings : b);
       setSummary(s);
       setVendors(vnd);
       
@@ -77,6 +94,16 @@ export const VendorDispatchPortal: React.FC = () => {
       try {
         const alerts = await fetchPending24hDispatchAlerts(selectedVendorId);
         setPending24hAlerts(alerts || []);
+      } catch (e) {
+        // quiet
+      }
+
+      // Load VIP inquiries
+      try {
+        const inqData = await fetchVendorInquiriesApi(selectedVendorId);
+        if (inqData && inqData.inquiries) {
+          setVipInquiries(inqData.inquiries);
+        }
       } catch (e) {
         // quiet
       }
@@ -234,6 +261,26 @@ export const VendorDispatchPortal: React.FC = () => {
             }}
           >
             <PhoneCall size={14} /> 📞 Inbound Phone Booking Desk
+          </button>
+
+          <button 
+            onClick={() => setShowDriverMgmtModal(true)}
+            style={{
+              fontSize: '13px',
+              padding: '10px 16px',
+              backgroundColor: '#0F172A',
+              color: '#FFFFFF',
+              border: 'none',
+              borderRadius: '8px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 2px 4px rgba(15, 23, 42, 0.2)'
+            }}
+          >
+            <Users size={14} color="#38BDF8" /> 👥 Chauffeurs & Rates
           </button>
 
           <button 
@@ -700,8 +747,383 @@ export const VendorDispatchPortal: React.FC = () => {
         <SourcingConciergeDesk />
       </div>
 
-      {/* Main Grid: Left = Live Dispatch Table, Right = Map & Detail View */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '24px' }}>
+      {/* Main Operational Desk Tabs Switcher */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '2px solid #E2E8F0', paddingBottom: '8px' }}>
+        <button
+          onClick={() => setActiveDeskView('DISPATCH_QUEUE')}
+          style={{
+            padding: '10px 18px',
+            borderRadius: '8px',
+            fontSize: '13px',
+            fontWeight: 800,
+            cursor: 'pointer',
+            border: 'none',
+            background: activeDeskView === 'DISPATCH_QUEUE' ? '#0F172A' : '#F1F5F9',
+            color: activeDeskView === 'DISPATCH_QUEUE' ? '#FFFFFF' : '#475569',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'all 0.15s ease'
+          }}
+        >
+          <Radio size={16} />
+          <span>Live Fleet Dispatch Queue ({vendorBookings.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveDeskView('VIP_INQUIRIES')}
+          style={{
+            padding: '10px 18px',
+            borderRadius: '8px',
+            fontSize: '13px',
+            fontWeight: 800,
+            cursor: 'pointer',
+            border: 'none',
+            background: activeDeskView === 'VIP_INQUIRIES' ? '#0F172A' : '#F1F5F9',
+            color: activeDeskView === 'VIP_INQUIRIES' ? '#FFFFFF' : '#475569',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'all 0.15s ease'
+          }}
+        >
+          <MessageSquare size={16} />
+          <span>VIP Inquiries & AI Follow-Up Desk ({vipInquiries.length})</span>
+          {vipInquiries.some(i => i.status === 'NEW' || i.status === 'AI_RESPONDED') && (
+            <span style={{ background: '#EF4444', color: '#FFFFFF', padding: '2px 6px', borderRadius: '10px', fontSize: '10px', fontWeight: 900 }}>
+              ACTIVE
+            </span>
+          )}
+        </button>
+      </div>
+
+      {inquiryActionNotice && (
+        <div style={{ background: '#ECFDF5', border: '1px solid #10B981', color: '#065F46', padding: '12px 18px', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <CheckCircle size={16} color="#059669" />
+          <span>{inquiryActionNotice}</span>
+        </div>
+      )}
+
+      {activeDeskView === 'VIP_INQUIRIES' ? (
+        /* ========================================================================= */
+        /* VIP INBOUND INQUIRIES & AUTONOMOUS AI FOLLOW-UP PIPELINE                   */
+        /* ========================================================================= */
+        <div className="glass-card" style={{ padding: '24px', background: '#FFFFFF' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>
+                VIP Inbound Inquiries & AI Follow-Up Pipeline
+              </h3>
+              <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#64748B' }}>
+                Inquiries received via direct web storefront, corporate RFQs, and phone intake. Autonomous AI parser generates binding quotes with 1-click confirmation links.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={loadData}
+                style={{
+                  background: '#F8FAFC',
+                  border: '1px solid #CBD5E1',
+                  color: '#0F172A',
+                  padding: '8px 14px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <RefreshCw size={13} className={loading ? 'pulse-live' : ''} /> Refresh Inquiries
+              </button>
+            </div>
+          </div>
+
+          {vipInquiries.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '48px 20px', border: '1px dashed #CBD5E1', borderRadius: '12px', background: '#F8FAFC' }}>
+              <MessageSquare size={32} color="#94A3B8" style={{ margin: '0 auto 12px auto' }} />
+              <div style={{ fontSize: '15px', fontWeight: 700, color: '#0F172A' }}>No Active Inquiries</div>
+              <p style={{ fontSize: '12px', color: '#64748B', maxWidth: '420px', margin: '6px auto 0 auto' }}>
+                When customers submit requests via the Direct VIP Concierge page or homepage instant quote, they will appear here with automated 15-minute SLA countdown timers.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {vipInquiries.map((inq) => {
+                const isNew = inq.status === 'NEW';
+                const isAiResponded = inq.status === 'AI_RESPONDED';
+                const isDripActive = inq.status?.startsWith('DRIP_');
+                const isConverted = inq.status === 'CONVERTED' || inq.status === 'CONVERTED_TO_BOOKING';
+                const currentDripStep = inq.drip_step || 1;
+
+                return (
+                  <div
+                    key={inq.inquiry_id}
+                    style={{
+                      background: '#FFFFFF',
+                      border: isConverted ? '2px solid #059669' : (isNew ? '2px solid #EF4444' : '1.5px solid #0F172A'),
+                      borderRadius: '12px',
+                      padding: '20px',
+                      boxShadow: '0 4px 12px rgba(15, 23, 42, 0.05)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '14px'
+                    }}
+                  >
+                    {/* Inquiry Top Row */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{
+                          background: isConverted ? '#ECFDF5' : (isNew ? '#FEE2E2' : '#F1F5F9'),
+                          color: isConverted ? '#065F46' : (isNew ? '#991B1B' : '#0F172A'),
+                          border: `1.5px solid ${isConverted ? '#10B981' : (isNew ? '#F87171' : '#0F172A')}`,
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          fontSize: '11px',
+                          fontWeight: 800,
+                          letterSpacing: '0.04em'
+                        }}>
+                          {inq.status}
+                        </span>
+
+                        <span style={{
+                          background: '#F8FAFC',
+                          color: '#475569',
+                          border: '1px solid #CBD5E1',
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          fontSize: '11px',
+                          fontWeight: 700
+                        }}>
+                          {inq.inquiry_type}
+                        </span>
+
+                        <span style={{ fontSize: '12px', color: '#64748B', fontFamily: 'monospace' }}>
+                          ID: {inq.inquiry_id}
+                        </span>
+                      </div>
+
+                      {/* 15-Minute VIP SLA Badge */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        background: '#FFFFFF',
+                        border: '1.5px solid #0F172A',
+                        color: '#0F172A',
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: 800
+                      }}>
+                        <Clock size={13} color="#0F172A" />
+                        <span>VIP SLA: 15-Min Fast Dispatch Active</span>
+                      </div>
+                    </div>
+
+                    {/* Customer & Itinerary Details */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+                      <div>
+                        <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 800, textTransform: 'uppercase', marginBottom: '4px' }}>
+                          Client Contact
+                        </div>
+                        <div style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>
+                          {inq.customer_name}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#475569', marginTop: '2px' }}>
+                          📧 {inq.email} • 📞 {inq.phone}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 800, textTransform: 'uppercase', marginBottom: '4px' }}>
+                          Client Request Notes
+                        </div>
+                        <p style={{ margin: 0, fontSize: '13px', color: '#0F172A', fontStyle: 'italic', background: '#F8FAFC', padding: '8px 12px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                          "{inq.message}"
+                        </p>
+                      </div>
+
+                      <div>
+                        <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 800, textTransform: 'uppercase', marginBottom: '4px' }}>
+                          AI Extracted Itinerary & Tariff
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#0F172A', fontWeight: 700 }}>
+                          🚘 {inq.extracted_vehicle?.replace('_', ' ')} • Est: <span style={{ color: '#059669', fontSize: '14px', fontWeight: 800 }}>${inq.estimated_amount?.toFixed(2)}</span>
+                          {inq.concession_code && (
+                            <span style={{ marginLeft: '8px', background: '#FEF3C7', color: '#92400E', padding: '2px 6px', borderRadius: '4px', fontSize: '10.5px', fontWeight: 800 }}>
+                              🏷️ {inq.concession_code} (-10%)
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
+                          {inq.extracted_pickup} → {inq.extracted_dropoff}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Autonomous Follow-Up Drip Sequence Progress */}
+                    <div style={{ background: '#F8FAFC', padding: '12px 16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                      <div style={{ fontSize: '11px', fontWeight: 800, color: '#0F172A', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Zap size={13} color="#0F172A" />
+                        <span>Autonomous Multi-Touch Drip Pipeline Status (Step {currentDripStep} of 3)</span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
+                        <div style={{
+                          padding: '8px',
+                          borderRadius: '6px',
+                          background: '#FFFFFF',
+                          border: '1.5px solid #0F172A',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          color: '#0F172A'
+                        }}>
+                          ✅ Touch 1: Instant AI Quote Sent
+                        </div>
+                        <div style={{
+                          padding: '8px',
+                          borderRadius: '6px',
+                          background: currentDripStep >= 2 ? '#FFFFFF' : '#F1F5F9',
+                          border: currentDripStep >= 2 ? '1.5px solid #0F172A' : '1px dashed #CBD5E1',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          color: currentDripStep >= 2 ? '#0F172A' : '#94A3B8'
+                        }}>
+                          {currentDripStep >= 2 ? '✅' : '⏳'} Touch 2: T+15m Fleet Slot Hold
+                        </div>
+                        <div style={{
+                          padding: '8px',
+                          borderRadius: '6px',
+                          background: currentDripStep >= 3 ? '#FFFFFF' : '#F1F5F9',
+                          border: currentDripStep >= 3 ? '1.5px solid #0F172A' : '1px dashed #CBD5E1',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          color: currentDripStep >= 3 ? '#0F172A' : '#94A3B8'
+                        }}>
+                          {currentDripStep >= 3 ? '✅' : '⏳'} Touch 3: T+4h 10% VIP Coupon
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* AI Draft & Dispatcher Action Buttons */}
+                    <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                      <div style={{ fontSize: '11.5px', color: '#475569', fontWeight: 600 }}>
+                        {inq.dispatcher_notes || 'AI Auto-responder transmitted initial quote draft.'}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {!isConverted && currentDripStep < 3 && (
+                          <button
+                            onClick={async () => {
+                              try {
+                                const dripRes = await triggerInquiryDripApi(inq.inquiry_id);
+                                setInquiryActionNotice(`Dispatched Step ${dripRes.drip_step} Drip follow-up to ${inq.customer_name}!`);
+                                loadData();
+                                setTimeout(() => setInquiryActionNotice(null), 4000);
+                              } catch (e: any) {
+                                alert('Error: ' + e.message);
+                              }
+                            }}
+                            style={{
+                              padding: '7px 12px',
+                              background: '#FFFFFF',
+                              border: '1.5px solid #0F172A',
+                              color: '#0F172A',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '5px'
+                            }}
+                          >
+                            <Zap size={13} color="#0F172A" />
+                            <span>Trigger Drip #{currentDripStep + 1}</span>
+                          </button>
+                        )}
+
+                        <button
+                          onClick={async () => {
+                            try {
+                              await fetch(`/api/v1/inquiries/${inq.inquiry_id}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ status: 'DISPATCH_CONTACTED', dispatcher_notes: 'Chauffeur concierge called passenger directly via phone.' })
+                              });
+                              setInquiryActionNotice(`Marked ${inq.inquiry_id} as Dispatch Contacted!`);
+                              loadData();
+                              setTimeout(() => setInquiryActionNotice(null), 4000);
+                            } catch (e: any) {
+                              alert('Error: ' + e.message);
+                            }
+                          }}
+                          style={{
+                            padding: '7px 12px',
+                            background: '#F8FAFC',
+                            border: '1px solid #CBD5E1',
+                            color: '#0F172A',
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          📞 Mark Contacted
+                        </button>
+
+                        {!isConverted ? (
+                          <button
+                            onClick={async () => {
+                              try {
+                                const convRes = await convertInquiryToBookingApi(inq.inquiry_id);
+                                setInquiryActionNotice(`Converted to Confirmed Live Booking #${convRes.booking_id}! Assigned Trip: #${convRes.trip_id}`);
+                                loadData();
+                                setTimeout(() => setInquiryActionNotice(null), 5000);
+                              } catch (e: any) {
+                                alert('Error: ' + e.message);
+                              }
+                            }}
+                            style={{
+                              padding: '7px 14px',
+                              background: '#0F172A',
+                              border: 'none',
+                              color: '#FFFFFF',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              boxShadow: '0 2px 8px rgba(15, 23, 42, 0.2)'
+                            }}
+                          >
+                            <CheckCircle size={13} color="#FFFFFF" />
+                            <span>1-Click Convert to Live Reservation</span>
+                          </button>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#ECFDF5', border: '1px solid #A7F3D0', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 800, color: '#065F46' }}>
+                            <CheckCircle size={13} color="#059669" />
+                            <span>Live Booking #{inq.converted_booking_id || 'CONFIRMED'}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : (
+        /* ========================================================================= */
+        /* STANDARD LIVE FLEET DISPATCH QUEUE                                       */
+        /* ========================================================================= */
+        /* Main Grid: Left = Live Dispatch Table, Right = Map & Detail View */
+        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '24px' }}>
         
         {/* Left Column: Live Bookings & Dispatch Grid */}
         <div className="glass-card" style={{ padding: '24px' }}>
@@ -936,6 +1358,156 @@ export const VendorDispatchPortal: React.FC = () => {
                 </div>
               </div>
 
+              {/* Booking Operational Actions Bar */}
+              <div style={{
+                background: '#F1F5F9',
+                border: '1px solid #CBD5E1',
+                borderRadius: '10px',
+                padding: '12px',
+                marginBottom: '18px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px'
+              }}>
+                <div style={{ fontSize: '11px', fontWeight: 800, color: '#0F172A', textTransform: 'uppercase' }}>
+                  ⚡ Executive Operations & Billing Actions
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                  <button
+                    onClick={() => {
+                      setBookingOpsInitialTab('invoice');
+                      setShowBookingOpsModal(true);
+                    }}
+                    style={{
+                      background: '#FFFFFF',
+                      border: '1px solid #CBD5E1',
+                      borderRadius: '6px',
+                      padding: '7px 8px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      color: '#0F172A',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    📄 Master Invoice
+                  </button>
+                  <button
+                    onClick={() => {
+                      setBookingOpsInitialTab('receipt');
+                      setShowBookingOpsModal(true);
+                    }}
+                    style={{
+                      background: '#FFFFFF',
+                      border: '1px solid #CBD5E1',
+                      borderRadius: '6px',
+                      padding: '7px 8px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      color: '#0F172A',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    💳 Receipt
+                  </button>
+                  <button
+                    onClick={() => {
+                      setBookingOpsInitialTab('pod');
+                      setShowBookingOpsModal(true);
+                    }}
+                    style={{
+                      background: '#FFFFFF',
+                      border: '1px solid #CBD5E1',
+                      borderRadius: '6px',
+                      padding: '7px 8px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      color: '#059669',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    🛡️ Proof of Delivery
+                  </button>
+                  <button
+                    onClick={() => {
+                      setBookingOpsInitialTab('payment');
+                      setShowBookingOpsModal(true);
+                    }}
+                    style={{
+                      background: '#059669',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '7px 8px',
+                      fontSize: '11px',
+                      fontWeight: 800,
+                      color: '#FFFFFF',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    ⚡ Capture / Settle
+                  </button>
+                  <button
+                    onClick={() => {
+                      setBookingOpsInitialTab('refund');
+                      setShowBookingOpsModal(true);
+                    }}
+                    style={{
+                      background: '#FFFFFF',
+                      border: '1px solid #CBD5E1',
+                      borderRadius: '6px',
+                      padding: '7px 8px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      color: '#D97706',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    ↩️ Courtesy Refund
+                  </button>
+                  <button
+                    onClick={() => {
+                      setBookingOpsInitialTab('cancel');
+                      setShowBookingOpsModal(true);
+                    }}
+                    style={{
+                      background: '#FFFFFF',
+                      border: '1px solid #FCA5A5',
+                      borderRadius: '6px',
+                      padding: '7px 8px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      color: '#DC2626',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    🚫 Cancel Booking
+                  </button>
+                </div>
+              </div>
+
               {/* Event Log Stream */}
               <div>
                 <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '10px' }}>
@@ -958,6 +1530,7 @@ export const VendorDispatchPortal: React.FC = () => {
           )}
         </div>
       </div>
+      )}
 
       {/* Assignment Neutrality Audit Record Modal */}
       {showAuditModal && activeAudit && (
@@ -1366,6 +1939,29 @@ export const VendorDispatchPortal: React.FC = () => {
         availableDrivers={vendorDrivers}
         availableVehicles={vendorVehicles}
         onBookingCreated={async (bkgId) => {
+          await loadData();
+        }}
+      />
+
+      {/* BOOKING OPERATIONS CONSOLE MODAL */}
+      {selectedBooking && (
+        <BookingOperationsModal
+          bookingId={selectedBooking.id}
+          isOpen={showBookingOpsModal}
+          initialTab={bookingOpsInitialTab}
+          onClose={() => setShowBookingOpsModal(false)}
+          onSuccess={async () => {
+            await loadData();
+          }}
+        />
+      )}
+
+      {/* CHAUFFEUR ROSTER & COMPENSATION MANAGEMENT MODAL */}
+      <DriverManagementModal
+        vendorId={selectedVendorId}
+        isOpen={showDriverMgmtModal}
+        onClose={() => setShowDriverMgmtModal(false)}
+        onSuccess={async () => {
           await loadData();
         }}
       />

@@ -10,7 +10,7 @@ Supports:
 
 import uuid
 from decimal import Decimal
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from enum import Enum
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, ConfigDict
@@ -105,6 +105,18 @@ class DistanceUnit(str, Enum):
     KILOMETERS = "KILOMETERS"
 
 
+class PricingModelType(str, Enum):
+    DYNAMIC_MATRIX = "DYNAMIC_MATRIX"                       # Granular 3-Leg Distance + Base + Deadhead + Surcharges + AI Yield
+    FLAT_ALL_INCLUSIVE_PER_MILE = "FLAT_ALL_INCLUSIVE_PER_MILE" # Simple all-inclusive per mile/km + Minimum trip floor
+    FLAT_HOURLY_CHARTER = "FLAT_HOURLY_CHARTER"             # Simple Hourly Charter with minimum duration
+    VEHICLE_SPECIFIC_PREMIUM = "VEHICLE_SPECIFIC_PREMIUM"   # Direct rates from Showroom Vehicle profile (vehicles table)
+
+
+class TaxGratuityDisplayMode(str, Enum):
+    ITEMIZED_SEPARATE = "ITEMIZED_SEPARATE"                 # Show Base + Distance + Taxes & Gratuity itemized in cart
+    ALL_INCLUSIVE_BUNDLED = "ALL_INCLUSIVE_BUNDLED"         # Cart displays single all-inclusive total (tax & gratuity included)
+
+
 class NetworkParticipationMode(str, Enum):
     GLOBAL_NETWORK_CONNECTED = "GLOBAL_NETWORK_CONNECTED"  # Eligible for global marketplace & cross-border multi-modal legs
     LOCAL_PRIVATE_ONLY = "LOCAL_PRIVATE_ONLY"              # Dedicated solely to vendor's own private clients
@@ -113,6 +125,10 @@ class NetworkParticipationMode(str, Enum):
 class VendorPricingRule(BaseModel):
     vendor_id: str
     vehicle_class: VehicleClass
+    pricing_model_type: PricingModelType = PricingModelType.DYNAMIC_MATRIX
+    tax_gratuity_display_mode: TaxGratuityDisplayMode = TaxGratuityDisplayMode.ITEMIZED_SEPARATE
+    flat_per_mile_all_inclusive: Decimal = Decimal("5.50")
+    flat_per_km_all_inclusive: Decimal = Decimal("3.45")
     base_rate_net: Decimal = Decimal("95.00")
     per_mile_rate_net: Decimal = Decimal("4.25")
     per_km_rate_net: Decimal = Decimal("2.65")
@@ -151,6 +167,16 @@ class VendorPricingRule(BaseModel):
     cancellation_lead_hours_sprinter: int = 24
     late_cancellation_fee_pct: Decimal = Decimal("100.00")
     
+    # Out-of-Town & Long-Distance Driver Stay & Sustenance Rules (Combined Hotel + Meals)
+    enable_out_of_town_stay: bool = False
+    out_of_town_stay_rate_net: Decimal = Decimal("300.00")
+    enable_driver_lodging: bool = False
+    driver_lodging_rate_net: Decimal = Decimal("225.00")
+    enable_driver_per_diem: bool = False
+    driver_per_diem_rate_net: Decimal = Decimal("75.00")
+    overnight_distance_threshold_miles: Decimal = Decimal("250.00")
+    daily_standby_min_hours: int = 6
+
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -288,6 +314,24 @@ class InterVendorNetworkJob(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class PricingSimulationScenario(BaseModel):
+    id: str = Field(default_factory=lambda: f"scen-{uuid.uuid4().hex[:8]}")
+    vendor_id: Optional[str] = None
+    name: str
+    description: str
+    icon: str = "✈️"
+    distance_miles: float = 22.0
+    is_hourly: bool = False
+    hourly_hours: int = 3
+    deadhead_miles: float = 6.0
+    is_airport: bool = True
+    meet_and_greet: bool = True
+    is_rush_hour: bool = False
+    is_late_night: bool = False
+    extra_wait_minutes: int = 15
+    sort_order: int = 0
+
+
 class VendorFrequentRoute(BaseModel):
     id: str = Field(default_factory=lambda: f"rte-{uuid.uuid4().hex[:8]}")
     vendor_id: str
@@ -303,6 +347,22 @@ class VendorFrequentRoute(BaseModel):
     job_volume_percentage: float = 40.0
     popularity_rank: int = 1
     description: Optional[str] = None
+
+
+class VendorOperatingSchedule(BaseModel):
+    is_24_7: bool = True
+    operating_start_time: str = "05:00"              # HH:MM local time e.g. "05:00"
+    operating_end_time: str = "23:59"                # HH:MM local time e.g. "23:59"
+    timezone: str = "America/New_York"
+    min_lead_time_minutes: int = 45                  # e.g., minimum 45 mins advance notice
+    turnaround_buffer_minutes: int = 30              # e.g., 30 mins vehicle prep/cleaning between trips
+    night_blackout_enabled: bool = False             # if true, night blackout active
+    night_blackout_start: str = "01:00"              # e.g. 1:00 AM
+    night_blackout_end: str = "05:00"                # e.g. 5:00 AM
+    allow_night_with_advance_hours: int = 12         # allow night ride if booked 12h ahead
+    night_surcharge_usd: Decimal = Decimal("35.00")   # surcharge for late-night rides (23:00 - 05:30)
+    auto_farmout_on_blackout: bool = True            # farm out if booked during unstaffed night blackout
+    auto_farmout_on_overcapacity: bool = True        # farm out if own fleet is 100% committed
 
 
 class Vendor(BaseModel):
@@ -346,6 +406,16 @@ class Vendor(BaseModel):
     voice_auto_quote_enabled: bool = True
     voice_instant_booking_enabled: bool = True
     frequent_routes: List[VendorFrequentRoute] = Field(default_factory=list)
+    operating_schedule: Optional[VendorOperatingSchedule] = Field(default_factory=VendorOperatingSchedule)
+    
+    # White-Label Branding & Document Numbering
+    vendor_operating_code: str = "VND-1001"
+    logo_image_url: Optional[str] = None
+    brand_primary_color: str = "#0078D4"
+    invoice_prefix: str = "INV"
+    receipt_prefix: str = "REC"
+    invoice_custom_footer: Optional[str] = "All rides operated by licensed & commercially insured executive chauffeurs."
+
 
 
 class VehiclePhotoType(str, Enum):
@@ -809,6 +879,24 @@ class VehicleShowroomPackage(BaseModel):
     inspection_certified: bool = True
 
 
+class VehicleClassOption(BaseModel):
+    id: str = Field(default_factory=lambda: f"vopt_{uuid.uuid4().hex[:8]}")
+    tenant_id: str = "tenant-us-east"
+    vendor_id: Optional[str] = None
+    type: VehicleClass
+    title: str
+    subtitle: Optional[str] = None
+    models: str
+    pax: int = 3
+    luggage: int = 3
+    features: List[str] = Field(default_factory=list)
+    badge: Optional[str] = None
+    photo_url: str
+    fallback_icon: Optional[str] = "SEDAN"
+    sort_order: int = 0
+    is_active: bool = True
+
+
 class DriverCompensationModel(str, Enum):
     CONTRACTOR_COMMISSION = "CONTRACTOR_COMMISSION"
     W2_HOURLY = "W2_HOURLY"
@@ -1101,6 +1189,8 @@ class Quote(BaseModel):
     wait_net: Decimal = Decimal("0.00")
     
     subtotal_net: Decimal
+    pricing_model_type: PricingModelType = PricingModelType.DYNAMIC_MATRIX
+    tax_gratuity_display_mode: TaxGratuityDisplayMode = TaxGratuityDisplayMode.ITEMIZED_SEPARATE
     tax_rate: Decimal = Decimal("0.08875")
     tax_amount: Decimal
     gratuity_rate: Decimal = Decimal("0.20")
@@ -1542,6 +1632,47 @@ class PhoneBookingResultDTO(BaseModel):
     assigned_vehicle_details: Optional[str] = None
     calendar_invite_url: str
     message: str
+
+
+class IncidentalChargeRequest(BaseModel):
+    id: str = Field(default_factory=lambda: f"inc_{uuid.uuid4().hex[:8]}")
+    trip_id: str
+    booking_id: str
+    requesting_vendor_id: str
+    wait_time_minutes: int = 0
+    wait_time_charge_usd: Decimal = Decimal("0.00")
+    unbilled_tolls_usd: Decimal = Decimal("0.00")
+    parking_charges_usd: Decimal = Decimal("0.00")
+    extra_stop_charge_usd: Decimal = Decimal("0.00")
+    total_incidentals_usd: Decimal = Decimal("0.00")
+    notes: Optional[str] = None
+    status: str = "PENDING_APPROVAL"  # PENDING_APPROVAL, APPROVED_CAPTURED, REJECTED
+    approved_at: Optional[datetime] = None
+
+
+class ProofOfDeliveryRecord(BaseModel):
+    pod_id: str = Field(default_factory=lambda: f"pod_{uuid.uuid4().hex[:8]}")
+    trip_id: str
+    booking_id: str
+    exchange_id: Optional[str] = None
+    originator_vendor_id: str
+    performing_vendor_id: str
+    chauffeur_name: str
+    chauffeur_phone: Optional[str] = None
+    vehicle_plate: str
+    vehicle_model: str
+    pickup_address: str
+    dropoff_address: str
+    pickup_timestamp: datetime
+    dropoff_timestamp: datetime
+    actual_mileage_miles: float
+    gps_breadcrumbs_summary: Optional[str] = "GPS route verified via telematics."
+    toll_amount_usd: Decimal = Decimal("0.00")
+    incidentals_requested: Optional[IncidentalChargeRequest] = None
+    passenger_signature_url: Optional[str] = None
+    status: str = "COMPLETED_PENDING_AUDIT"  # COMPLETED_PENDING_AUDIT, AUDITED_CLEARED, DISPUTED
+    settlement_hold_until: datetime = Field(default_factory=lambda: datetime.now(timezone.utc) + timedelta(hours=24))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 

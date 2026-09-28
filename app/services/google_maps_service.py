@@ -476,6 +476,15 @@ class GoogleMapsService:
     @classmethod
     def _get_cached_toll(cls, origin: str, destination: str) -> Optional[Decimal]:
         k = f"{origin.strip().lower()}->{destination.strip().lower()}"
+        try:
+            from app.database import db
+            if hasattr(db, "central_toll_registry") and k in db.central_toll_registry:
+                entry = db.central_toll_registry[k]
+                entry["hits"] = entry.get("hits", 0) + 1
+                return Decimal(str(entry.get("toll_usd", "0.00")))
+        except Exception:
+            pass
+
         if k in cls._TOLL_CACHE:
             ts, val = cls._TOLL_CACHE[k]
             if datetime.now(timezone.utc).timestamp() - ts < cls.CACHE_TTL_SECONDS:
@@ -483,8 +492,29 @@ class GoogleMapsService:
         return None
 
     @classmethod
-    def _set_cached_toll(cls, origin: str, destination: str, val: Decimal) -> None:
-        cls._TOLL_CACHE[f"{origin.strip().lower()}->{destination.strip().lower()}"] = (datetime.now(timezone.utc).timestamp(), val)
+    def _set_cached_toll(cls, origin: str, destination: str, val: Decimal, provider: str = "CENTRAL_TOLL_ORACLE") -> None:
+        k = f"{origin.strip().lower()}->{destination.strip().lower()}"
+        cls._TOLL_CACHE[k] = (datetime.now(timezone.utc).timestamp(), val)
+        try:
+            from app.database import db
+            if hasattr(db, "central_toll_registry"):
+                # Calculate roundtrip toll rate for intercity charters
+                comb = f"{origin} {destination}".lower()
+                is_intercity_ny = any(kw in comb for kw in ("new york", "nyc", "manhattan", "brooklyn", "queens", "jfk", "lga", "hudson"))
+                roundtrip_toll = Decimal("92.00") if is_intercity_ny and any(kw in comb for kw in ("pa", "pennsylvania", "broomall", "philadelphia", "wilmington", "de", "nj")) else val * Decimal("2.00")
+                
+                db.central_toll_registry[k] = {
+                    "corridor_key": k,
+                    "origin": origin.strip(),
+                    "destination": destination.strip(),
+                    "toll_usd": str(val),
+                    "roundtrip_toll_usd": str(roundtrip_toll),
+                    "cached_at": datetime.now(timezone.utc).isoformat(),
+                    "provider": provider,
+                    "hits": db.central_toll_registry.get(k, {}).get("hits", 0) + 1
+                }
+        except Exception as e:
+            logger.warning(f"Could not persist to central_toll_registry: {e}")
 
     @classmethod
     def detect_corridor_tolls(cls, origin: str, destination: str) -> Decimal:

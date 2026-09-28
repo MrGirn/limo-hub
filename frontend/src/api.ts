@@ -4,11 +4,11 @@ import {
   UserSession, ActorPersonaOption, VendorPortalConfig, SystemRuntimeMode,
   TeamMember, CreateTeamMemberPayload, UpdateTeamMemberPayload, RoleMatrixResponse,
   CertifiedAffiliatePartner, AffiliateRecommendation, Dispatch24hAlert,
-  RegionalStaffingPod, InboundVoiceCallResolution
+  RegionalStaffingPod, InboundVoiceCallResolution, VehicleOption
 } from './types';
 
 
-const BASE_URL = '';
+export const BASE_URL = '';
 
 let currentAuthToken: string | null = localStorage.getItem('limo_auth_token');
 let currentActorRole: string | null = localStorage.getItem('limo_actor_role') || 'ROLE_VENDOR_ADMIN';
@@ -24,6 +24,12 @@ export function setAuthToken(token: string | null, role?: string | null) {
     currentActorRole = role;
     localStorage.setItem('limo_actor_role', role);
   }
+}
+
+export function clearAuthToken() {
+  setAuthToken(null, null);
+  localStorage.removeItem('limo_auth_token');
+  localStorage.removeItem('limo_actor_role');
 }
 
 export function getAuthHeaders(): HeadersInit {
@@ -96,15 +102,15 @@ export async function switchPersonaApi(personaKey: string): Promise<{ user: User
   return data;
 }
 
-export async function loginApi(email: string, password?: string, role?: string): Promise<{ user: UserSession; token: string }> {
-  const res = await fetch(`${BASE_URL}/api/v1/auth/oauth-login`, {
+export async function loginApi(email: string, password?: string, role?: string, vendor_id?: string): Promise<{ user: UserSession; token: string }> {
+  const res = await fetch(`${BASE_URL}/api/v1/auth/login`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify({
-      provider: 'google',
       email,
-      full_name: email.split('@')[0],
-      role: role || 'ROLE_CUSTOMER'
+      password,
+      role: role || 'ROLE_CUSTOMER',
+      vendor_id
     })
   });
   if (!res.ok) {
@@ -116,8 +122,49 @@ export async function loginApi(email: string, password?: string, role?: string):
   return data;
 }
 
+export async function registerApi(params: {
+  email: string;
+  full_name: string;
+  password?: string;
+  phone?: string;
+  role?: string;
+  vendor_id?: string;
+  company_name?: string;
+}): Promise<{ user: UserSession; token: string }> {
+  const res = await fetch(`${BASE_URL}/api/v1/auth/register`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(params)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Registration failed'));
+  }
+  const data = await res.json();
+  setAuthToken(data.token, data.user.role);
+  return data;
+}
+
+export async function logoutApi(): Promise<{ success: boolean; message: string }> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/v1/auth/logout`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    if (res.ok) {
+      const data = await res.json();
+      clearAuthToken();
+      return data;
+    }
+  } catch (err) {
+    console.warn('Logout API error:', err);
+  }
+  clearAuthToken();
+  return { success: true, message: 'Logged out successfully' };
+}
+
 export async function oauthLoginApi(params: {
-  provider: 'apple' | 'google';
+  provider: 'apple' | 'google' | 'email' | 'magic-link' | 'corporate' | 'passkey' | 'password' | string;
   email: string;
   full_name?: string;
   id_token?: string;
@@ -131,11 +178,119 @@ export async function oauthLoginApi(params: {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(extractErrorMessage(err, `${params.provider} OAuth authentication failed`));
+    throw new Error(extractErrorMessage(err, `${params.provider} authentication failed`));
   }
   const data = await res.json();
   setAuthToken(data.token, data.user.role);
   return data;
+}
+
+export async function passkeyRegisterChallengeApi(params: {
+  email: string;
+  full_name?: string;
+  role?: string;
+  vendor_id?: string;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/auth/passkey/register-challenge`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(params)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to generate Passkey registration challenge'));
+  }
+  return res.json();
+}
+
+export async function passkeyVerifyRegistrationApi(params: {
+  email: string;
+  full_name?: string;
+  role?: string;
+  vendor_id?: string;
+  credential_id: string;
+  raw_id?: string;
+  client_data_json?: string;
+  attestation_object?: string;
+}): Promise<{ user: UserSession; token: string }> {
+  const res = await fetch(`${BASE_URL}/api/v1/auth/passkey/verify-registration`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(params)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Passkey registration verification failed'));
+  }
+  const data = await res.json();
+  setAuthToken(data.token, data.user.role);
+  return data;
+}
+
+export async function passkeyAuthChallengeApi(params: {
+  email?: string;
+  vendor_id?: string;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/auth/passkey/auth-challenge`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(params)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to generate Passkey auth challenge'));
+  }
+  return res.json();
+}
+
+export async function passkeyVerifyAuthApi(params: {
+  email: string;
+  credential_id: string;
+  authenticator_data?: string;
+  client_data_json?: string;
+  signature?: string;
+  user_handle?: string;
+  role?: string;
+  vendor_id?: string;
+}): Promise<{ user: UserSession; token: string }> {
+  const res = await fetch(`${BASE_URL}/api/v1/auth/passkey/verify-auth`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(params)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Biometric Passkey sign-in verification failed'));
+  }
+  const data = await res.json();
+  setAuthToken(data.token, data.user.role);
+  return data;
+}
+
+export async function triggerInquiryDripApi(inquiryId: string, params?: { drip_action?: string; custom_note?: string }): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/inquiries/${inquiryId}/trigger-drip`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(params || {})
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to trigger follow-up drip'));
+  }
+  return res.json();
+}
+
+export async function convertInquiryToBookingApi(inquiryId: string, params?: any): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/inquiries/${inquiryId}/convert-booking`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(params || {})
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to convert inquiry to booking'));
+  }
+  return res.json();
 }
 
 export async function fetchSystemSummary(): Promise<SystemSummary> {
@@ -272,11 +427,16 @@ export async function lookupBookingsApi(query: string): Promise<Booking[]> {
   return res.json();
 }
 
-export async function cancelBookingApi(bookingId: string, reason: string = 'Customer requested cancellation'): Promise<any> {
+export async function cancelBookingApi(bookingId: string, payload: string | {
+  reason?: string;
+  cancelled_by?: string;
+  refund_requested?: boolean;
+} = 'Customer requested cancellation'): Promise<any> {
+  const bodyPayload = typeof payload === 'string' ? { reason: payload } : payload;
   const res = await fetch(`${BASE_URL}/api/v1/bookings/${bookingId}/cancel`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ reason })
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(bodyPayload)
   });
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
@@ -506,6 +666,32 @@ export async function saveVendorPricingRule(vendorId: string, rule: any): Promis
     body: JSON.stringify(rule)
   });
   if (!res.ok) throw new Error('Failed to save vendor pricing rule');
+  return res.json();
+}
+
+export async function fetchSimulationScenarios(vendorId?: string): Promise<any[]> {
+  const url = vendorId 
+    ? `${BASE_URL}/api/v1/vendors/${vendorId}/simulation-scenarios`
+    : `${BASE_URL}/api/v1/pricing/simulation-scenarios`;
+  const res = await fetch(url, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    // Fallback to global scenarios
+    const fallbackRes = await fetch(`${BASE_URL}/api/v1/pricing/simulation-scenarios`, { headers: getAuthHeaders() }).catch(() => null);
+    if (fallbackRes && fallbackRes.ok) return fallbackRes.json();
+    return [];
+  }
+  return res.json();
+}
+
+export async function saveSimulationScenario(scenario: any): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/pricing/simulation-scenarios`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(scenario)
+  });
+  if (!res.ok) throw new Error('Failed to save simulation scenario');
   return res.json();
 }
 
@@ -821,21 +1007,14 @@ export async function fetchVendorToken(vendorId: string): Promise<{ vendor_id: s
 }
 
 export async function fetchSystemRuntimeMode(): Promise<SystemRuntimeMode> {
-  try {
-    const res = await fetch(`${BASE_URL}/api/v1/system/runtime-mode`, {
-      headers: getAuthHeaders()
-    });
-    if (!res.ok) throw new Error('Failed to fetch runtime mode');
-    return res.json();
-  } catch {
-    return {
-      is_sovereign_cell: false,
-      sovereign_vendor_id: null,
-      is_prod_mode: false,
-      hub_mode: true,
-      node_hostname: 'limo-local'
-    };
+  const res = await fetch(`${BASE_URL}/api/v1/system/runtime-mode`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to fetch runtime mode'));
   }
+  return res.json();
 }
 
 
@@ -2026,14 +2205,1512 @@ export async function uploadDriverDocument(
   return res.json();
 }
 
+export async function fetchVehicleOptions(vendorId?: string): Promise<VehicleOption[]> {
+  const url = vendorId 
+    ? `${BASE_URL}/api/v1/fleet/vehicle-options?vendor_id=${encodeURIComponent(vendorId)}` 
+    : `${BASE_URL}/api/v1/fleet/vehicle-options`;
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to load vehicle options from database'));
+  }
+  const data = await res.json();
+  return data.map((item: any) => ({
+    id: item.id,
+    tenant_id: item.tenant_id,
+    vendor_id: item.vendor_id,
+    type: item.type as VehicleClass,
+    categoryName: item.categoryName || 'SEDAN',
+    title: item.title,
+    subtitle: item.subtitle,
+    models: item.models,
+    makeModel: item.makeModel || `${item.title} (${item.models})`,
+    year: item.year || '2025 Fleet Model',
+    tagline: item.tagline || '',
+    pax: item.pax,
+    luggage: item.luggage,
+    multiplier: item.multiplier || 1.0,
+    features: item.features || [],
+    badge: item.badge,
+    badgeColor: item.badgeColor || '#10253F',
+    desc: item.desc || '',
+    specs: item.specs || {},
+    amenities: item.amenities || [],
+    photoUrl: item.photo_url || item.photoUrl,
+    photos: item.photos || (item.photo_url ? [{ url: item.photo_url, caption: item.title, viewType: 'EXTERIOR' }] : []),
+    fallbackIcon: item.fallback_icon || item.fallbackIcon || 'SEDAN',
+    sort_order: item.sort_order || 0,
+    is_active: item.is_active !== undefined ? item.is_active : true
+  }));
+}
+
+// ==============================================================================
+// CENTRAL SUPPORT, TICKETING & 2-TIER AI RESOLUTION API
+// ==============================================================================
+
+export interface TicketMessage {
+  id: string;
+  ticket_id: string;
+  sender_type: 'CUSTOMER' | 'AI_ASSISTANT' | 'VENDOR_DISPATCH' | 'HUB_SUPERADMIN';
+  sender_name: string;
+  sender_id?: string;
+  message_body: string;
+  is_internal_note: boolean;
+  attachments_json?: string;
+  created_at: string;
+}
+
+export interface SupportTicket {
+  id: string;
+  ticket_number: string;
+  tenant_id: string;
+  vendor_id: string;
+  vendor_name: string;
+  category: string;
+  customer_id?: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_email?: string;
+  booking_id?: string;
+  channel: string;
+  priority: 'URGENT_LIVE_RIDE' | 'HIGH' | 'NORMAL' | 'LOW';
+  status: 'OPEN' | 'AI_RESOLVED' | 'ASSIGNED_TO_VENDOR' | 'ESCALATED_TO_HUB' | 'PENDING_CUSTOMER' | 'RESOLVED' | 'CLOSED';
+  subject: string;
+  description: string;
+  assigned_agent?: string;
+  assigned_to: string;
+  sla_minutes: number;
+  sla_deadline_utc?: string;
+  is_sla_breached: boolean;
+  time_remaining_minutes?: number;
+  resolution_notes?: string;
+  flight_number?: string;
+  created_at: string;
+  updated_at?: string;
+  resolved_at?: string;
+  messages: TicketMessage[];
+  booking_context?: {
+    id: string;
+    status: string;
+    pickup_address?: string;
+    dropoff_address?: string;
+    pickup_time_utc?: string;
+    vehicle_class?: string;
+    total_amount?: number;
+    flight_number?: string;
+  };
+}
+
+export async function createSupportTicketApi(payload: {
+  vendor_id?: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_email?: string;
+  booking_id?: string;
+  category: string;
+  priority?: string;
+  subject: string;
+  message: string;
+  channel?: string;
+}): Promise<SupportTicket> {
+  const res = await fetch(`${BASE_URL}/api/v1/support/tickets`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || 'Failed to submit support ticket');
+  }
+  return res.json();
+}
+
+export async function lookupSupportTicketsApi(query: string): Promise<SupportTicket[]> {
+  const res = await fetch(`${BASE_URL}/api/v1/support/tickets/lookup?query=${encodeURIComponent(query)}`);
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || 'Failed to lookup support tickets');
+  }
+  return res.json();
+}
+
+export async function fetchSupportTicketApi(ticketId: string): Promise<SupportTicket> {
+  const res = await fetch(`${BASE_URL}/api/v1/support/tickets/${encodeURIComponent(ticketId)}`);
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || 'Ticket not found');
+  }
+  return res.json();
+}
+
+export async function addTicketMessageApi(ticketId: string, payload: {
+  sender_type: string;
+  sender_name: string;
+  sender_id?: string;
+  message_body: string;
+  is_internal_note?: boolean;
+}): Promise<TicketMessage> {
+  const res = await fetch(`${BASE_URL}/api/v1/support/tickets/${ticketId}/messages`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || 'Failed to send message');
+  }
+  return res.json();
+}
+
+export async function fetchVendorSupportTicketsApi(vendorId: string, status?: string): Promise<SupportTicket[]> {
+  const q = status && status !== 'ALL' ? `?status=${encodeURIComponent(status)}` : '';
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/support/tickets${q}`);
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || 'Failed to fetch vendor support tickets');
+  }
+  return res.json();
+}
+
+export async function replyVendorTicketApi(vendorId: string, ticketId: string, payload: {
+  sender_name: string;
+  message_body: string;
+  is_internal_note?: boolean;
+}): Promise<TicketMessage> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/support/tickets/${ticketId}/reply`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || 'Failed to post reply');
+  }
+  return res.json();
+}
+
+export async function resolveVendorTicketApi(vendorId: string, ticketId: string, payload: {
+  resolution_notes: string;
+  resolved_by: string;
+}): Promise<SupportTicket> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/support/tickets/${ticketId}/resolve`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || 'Failed to resolve ticket');
+  }
+  return res.json();
+}
+
+export async function fetchGlobalHubSupportTicketsApi(status?: string, filterBreached?: boolean): Promise<SupportTicket[]> {
+  const params = new URLSearchParams();
+  if (status && status !== 'ALL') params.append('status', status);
+  if (filterBreached) params.append('filter_breached', 'true');
+  const qs = params.toString() ? `?${params.toString()}` : '';
+
+  const res = await fetch(`${BASE_URL}/api/v1/global-hub/support/tickets${qs}`);
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || 'Failed to fetch hub support tickets');
+  }
+  return res.json();
+}
+
+export async function escalateTicketToGlobalHubApi(ticketId: string, reason: string): Promise<SupportTicket> {
+  const res = await fetch(`${BASE_URL}/api/v1/global-hub/support/tickets/${ticketId}/escalate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason, escalated_by: 'Dispatcher' })
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || 'Failed to escalate ticket');
+  }
+  return res.json();
+}
+
+// --- LIVE CHAUFFEUR GPS TELEMETRY & TRACKING API ---
+
+export interface LiveTrackingTelemetry {
+  lat: number;
+  lng: number;
+  speed_mph: number;
+  heading: number;
+  dist_miles: number;
+  eta_minutes: number;
+  updated_at: string;
+}
+
+export interface LiveTrackingResponse {
+  success: boolean;
+  trip_id: string;
+  booking_id: string;
+  status: string;
+  driver: {
+    id: string;
+    name: string;
+    phone: string;
+    badge_id: string;
+    rating: number;
+    photo_url?: string;
+  };
+  vehicle: {
+    model: string;
+    license_plate: string;
+    color: string;
+    class: string;
+  };
+  telemetry: LiveTrackingTelemetry;
+  route: {
+    pickup_address: string;
+    dropoff_address: string;
+    pickup_lat?: number;
+    pickup_lng?: number;
+    flight_number?: string;
+  };
+}
+
+export async function fetchTripLiveTrackingApi(tripId: string): Promise<LiveTrackingResponse> {
+  const res = await fetch(`${BASE_URL}/api/v1/trips/${tripId}/live-tracking`);
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || 'Failed to fetch live trip tracking');
+  }
+  return res.json();
+}
+
+export async function fetchBookingLiveTrackingApi(bookingId: string): Promise<LiveTrackingResponse> {
+  const res = await fetch(`${BASE_URL}/api/v1/bookings/${bookingId}/live-tracking`);
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || 'Failed to fetch live booking tracking');
+  }
+  return res.json();
+}
+
+export async function sendDriverLocationPingApi(payload: {
+  driver_id: string;
+  trip_id?: string;
+  vehicle_id?: string;
+  latitude: number;
+  longitude: number;
+  speed_mph?: number;
+  heading_degrees?: number;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/telemetry/driver-location`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || 'Failed to stream driver telemetry');
+  }
+  return res.json();
+}
+
+export async function fetchBookingMasterInvoiceHtml(bookingId: string): Promise<string> {
+  const res = await fetch(`${BASE_URL}/api/v1/bookings/${bookingId}/master-invoice/html`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch master invoice HTML');
+  return res.text();
+}
+
+export async function fetchBookingMasterReceiptHtml(bookingId: string): Promise<string> {
+  const res = await fetch(`${BASE_URL}/api/v1/bookings/${bookingId}/master-receipt/html`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch master receipt HTML');
+  return res.text();
+}
+
+export async function fetchBookingPodApi(bookingId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/dispatch/bookings/${bookingId}/pod`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || 'Failed to fetch Proof of Delivery');
+  }
+  return res.json();
+}
+
+export async function requestBookingIncidentalsApi(bookingId: string, payload: {
+  wait_minutes?: number;
+  tolls_usd?: number;
+  stops_count?: number;
+  notes?: string;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/dispatch/bookings/${bookingId}/pod/incidentals/request`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || 'Failed to request incidentals');
+  }
+  return res.json();
+}
+
+export async function approveBookingIncidentalsApi(bookingId: string, payload?: {
+  approved_amount_usd?: number;
+  approval_notes?: string;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/dispatch/bookings/${bookingId}/pod/incidentals/approve`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload || {})
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || 'Failed to approve incidentals');
+  }
+  return res.json();
+}
+
+export async function disputeBookingDeliveryApi(bookingId: string, payload: {
+  dispute_reason: string;
+  requested_remedy?: string;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/dispatch/bookings/${bookingId}/pod/dispute`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || 'Failed to submit delivery dispute');
+  }
+  return res.json();
+}
+
+export async function processBookingPaymentOperationsApi(bookingId: string, payload?: {
+  tip_amount_usd?: number;
+  dispatcher_notes?: string;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/dispatch/bookings/${bookingId}/process-payment`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload || {})
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || 'Failed to process payment capture');
+  }
+  return res.json();
+}
+
+export async function processBookingRefundOperationsApi(bookingId: string, payload: {
+  refund_amount_usd: number;
+  reason: string;
+  is_full_refund?: boolean;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/dispatch/bookings/${bookingId}/refund`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || 'Failed to process refund');
+  }
+  return res.json();
+}
+
+export async function acceptDriverOfferApi(offerId: string, driverId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/driver/offers/${offerId}/accept`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ driver_id: driverId })
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || 'Failed to accept driver offer');
+  }
+  return res.json();
+}
+
+export async function uploadDriverDocumentApi(driverId: string, payload: {
+  document_type: string;
+  document_name: string;
+  expiry_date?: string;
+  file_base64: string;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/drivers/${driverId}/documents/upload`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || 'Failed to upload driver credential');
+  }
+  return res.json();
+}
+
+export async function updateDriverCompensationModelApi(vendorId: string, driverId: string, payload: {
+  model_type: 'HOURLY' | 'SPLIT_PERCENTAGE' | 'COMMISSION_FLAT';
+  hourly_rate_usd?: number;
+  split_percentage?: number;
+  minimum_trip_payout_usd?: number;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/drivers/${driverId}/compensation-model`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || 'Failed to update compensation model');
+  }
+  return res.json();
+}
+
+// =========================================================================
+// SPRINT 1: CUSTOMER SUPPORT, TICKETING & 2-TIER RESOLUTION ENGINE API
+// =========================================================================
+
+export async function createCustomerSupportTicketApi(payload: {
+  customer_name: string;
+  phone: string;
+  email?: string;
+  category: string;
+  subject: string;
+  message: string;
+  booking_id?: string;
+  flight_number?: string;
+  vendor_id?: string;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/support/tickets`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to submit customer support ticket');
+  }
+  return res.json();
+}
+
+export async function lookupCustomerSupportTicketsApi(query: string): Promise<any[]> {
+  const res = await fetch(`${BASE_URL}/api/v1/support/tickets/lookup?query=${encodeURIComponent(query)}`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to lookup customer support tickets');
+  return res.json();
+}
+
+export async function getSupportTicketDetailsApi(ticketId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/support/tickets/${ticketId}`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch support ticket details');
+  return res.json();
+}
+
+export async function addSupportTicketMessageApi(ticketId: string, payload: {
+  sender_type: string;
+  sender_name: string;
+  message_body: string;
+  sender_id?: string;
+  is_internal_note?: boolean;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/support/tickets/${ticketId}/messages`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to send message');
+  }
+  return res.json();
+}
 
 
 
+export async function updateSupportDeskPlanApi(planId: string, payload: {
+  monthly_price_usd?: number;
+  included_minutes?: number;
+  overage_rate_per_min?: number;
+  features?: string[];
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/support-desk/plans/${planId}`, {
+    method: 'PUT',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to update support desk plan');
+  }
+  return res.json();
+}
 
+export async function evaluateSlaTriggersApi(): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/support-desk/sla/evaluate-triggers`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to evaluate SLA triggers');
+  return res.json();
+}
 
+export async function mutateTicketBookingActionApi(ticketId: string, payload: {
+  action: 'RESCHEDULE_PICKUP' | 'CANCEL_AND_RELEASE_ESCROW' | 'SEND_MASKED_DRIVER_SMS';
+  params?: Record<string, any>;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/support-desk/tickets/${ticketId}/mutate`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to execute ticket booking mutation');
+  }
+  return res.json();
+}
 
+// =========================================================================
+// SPRINT 1: STRIPE CONNECT, SUBSCRIPTION & BILLING PORTAL API
+// =========================================================================
 
+export async function fetchVendorStripeConnectStatusApi(vendorId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/stripe/connect-status`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch Stripe connect status');
+  return res.json();
+}
 
+export async function switchVendorPayAsYouGoApi(vendorId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/subscription/pay-as-you-go`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to switch to pay-as-you-go');
+  }
+  return res.json();
+}
 
+export async function upgradeVendorSubscriptionApi(vendorId: string, planTier: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/subscription/upgrade`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tier: planTier })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to upgrade subscription');
+  }
+  return res.json();
+}
+
+export async function cancelVendorSubscriptionApi(vendorId: string, reason?: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/subscription/cancel`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason: reason || 'Vendor requested subscription termination' })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to cancel subscription');
+  }
+  return res.json();
+}
+
+export async function simulateVendorDunningAlertApi(vendorId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/subscription/simulate-dunning`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to simulate dunning alert');
+  return res.json();
+}
+
+export async function clearVendorDunningAlertApi(vendorId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/subscription/clear-dunning`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to clear dunning alert');
+  return res.json();
+}
+
+// =========================================================================
+// SPRINT 2: VOICE AI TELEPHONY, 10DLC COMPLIANCE & BRANDING STUDIO API
+// =========================================================================
+
+export async function simulateVoiceCallApi(payload: {
+  caller_phone?: string;
+  dialed_number?: string;
+  prompt_override?: string;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/voice/simulate-call`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to simulate voice call');
+  }
+  return res.json();
+}
+
+export async function fetchVoiceSessionApi(sessionId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/voice/session/${sessionId}`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch voice session');
+  return res.json();
+}
+
+export async function executeVoiceCallIntakeApi(vendorId: string, payload: any): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/voice-call-intake`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to execute voice call intake');
+  }
+  return res.json();
+}
+
+export async function processInboundSmsComplianceApi(vendorId: string, payload: {
+  from_number?: string;
+  sender_phone?: string;
+  body?: string;
+  text_body?: string;
+}): Promise<any> {
+  const dto = {
+    sender_phone: payload.sender_phone || payload.from_number || '',
+    text_body: payload.text_body || payload.body || ''
+  };
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/telecom-compliance/inbound-sms`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(dto)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to process compliance SMS');
+  }
+  return res.json();
+}
+
+export async function exportCorporateInvoiceCsvApi(invoiceId: string): Promise<string> {
+  const res = await fetch(`${BASE_URL}/api/v1/corporate/invoices/${invoiceId}/csv`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to export invoice CSV');
+  return res.text();
+}
+
+export async function sendVendorInvoiceFromHubApi(vendorId: string, payload: {
+  recipient_email: string;
+  invoice_id: string;
+  amount_usd: number;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/hub/vendors/${vendorId}/send-invoice`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to send vendor invoice from Hub');
+  }
+  return res.json();
+}
+
+export async function sendVendorTripInvoiceEmailApi(vendorId: string, payload: {
+  recipient_email: string;
+  booking_id: string;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendor-cell/${vendorId}/email/send-invoice`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to send trip invoice email');
+  }
+  return res.json();
+}
+
+export async function fetchHubHelicopterConfigApi(): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/hub/helicopter-config`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch helicopter config');
+  return res.json();
+}
+
+export async function updateHubHelicopterConfigApi(config: any): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/hub/helicopter-config`, {
+    method: 'PUT',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(config)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to update helicopter config');
+  }
+  return res.json();
+}
+
+export async function listVendorCellsApi(): Promise<any[]> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendor-cell/cells`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to list vendor cells');
+  return res.json();
+}
+
+export async function toggleVendorCellCircuitBreakerApi(vendorId: string, tripBreaker: boolean, reason?: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendor-cell/${vendorId}/circuit-breaker`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ trip_breaker: tripBreaker, reason })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to toggle cell circuit breaker');
+  }
+  return res.json();
+}
+
+export async function syncVendorOutboxToGlobalHubApi(vendorId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendor-cell/${vendorId}/outbox/sync`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to sync vendor outbox');
+  return res.json();
+}
+
+export async function fetchVendorCellStatusApi(vendorId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendor-cell/${vendorId}/status`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch cell status');
+  return res.json();
+}
+
+export async function generateVendorPortalTokenApi(vendorId: string): Promise<{ token: string; expires_at: string }> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendor-portal/token/${vendorId}`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to generate vendor token');
+  return res.json();
+}
+
+export async function resolveVendorPortalTokenApi(token: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendor-portal/resolve-token?token=${encodeURIComponent(token)}`);
+  if (!res.ok) throw new Error('Failed to resolve vendor token');
+  return res.json();
+}
+
+export async function fetchVendorBrandingSettingsApi(vendorId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/branding`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch vendor branding');
+  return res.json();
+}
+
+export async function updateVendorBrandingSettingsApi(vendorId: string, payload: any): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/branding`, {
+    method: 'PUT',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to update vendor branding');
+  }
+  return res.json();
+}
+
+export async function fetchVendorIntakeConfigApi(vendorId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/config`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch vendor config');
+  return res.json();
+}
+
+export async function updateVendorIntakeConfigApi(vendorId: string, payload: any): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/config`, {
+    method: 'PUT',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to update vendor config');
+  }
+  return res.json();
+}
+
+export async function fetchVendorOperatingScheduleApi(vendorId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/schedule`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch operating schedule');
+  return res.json();
+}
+
+export async function updateVendorOperatingScheduleApi(vendorId: string, payload: any): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/schedule`, {
+    method: 'PUT',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to update operating schedule');
+  }
+  return res.json();
+}
+
+export async function fetchVendorSeoSchemaApi(vendorId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/seo-schema`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch SEO schema');
+  return res.json();
+}
+
+export async function fetchVendorEmailConfigApi(vendorId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendor-cell/${vendorId}/email/config`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch email gateway config');
+  return res.json();
+}
+
+export async function updateVendorEmailConfigApi(vendorId: string, config: any): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendor-cell/${vendorId}/email/config`, {
+    method: 'PUT',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(config)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to update email gateway config');
+  }
+  return res.json();
+}
+
+export async function testVendorEmailConnectionApi(vendorId: string, targetEmail: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendor-cell/${vendorId}/email/test`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ target_email: targetEmail })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Email connection test failed');
+  }
+  return res.json();
+}
+
+export async function testVendorInboundEmailConnectionApi(vendorId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendor-cell/${vendorId}/email/test-inbound`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Inbound email test failed');
+  }
+  return res.json();
+}
+
+export async function fetchVendorEmailInboxApi(vendorId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendor-cell/${vendorId}/email/inbox`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch email inbox');
+  return res.json();
+}
+
+export async function convertEmailRfqToBookingApi(vendorId: string, rfqId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendor-cell/${vendorId}/email/rfqs/${rfqId}/convert-booking`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to convert RFQ to booking');
+  }
+  return res.json();
+}
+
+export async function parseVendorInboundEmailApi(vendorId: string, payload: { sender_email: string; subject: string; body: string }): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendor-cell/${vendorId}/email/inbound-parse`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Inbound email parsing failed');
+  }
+  return res.json();
+}
+
+export async function dispatchVendorOutboundEmailApi(vendorId: string, payload: any): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendor-cell/${vendorId}/email/outbound-dispatch`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to dispatch outbound email');
+  }
+  return res.json();
+}
+
+export async function fetchVendorManifestTemplateApi(): Promise<{ template_yaml: string }> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendor-cell/manifest-template`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch manifest template');
+  return res.json();
+}
+
+export async function validateVendorYamlApi(yamlContent: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendor-cell/validate-yaml`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ yaml_content: yamlContent })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'YAML validation failed');
+  }
+  return res.json();
+}
+
+export async function spinUpVendorCellApi(payload: any): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendor-cell/spin-up`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Spin up vendor cell failed');
+  }
+  return res.json();
+}
+
+export async function fetchGlobalHubAnalyticsApi(): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/global-hub/analytics`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch Global Hub analytics');
+  return res.json();
+}
+
+export async function fetchSystemRuntimeModeApi(): Promise<{
+  is_sovereign_cell: boolean;
+  sovereign_vendor_id: string | null;
+  is_prod_mode: boolean;
+  hub_mode: boolean;
+  node_hostname: string;
+}> {
+  const res = await fetch(`${BASE_URL}/api/v1/system/runtime-mode`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch system runtime mode');
+  return res.json();
+}
+
+export async function executeDirectCellBookingApi(vendorId: string, payload: any): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendor-cell/${vendorId}/booking/direct`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Direct cell booking failed');
+  }
+  return res.json();
+}
+
+export async function resolveVendorDomainApi(domain: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendor-portal/resolve-domain?domain=${encodeURIComponent(domain)}`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to resolve vendor domain');
+  return res.json();
+}
+
+export async function fetchOmnichannelWorkspaceApi(vendorId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/omnichannel/desk`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch omnichannel workspace');
+  return res.json();
+}
+
+export async function sendOmnichannelMessageApi(vendorId: string, payload: {
+  recipient_phone: string;
+  body: string;
+  channel: 'SMS' | 'WHATSAPP';
+  quick_action_type?: string;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/omnichannel/send-message`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to dispatch omnichannel message');
+  }
+  return res.json();
+}
+
+export async function recordVoiceStudioCallApi(vendorId: string, payload: {
+  caller_phone: string;
+  caller_name?: string;
+  duration_seconds?: number;
+  transcript?: string;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/omnichannel/dial-call`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to trigger voice call');
+  }
+  return res.json();
+}
+
+export async function updateVendorOmnichannelConfigApi(vendorId: string, payload: any): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/omnichannel/config`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to update omnichannel config');
+  }
+  return res.json();
+}
+
+// --- Sprint 3: Autonomous Recovery, FlightAware & Mission Control APIs ---
+
+export async function fetchVendorAiYieldApi(vendorId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/ai-yield`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch AI yield metrics');
+  return res.json();
+}
+
+export async function trainVendorAiYieldApi(vendorId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/ai-yield/train`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to train AI dynamic yield');
+  return res.json();
+}
+
+export async function applyVendorAiYieldApi(vendorId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/ai-yield/apply`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to apply AI yield pricing rules');
+  return res.json();
+}
+
+export async function checkFleetAvailabilityApi(vendorId: string, payload: {
+  vehicle_class?: string;
+  pickup_time_utc: string;
+  estimated_duration_minutes?: number;
+  service_type?: string;
+  hourly_hours?: number;
+  origin_address?: string;
+  destination_address?: string;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/availability/check`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Fleet availability check failed');
+  }
+  return res.json();
+}
+
+export async function fetchVendorSimulationScenariosApi(vendorId?: string): Promise<any[]> {
+  const url = vendorId 
+    ? `${BASE_URL}/api/v1/vendors/${vendorId}/simulation-scenarios`
+    : `${BASE_URL}/api/v1/pricing/simulation-scenarios`;
+  const res = await fetch(url, { headers: getAuthHeaders() });
+  if (!res.ok) throw new Error('Failed to fetch simulation scenarios');
+  return res.json();
+}
+
+export async function savePricingSimulationScenarioApi(scenario: any): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/pricing/simulation-scenarios`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(scenario)
+  });
+  if (!res.ok) throw new Error('Failed to save simulation scenario');
+  return res.json();
+}
+
+export async function fetchCellDomainMappingApi(vendorId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/infrastructure/cells/${vendorId}/domain-mapping`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch cell domain mapping');
+  return res.json();
+}
+
+export async function updateCellDomainMappingApi(vendorId: string, payload: {
+  custom_domain: string;
+  waf_enabled?: boolean;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/infrastructure/cells/${vendorId}/domain-mapping`, {
+    method: 'PUT',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to update cell domain mapping');
+  }
+  return res.json();
+}
+
+export async function invokeSharedAiGatewayApi(payload: {
+  vendor_id?: string;
+  system_prompt: string;
+  user_prompt: string;
+  max_tokens?: number;
+  temperature?: number;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/global-hub/shared-ai/invoke`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Shared AI Gateway invocation failed');
+  }
+  return res.json();
+}
+
+export async function broadcastFlightRadarEventApi(payload: {
+  flight_number: string;
+  carrier: string;
+  origin_airport: string;
+  destination_airport: string;
+  delay_minutes: number;
+  updated_eta_utc: string;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/global-hub/radar/broadcast`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Flight radar broadcast failed');
+  }
+  return res.json();
+}
+
+export async function ingestFlightAwareWebhookApi(payload: any): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/webhooks/flightaware`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'FlightAware webhook ingestion failed');
+  }
+  return res.json();
+}
+
+export async function addAiDocumentApi(payload: {
+  document_name: string;
+  content: string;
+  category?: string;
+  metadata?: any;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/ai/documents`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error('Failed to add AI document');
+  return res.json();
+}
+
+export async function addAiGraphEdgeApi(payload: {
+  source_id: string;
+  target_id: string;
+  relation_type: string;
+  properties?: any;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/ai/graph/edges`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error('Failed to create AI graph edge');
+  return res.json();
+}
+
+// --- Sprint 4: Bookings, Inbound Leads, Reservations & Chauffeur Operations ---
+
+export async function fetchVendorBookingsApi(vendorId: string): Promise<Booking[]> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/bookings`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch vendor bookings');
+  return res.json();
+}
+
+export async function fetchVendorInquiriesApi(vendorId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/inquiries`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch vendor inquiries');
+  return res.json();
+}
+
+export async function fetchChauffeurDutyStatusApi(driverId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/chauffeur/${driverId}/duty-status`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch chauffeur duty status');
+  return res.json();
+}
+
+export async function fetchVendorDriversApi(vendorId: string): Promise<Driver[]> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/drivers`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch vendor drivers');
+  return res.json();
+}
+
+export async function createVendorDriverApi(vendorId: string, payload: any): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/drivers`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to create vendor driver');
+  }
+  return res.json();
+}
+
+export async function fetchRegionalStaffingPodsApi(): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/support-desk/pods`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch regional staffing pods');
+  return res.json();
+}
+
+// --- Sprint 5: Dynamic Pricing, Regional Tax Rules & AI Price Validation ---
+
+export const quoteItineraryMatrix = quoteMasterItineraryMatrix;
+
+export async function fetchRegionalTaxRulesApi(): Promise<any[]> {
+  const res = await fetch(`${BASE_URL}/api/v1/pricing/tax-rules`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to fetch regional tax rules'));
+  }
+  return res.json();
+}
+
+export const fetchTaxRulesApi = fetchRegionalTaxRulesApi;
+
+export async function aiValidatePricingQuoteApi(payload: {
+  vendor_id?: string;
+  service_type?: string;
+  vehicle_class?: string;
+  pickup_address: string;
+  dropoff_address?: string;
+  hourly_hours?: number;
+  proposed_quote_amount?: number;
+  currency?: string;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/quotes/ai-validate-pricing`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'AI pricing validation failed'));
+  }
+  return res.json();
+}
+
+export async function aiValidateVendorPricingApi(vendorId: string, payload: {
+  service_type?: string;
+  vehicle_class?: string;
+  pickup_address: string;
+  dropoff_address?: string;
+  hourly_hours?: number;
+  proposed_quote_amount?: number;
+  currency?: string;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${encodeURIComponent(vendorId)}/ai-validate-pricing`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Vendor AI pricing validation failed'));
+  }
+  return res.json();
+}
+
+// --- Sprint 6: Fleet Assets & Vehicle Inventory + Payroll, Shifts & Settlements ---
+
+export async function fetchVendorVehicleDetail(vendorId: string, vehicleId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${encodeURIComponent(vendorId)}/fleet-inventory/${encodeURIComponent(vehicleId)}`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to fetch vehicle detail'));
+  }
+  return res.json();
+}
+
+export async function fetchVendorPayrollSummaryApi(vendorId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${encodeURIComponent(vendorId)}/payroll/summary`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to fetch vendor payroll summary'));
+  }
+  return res.json();
+}
+
+export async function processTripPayoutApi(vendorId: string, payload: {
+  trip_id: string;
+  driver_id: string;
+  driver_name: string;
+  gross_fare_usd: number;
+  tip_amount_usd?: number;
+  tolls_usd?: number;
+  trip_duration_minutes?: number;
+  currency?: string;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${encodeURIComponent(vendorId)}/payroll/process-trip`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to process driver trip payout'));
+  }
+  return res.json();
+}
+
+export async function recordDriverShiftApi(vendorId: string, payload: {
+  driver_id: string;
+  driver_name: string;
+  hours: number;
+  tips?: number;
+  tolls?: number;
+  trips_count?: number;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${encodeURIComponent(vendorId)}/payroll/record-shift`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to record driver shift'));
+  }
+  return res.json();
+}
+
+export const exportVendorPayrollCsv = exportPayrollCsvApi;
+export const fetchVehicles = fetchAllVehicles;
+
+export async function simulateStripeWebhookApi(payload?: {
+  id?: string;
+  type?: string;
+  data?: any;
+  booking_id?: string;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/webhooks/stripe`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload || {
+      id: `evt_test_${Date.now()}`,
+      type: 'payment_intent.succeeded',
+      data: {
+        object: {
+          id: `pi_test_${Date.now()}`,
+          amount: 18500,
+          currency: 'usd',
+          status: 'succeeded'
+        }
+      }
+    })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to process Stripe webhook event'));
+  }
+  return res.json();
+}
+
+export const triggerStripeWebhookApi = simulateStripeWebhookApi;
 
 

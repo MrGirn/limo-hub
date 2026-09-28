@@ -50,195 +50,44 @@ export const PublicFleetPage: React.FC<PublicFleetPageProps> = ({ config, onSele
   const [liveVehicles, setLiveVehicles] = useState<FleetVehicle[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const fleetVehicles: FleetVehicle[] = [
-    {
-      id: 'v_escalade_esv',
-      type: 'LUXURY_SUV' as VehicleClass,
-      categoryName: 'SUV',
-      title: 'Cadillac Escalade ESV Sport Platinum',
-      makeModel: 'Cadillac Escalade ESV (Extended Wheelbase)',
-      year: '2025 Flagship Model',
-      tagline: 'The Undisputed American Executive Standard in Chauffeur Luxury',
-      pax: 6,
-      luggage: 6,
-      multiplier: 1.25,
-      badge: '👑 Most Requested Airport & FBO SUV',
-      badgeColor: '#10253F',
-      desc: 'Extended length wheelbase delivering 142.8 cubic feet of maximum cargo capacity, comfortably accommodating up to 6 oversized international luggage pieces. Features semi-aniline leather seating, magnetic ride control suspension, dual rear OLED entertainment displays, and whisper-quiet acoustic laminated glass.',
-      specs: {
-        seatingType: 'Tri-Zone Heated/Cooled Semi-Aniline Captain Chairs',
-        soundSystem: 'AKG Studio Reference 36-Speaker 3D Surround Sound',
-        connectivity: 'High-Speed Wi-Fi Hotspot + Dual 12.6” Rear HD Displays',
-        climate: 'Advanced Cabin Air Filtration & Tri-Zone Automatic HVAC',
-        beverage: 'Center Console Cooler with Fiji Artesian Water',
-        safetyRating: 'Surround Vision 360 + Night Vision Thermal Assist'
-      },
-      amenities: [
-        'Dedicated Massive Luggage Cargo Bay (Up to 6 Large Suitcases)',
-        'Power Retractable Illuminated Boarding Steps',
-        'Inside FBO Ramp Airfield Direct Transfer Clearance',
-        'Ultra-Quiet Acoustic Noise Cancellation Architecture',
-        'Dedicated Rear 110V AC Power Inverter & USB-PD Hub',
-        'Digital Umbrella & Executive Sanitization Kit'
-      ],
-      photos: [
-        {
-          url: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=1200&q=80',
-          caption: 'Exterior Profile - Obsidian Black Escalade ESV',
-          viewType: 'EXTERIOR'
-        },
-        {
-          url: 'https://images.unsplash.com/photo-1583121274602-3e2820c69888?auto=format&fit=crop&w=1200&q=80',
-          caption: 'Rear Passenger Lounge with Dual HD Entertainment Displays',
-          viewType: 'CABIN'
-        },
-        {
-          url: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=1200&q=80',
-          caption: 'Executive Curved OLED Chauffeur Cockpit',
-          viewType: 'DETAILS'
-        },
-        {
-          url: 'https://images.unsplash.com/photo-1502877338535-766e1452684a?auto=format&fit=crop&w=1200&q=80',
-          caption: 'Curbside Stature & Signature Vertical LED Presence',
-          viewType: 'EXTERIOR'
-        }
-      ]
+  // Authoritative database-backed fleet vehicles derived from cached portal bootstrap
+  const configFleetVehicles: FleetVehicle[] = (config.fleet_vehicles || config.vehicle_options || []).map((v: any, idx: number) => ({
+    id: v.id || `veh_cls_${v.type || idx}`,
+    type: (v.type || 'LUXURY_SUV') as VehicleClass,
+    categoryName: v.categoryName || (String(v.type).includes('SUV') ? 'SUV' : String(v.type).includes('VAN') ? 'VAN' : 'SEDAN'),
+    title: v.title || 'Executive Fleet Vehicle',
+    makeModel: v.makeModel || v.models || v.title || 'Executive Fleet Model',
+    year: v.year || '2025 Fleet Model',
+    tagline: v.tagline || v.subtitle || 'Pinnacle Chauffeur Luxury & Executive Transport',
+    pax: v.pax || 4,
+    luggage: v.luggage || 3,
+    multiplier: v.multiplier || 1.0,
+    badge: v.badge || '👑 Sovereign Verified Fleet',
+    badgeColor: v.badgeColor || '#10253F',
+    desc: v.desc || v.tagline || 'Commercial flagship vehicle certified for private aviation, diplomatic roadshows, and executive airport transfers.',
+    specs: v.specs || {
+      seatingType: 'Executive Leather Heated/Cooled Comfort Seats',
+      soundSystem: 'High-Fidelity Acoustic Surround Sound',
+      connectivity: 'High-Speed 5G Wi-Fi Hotspot & USB-C Power',
+      climate: 'Multi-Zone Automatic Climate & HEPA Air Ionizer',
+      beverage: 'Complimentary Chilled Artesian Bottled Water',
+      safetyRating: 'Surround 360 Telemetry & DOT Vetted Chauffeur'
     },
-    {
-      id: 'v_yukon_denali',
-      type: 'LUXURY_SUV' as VehicleClass,
-      categoryName: 'SUV',
-      title: 'GMC Yukon Denali XL Ultimate',
-      makeModel: 'GMC Yukon Denali XL (Extended Chassis)',
-      year: '2025 Ultimate Edition',
-      tagline: 'Presidential Command, Refined Craftsmanship & Massive Luggage Capacity',
-      pax: 6,
-      luggage: 6,
-      multiplier: 1.20,
-      badge: '🌟 Presidential & Delegation Preferred',
-      badgeColor: '#806734',
-      desc: 'The pinnacle of GMC luxury engineering. Handcrafted Alpine Umber full-grain leather, 16-way power front & rear massaging seats, Vader Chrome exterior accents, and Air Ride Adaptive suspension that lowers the vehicle automatically for effortless VIP curbside ingress and egress.',
-      specs: {
-        seatingType: 'Alpine Umber Full-Grain Leather Executive Captain Chairs',
-        soundSystem: 'Bose Performance Series 18-Speaker Audio with Headrest Speakers',
-        connectivity: 'Dual 12.6” Rear Seat Media System with HDMI/Streaming',
-        climate: 'Tri-Zone Climate with Rear Auxiliary Controls & Air Ionizer',
-        beverage: 'Power-Sliding Center Console Safe & Chilled Storage',
-        safetyRating: '5-Star Safety + Secret Service Protocol Clearance'
-      },
-      amenities: [
-        'Massive XL Extended Luggage Bay (Full International Baggage Sets)',
-        'Four-Corner Air Ride Adaptive Suspension for Smooth Ride',
-        'Panoramic Dual-Pane Power Sunroof with Power Shade',
-        'Complimentary High-Speed 5G In-Cabin Wi-Fi',
-        'Chilled Glass Bottled Water & Travel Refreshments',
-        'FAA FlightRadar24 Synced Gate Coordination'
-      ],
-      photos: [
-        {
-          url: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80',
-          caption: 'Exterior Stature - GMC Yukon Denali XL Onyx Black',
-          viewType: 'EXTERIOR'
-        },
-        {
-          url: 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=1200&q=80',
-          caption: 'Full-Grain Leather Executive Rear Lounge Suite',
-          viewType: 'CABIN'
-        },
-        {
-          url: 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=1200&q=80',
-          caption: 'Precision Flight Telemetry Driver Cockpit',
-          viewType: 'DETAILS'
-        }
-      ]
-    },
-    {
-      id: 'v_maybach_s580',
-      type: 'FIRST_CLASS' as VehicleClass,
-      categoryName: 'SEDAN',
-      title: 'Mercedes-Maybach S 580 4MATIC',
-      makeModel: 'Mercedes-Maybach S 580 Prestige',
-      year: '2025 Diplomatic Edition',
-      tagline: 'The Pinnacle of First-Class Chauffeured Luxury',
-      pax: 3,
-      luggage: 3,
-      multiplier: 1.0,
-      badge: '👑 Diplomatic & CEO Choice',
-      badgeColor: '#10253F',
-      desc: 'Engineered for sovereign heads of state, CEOs, and private aviation travelers. Hand-stitched Exclusive Nappa leather, 43.5-degree reclining rear executive captain chairs with calf-rests, energizing hot-stone massage, silver-plated champagne flute consoles, and Burmester High-End 4D surround sound.',
-      specs: {
-        seatingType: 'Executive Reclining Rear Suite with Calf Rest',
-        soundSystem: 'Burmester High-End 4D Sound (1,750W)',
-        connectivity: 'Dual 11.6” Rear HD OLED Displays + Wi-Fi 6E',
-        climate: '4-Zone Thermotronic Air Balance Fragrance System',
-        beverage: 'Rear Console Chilled Refrigeration Compartment',
-        safetyRating: '5-Star Pre-Safe Impulse + Secret Service Vetting'
-      },
-      amenities: [
-        'Acoustic Laminated Privacy & Solar Glass',
-        'Motorized Rear & Side Window Privacy Sunshades',
-        'Chilled Fiji Artesian Water & Executive Mints',
-        'Rear Center Fold-Out Executive Work Tables',
-        'Wireless High-Speed Charging & Multi-Device USB-C Hub',
-        'Autonomous FlightRadar24 Gate Telemetry Link'
-      ],
-      photos: [
-        {
-          url: 'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&w=1200&q=80',
-          caption: 'Exterior Obsidian Black Prestige Silhouette',
-          viewType: 'EXTERIOR'
-        },
-        {
-          url: 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=1200&q=80',
-          caption: 'Rear Executive Lounge with Nappa Leather Recliners',
-          viewType: 'CABIN'
-        }
-      ]
-    },
-    {
-      id: 'v_sprinter_jet',
-      type: 'BUSINESS_VAN' as VehicleClass,
-      categoryName: 'VAN',
-      title: 'Mercedes-Benz Sprinter Jet Lounge',
-      makeModel: 'Mercedes-Benz Sprinter 3500 High Roof Executive',
-      year: '2025 Bespoke Custom Build',
-      tagline: 'Private Aviation Cabin Environment for Group Roadshows & Delegations',
-      pax: 12,
-      luggage: 14,
-      multiplier: 1.60,
-      badge: '💼 Executive Roadshows & Large Delegations',
-      badgeColor: '#059669',
-      desc: 'A private jet on wheels. 6-foot-4 standing headroom, custom diamond-quilted Maybach-style captain seats facing each other in conference arrangement, 43-inch 4K Smart TV with Apple AirPlay & HDMI inputs, fiber-optic starlight ceiling, and an enclosed partition between chauffeur and passengers.',
-      specs: {
-        seatingType: 'Maybach-Style Diamond Quilted Swivel Captain Chairs',
-        soundSystem: 'Custom Audiophile Surround Sound with Subwoofers',
-        connectivity: '43” 4K Smart TV with Live HDMI & Apple AirPlay',
-        climate: 'Dual Heavy-Duty Auxiliary Rear A/C & Heating Units',
-        beverage: 'Built-in Bar, Champagne Flute Rack & Nespresso Bar',
-        safetyRating: 'Commercial DOT Certified with Dual Rear Wheels'
-      },
-      amenities: [
-        'Motorized Chauffeur Privacy Glass Partition with Intercom',
-        'Starlight Fiber-Optic Ceiling with Infinite Color Palette',
-        'Full Walk-In Standing Height (6ft 4in)',
-        'Conference Club Tables with Built-in Cup Holders & Power',
-        'Partitioned Commercial Luggage Bay for 14+ Suitcases',
-        'High-Speed Satellite Wi-Fi for Mobile Boardroom Meetings'
-      ],
-      photos: [
-        {
-          url: 'https://images.unsplash.com/photo-1570125909232-eb263c188f7e?auto=format&fit=crop&w=1200&q=80',
-          caption: 'Exterior Sprinter Jet Black High-Roof VIP Shuttle',
-          viewType: 'EXTERIOR'
-        },
-        {
-          url: 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=1200&q=80',
-          caption: 'Bespoke Executive Cabin with Starlight Ceiling & Club Chairs',
-          viewType: 'CABIN'
-        }
-      ]
-    }
-  ];
+    amenities: (v.amenities && v.amenities.length > 0) ? v.amenities : (v.features || [
+      'Dedicated Luggage Cargo Space',
+      'Complimentary High-Speed Wi-Fi Hotspot',
+      'Chilled Fiji Bottled Water & Travel Refreshments'
+    ]),
+    photos: (v.photos && v.photos.length > 0) ? v.photos : [
+      {
+        url: v.photoUrl || 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=1200&q=80',
+        caption: `${v.title || 'Executive Vehicle'} - Fleet Exterior Profile`,
+        viewType: 'EXTERIOR'
+      }
+    ]
+  }));
+
+  const fleetVehicles: FleetVehicle[] = configFleetVehicles;
 
   useEffect(() => {
     let isMounted = true;

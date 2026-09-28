@@ -1,0 +1,1824 @@
+{
+  "total_backend_routes": 303,
+  "backend_routes": [
+    {
+      "path": "/openapi.json",
+      "method": "GET",
+      "endpoint_name": "openapi",
+      "func": "openapi"
+    },
+    {
+      "path": "/docs",
+      "method": "GET",
+      "endpoint_name": "swagger_ui_html",
+      "func": "swagger_ui_html"
+    },
+    {
+      "path": "/docs/oauth2-redirect",
+      "method": "GET",
+      "endpoint_name": "swagger_ui_redirect",
+      "func": "swagger_ui_redirect"
+    },
+    {
+      "path": "/redoc",
+      "method": "GET",
+      "endpoint_name": "redoc_html",
+      "func": "redoc_html"
+    },
+    {
+      "path": "/api/v1/quotes",
+      "method": "POST",
+      "endpoint_name": "request_quote",
+      "func": "request_quote"
+    },
+    {
+      "path": "/api/v1/quotes/matrix",
+      "method": "POST",
+      "endpoint_name": "request_quote_matrix",
+      "func": "request_quote_matrix"
+    },
+    {
+      "path": "/api/v1/quotes/compare",
+      "method": "POST",
+      "endpoint_name": "compare_market_quotes",
+      "func": "compare_market_quotes"
+    },
+    {
+      "path": "/api/v1/hub/toll-registry",
+      "method": "GET",
+      "endpoint_name": "get_central_toll_registry",
+      "func": "get_central_toll_registry"
+    },
+    {
+      "path": "/api/v1/pricing/research-simulate",
+      "method": "POST",
+      "endpoint_name": "run_pricing_research_simulation",
+      "func": "run_pricing_research_simulation"
+    },
+    {
+      "path": "/api/v1/quotes/{quote_id}/book",
+      "method": "POST",
+      "endpoint_name": "accept_and_book",
+      "func": "accept_and_book"
+    },
+    {
+      "path": "/api/v1/bookings",
+      "method": "GET",
+      "endpoint_name": "list_bookings",
+      "func": "list_bookings"
+    },
+    {
+      "path": "/api/v1/bookings/lookup",
+      "method": "GET",
+      "endpoint_name": "lookup_customer_bookings",
+      "func": "lookup_customer_bookings"
+    },
+    {
+      "path": "/api/v1/bookings/{booking_id}",
+      "method": "GET",
+      "endpoint_name": "get_booking",
+      "func": "get_booking"
+    },
+    {
+      "path": "/api/v1/bookings/{booking_id}/calendar.ics",
+      "method": "GET",
+      "endpoint_name": "get_booking_calendar_ics",
+      "func": "get_booking_calendar_ics"
+    },
+    {
+      "path": "/api/v1/bookings/{booking_id}/cancel",
+      "method": "POST",
+      "endpoint_name": "cancel_customer_booking",
+      "func": "cancel_customer_booking"
+    },
+    {
+      "path": "/api/v1/dispatch/bookings/{booking_id}/process-payment",
+      "method": "POST",
+      "endpoint_name": "process_booking_payment_operations",
+      "func": "process_booking_payment_operations"
+    },
+    {
+      "path": "/api/v1/dispatch/bookings/{booking_id}/refund",
+      "method": "POST",
+      "endpoint_name": "process_booking_refund_operations",
+      "func": "process_booking_refund_operations"
+    },
+    {
+      "path": "/api/v1/bookings/{booking_id}/terms-voucher",
+      "method": "GET",
+      "endpoint_name": "get_booking_terms_voucher",
+      "func": "get_booking_terms_voucher"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/branding",
+      "method": "GET",
+      "endpoint_name": "get_vendor_branding_settings",
+      "func": "get_vendor_branding_settings"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/branding",
+      "method": "PUT",
+      "endpoint_name": "update_vendor_branding_settings",
+      "func": "update_vendor_branding_settings"
+    },
+    {
+      "path": "/api/v1/dispatch/bookings/{booking_id}/pod",
+      "method": "GET",
+      "endpoint_name": "get_booking_proof_of_delivery",
+      "func": "get_booking_proof_of_delivery"
+    },
+    {
+      "path": "/api/v1/dispatch/bookings/{booking_id}/pod/incidentals/request",
+      "method": "POST",
+      "endpoint_name": "request_booking_incidentals",
+      "func": "request_booking_incidentals"
+    },
+    {
+      "path": "/api/v1/dispatch/bookings/{booking_id}/pod/incidentals/approve",
+      "method": "POST",
+      "endpoint_name": "approve_booking_incidentals",
+      "func": "approve_booking_incidentals"
+    },
+    {
+      "path": "/api/v1/dispatch/bookings/{booking_id}/pod/dispute",
+      "method": "POST",
+      "endpoint_name": "dispute_booking_delivery",
+      "func": "dispute_booking_delivery"
+    },
+    {
+      "path": "/api/v1/bookings/{booking_id}/master-invoice/html",
+      "method": "GET",
+      "endpoint_name": "get_master_invoice_html",
+      "func": "get_master_invoice_html"
+    },
+    {
+      "path": "/api/v1/bookings/{booking_id}/master-receipt/html",
+      "method": "GET",
+      "endpoint_name": "get_master_receipt_html",
+      "func": "get_master_receipt_html"
+    },
+    {
+      "path": "/api/v1/fleet/vehicles",
+      "method": "GET",
+      "endpoint_name": "list_vehicles",
+      "func": "list_vehicles"
+    },
+    {
+      "path": "/api/v1/fleet/drivers",
+      "method": "GET",
+      "endpoint_name": "list_drivers",
+      "func": "list_drivers"
+    },
+    {
+      "path": "/api/v1/fleet/vehicle-options",
+      "method": "GET",
+      "endpoint_name": "list_vehicle_options",
+      "func": "list_vehicle_options"
+    },
+    {
+      "path": "/api/v1/dispatch/pending-24h-alerts",
+      "method": "GET",
+      "endpoint_name": "get_pending_24h_dispatch_alerts",
+      "func": "get_pending_24h_dispatch_alerts"
+    },
+    {
+      "path": "/api/v1/dispatch/assign-24h-driver",
+      "method": "POST",
+      "endpoint_name": "assign_24h_chauffeur",
+      "func": "assign_24h_chauffeur"
+    },
+    {
+      "path": "/api/v1/dispatch/pricing/quick-quote",
+      "method": "POST",
+      "endpoint_name": "dispatch_quick_quote",
+      "func": "dispatch_quick_quote"
+    },
+    {
+      "path": "/api/v1/dispatch/bookings/phone-intake",
+      "method": "POST",
+      "endpoint_name": "create_phone_intake_booking",
+      "func": "create_phone_intake_booking"
+    },
+    {
+      "path": "/api/v1/bookings/{booking_id}/email-receipt",
+      "method": "GET",
+      "endpoint_name": "get_booking_email_receipt",
+      "func": "get_booking_email_receipt"
+    },
+    {
+      "path": "/api/v1/driver/my-offers",
+      "method": "GET",
+      "endpoint_name": "get_driver_offers",
+      "func": "get_driver_offers"
+    },
+    {
+      "path": "/api/v1/driver/offers/{offer_id}/accept",
+      "method": "POST",
+      "endpoint_name": "accept_offer",
+      "func": "accept_offer"
+    },
+    {
+      "path": "/api/v1/driver/trips/{trip_id}/events",
+      "method": "POST",
+      "endpoint_name": "update_trip_event",
+      "func": "update_trip_event"
+    },
+    {
+      "path": "/api/v1/trips/{trip_id}",
+      "method": "GET",
+      "endpoint_name": "get_trip",
+      "func": "get_trip"
+    },
+    {
+      "path": "/api/v1/trips/{trip_id}/live-tracking",
+      "method": "GET",
+      "endpoint_name": "get_trip_live_tracking",
+      "func": "get_trip_live_tracking"
+    },
+    {
+      "path": "/api/v1/bookings/{booking_id}/live-tracking",
+      "method": "GET",
+      "endpoint_name": "get_booking_live_tracking",
+      "func": "get_booking_live_tracking"
+    },
+    {
+      "path": "/api/v1/recovery/simulate-flight-delay",
+      "method": "POST",
+      "endpoint_name": "simulate_flight_delay",
+      "func": "simulate_flight_delay"
+    },
+    {
+      "path": "/api/v1/recovery/simulate-driver-timeout",
+      "method": "POST",
+      "endpoint_name": "simulate_driver_timeout",
+      "func": "simulate_driver_timeout"
+    },
+    {
+      "path": "/api/v1/recovery/incidents",
+      "method": "GET",
+      "endpoint_name": "list_incidents",
+      "func": "list_incidents"
+    },
+    {
+      "path": "/api/v1/vendors",
+      "method": "GET",
+      "endpoint_name": "list_vendors",
+      "func": "list_vendors"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/schedule",
+      "method": "GET",
+      "endpoint_name": "get_vendor_schedule",
+      "func": "get_vendor_schedule"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/schedule",
+      "method": "PUT",
+      "endpoint_name": "update_vendor_schedule",
+      "func": "update_vendor_schedule"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/availability/check",
+      "method": "POST",
+      "endpoint_name": "check_fleet_availability",
+      "func": "check_fleet_availability"
+    },
+    {
+      "path": "/api/v1/system-summary",
+      "method": "GET",
+      "endpoint_name": "get_system_summary",
+      "func": "get_system_summary"
+    },
+    {
+      "path": "/api/v1/maps/validate-address",
+      "method": "GET",
+      "endpoint_name": "validate_address",
+      "func": "validate_address"
+    },
+    {
+      "path": "/api/v1/maps/calculate-route",
+      "method": "GET",
+      "endpoint_name": "calculate_route_matrix",
+      "func": "calculate_route_matrix"
+    },
+    {
+      "path": "/api/v1/maps/places-autocomplete",
+      "method": "GET",
+      "endpoint_name": "places_autocomplete",
+      "func": "places_autocomplete"
+    },
+    {
+      "path": "/api/v1/itineraries/quote",
+      "method": "POST",
+      "endpoint_name": "quote_multi_modal_itinerary",
+      "func": "quote_multi_modal_itinerary"
+    },
+    {
+      "path": "/api/v1/itineraries/quote-matrix",
+      "method": "POST",
+      "endpoint_name": "quote_multi_modal_itinerary_matrix",
+      "func": "quote_multi_modal_itinerary_matrix"
+    },
+    {
+      "path": "/api/v1/itineraries/{itinerary_id}/book",
+      "method": "POST",
+      "endpoint_name": "book_multi_modal_itinerary",
+      "func": "book_multi_modal_itinerary"
+    },
+    {
+      "path": "/api/v1/intake/parse-enquiry",
+      "method": "POST",
+      "endpoint_name": "parse_omnichannel_enquiry",
+      "func": "parse_omnichannel_enquiry"
+    },
+    {
+      "path": "/api/v1/vendors/register",
+      "method": "POST",
+      "endpoint_name": "register_vendor",
+      "func": "register_vendor"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/config",
+      "method": "GET",
+      "endpoint_name": "get_vendor_intake_config",
+      "func": "get_vendor_intake_config"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/config",
+      "method": "PUT",
+      "endpoint_name": "update_vendor_intake_config",
+      "func": "update_vendor_intake_config"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/voice-call-intake",
+      "method": "POST",
+      "endpoint_name": "execute_voice_call_intake",
+      "func": "execute_voice_call_intake"
+    },
+    {
+      "path": "/api/v1/network/jobs",
+      "method": "GET",
+      "endpoint_name": "get_network_jobs",
+      "func": "get_network_jobs"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/pricing-rules",
+      "method": "GET",
+      "endpoint_name": "get_vendor_pricing_rules",
+      "func": "get_vendor_pricing_rules"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/pricing-rules",
+      "method": "POST",
+      "endpoint_name": "save_vendor_pricing_rule",
+      "func": "save_vendor_pricing_rule"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/ai-yield",
+      "method": "GET",
+      "endpoint_name": "get_vendor_ai_yield",
+      "func": "get_vendor_ai_yield"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/ai-yield/train",
+      "method": "POST",
+      "endpoint_name": "train_vendor_ai_yield",
+      "func": "train_vendor_ai_yield"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/ai-yield/apply",
+      "method": "POST",
+      "endpoint_name": "apply_vendor_ai_yield",
+      "func": "apply_vendor_ai_yield"
+    },
+    {
+      "path": "/api/v1/quotes/ai-validate-pricing",
+      "method": "POST",
+      "endpoint_name": "ai_validate_pricing_quote",
+      "func": "ai_validate_pricing_quote"
+    },
+    {
+      "path": "/api/v1/pricing/simulation-scenarios",
+      "method": "GET",
+      "endpoint_name": "get_pricing_simulation_scenarios",
+      "func": "get_pricing_simulation_scenarios"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/simulation-scenarios",
+      "method": "GET",
+      "endpoint_name": "get_vendor_simulation_scenarios",
+      "func": "get_vendor_simulation_scenarios"
+    },
+    {
+      "path": "/api/v1/pricing/simulation-scenarios",
+      "method": "POST",
+      "endpoint_name": "save_pricing_simulation_scenario",
+      "func": "save_pricing_simulation_scenario"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/ai-validate-pricing",
+      "method": "POST",
+      "endpoint_name": "ai_validate_vendor_pricing",
+      "func": "ai_validate_vendor_pricing"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/drivers",
+      "method": "GET",
+      "endpoint_name": "list_vendor_drivers",
+      "func": "list_vendor_drivers"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/comm-config",
+      "method": "GET",
+      "endpoint_name": "get_vendor_comm_config",
+      "func": "get_vendor_comm_config"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/comm-config",
+      "method": "POST",
+      "endpoint_name": "save_vendor_comm_config",
+      "func": "save_vendor_comm_config"
+    },
+    {
+      "path": "/api/v1/transit/radar-stream",
+      "method": "GET",
+      "endpoint_name": "list_radar_stream",
+      "func": "list_radar_stream"
+    },
+    {
+      "path": "/api/v1/transit/simulate-radar-delay",
+      "method": "POST",
+      "endpoint_name": "simulate_radar_delay",
+      "func": "simulate_radar_delay"
+    },
+    {
+      "path": "/api/v1/transit/inbound-plan-update",
+      "method": "POST",
+      "endpoint_name": "execute_inbound_plan_update",
+      "func": "execute_inbound_plan_update"
+    },
+    {
+      "path": "/api/v1/auth/personas",
+      "method": "GET",
+      "endpoint_name": "list_available_personas",
+      "func": "list_available_personas"
+    },
+    {
+      "path": "/api/v1/auth/me",
+      "method": "GET",
+      "endpoint_name": "get_current_session",
+      "func": "get_current_session"
+    },
+    {
+      "path": "/api/v1/auth/switch-persona",
+      "method": "POST",
+      "endpoint_name": "switch_persona",
+      "func": "switch_persona"
+    },
+    {
+      "path": "/api/v1/auth/oauth-login",
+      "method": "POST",
+      "endpoint_name": "oauth_login",
+      "func": "oauth_login"
+    },
+    {
+      "path": "/api/v1/coverage/evaluate",
+      "method": "POST",
+      "endpoint_name": "evaluate_coverage",
+      "func": "evaluate_coverage"
+    },
+    {
+      "path": "/api/v1/coverage/inquiry",
+      "method": "POST",
+      "endpoint_name": "submit_sourcing_inquiry",
+      "func": "submit_sourcing_inquiry"
+    },
+    {
+      "path": "/api/v1/compliance/alerts",
+      "method": "GET",
+      "endpoint_name": "get_compliance_alerts",
+      "func": "get_compliance_alerts"
+    },
+    {
+      "path": "/api/v1/compliance/scan",
+      "method": "POST",
+      "endpoint_name": "trigger_compliance_scan",
+      "func": "trigger_compliance_scan"
+    },
+    {
+      "path": "/api/v1/dispatch/verify-eligibility",
+      "method": "POST",
+      "endpoint_name": "verify_pre_dispatch_eligibility",
+      "func": "verify_pre_dispatch_eligibility"
+    },
+    {
+      "path": "/api/v1/dispatch/assignment-audits/{trip_id}",
+      "method": "GET",
+      "endpoint_name": "get_assignment_audit",
+      "func": "get_assignment_audit"
+    },
+    {
+      "path": "/api/v1/chauffeur/{driver_id}/duty-status",
+      "method": "GET",
+      "endpoint_name": "get_chauffeur_duty_status",
+      "func": "get_chauffeur_duty_status"
+    },
+    {
+      "path": "/api/v1/flights/{flight_ident}/live-status",
+      "method": "GET",
+      "endpoint_name": "get_live_flight_status",
+      "func": "get_live_flight_status"
+    },
+    {
+      "path": "/api/v1/webhooks/flightaware",
+      "method": "POST",
+      "endpoint_name": "webhook_flightaware",
+      "func": "webhook_flightaware"
+    },
+    {
+      "path": "/api/v1/webhooks/stripe",
+      "method": "POST",
+      "endpoint_name": "webhook_stripe",
+      "func": "webhook_stripe"
+    },
+    {
+      "path": "/api/v1/webhooks/twilio/voice",
+      "method": "POST",
+      "endpoint_name": "webhook_twilio_voice",
+      "func": "webhook_twilio_voice"
+    },
+    {
+      "path": "/api/v1/webhooks/twilio/whatsapp",
+      "method": "POST",
+      "endpoint_name": "webhook_twilio_whatsapp",
+      "func": "webhook_twilio_whatsapp"
+    },
+    {
+      "path": "/api/v1/telemetry/location",
+      "method": "POST",
+      "endpoint_name": "ingest_telemetry_ping",
+      "func": "ingest_telemetry_ping"
+    },
+    {
+      "path": "/api/v1/telemetry/driver-location",
+      "method": "POST",
+      "endpoint_name": "ingest_driver_location_ping",
+      "func": "ingest_driver_location_ping"
+    },
+    {
+      "path": "/api/v1/vendor-app/trips/settle-driver-payout",
+      "method": "POST",
+      "endpoint_name": "settle_driver_payout_endpoint",
+      "func": "settle_driver_payout_endpoint"
+    },
+    {
+      "path": "/api/v1/trips/{trip_id}/live-tracking",
+      "method": "GET",
+      "endpoint_name": "get_trip_live_tracking",
+      "func": "get_trip_live_tracking"
+    },
+    {
+      "path": "/api/v1/bookings/{booking_id}/live-tracking",
+      "method": "GET",
+      "endpoint_name": "get_booking_live_tracking",
+      "func": "get_booking_live_tracking"
+    },
+    {
+      "path": "/api/v1/webhooks/events",
+      "method": "GET",
+      "endpoint_name": "list_webhook_events",
+      "func": "list_webhook_events"
+    },
+    {
+      "path": "/api/v1/settlements/split-records",
+      "method": "GET",
+      "endpoint_name": "list_split_settlements",
+      "func": "list_split_settlements"
+    },
+    {
+      "path": "/api/v1/webhooks/simulate",
+      "method": "POST",
+      "endpoint_name": "simulate_webhook_event",
+      "func": "simulate_webhook_event"
+    },
+    {
+      "path": "/api/v1/pricing/fx-rates",
+      "method": "GET",
+      "endpoint_name": "get_fx_rates",
+      "func": "get_fx_rates"
+    },
+    {
+      "path": "/api/v1/pricing/fx-rates/sync",
+      "method": "POST",
+      "endpoint_name": "sync_live_fx_rates",
+      "func": "sync_live_fx_rates"
+    },
+    {
+      "path": "/api/v1/pricing/tax-rules",
+      "method": "GET",
+      "endpoint_name": "get_regional_tax_rules",
+      "func": "get_regional_tax_rules"
+    },
+    {
+      "path": "/api/v1/corporate/accounts",
+      "method": "GET",
+      "endpoint_name": "get_corporate_accounts",
+      "func": "get_corporate_accounts"
+    },
+    {
+      "path": "/api/v1/corporate/accounts/{account_id}",
+      "method": "GET",
+      "endpoint_name": "get_corporate_account",
+      "func": "get_corporate_account"
+    },
+    {
+      "path": "/api/v1/corporate/accounts",
+      "method": "POST",
+      "endpoint_name": "create_corporate_account",
+      "func": "create_corporate_account"
+    },
+    {
+      "path": "/api/v1/corporate/accounts/{account_id}/cost-centers",
+      "method": "POST",
+      "endpoint_name": "add_cost_center",
+      "func": "add_cost_center"
+    },
+    {
+      "path": "/api/v1/corporate/validate-policy",
+      "method": "POST",
+      "endpoint_name": "validate_corporate_policy",
+      "func": "validate_corporate_policy"
+    },
+    {
+      "path": "/api/v1/corporate/bookings",
+      "method": "POST",
+      "endpoint_name": "create_corporate_booking",
+      "func": "create_corporate_booking"
+    },
+    {
+      "path": "/api/v1/corporate/invoices/{account_id}",
+      "method": "GET",
+      "endpoint_name": "get_corporate_invoices",
+      "func": "get_corporate_invoices"
+    },
+    {
+      "path": "/api/v1/corporate/invoices/{invoice_id}/csv",
+      "method": "GET",
+      "endpoint_name": "export_invoice_csv",
+      "func": "export_invoice_csv"
+    },
+    {
+      "path": "/api/v1/voice/simulate-call",
+      "method": "POST",
+      "endpoint_name": "simulate_voice_call",
+      "func": "simulate_voice_call"
+    },
+    {
+      "path": "/api/v1/voice/consent",
+      "method": "POST",
+      "endpoint_name": "submit_voice_consent",
+      "func": "submit_voice_consent"
+    },
+    {
+      "path": "/api/v1/voice/barge-in",
+      "method": "POST",
+      "endpoint_name": "trigger_voice_barge_in",
+      "func": "trigger_voice_barge_in"
+    },
+    {
+      "path": "/api/v1/voice/utterance",
+      "method": "POST",
+      "endpoint_name": "process_voice_utterance",
+      "func": "process_voice_utterance"
+    },
+    {
+      "path": "/api/v1/voice/session/{session_id}",
+      "method": "GET",
+      "endpoint_name": "get_voice_session",
+      "func": "get_voice_session"
+    },
+    {
+      "path": "/api/v1/graph-rag/export",
+      "method": "GET",
+      "endpoint_name": "export_graph_rag",
+      "func": "export_graph_rag"
+    },
+    {
+      "path": "/api/v1/graph-rag/paths",
+      "method": "POST",
+      "endpoint_name": "query_graph_rag_paths",
+      "func": "query_graph_rag_paths"
+    },
+    {
+      "path": "/api/v1/graph-rag/verify",
+      "method": "POST",
+      "endpoint_name": "verify_regulatory_claim",
+      "func": "verify_regulatory_claim"
+    },
+    {
+      "path": "/api/v1/graph-rag/neo4j/sync",
+      "method": "POST",
+      "endpoint_name": "sync_neo4j_aura",
+      "func": "sync_neo4j_aura"
+    },
+    {
+      "path": "/api/v1/graph-rag/neo4j/cypher",
+      "method": "POST",
+      "endpoint_name": "execute_cypher_query",
+      "func": "execute_cypher_query"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/booking/direct",
+      "method": "POST",
+      "endpoint_name": "create_vendor_cell_direct_booking",
+      "func": "create_vendor_cell_direct_booking"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/status",
+      "method": "GET",
+      "endpoint_name": "get_vendor_cell_status",
+      "func": "get_vendor_cell_status"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/circuit-breaker",
+      "method": "POST",
+      "endpoint_name": "toggle_vendor_cell_circuit_breaker",
+      "func": "toggle_vendor_cell_circuit_breaker"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/outbox/sync",
+      "method": "POST",
+      "endpoint_name": "sync_vendor_outbox_to_global_hub",
+      "func": "sync_vendor_outbox_to_global_hub"
+    },
+    {
+      "path": "/api/v1/global-hub/analytics",
+      "method": "GET",
+      "endpoint_name": "get_global_hub_analytics",
+      "func": "get_global_hub_analytics"
+    },
+    {
+      "path": "/api/v1/global-hub/shared-ai/invoke",
+      "method": "POST",
+      "endpoint_name": "invoke_shared_ai_gateway",
+      "func": "invoke_shared_ai_gateway"
+    },
+    {
+      "path": "/api/v1/global-hub/radar/broadcast",
+      "method": "POST",
+      "endpoint_name": "broadcast_flight_radar_event",
+      "func": "broadcast_flight_radar_event"
+    },
+    {
+      "path": "/api/v1/vendor-cell/cells",
+      "method": "GET",
+      "endpoint_name": "list_vendor_cells",
+      "func": "list_vendor_cells"
+    },
+    {
+      "path": "/api/v1/vendor-cell/manifest-template",
+      "method": "GET",
+      "endpoint_name": "get_vendor_manifest_template",
+      "func": "get_vendor_manifest_template"
+    },
+    {
+      "path": "/api/v1/vendor-cell/validate-yaml",
+      "method": "POST",
+      "endpoint_name": "validate_vendor_yaml",
+      "func": "validate_vendor_yaml"
+    },
+    {
+      "path": "/api/v1/vendor-cell/spin-up",
+      "method": "POST",
+      "endpoint_name": "spin_up_vendor_cell",
+      "func": "spin_up_vendor_cell"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/onboarding-status",
+      "method": "GET",
+      "endpoint_name": "get_vendor_onboarding_status",
+      "func": "get_vendor_onboarding_status"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/onboarding-invite",
+      "method": "POST",
+      "endpoint_name": "send_vendor_onboarding_invite",
+      "func": "send_vendor_onboarding_invite"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/email/config",
+      "method": "GET",
+      "endpoint_name": "get_vendor_email_config",
+      "func": "get_vendor_email_config"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/email/config",
+      "method": "PUT",
+      "endpoint_name": "update_vendor_email_config",
+      "func": "update_vendor_email_config"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/email/test",
+      "method": "POST",
+      "endpoint_name": "test_vendor_email_connection",
+      "func": "test_vendor_email_connection"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/email/test-inbound",
+      "method": "POST",
+      "endpoint_name": "test_vendor_inbound_email_connection",
+      "func": "test_vendor_inbound_email_connection"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/email/inbox",
+      "method": "GET",
+      "endpoint_name": "get_vendor_email_inbox",
+      "func": "get_vendor_email_inbox"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/email/rfqs/{rfq_id}/convert-booking",
+      "method": "POST",
+      "endpoint_name": "convert_email_rfq_to_booking",
+      "func": "convert_email_rfq_to_booking"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/email/send-invoice",
+      "method": "POST",
+      "endpoint_name": "send_vendor_trip_invoice",
+      "func": "send_vendor_trip_invoice"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/email/inbound-parse",
+      "method": "POST",
+      "endpoint_name": "parse_vendor_inbound_email",
+      "func": "parse_vendor_inbound_email"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/email/outbound-dispatch",
+      "method": "POST",
+      "endpoint_name": "dispatch_vendor_outbound_email",
+      "func": "dispatch_vendor_outbound_email"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/affiliate/farm-out",
+      "method": "POST",
+      "endpoint_name": "farm_out_affiliate_ride",
+      "func": "farm_out_affiliate_ride"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/affiliate/records",
+      "method": "GET",
+      "endpoint_name": "get_vendor_affiliate_records",
+      "func": "get_vendor_affiliate_records"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/team",
+      "method": "GET",
+      "endpoint_name": "list_vendor_team",
+      "func": "list_vendor_team"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/team",
+      "method": "GET",
+      "endpoint_name": "list_vendor_team",
+      "func": "list_vendor_team"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/team",
+      "method": "POST",
+      "endpoint_name": "create_vendor_team_member",
+      "func": "create_vendor_team_member"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/team",
+      "method": "POST",
+      "endpoint_name": "create_vendor_team_member",
+      "func": "create_vendor_team_member"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/team/{user_id}",
+      "method": "PUT",
+      "endpoint_name": "update_vendor_team_member",
+      "func": "update_vendor_team_member"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/team/{user_id}",
+      "method": "PUT",
+      "endpoint_name": "update_vendor_team_member",
+      "func": "update_vendor_team_member"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/team/{user_id}",
+      "method": "DELETE",
+      "endpoint_name": "delete_vendor_team_member",
+      "func": "delete_vendor_team_member"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/team/{user_id}",
+      "method": "DELETE",
+      "endpoint_name": "delete_vendor_team_member",
+      "func": "delete_vendor_team_member"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/team/{user_id}/impersonate-token",
+      "method": "POST",
+      "endpoint_name": "generate_team_member_impersonate_token",
+      "func": "generate_team_member_impersonate_token"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/team/roles-matrix",
+      "method": "GET",
+      "endpoint_name": "get_vendor_roles_matrix",
+      "func": "get_vendor_roles_matrix"
+    },
+    {
+      "path": "/api/v1/vendor-cell/{vendor_id}/portal-config",
+      "method": "GET",
+      "endpoint_name": "get_vendor_portal_config",
+      "func": "get_vendor_portal_config"
+    },
+    {
+      "path": "/api/v1/vendor-portal/resolve-domain",
+      "method": "GET",
+      "endpoint_name": "resolve_vendor_domain",
+      "func": "resolve_vendor_domain"
+    },
+    {
+      "path": "/api/v1/vendor-portal/resolve-token",
+      "method": "GET",
+      "endpoint_name": "resolve_vendor_token",
+      "func": "resolve_vendor_token"
+    },
+    {
+      "path": "/api/v1/vendor-portal/token/{vendor_id}",
+      "method": "GET",
+      "endpoint_name": "generate_vendor_token",
+      "func": "generate_vendor_token"
+    },
+    {
+      "path": "/api/v1/system/runtime-mode",
+      "method": "GET",
+      "endpoint_name": "get_system_runtime_mode",
+      "func": "get_system_runtime_mode"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/telecom-compliance",
+      "method": "GET",
+      "endpoint_name": "get_vendor_telecom_compliance",
+      "func": "get_vendor_telecom_compliance"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/telecom-compliance/inbound-sms",
+      "method": "POST",
+      "endpoint_name": "process_inbound_sms_compliance",
+      "func": "process_inbound_sms_compliance"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/telecom-compliance/register-brand",
+      "method": "POST",
+      "endpoint_name": "register_vendor_brand",
+      "func": "register_vendor_brand"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/omnichannel/desk",
+      "method": "GET",
+      "endpoint_name": "get_vendor_omnichannel_desk",
+      "func": "get_vendor_omnichannel_desk"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/omnichannel/send-message",
+      "method": "POST",
+      "endpoint_name": "send_omnichannel_chat_message",
+      "func": "send_omnichannel_chat_message"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/omnichannel/dial-call",
+      "method": "POST",
+      "endpoint_name": "record_voice_studio_call",
+      "func": "record_voice_studio_call"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/omnichannel/config",
+      "method": "POST",
+      "endpoint_name": "update_vendor_omnichannel_config",
+      "func": "update_vendor_omnichannel_config"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/seo-schema",
+      "method": "GET",
+      "endpoint_name": "get_vendor_seo_schema",
+      "func": "get_vendor_seo_schema"
+    },
+    {
+      "path": "/api/v1/public/vendor-onboarding/validate",
+      "method": "POST",
+      "endpoint_name": "validate_public_vendor_onboarding",
+      "func": "validate_public_vendor_onboarding"
+    },
+    {
+      "path": "/api/v1/public/vendor-onboarding/submit",
+      "method": "POST",
+      "endpoint_name": "submit_public_vendor_onboarding",
+      "func": "submit_public_vendor_onboarding"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/payroll/summary",
+      "method": "GET",
+      "endpoint_name": "get_vendor_payroll_summary",
+      "func": "get_vendor_payroll_summary"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/payroll/export",
+      "method": "GET",
+      "endpoint_name": "export_vendor_payroll_csv",
+      "func": "export_vendor_payroll_csv"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/drivers/{driver_id}/compensation-model",
+      "method": "POST",
+      "endpoint_name": "update_driver_compensation_model",
+      "func": "update_driver_compensation_model"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/payroll/process-trip",
+      "method": "POST",
+      "endpoint_name": "process_trip_payout",
+      "func": "process_trip_payout"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/payroll/record-shift",
+      "method": "POST",
+      "endpoint_name": "record_driver_shift",
+      "func": "record_driver_shift"
+    },
+    {
+      "path": "/api/v1/customers/lookup",
+      "method": "GET",
+      "endpoint_name": "lookup_customer_for_intake",
+      "func": "lookup_customer_for_intake"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/customers",
+      "method": "GET",
+      "endpoint_name": "list_vendor_customers",
+      "func": "list_vendor_customers"
+    },
+    {
+      "path": "/api/v1/customers/{customer_id}",
+      "method": "GET",
+      "endpoint_name": "get_customer_profile",
+      "func": "get_customer_profile"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/customers",
+      "method": "POST",
+      "endpoint_name": "create_or_register_customer",
+      "func": "create_or_register_customer"
+    },
+    {
+      "path": "/api/v1/customers/{customer_id}/preferences",
+      "method": "PATCH",
+      "endpoint_name": "update_customer_preferences",
+      "func": "update_customer_preferences"
+    },
+    {
+      "path": "/api/v1/customers/{customer_id}/addresses",
+      "method": "POST",
+      "endpoint_name": "add_customer_saved_address",
+      "func": "add_customer_saved_address"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/outbox/telemetry",
+      "method": "GET",
+      "endpoint_name": "get_vendor_outbox_telemetry",
+      "func": "get_vendor_outbox_telemetry"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/outbox/flush",
+      "method": "POST",
+      "endpoint_name": "flush_vendor_outbox_queue",
+      "func": "flush_vendor_outbox_queue"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/affiliates/records",
+      "method": "GET",
+      "endpoint_name": "get_vendor_affiliate_records",
+      "func": "get_vendor_affiliate_records"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/affiliates/farm-out",
+      "method": "POST",
+      "endpoint_name": "farm_out_ride_to_affiliate",
+      "func": "farm_out_ride_to_affiliate"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/affiliates/directory",
+      "method": "GET",
+      "endpoint_name": "get_global_affiliate_directory",
+      "func": "get_global_affiliate_directory"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/affiliates/recommendations",
+      "method": "GET",
+      "endpoint_name": "get_affiliate_recommendations_for_ride",
+      "func": "get_affiliate_recommendations_for_ride"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/affiliates/policy",
+      "method": "GET",
+      "endpoint_name": "get_vendor_affiliate_policy",
+      "func": "get_vendor_affiliate_policy"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/affiliates/policy",
+      "method": "PUT",
+      "endpoint_name": "update_vendor_affiliate_policy",
+      "func": "update_vendor_affiliate_policy"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/evaluate-multileg-strategy",
+      "method": "POST",
+      "endpoint_name": "evaluate_vendor_multileg_strategy",
+      "func": "evaluate_vendor_multileg_strategy"
+    },
+    {
+      "path": "/api/v1/global-hub/affiliates/knowledge-base",
+      "method": "GET",
+      "endpoint_name": "get_global_hub_affiliates_knowledge_base",
+      "func": "get_global_hub_affiliates_knowledge_base"
+    },
+    {
+      "path": "/api/v1/global-hub/clearinghouse/ledger",
+      "method": "GET",
+      "endpoint_name": "get_global_hub_clearinghouse_ledger",
+      "func": "get_global_hub_clearinghouse_ledger"
+    },
+    {
+      "path": "/api/v1/vendor-network/exchange/ledger",
+      "method": "GET",
+      "endpoint_name": "get_vendor_network_exchange_ledger",
+      "func": "get_vendor_network_exchange_ledger"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/media/upload-s3",
+      "method": "POST",
+      "endpoint_name": "upload_vendor_media_to_s3",
+      "func": "upload_vendor_media_to_s3"
+    },
+    {
+      "path": "/api/v1/media/{file_path:path}",
+      "method": "GET",
+      "endpoint_name": "serve_media_vault_file",
+      "func": "serve_media_vault_file"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/fleet-inventory",
+      "method": "GET",
+      "endpoint_name": "list_vendor_fleet_inventory",
+      "func": "list_vendor_fleet_inventory"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/fleet-inventory",
+      "method": "POST",
+      "endpoint_name": "create_vendor_vehicle",
+      "func": "create_vendor_vehicle"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/fleet-inventory/{vehicle_id}",
+      "method": "GET",
+      "endpoint_name": "get_vendor_vehicle_detail",
+      "func": "get_vendor_vehicle_detail"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/fleet-inventory/{vehicle_id}",
+      "method": "PUT",
+      "endpoint_name": "update_vendor_vehicle",
+      "func": "update_vendor_vehicle"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/fleet-inventory/{vehicle_id}",
+      "method": "DELETE",
+      "endpoint_name": "delete_vendor_vehicle",
+      "func": "delete_vendor_vehicle"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/fleet-inventory/{vehicle_id}/toggle-network",
+      "method": "PATCH",
+      "endpoint_name": "toggle_vendor_vehicle_network",
+      "func": "toggle_vendor_vehicle_network"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/fleet-inventory/{vehicle_id}/toggle-active",
+      "method": "PATCH",
+      "endpoint_name": "toggle_vendor_vehicle_active",
+      "func": "toggle_vendor_vehicle_active"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/drivers",
+      "method": "GET",
+      "endpoint_name": "list_vendor_drivers",
+      "func": "list_vendor_drivers"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/drivers",
+      "method": "POST",
+      "endpoint_name": "create_vendor_driver",
+      "func": "create_vendor_driver"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/bookings",
+      "method": "GET",
+      "endpoint_name": "list_vendor_bookings",
+      "func": "list_vendor_bookings"
+    },
+    {
+      "path": "/api/v1/sourcing/opportunities",
+      "method": "GET",
+      "endpoint_name": "get_all_sourcing_opportunities",
+      "func": "get_all_sourcing_opportunities"
+    },
+    {
+      "path": "/api/v1/sourcing/trigger-rfp",
+      "method": "POST",
+      "endpoint_name": "trigger_manual_sourcing_rfp",
+      "func": "trigger_manual_sourcing_rfp"
+    },
+    {
+      "path": "/api/v1/sourcing/rfp-details/{quote_token}",
+      "method": "GET",
+      "endpoint_name": "get_rfp_details_by_token",
+      "func": "get_rfp_details_by_token"
+    },
+    {
+      "path": "/api/v1/sourcing/submit-quote",
+      "method": "POST",
+      "endpoint_name": "submit_vendor_quote",
+      "func": "submit_vendor_quote"
+    },
+    {
+      "path": "/api/v1/sourcing/manager-override",
+      "method": "POST",
+      "endpoint_name": "manager_phone_quote_override",
+      "func": "manager_phone_quote_override"
+    },
+    {
+      "path": "/api/v1/sourcing/inbound-email-webhook",
+      "method": "POST",
+      "endpoint_name": "receive_inbound_vendor_email_webhook",
+      "func": "receive_inbound_vendor_email_webhook"
+    },
+    {
+      "path": "/api/v1/global-hub/dispatch-route",
+      "method": "POST",
+      "endpoint_name": "route_global_hub_booking",
+      "func": "route_global_hub_booking"
+    },
+    {
+      "path": "/api/v1/global-hub/dispatch-metrics",
+      "method": "GET",
+      "endpoint_name": "get_global_hub_dispatch_metrics",
+      "func": "get_global_hub_dispatch_metrics"
+    },
+    {
+      "path": "/api/v1/global-hub/dispatch-sla-sweep",
+      "method": "POST",
+      "endpoint_name": "trigger_dispatch_sla_sweep",
+      "func": "trigger_dispatch_sla_sweep"
+    },
+    {
+      "path": "/api/v1/infrastructure/cells",
+      "method": "GET",
+      "endpoint_name": "list_infrastructure_cells",
+      "func": "list_infrastructure_cells"
+    },
+    {
+      "path": "/api/v1/infrastructure/cells/{vendor_id}",
+      "method": "GET",
+      "endpoint_name": "get_cell_infrastructure",
+      "func": "get_cell_infrastructure"
+    },
+    {
+      "path": "/api/v1/infrastructure/cells/{vendor_id}/lifecycle",
+      "method": "POST",
+      "endpoint_name": "execute_cell_lifecycle",
+      "func": "execute_cell_lifecycle"
+    },
+    {
+      "path": "/api/v1/infrastructure/cells/{vendor_id}/domain-mapping",
+      "method": "GET",
+      "endpoint_name": "get_cell_domain_mapping",
+      "func": "get_cell_domain_mapping"
+    },
+    {
+      "path": "/api/v1/infrastructure/cells/{vendor_id}/domain-mapping",
+      "method": "PUT",
+      "endpoint_name": "update_cell_domain_mapping",
+      "func": "update_cell_domain_mapping"
+    },
+    {
+      "path": "/api/v1/infrastructure/cells/{vendor_id}/push-to-aws",
+      "method": "POST",
+      "endpoint_name": "push_cell_infrastructure_to_aws",
+      "func": "push_cell_infrastructure_to_aws"
+    },
+    {
+      "path": "/api/v1/infrastructure/cells/bulk-push-aws",
+      "method": "POST",
+      "endpoint_name": "bulk_push_cells_to_aws",
+      "func": "bulk_push_cells_to_aws"
+    },
+    {
+      "path": "/api/v1/infrastructure/compliance-vault",
+      "method": "GET",
+      "endpoint_name": "list_compliance_vaults",
+      "func": "list_compliance_vaults"
+    },
+    {
+      "path": "/api/v1/infrastructure/cells/{vendor_id}/compliance-vault",
+      "method": "GET",
+      "endpoint_name": "get_cell_compliance_vault",
+      "func": "get_cell_compliance_vault"
+    },
+    {
+      "path": "/api/v1/payments/global-settlements",
+      "method": "GET",
+      "endpoint_name": "get_global_settlement_ledger",
+      "func": "get_global_settlement_ledger"
+    },
+    {
+      "path": "/api/v1/payments/simulate-escrow-settlement",
+      "method": "POST",
+      "endpoint_name": "simulate_escrow_settlement_api",
+      "func": "simulate_escrow_settlement_api"
+    },
+    {
+      "path": "/api/v1/payments/stripe-architecture",
+      "method": "GET",
+      "endpoint_name": "get_stripe_architecture_status",
+      "func": "get_stripe_architecture_status"
+    },
+    {
+      "path": "/api/v1/ai/model-lifecycle",
+      "method": "GET",
+      "endpoint_name": "get_ai_model_lifecycle",
+      "func": "get_ai_model_lifecycle"
+    },
+    {
+      "path": "/api/v1/ai/model-lifecycle/audit-sync",
+      "method": "POST",
+      "endpoint_name": "run_ai_model_lifecycle_audit",
+      "func": "run_ai_model_lifecycle_audit"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/stripe/connect-link",
+      "method": "POST",
+      "endpoint_name": "create_vendor_stripe_connect_link",
+      "func": "create_vendor_stripe_connect_link"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/stripe/connect-status",
+      "method": "GET",
+      "endpoint_name": "get_vendor_stripe_connect_status",
+      "func": "get_vendor_stripe_connect_status"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/payouts/ledger",
+      "method": "GET",
+      "endpoint_name": "get_vendor_payouts_ledger",
+      "func": "get_vendor_payouts_ledger"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/stripe/login-link",
+      "method": "POST",
+      "endpoint_name": "create_vendor_stripe_login_link",
+      "func": "create_vendor_stripe_login_link"
+    },
+    {
+      "path": "/api/v1/hub/subscriptions/overview",
+      "method": "GET",
+      "endpoint_name": "get_hub_subscriptions_overview",
+      "func": "get_hub_subscriptions_overview"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/subscription",
+      "method": "GET",
+      "endpoint_name": "get_vendor_subscription_details",
+      "func": "get_vendor_subscription_details"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/subscription/upgrade",
+      "method": "POST",
+      "endpoint_name": "upgrade_vendor_subscription",
+      "func": "upgrade_vendor_subscription"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/subscription/pay-as-you-go",
+      "method": "POST",
+      "endpoint_name": "switch_vendor_to_pay_as_you_go",
+      "func": "switch_vendor_to_pay_as_you_go"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/subscription/cancel",
+      "method": "POST",
+      "endpoint_name": "cancel_vendor_subscription",
+      "func": "cancel_vendor_subscription"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/account/delete-request",
+      "method": "POST",
+      "endpoint_name": "request_vendor_account_deletion",
+      "func": "request_vendor_account_deletion"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/subscription/simulate-dunning",
+      "method": "POST",
+      "endpoint_name": "trigger_dunning_test_alert",
+      "func": "trigger_dunning_test_alert"
+    },
+    {
+      "path": "/api/v1/hub/subscriptions/{vendor_id}/trigger-dunning-test",
+      "method": "POST",
+      "endpoint_name": "trigger_dunning_test_alert",
+      "func": "trigger_dunning_test_alert"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/subscription/billing-portal",
+      "method": "POST",
+      "endpoint_name": "create_vendor_billing_portal_session",
+      "func": "create_vendor_billing_portal_session"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/subscription/clear-dunning",
+      "method": "POST",
+      "endpoint_name": "clear_vendor_dunning_alert",
+      "func": "clear_vendor_dunning_alert"
+    },
+    {
+      "path": "/api/v1/hub/vendors/{vendor_id}/charging-profile",
+      "method": "PUT",
+      "endpoint_name": "update_vendor_charging_profile_endpoint",
+      "func": "update_vendor_charging_profile_endpoint"
+    },
+    {
+      "path": "/api/v1/hub/vendors/{vendor_id}/send-invoice",
+      "method": "POST",
+      "endpoint_name": "send_vendor_invoice_endpoint",
+      "func": "send_vendor_invoice_endpoint"
+    },
+    {
+      "path": "/api/v1/hub/vendors/{vendor_id}/charge-auto-pay",
+      "method": "POST",
+      "endpoint_name": "charge_vendor_auto_pay_endpoint",
+      "func": "charge_vendor_auto_pay_endpoint"
+    },
+    {
+      "path": "/api/v1/infrastructure/cells/{vendor_id}/stop",
+      "method": "POST",
+      "endpoint_name": "stop_sovereign_cell_endpoint",
+      "func": "stop_sovereign_cell_endpoint"
+    },
+    {
+      "path": "/api/v1/infrastructure/cells/{vendor_id}/start",
+      "method": "POST",
+      "endpoint_name": "start_sovereign_cell_endpoint",
+      "func": "start_sovereign_cell_endpoint"
+    },
+    {
+      "path": "/api/v1/infrastructure/cells/{vendor_id}/terminate",
+      "method": "POST",
+      "endpoint_name": "terminate_sovereign_cell_endpoint",
+      "func": "terminate_sovereign_cell_endpoint"
+    },
+    {
+      "path": "/api/v1/support-desk/plans",
+      "method": "GET",
+      "endpoint_name": "list_support_desk_plans",
+      "func": "list_support_desk_plans"
+    },
+    {
+      "path": "/api/v1/support-desk/plans/{plan_id}",
+      "method": "PUT",
+      "endpoint_name": "update_support_desk_plan_endpoint",
+      "func": "update_support_desk_plan_endpoint"
+    },
+    {
+      "path": "/api/v1/support-desk/config",
+      "method": "GET",
+      "endpoint_name": "get_support_desk_config",
+      "func": "get_support_desk_config"
+    },
+    {
+      "path": "/api/v1/support-desk/config",
+      "method": "PUT",
+      "endpoint_name": "update_support_desk_config",
+      "func": "update_support_desk_config"
+    },
+    {
+      "path": "/api/v1/support-desk/subscribe",
+      "method": "POST",
+      "endpoint_name": "subscribe_vendor_support_endpoint",
+      "func": "subscribe_vendor_support_endpoint"
+    },
+    {
+      "path": "/api/v1/support-desk/subscriptions",
+      "method": "GET",
+      "endpoint_name": "list_support_desk_subscriptions",
+      "func": "list_support_desk_subscriptions"
+    },
+    {
+      "path": "/api/v1/support-desk/tickets",
+      "method": "GET",
+      "endpoint_name": "list_support_tickets",
+      "func": "list_support_tickets"
+    },
+    {
+      "path": "/api/v1/support-desk/tickets",
+      "method": "POST",
+      "endpoint_name": "create_support_ticket_endpoint",
+      "func": "create_support_ticket_endpoint"
+    },
+    {
+      "path": "/api/v1/support-desk/tickets/{ticket_id}",
+      "method": "PUT",
+      "endpoint_name": "update_support_ticket_endpoint",
+      "func": "update_support_ticket_endpoint"
+    },
+    {
+      "path": "/api/v1/support-desk/tickets/{ticket_id}/mutate",
+      "method": "POST",
+      "endpoint_name": "mutate_ticket_booking_endpoint",
+      "func": "mutate_ticket_booking_endpoint"
+    },
+    {
+      "path": "/api/v1/support-desk/pods",
+      "method": "GET",
+      "endpoint_name": "list_regional_pods_endpoint",
+      "func": "list_regional_pods_endpoint"
+    },
+    {
+      "path": "/api/v1/support-desk/voice/resolve-inbound",
+      "method": "POST",
+      "endpoint_name": "resolve_inbound_voice_endpoint",
+      "func": "resolve_inbound_voice_endpoint"
+    },
+    {
+      "path": "/api/v1/support-desk/sla/evaluate-triggers",
+      "method": "POST",
+      "endpoint_name": "evaluate_sla_triggers_endpoint",
+      "func": "evaluate_sla_triggers_endpoint"
+    },
+    {
+      "path": "/api/v1/support-desk/overview",
+      "method": "GET",
+      "endpoint_name": "get_support_desk_overview",
+      "func": "get_support_desk_overview"
+    },
+    {
+      "path": "/api/v1/support-desk/voice/twiml-inbound",
+      "method": "POST",
+      "endpoint_name": "get_inbound_twiml_xml",
+      "func": "get_inbound_twiml_xml"
+    },
+    {
+      "path": "/api/v1/hub/helicopter-config",
+      "method": "GET",
+      "endpoint_name": "get_hub_helicopter_config_endpoint",
+      "func": "get_hub_helicopter_config_endpoint"
+    },
+    {
+      "path": "/api/v1/hub/helicopter-config",
+      "method": "PUT",
+      "endpoint_name": "update_hub_helicopter_config_endpoint",
+      "func": "update_hub_helicopter_config_endpoint"
+    },
+    {
+      "path": "/api/v1/hub/heliports",
+      "method": "GET",
+      "endpoint_name": "list_hub_domestic_heliports",
+      "func": "list_hub_domestic_heliports"
+    },
+    {
+      "path": "/api/v1/hub/helicopter/validate",
+      "method": "POST",
+      "endpoint_name": "validate_helicopter_leg_endpoint",
+      "func": "validate_helicopter_leg_endpoint"
+    },
+    {
+      "path": "/api/v1/drivers/{driver_id}/documents",
+      "method": "GET",
+      "endpoint_name": "get_driver_documents",
+      "func": "get_driver_documents"
+    },
+    {
+      "path": "/api/v1/drivers/{driver_id}/documents/upload",
+      "method": "POST",
+      "endpoint_name": "upload_driver_document_endpoint",
+      "func": "upload_driver_document_endpoint"
+    },
+    {
+      "path": "/api/v1/inquiries",
+      "method": "POST",
+      "endpoint_name": "create_inquiry_endpoint",
+      "func": "create_inquiry_endpoint"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/inquiries",
+      "method": "GET",
+      "endpoint_name": "list_vendor_inquiries",
+      "func": "list_vendor_inquiries"
+    },
+    {
+      "path": "/api/v1/inquiries/{inquiry_id}",
+      "method": "PATCH",
+      "endpoint_name": "update_inquiry_status",
+      "func": "update_inquiry_status"
+    },
+    {
+      "path": "/api/v1/auth/passkey/register-challenge",
+      "method": "POST",
+      "endpoint_name": "passkey_register_challenge",
+      "func": "passkey_register_challenge"
+    },
+    {
+      "path": "/api/v1/auth/passkey/verify-registration",
+      "method": "POST",
+      "endpoint_name": "passkey_verify_registration",
+      "func": "passkey_verify_registration"
+    },
+    {
+      "path": "/api/v1/auth/passkey/auth-challenge",
+      "method": "POST",
+      "endpoint_name": "passkey_auth_challenge",
+      "func": "passkey_auth_challenge"
+    },
+    {
+      "path": "/api/v1/auth/passkey/verify-auth",
+      "method": "POST",
+      "endpoint_name": "passkey_verify_auth",
+      "func": "passkey_verify_auth"
+    },
+    {
+      "path": "/api/v1/inquiries/{inquiry_id}/trigger-drip",
+      "method": "POST",
+      "endpoint_name": "trigger_inquiry_drip",
+      "func": "trigger_inquiry_drip"
+    },
+    {
+      "path": "/api/v1/inquiries/{inquiry_id}/convert-booking",
+      "method": "POST",
+      "endpoint_name": "convert_inquiry_to_booking",
+      "func": "convert_inquiry_to_booking"
+    },
+    {
+      "path": "/api/v1/support/tickets",
+      "method": "POST",
+      "endpoint_name": "create_customer_support_ticket",
+      "func": "create_customer_support_ticket"
+    },
+    {
+      "path": "/api/v1/support/tickets/lookup",
+      "method": "GET",
+      "endpoint_name": "lookup_customer_support_tickets",
+      "func": "lookup_customer_support_tickets"
+    },
+    {
+      "path": "/api/v1/support/tickets/{ticket_id}",
+      "method": "GET",
+      "endpoint_name": "get_support_ticket",
+      "func": "get_support_ticket"
+    },
+    {
+      "path": "/api/v1/support/tickets/{ticket_id}/messages",
+      "method": "POST",
+      "endpoint_name": "add_ticket_message",
+      "func": "add_ticket_message"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/support/tickets",
+      "method": "GET",
+      "endpoint_name": "list_vendor_support_tickets",
+      "func": "list_vendor_support_tickets"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/support/tickets/{ticket_id}/reply",
+      "method": "POST",
+      "endpoint_name": "reply_to_vendor_ticket",
+      "func": "reply_to_vendor_ticket"
+    },
+    {
+      "path": "/api/v1/vendors/{vendor_id}/support/tickets/{ticket_id}/resolve",
+      "method": "PUT",
+      "endpoint_name": "resolve_vendor_ticket",
+      "func": "resolve_vendor_ticket"
+    },
+    {
+      "path": "/api/v1/global-hub/support/tickets",
+      "method": "GET",
+      "endpoint_name": "list_global_hub_support_tickets",
+      "func": "list_global_hub_support_tickets"
+    },
+    {
+      "path": "/api/v1/global-hub/support/tickets/{ticket_id}/escalate",
+      "method": "POST",
+      "endpoint_name": "escalate_ticket_to_global_hub",
+      "func": "escalate_ticket_to_global_hub"
+    },
+    {
+      "path": "/api/v1/global-hub/support/sla-sweep",
+      "method": "POST",
+      "endpoint_name": "sweep_support_sla",
+      "func": "sweep_support_sla"
+    },
+    {
+      "path": "/api/ai/capabilities",
+      "method": "GET",
+      "endpoint_name": "capabilities",
+      "func": "capabilities"
+    },
+    {
+      "path": "/api/ai/documents",
+      "method": "POST",
+      "endpoint_name": "add_document",
+      "func": "add_document"
+    },
+    {
+      "path": "/api/ai/documents",
+      "method": "GET",
+      "endpoint_name": "documents",
+      "func": "documents"
+    },
+    {
+      "path": "/api/ai/documents/{identifier}",
+      "method": "DELETE",
+      "endpoint_name": "delete",
+      "func": "delete"
+    },
+    {
+      "path": "/api/ai/graph/edges",
+      "method": "POST",
+      "endpoint_name": "edge",
+      "func": "edge"
+    },
+    {
+      "path": "/api/ai/retrieve",
+      "method": "POST",
+      "endpoint_name": "search",
+      "func": "search"
+    },
+    {
+      "path": "/api/ai/run",
+      "method": "POST",
+      "endpoint_name": "run",
+      "func": "run"
+    },
+    {
+      "path": "/api/ai/runs",
+      "method": "GET",
+      "endpoint_name": "history",
+      "func": "history"
+    },
+    {
+      "path": "/api/ai/evaluate",
+      "method": "POST",
+      "endpoint_name": "evaluate",
+      "func": "evaluate"
+    },
+    {
+      "path": "/ws/voice/stream",
+      "method": "WS/MOUNT",
+      "endpoint_name": "voice_websocket_stream",
+      "func": ""
+    },
+    {
+      "path": "/ws/voice/twilio/media",
+      "method": "WS/MOUNT",
+      "endpoint_name": "twilio_voice_media_stream",
+      "func": ""
+    },
+    {
+      "path": "/health",
+      "method": "GET",
+      "endpoint_name": "health",
+      "func": "health"
+    },
+    {
+      "path": "/api/demo/policy",
+      "method": "GET",
+      "endpoint_name": "policy",
+      "func": "policy"
+    },
+    {
+      "path": "/api/demo/quotes",
+      "method": "POST",
+      "endpoint_name": "quote",
+      "func": "quote"
+    },
+    {
+      "path": "",
+      "method": "WS/MOUNT",
+      "endpoint_name": "static_frontend",
+      "func": ""
+    }
+  ],
+  "frontend_files_count": 50
+}

@@ -23,6 +23,7 @@ from app.services.vendor_cell_engine import (
 )
 from app.services.vendor_email_gateway_service import VendorEmailGatewayService
 from app.services.vendor_token_encryption_service import vendor_token_encryption_service
+from app.database import db
 
 logger = logging.getLogger("VendorSpinupService")
 
@@ -68,6 +69,11 @@ class VendorSpinUpPayload(BaseModel):
     operational_stats: Dict[str, Any] = Field(default_factory=dict)
 
 
+import time
+
+PORTAL_CACHE_TTL_SECONDS = 300.0  # 5-minute in-memory cache for public portal data
+
+
 class VendorSpinupService:
     """Provisions and boots sovereign vendor cells from declarative specs with progressive 2-phase onboarding."""
 
@@ -76,6 +82,17 @@ class VendorSpinupService:
         self.email_gateways: Dict[str, VendorEmailGatewayService] = {}
         self.telecom_compliance_profiles: Dict[str, Dict[str, Any]] = {}
         self.operational_stats_profiles: Dict[str, Dict[str, Any]] = {}
+        self._portal_cache: Dict[str, Dict[str, Any]] = {}
+        self._portal_cache_timestamp: Dict[str, float] = {}
+
+    def invalidate_vendor_portal_cache(self, vendor_id: Optional[str] = None):
+        """Invalidates in-memory public portal & fleet cache when owner updates fleet."""
+        if vendor_id:
+            self._portal_cache.pop(vendor_id, None)
+            self._portal_cache_timestamp.pop(vendor_id, None)
+        else:
+            self._portal_cache.clear()
+            self._portal_cache_timestamp.clear()
 
     def spin_up_vendor(self, payload: VendorSpinUpPayload, db_instance: Any = None) -> VendorCellConfig:
         """
@@ -521,6 +538,10 @@ class VendorSpinupService:
 
     def get_portal_branding(self, vendor_id: str) -> Dict[str, Any]:
         """Returns white-label portal branding, public metadata, and encrypted secure cellular URL token."""
+        now = time.time()
+        if vendor_id in self._portal_cache and (now - self._portal_cache_timestamp.get(vendor_id, 0.0)) < PORTAL_CACHE_TTL_SECONDS:
+            return self._portal_cache[vendor_id]
+
         cell = vendor_cell_registry.get_cell(vendor_id)
         branding = self.branding_profiles.get(vendor_id, VendorBrandingProfile())
         encrypted_token = vendor_token_encryption_service.encrypt_vendor_token(
@@ -528,7 +549,84 @@ class VendorSpinupService:
             domain=branding.domain
         )
         stats = self.operational_stats_profiles.get(vendor_id) or (cell.config.operational_stats if cell else {})
-        return {
+
+        # 1. Authoritative Vendor Fleet Inventory & Active Classes Resolution
+        from app.database_mysql import mysql_db, VehicleClassOptionModel, VehicleModel
+        import json
+
+        norm_id = vendor_id.replace("-", "_")
+        alias_id = vendor_id.replace("_", "-")
+        
+        active_classes_set = set()
+        session = mysql_db.get_session()
+        if session:
+            try:
+                v_rows = session.query(VehicleModel).filter(
+                    (VehicleModel.vendor_id == vendor_id) |
+                    (VehicleModel.vendor_id == norm_id) |
+                    (VehicleModel.vendor_id == alias_id)
+                ).all()
+                for vr in v_rows:
+                    if vr.is_active:
+                        active_classes_set.add(vr.vehicle_class)
+            except Exception:
+                pass
+
+        # Also check in-memory store for newly added / unsynced vehicles
+        for v in db.vehicles.values():
+            v_vid = getattr(v, "vendor_id", "")
+            if v_vid in (vendor_id, norm_id, alias_id) or v.id.startswith(f"veh_{norm_id}") or v.id.startswith(f"veh_{alias_id}") or v.id.startswith(f"veh_{vendor_id}"):
+                vc_val = v.vehicle_class.value if hasattr(v.vehicle_class, "value") else str(v.vehicle_class)
+                if getattr(v, "is_active", True):
+                    active_classes_set.add(vc_val)
+
+        # 2. Authoritative Vehicle Options and Fleet Catalog from MySQL Database
+        vehicle_options = []
+        if session:
+            try:
+                rows = session.query(VehicleClassOptionModel).filter_by(is_active=True).order_by(VehicleClassOptionModel.sort_order).all()
+                for r in rows:
+                    # Strictly filter: only include classes that exist in this vendor's active fleet inventory
+                    if active_classes_set and r.vehicle_class not in active_classes_set:
+                        continue
+
+                    feat = json.loads(r.features_json) if r.features_json else []
+                    specs = json.loads(r.specs_json) if r.specs_json else {}
+                    amenities = json.loads(r.amenities_json) if r.amenities_json else []
+                    photos = json.loads(r.photos_json) if r.photos_json else []
+                    vehicle_options.append({
+                        "id": r.id,
+                        "tenant_id": r.tenant_id,
+                        "vendor_id": r.vendor_id,
+                        "type": r.vehicle_class,
+                        "categoryName": r.category_name or "SEDAN",
+                        "title": r.title,
+                        "subtitle": r.subtitle,
+                        "models": r.models,
+                        "makeModel": f"{r.title} ({r.models})",
+                        "year": r.year_label or "2025 Fleet Model",
+                        "tagline": r.tagline or "",
+                        "pax": r.pax,
+                        "luggage": r.luggage,
+                        "multiplier": r.multiplier or 1.0,
+                        "features": feat,
+                        "badge": r.badge,
+                        "badgeColor": r.badge_color or "#10253F",
+                        "desc": r.desc_text or "",
+                        "specs": specs,
+                        "amenities": amenities,
+                        "photoUrl": r.photo_url,
+                        "photos": photos,
+                        "fallbackIcon": r.fallback_icon or "SEDAN",
+                        "sort_order": r.sort_order,
+                        "is_active": r.is_active
+                    })
+            except Exception:
+                pass
+            finally:
+                session.close()
+
+        result = {
             "vendor_id": vendor_id,
             "vendor_name": cell.config.vendor_name if cell else vendor_id,
             "tier": cell.config.tier if cell else "AUTONOMOUS_T1",
@@ -546,8 +644,14 @@ class VendorSpinupService:
             "secure_url": f"/?vt={encrypted_token}",
             "branding": branding.model_dump(),
             "telecom_compliance": self.telecom_compliance_profiles.get(vendor_id),
-            "operational_stats": stats
+            "operational_stats": stats,
+            "vehicle_options": vehicle_options,
+            "fleet_vehicles": vehicle_options
         }
+
+        self._portal_cache[vendor_id] = result
+        self._portal_cache_timestamp[vendor_id] = now
+        return result
 
     def get_all_portal_brandings(self) -> List[Dict[str, Any]]:
         """Returns portal brandings for all registered vendor cells."""

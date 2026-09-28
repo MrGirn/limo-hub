@@ -1,0 +1,1027 @@
+{
+  "Autonomous Recovery & FlightAware Engine": [
+    {
+      "method": "POST",
+      "path": "/api/ai/documents",
+      "func_name": "add_document",
+      "doc": "No docstring"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ai/graph/edges",
+      "func_name": "edge",
+      "doc": "No docstring"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/global-hub/shared-ai/invoke",
+      "func_name": "invoke_shared_ai_gateway",
+      "doc": "Invokes centralized AI gateway with token pooling and prompt caching."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/infrastructure/cells/{vendor_id}/domain-mapping",
+      "func_name": "get_cell_domain_mapping",
+      "doc": "No docstring"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/infrastructure/cells/{vendor_id}/domain-mapping",
+      "func_name": "update_cell_domain_mapping",
+      "doc": "Updates the custom domain for a cell and creates Route53 CNAME + ACM validation records."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendor-cell/{vendor_id}/email/config",
+      "func_name": "get_vendor_email_config",
+      "doc": "Retrieves vendor's active BYOE email gateway settings."
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/vendor-cell/{vendor_id}/email/config",
+      "func_name": "update_vendor_email_config",
+      "doc": "Updates vendor's custom SMTP / AWS SES / SendGrid / Postmark configuration."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendor-cell/{vendor_id}/email/inbound-parse",
+      "func_name": "parse_vendor_inbound_email",
+      "doc": "Parses inbound travel desk email RFQ and calculates instant sovereign quote."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendor-cell/{vendor_id}/email/inbox",
+      "func_name": "get_vendor_email_inbox",
+      "doc": "Retrieves full email telemetry: Inbound RFQs, Outbound confirmations, and active BYOE config."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendor-cell/{vendor_id}/email/outbound-dispatch",
+      "func_name": "dispatch_vendor_outbound_email",
+      "doc": "Generates and dispatches branded outbound booking confirmation email with DKIM/SPF."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendor-cell/{vendor_id}/email/test",
+      "func_name": "test_vendor_email_connection",
+      "doc": "Sends a live test verification email ping using the vendor's active email gateway."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendor-cell/{vendor_id}/email/test-inbound",
+      "func_name": "test_vendor_inbound_email_connection",
+      "doc": "Tests inbound IMAP/POP3 host, port, credentials, and mailbox polling readiness."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendor-portal/resolve-domain",
+      "func_name": "resolve_vendor_domain",
+      "doc": "Resolves white-label branding, tariff card, and metadata from incoming domain/subdomain or encrypted token."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendors/{vendor_id}/ai-yield",
+      "func_name": "get_vendor_ai_yield",
+      "doc": "No docstring"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendors/{vendor_id}/ai-yield/apply",
+      "func_name": "apply_vendor_ai_yield",
+      "doc": "No docstring"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendors/{vendor_id}/ai-yield/train",
+      "func_name": "train_vendor_ai_yield",
+      "doc": "No docstring"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendors/{vendor_id}/availability/check",
+      "func_name": "check_fleet_availability",
+      "doc": "No docstring"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendors/{vendor_id}/simulation-scenarios",
+      "func_name": "get_vendor_simulation_scenarios",
+      "doc": "Fetch vendor-specific and global benchmark scenarios from MySQL database."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/webhooks/flightaware",
+      "func_name": "webhook_flightaware",
+      "doc": "Ingests live FlightAware/Radar flight status updates and recalibrates chauffeur pickup times."
+    }
+  ],
+  "Billing, Subscriptions & Stripe Connect": [
+    {
+      "method": "POST",
+      "path": "/api/v1/hub/subscriptions/{vendor_id}/trigger-dunning-test",
+      "func_name": "trigger_dunning_test_alert",
+      "doc": "Simulates a delinquent payment event and triggers warning alerts / grace period."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendors/{vendor_id}/stripe/connect-status",
+      "func_name": "get_vendor_stripe_connect_status",
+      "doc": "Returns live Stripe Connect verification, payout status, and requirements for a vendor."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendors/{vendor_id}/subscription",
+      "func_name": "get_vendor_subscription_details",
+      "doc": "Returns current subscription plan, billing cycle, invoice history, and dunning status for a vendor."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendors/{vendor_id}/subscription/cancel",
+      "func_name": "cancel_vendor_subscription",
+      "doc": "Cancels the vendor's recurring SaaS subscription."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendors/{vendor_id}/subscription/clear-dunning",
+      "func_name": "clear_vendor_dunning_alert",
+      "doc": "Clears past-due dunning state, restores account to good standing, and resets grace period."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendors/{vendor_id}/subscription/pay-as-you-go",
+      "func_name": "switch_vendor_to_pay_as_you_go",
+      "doc": "Switches the vendor to the Pay-As-You-Go ($0/mo fixed + 5% per ride) model."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendors/{vendor_id}/subscription/simulate-dunning",
+      "func_name": "trigger_dunning_test_alert",
+      "doc": "Simulates a delinquent payment event and triggers warning alerts / grace period."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendors/{vendor_id}/subscription/upgrade",
+      "func_name": "upgrade_vendor_subscription",
+      "doc": "Upgrades or switches the vendor's subscription plan."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/webhooks/stripe",
+      "func_name": "webhook_stripe",
+      "doc": "Ingests live Stripe Connect webhook lifecycle events (pre-auth, capture, 85/10/5 split)."
+    }
+  ],
+  "Bookings, Inbound Leads & Reservations": [
+    {
+      "method": "GET",
+      "path": "/api/v1/bookings/lookup",
+      "func_name": "lookup_customer_bookings",
+      "doc": "Customer Self-Service Lookup:"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/bookings/{booking_id}/calendar.ics",
+      "func_name": "get_booking_calendar_ics",
+      "doc": "Generates standard RFC 5545 iCalendar (.ics) file for 1-click import into"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/bookings/{booking_id}/email-receipt",
+      "func_name": "get_booking_email_receipt",
+      "doc": "Returns the rendered luxury HTML payment authorization email for a booking."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/bookings/{booking_id}/live-tracking",
+      "func_name": "get_booking_live_tracking",
+      "doc": "No docstring"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/bookings/{booking_id}/live-tracking",
+      "func_name": "get_booking_live_tracking",
+      "doc": "Returns live tracking for a booking by reference ID."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/coverage/inquiry",
+      "func_name": "submit_sourcing_inquiry",
+      "doc": "Submits a sourcing inquiry ticket for an uncontracted REQUEST_ONLY corridor."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/dispatch/bookings/phone-intake",
+      "func_name": "create_phone_intake_booking",
+      "doc": "Creates authoritative reservation booked over the telephone by dispatcher."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inquiries/{inquiry_id}/convert-booking",
+      "func_name": "convert_inquiry_to_booking",
+      "doc": "Directly converts a VIP Inquiry into a real authoritative Booking and Trip in the database."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inquiries/{inquiry_id}/trigger-drip",
+      "func_name": "trigger_inquiry_drip",
+      "doc": "Advances the Autonomous Multi-Touch Follow-Up Drip pipeline for unconverted inquiries."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/support-desk/pods",
+      "func_name": "list_regional_pods_endpoint",
+      "doc": "Returns all geographical staffing pods (US East, US West, EMEA) and localized airport coverage."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendor-cell/{vendor_id}/booking/direct",
+      "func_name": "create_vendor_cell_direct_booking",
+      "doc": "Executes direct booking inside the vendor's isolated cellular engine and queues outbox event."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendor-cell/{vendor_id}/email/rfqs/{rfq_id}/convert-booking",
+      "func_name": "convert_email_rfq_to_booking",
+      "doc": "1-Click converts an Inbound Email RFQ directly into a confirmed reservation with Stripe Pre-Auth hold."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendors/{vendor_id}/bookings",
+      "func_name": "list_vendor_bookings",
+      "doc": "Returns rich, authoritative bookings for this specific vendor cell from MySQL + in-memory store."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendors/{vendor_id}/inquiries",
+      "func_name": "list_vendor_inquiries",
+      "doc": "Returns all inquiries logged for a specific vendor cell."
+    }
+  ],
+  "Corporate Accounts & B2B Portal": [
+    {
+      "method": "POST",
+      "path": "/api/v1/corporate/accounts/{account_id}/cost-centers",
+      "func_name": "add_cost_center",
+      "doc": "No docstring"
+    }
+  ],
+  "Driver Management & Chauffeur Operations": [
+    {
+      "method": "GET",
+      "path": "/api/v1/chauffeur/{driver_id}/duty-status",
+      "func_name": "get_chauffeur_duty_status",
+      "doc": "Returns chauffeur shift hours and fatigue / rest compliance status."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/driver/offers/{offer_id}/accept",
+      "func_name": "accept_offer",
+      "doc": "No docstring"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/driver/trips/{trip_id}/events",
+      "func_name": "update_trip_event",
+      "doc": "No docstring"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendors/{vendor_id}/drivers",
+      "func_name": "list_vendor_drivers",
+      "doc": "No docstring"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendors/{vendor_id}/drivers",
+      "func_name": "list_vendor_drivers",
+      "doc": "Returns the chauffeur roster strictly belonging to this specific vendor cell."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendors/{vendor_id}/drivers",
+      "func_name": "create_vendor_driver",
+      "doc": "Enrolls a new chauffeur strictly scoped to this vendor cell."
+    }
+  ],
+  "Dynamic Pricing & Instant Quotations": [
+    {
+      "method": "POST",
+      "path": "/api/v1/dispatch/pricing/quick-quote",
+      "func_name": "dispatch_quick_quote",
+      "doc": "Calculates instantaneous live quote for dispatch phone intake orders."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/itineraries/quote",
+      "func_name": "quote_multi_modal_itinerary",
+      "doc": "No docstring"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/itineraries/quote-matrix",
+      "func_name": "quote_multi_modal_itinerary_matrix",
+      "doc": "Single-Pass Multi-Class Multi-Modal Itinerary Quoting:"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/pricing/simulation-scenarios",
+      "func_name": "get_pricing_simulation_scenarios",
+      "doc": "Fetch authoritative benchmark trip scenarios for quote calculation from MySQL database."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pricing/simulation-scenarios",
+      "func_name": "save_pricing_simulation_scenario",
+      "doc": "Persist a benchmark scenario to the MySQL database."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/pricing/tax-rules",
+      "func_name": "get_regional_tax_rules",
+      "doc": "No docstring"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/quotes/ai-validate-pricing",
+      "func_name": "ai_validate_pricing_quote",
+      "doc": "Leverage Google Gemini / AI Market Intelligence to validate proposed quotes against regional benchmarks."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/quotes/{quote_id}/book",
+      "func_name": "accept_and_book",
+      "doc": "No docstring"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sourcing/submit-quote",
+      "func_name": "submit_vendor_quote",
+      "doc": "Called when an external discovered vendor submits their rate via 1-click quote link."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendors/{vendor_id}/ai-validate-pricing",
+      "func_name": "ai_validate_vendor_pricing",
+      "doc": "Leverage Google Gemini / AI Market Intelligence to validate a specific vendor's quote."
+    }
+  ],
+  "Fleet Assets & Vehicle Inventory": [
+    {
+      "method": "GET",
+      "path": "/api/v1/fleet/vehicles",
+      "func_name": "list_vehicles",
+      "doc": "No docstring"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendors/{vendor_id}/fleet-inventory/{vehicle_id}",
+      "func_name": "get_vendor_vehicle_detail",
+      "doc": "Retrieves detailed specifications for a vehicle in this vendor's inventory."
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/vendors/{vendor_id}/fleet-inventory/{vehicle_id}/toggle-active",
+      "func_name": "toggle_vendor_vehicle_active",
+      "doc": "Enables or disables a vehicle from active fleet and customer rental showroom."
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/vendors/{vendor_id}/fleet-inventory/{vehicle_id}/toggle-network",
+      "func_name": "toggle_vendor_vehicle_network",
+      "doc": "Toggles between GLOBAL_NETWORK_CONNECTED and LOCAL_PRIVATE_ONLY for this vendor's vehicle."
+    }
+  ],
+  "Global Affiliate Network & Ride Farm-Out": [
+    {
+      "method": "GET",
+      "path": "/api/v1/global-hub/affiliates/knowledge-base",
+      "func_name": "get_global_hub_affiliates_knowledge_base",
+      "doc": "Returns the central Global Hub Knowledge Base indexing all sovereign vendor availability & rules."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendors/{vendor_id}/affiliates/farm-out",
+      "func_name": "farm_out_ride_to_affiliate",
+      "doc": "Farms out a ride to another sovereign vendor cell with atomic clearinghouse split."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendors/{vendor_id}/affiliates/recommendations",
+      "func_name": "get_affiliate_recommendations_for_ride",
+      "doc": "Algorithm: Matches out-of-market jobs to top certified affiliate partners"
+    }
+  ],
+  "Global Hub Governance & Marketplace": [
+    {
+      "method": "GET",
+      "path": "/api/v1/global-hub/clearinghouse/ledger",
+      "func_name": "get_global_hub_clearinghouse_ledger",
+      "doc": "Returns the Global Hub central clearinghouse ledger across all federation cells."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/global-hub/dispatch-sla-sweep",
+      "func_name": "trigger_dispatch_sla_sweep",
+      "doc": "Background worker evaluation: Sweeps active dispatch tickets and auto-rolls unaccepted jobs or posts to The Wall."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/global-hub/radar/broadcast",
+      "func_name": "broadcast_flight_radar_event",
+      "doc": "Multiplexes single incoming flight radar event to all affected vendor cells."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/payments/simulate-escrow-settlement",
+      "func_name": "simulate_escrow_settlement_api",
+      "doc": "Simulates and executes a multi-vendor 85/10/5 escrow settlement via Stripe Connect clearinghouse."
+    }
+  ],
+  "Other Operations": [
+    {
+      "method": "WS/MOUNT",
+      "path": "",
+      "func_name": "static_frontend",
+      "doc": "No docstring"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/oauth-login",
+      "func_name": "oauth_login",
+      "doc": "Processes verified Apple Sign-In and Google 1-Tap OAuth assertions."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/passkey/auth-challenge",
+      "func_name": "passkey_auth_challenge",
+      "doc": "Generates a secure WebAuthn authentication assertion challenge."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/passkey/register-challenge",
+      "func_name": "passkey_register_challenge",
+      "doc": "Generates a secure FIDO2/WebAuthn registration challenge for TouchID/FaceID/Windows Hello."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/passkey/verify-auth",
+      "func_name": "passkey_verify_auth",
+      "doc": "Verifies the biometric Passkey assertion and logs the user in."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/passkey/verify-registration",
+      "func_name": "passkey_verify_registration",
+      "doc": "Validates and stores the client WebAuthn public key credential."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/personas",
+      "func_name": "list_available_personas",
+      "doc": "Lists standard personas available for fast role demonstration and testing."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/switch-persona",
+      "func_name": "switch_persona",
+      "doc": "Generates a signed JWT token for the requested actor persona or role name."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/coverage/evaluate",
+      "func_name": "evaluate_coverage",
+      "doc": "Evaluates 4-state corridor coverage (BOOKABLE vs REQUEST_ONLY)."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/customers/lookup",
+      "func_name": "lookup_customer_for_intake",
+      "doc": "Sub-20ms Caller Intake Lookup."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/customers/{customer_id}",
+      "func_name": "get_customer_profile",
+      "doc": "Returns complete customer CRM profile including VIP preferences and saved addresses."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/customers/{customer_id}/addresses",
+      "func_name": "add_customer_saved_address",
+      "doc": "Adds a frequent VIP destination for instant 1-click booking."
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/customers/{customer_id}/preferences",
+      "func_name": "update_customer_preferences",
+      "doc": "Updates 5-star VIP service preferences for consistent luxury experience."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/dispatch/verify-eligibility",
+      "func_name": "verify_pre_dispatch_eligibility",
+      "doc": "Performs live date-aware credential validation on the scheduled trip date."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/flights/{flight_ident}/live-status",
+      "func_name": "get_live_flight_status",
+      "doc": "Fetches real-time flight radar status, delay, terminal, and gate from FlightAware / AviationStack."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/hub/helicopter/validate",
+      "func_name": "validate_helicopter_leg_endpoint",
+      "doc": "Authoritative pre-flight validation enforcing:"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/hub/heliports",
+      "func_name": "list_hub_domestic_heliports",
+      "doc": "Returns directory of vetted domestic VIP heliports & vertiports."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/hub/vendors/{vendor_id}/charge-auto-pay",
+      "func_name": "charge_vendor_auto_pay_endpoint",
+      "doc": "Triggers direct Stripe card / ACH auto-debit against the vendor's primary payment method."
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/hub/vendors/{vendor_id}/charging-profile",
+      "func_name": "update_vendor_charging_profile_endpoint",
+      "doc": "Global Hub Admin endpoint to configure customized monthly fees, per-ride take rates,"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/infrastructure/cells/{vendor_id}/compliance-vault",
+      "func_name": "get_cell_compliance_vault",
+      "doc": "Returns the legal and compliance documents (COI, Operating Authority, KYB, TCR) for a vendor cell."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/infrastructure/cells/{vendor_id}/lifecycle",
+      "func_name": "execute_cell_lifecycle",
+      "doc": "Controls sovereign cell container/pod lifecycle: start, stop, restart, suspend, scale."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/infrastructure/cells/{vendor_id}/push-to-aws",
+      "func_name": "push_cell_infrastructure_to_aws",
+      "doc": "Automated One-Click AWS Cloud Push:"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/infrastructure/cells/{vendor_id}/start",
+      "func_name": "start_sovereign_cell_endpoint",
+      "doc": "Restarts and re-enables traffic routing to the sovereign cell (ONLINE_HEALTHY)."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/infrastructure/cells/{vendor_id}/stop",
+      "func_name": "stop_sovereign_cell_endpoint",
+      "doc": "Pauses and stops public traffic routing to the sovereign cell (SUSPENDED / STOPPED)."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/infrastructure/cells/{vendor_id}/terminate",
+      "func_name": "terminate_sovereign_cell_endpoint",
+      "doc": "Permanently terminates the sovereign cell container, deregisters port, and decommissions cell."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/infrastructure/compliance-vault",
+      "func_name": "list_compliance_vaults",
+      "doc": "Returns the authoritative compliance, licensing, and insurance audit vault for all sovereign cells."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/itineraries/{itinerary_id}/book",
+      "func_name": "book_multi_modal_itinerary",
+      "doc": "No docstring"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/maps/calculate-route",
+      "func_name": "calculate_route_matrix",
+      "doc": "No docstring"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/maps/validate-address",
+      "func_name": "validate_address",
+      "doc": "No docstring"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/media/{file_path:path}",
+      "func_name": "serve_media_vault_file",
+      "doc": "Serves stored media assets from the sovereign media vault with high-speed streaming."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/network/jobs",
+      "func_name": "get_network_jobs",
+      "doc": "No docstring"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sourcing/manager-override",
+      "func_name": "manager_phone_quote_override",
+      "doc": "Dispatcher phones vendor directly, agrees on net rate, and locks leg."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sourcing/opportunities",
+      "func_name": "get_all_sourcing_opportunities",
+      "doc": "Returns all active out-of-market vendor sourcing tickets with live countdown timers,"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/telemetry/location",
+      "func_name": "ingest_telemetry_ping",
+      "doc": "Ingests high-frequency chauffeur GPS coordinates and evaluates automated geofence transitions."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/transit/radar-stream",
+      "func_name": "list_radar_stream",
+      "doc": "No docstring"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/trips/{trip_id}",
+      "func_name": "get_trip",
+      "doc": "No docstring"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/trips/{trip_id}/live-tracking",
+      "func_name": "get_trip_live_tracking",
+      "doc": "No docstring"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/trips/{trip_id}/live-tracking",
+      "func_name": "get_trip_live_tracking",
+      "doc": "Returns real-time chauffeur telemetry, ETA countdown, vehicle details, and route coordinates."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendors/{vendor_id}/account/delete-request",
+      "func_name": "request_vendor_account_deletion",
+      "doc": "Submits a vendor account deletion request, decommission the cell, and halts traffic routing."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendors/{vendor_id}/customers",
+      "func_name": "list_vendor_customers",
+      "doc": "Returns the authoritative customer directory and VIP profiles for a vendor cell."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendors/{vendor_id}/customers",
+      "func_name": "create_or_register_customer",
+      "doc": "Creates a new customer profile or updates existing by phone/email."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendors/{vendor_id}/media/upload-s3",
+      "func_name": "upload_vendor_media_to_s3",
+      "doc": "Uploads vehicle showroom media to S3 (or authoritative sovereign media vault)"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendors/{vendor_id}/outbox/flush",
+      "func_name": "flush_vendor_outbox_queue",
+      "doc": "Triggers immediate background worker flush of queued outbox events."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendors/{vendor_id}/outbox/telemetry",
+      "func_name": "get_vendor_outbox_telemetry",
+      "doc": "Returns live transactional outbox queue statistics and zero-loss status."
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "func_name": "health",
+      "doc": "No docstring"
+    }
+  ],
+  "Payroll, Shifts & Settlements": [
+    {
+      "method": "GET",
+      "path": "/api/v1/vendors/{vendor_id}/payroll/export",
+      "func_name": "export_vendor_payroll_csv",
+      "doc": "Generates and downloads a payroll CSV formatted for Gusto, ADP, or Standard accounting systems."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendors/{vendor_id}/payroll/process-trip",
+      "func_name": "process_trip_payout",
+      "doc": "Processes driver earnings upon trip completion: triggers Stripe instant transfer if 1099, or logs shift accrual if W-2."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendors/{vendor_id}/payroll/record-shift",
+      "func_name": "record_driver_shift",
+      "doc": "Records driving shift hours and tips into the active pay period payroll ledger for W-2/salaried chauffeurs."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendors/{vendor_id}/payroll/summary",
+      "func_name": "get_vendor_payroll_summary",
+      "doc": "Retrieves live driver compensation summary, contractor payouts, and W-2 payroll accruals."
+    }
+  ],
+  "Staff, Team & Role Security": [],
+  "Support Ticketing Desk": [
+    {
+      "method": "GET",
+      "path": "/api/v1/global-hub/support/tickets",
+      "func_name": "list_global_hub_support_tickets",
+      "doc": "Global Hub SuperAdmin Observability: Network-wide ticket monitoring and SLA radar."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/global-hub/support/tickets/{ticket_id}/escalate",
+      "func_name": "escalate_ticket_to_global_hub",
+      "doc": "Escalates an unassigned or contentious ticket directly to the Central Global Hub clearinghouse."
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/support-desk/plans/{plan_id}",
+      "func_name": "update_support_desk_plan_endpoint",
+      "doc": "Global Hub Admin endpoint to dynamically update any Support Desk tier pricing,"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/support-desk/sla/evaluate-triggers",
+      "func_name": "evaluate_sla_triggers_endpoint",
+      "doc": "Autonomous SLA escalation scanner evaluating T-25m driver alerts, T-15m affiliate rescue,"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/support-desk/subscribe",
+      "func_name": "subscribe_vendor_support_endpoint",
+      "doc": "Enrolls a vendor into a Support Desk tier. If billing is in Free Preview,"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/support-desk/tickets",
+      "func_name": "create_support_ticket_endpoint",
+      "doc": "Creates an omnichannel customer or vendor support ticket."
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/support-desk/tickets/{ticket_id}",
+      "func_name": "update_support_ticket_endpoint",
+      "doc": "Updates a ticket's status, priority, or resolution notes."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/support-desk/tickets/{ticket_id}/mutate",
+      "func_name": "mutate_ticket_booking_endpoint",
+      "doc": "Executes 1-click mutation for support agents:"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/support/tickets",
+      "func_name": "create_customer_support_ticket",
+      "doc": "Creates an authoritative customer support ticket, attaches live booking/flight context,"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/support/tickets/lookup",
+      "func_name": "lookup_customer_support_tickets",
+      "doc": "Searches customer support tickets by phone, email, booking reference, or ticket number."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/support/tickets/{ticket_id}",
+      "func_name": "get_support_ticket",
+      "doc": "Retrieves full ticket details, live SLA countdown timer, and message thread."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/support/tickets/{ticket_id}/messages",
+      "func_name": "add_ticket_message",
+      "doc": "Appends a new message to a ticket thread and dynamically updates status."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendors/{vendor_id}/support/tickets",
+      "func_name": "list_vendor_support_tickets",
+      "doc": "Returns all support tickets assigned to a specific carrier with SLA status."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendors/{vendor_id}/support/tickets/{ticket_id}/reply",
+      "func_name": "reply_to_vendor_ticket",
+      "doc": "Allows a vendor dispatcher to reply to a customer ticket or record internal notes."
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/vendors/{vendor_id}/support/tickets/{ticket_id}/resolve",
+      "func_name": "resolve_vendor_ticket",
+      "doc": "Marks a vendor support ticket as RESOLVED."
+    }
+  ],
+  "Vendor White-Label Branding & Cell Config": [
+    {
+      "method": "GET",
+      "path": "/api/v1/hub/helicopter-config",
+      "func_name": "get_hub_helicopter_config_endpoint",
+      "doc": "Returns current Hub Helicopter Feature Switch, Domestic-Only Rules, and FAA Part 135 status."
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/hub/helicopter-config",
+      "func_name": "update_hub_helicopter_config_endpoint",
+      "doc": "Updates Hub Helicopter Feature Switch, permitting live toggle between Staging/Compliance Hold and Active."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendor-cell/cells",
+      "func_name": "list_vendor_cells",
+      "doc": "Lists all dynamically provisioned sovereign vendor cells."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendor-cell/{vendor_id}/circuit-breaker",
+      "func_name": "toggle_vendor_cell_circuit_breaker",
+      "doc": "Sets circuit breaker status for graceful local fallback during upstream outages."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendor-cell/{vendor_id}/outbox/sync",
+      "func_name": "sync_vendor_outbox_to_global_hub",
+      "doc": "Asynchronously syncs queued outbox events from the vendor cell into the Global Hub."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendor-cell/{vendor_id}/status",
+      "func_name": "get_vendor_cell_status",
+      "doc": "Retrieves isolated cell status, circuit breaker health, outbox queue depth, and DB partition."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendor-portal/resolve-token",
+      "func_name": "resolve_vendor_token",
+      "doc": "Decrypts and authenticates a secure vendor token and returns its white-label branding profile."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendor-portal/token/{vendor_id}",
+      "func_name": "generate_vendor_token",
+      "doc": "Generates an encrypted, obfuscated URL token for a sovereign vendor cell."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendors/{vendor_id}/branding",
+      "func_name": "get_vendor_branding_settings",
+      "doc": "Retrieves white-label logo, operating code, and invoice custom footer for a vendor."
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/vendors/{vendor_id}/branding",
+      "func_name": "update_vendor_branding_settings",
+      "doc": "Updates vendor logo URL, brand color, operating code, and custom invoice footer."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendors/{vendor_id}/config",
+      "func_name": "get_vendor_intake_config",
+      "doc": "No docstring"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/vendors/{vendor_id}/config",
+      "func_name": "update_vendor_intake_config",
+      "doc": "No docstring"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendors/{vendor_id}/schedule",
+      "func_name": "get_vendor_schedule",
+      "doc": "No docstring"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/vendors/{vendor_id}/schedule",
+      "func_name": "update_vendor_schedule",
+      "doc": "No docstring"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendors/{vendor_id}/seo-schema",
+      "func_name": "get_vendor_seo_schema",
+      "doc": "Generates dynamic JSON-LD Schema.org structured data for Google Search rich snippets."
+    }
+  ],
+  "Voice AI Concierge & Omnichannel Telephony": [
+    {
+      "method": "GET",
+      "path": "/api/v1/corporate/invoices/{invoice_id}/csv",
+      "func_name": "export_invoice_csv",
+      "doc": "No docstring"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/hub/vendors/{vendor_id}/send-invoice",
+      "func_name": "send_vendor_invoice_endpoint",
+      "doc": "Generates and emails an official itemized monthly statement / invoice to the vendor."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/support-desk/voice/resolve-inbound",
+      "func_name": "resolve_inbound_voice_endpoint",
+      "doc": "Resolves an incoming voice call via dedicated local DID or 1-800 PIN extension,"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/support-desk/voice/twiml-inbound",
+      "func_name": "get_inbound_twiml_xml",
+      "doc": "Returns dynamic TwiML XML to Twilio Voice carrier SIP trunks,"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendor-cell/{vendor_id}/email/send-invoice",
+      "func_name": "send_vendor_trip_invoice",
+      "doc": "Dispatches branded final PDF tax invoice and Stripe charge receipt upon ride completion."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendors/{vendor_id}/omnichannel/config",
+      "func_name": "update_vendor_omnichannel_config",
+      "doc": "Configures BYOK custom keys vs Turnkey SaaS Gateway with automatic fail-safe fallback."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendors/{vendor_id}/omnichannel/desk",
+      "func_name": "get_vendor_omnichannel_desk",
+      "doc": "Retrieves consolidated omnichannel workspace (Voice Studio, WhatsApp/SMS chat, Email desk, SEO engine)."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendors/{vendor_id}/omnichannel/dial-call",
+      "func_name": "record_voice_studio_call",
+      "doc": "Triggers a live outbound Twilio phone call and logs the voice session."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendors/{vendor_id}/omnichannel/send-message",
+      "func_name": "send_omnichannel_chat_message",
+      "doc": "Dispatches an outbound SMS or WhatsApp message with TCPA compliance checks."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendors/{vendor_id}/telecom-compliance",
+      "func_name": "get_vendor_telecom_compliance",
+      "doc": "Retrieves live A2P 10DLC Brand, Campaign, STIR/SHAKEN, and TCPA compliance status."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendors/{vendor_id}/telecom-compliance/inbound-sms",
+      "func_name": "process_inbound_sms_compliance",
+      "doc": "Processes inbound SMS against TCPA opt-out keywords (STOP/HELP/START)."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendors/{vendor_id}/telecom-compliance/register-brand",
+      "func_name": "register_vendor_brand",
+      "doc": "Submits A2P 10DLC Brand registration to carrier vetting in-process."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendors/{vendor_id}/voice-call-intake",
+      "func_name": "execute_voice_call_intake",
+      "doc": "No docstring"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/voice/session/{session_id}",
+      "func_name": "get_voice_session",
+      "doc": "No docstring"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/voice/simulate-call",
+      "func_name": "simulate_voice_call",
+      "doc": "Simulates an end-to-end voice telephony call session with consent, quoting, and hold pre-auth."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/webhooks/twilio/voice",
+      "func_name": "webhook_twilio_voice",
+      "doc": "Ingests Twilio Voice IVR inbound calls and returns TwiML speech XML with dynamic quote."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/webhooks/twilio/whatsapp",
+      "func_name": "webhook_twilio_whatsapp",
+      "doc": "Ingests Twilio WhatsApp inbound chat and returns quote text with deep-link checkout."
+    }
+  ]
+}

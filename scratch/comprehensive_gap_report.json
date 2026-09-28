@@ -1,0 +1,5132 @@
+{
+  "total_apis": 299,
+  "total_ui_connected": 236,
+  "total_gaps": 63,
+  "groups": {
+    "Other Operations": {
+      "total": 70,
+      "completed": 32,
+      "gaps": 38,
+      "items": [
+        {
+          "path": "",
+          "methods": [
+            "WS/MOUNT"
+          ],
+          "func_name": "static_frontend",
+          "doc": "No docstring",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/demo/policy",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "policy",
+          "doc": "No docstring",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/AIRecoveryHub.tsx",
+              "how": "Function `policy`"
+            },
+            {
+              "file": "components/BookingOperationsModal.tsx",
+              "how": "Function `policy`"
+            },
+            {
+              "file": "components/CustomerPortal.tsx",
+              "how": "Function `policy`"
+            },
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "Function `policy`"
+            },
+            {
+              "file": "components/public/CustomerBookingsLookupModal.tsx",
+              "how": "Function `policy`"
+            },
+            {
+              "file": "components/public/PublicHomePage.tsx",
+              "how": "Function `policy`"
+            },
+            {
+              "file": "components/public/PublicPoliciesPage.tsx",
+              "how": "Function `policy`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/auth/me",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_current_session",
+          "doc": "Returns the authenticated user's session profile and permissions.",
+          "group": "Other Operations",
+          "wrapper": "fetchCurrentSession",
+          "ui_callers": [
+            {
+              "file": "context/AuthContext.tsx",
+              "how": "API wrapper `fetchCurrentSession`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/auth/oauth-login",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "oauth_login",
+          "doc": "Processes verified Apple Sign-In and Google 1-Tap OAuth assertions.",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/auth/passkey/auth-challenge",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "passkey_auth_challenge",
+          "doc": "Generates a secure WebAuthn authentication assertion challenge.",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/auth/passkey/register-challenge",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "passkey_register_challenge",
+          "doc": "Generates a secure FIDO2/WebAuthn registration challenge for TouchID/FaceID/Windows Hello.",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/auth/passkey/verify-auth",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "passkey_verify_auth",
+          "doc": "Verifies the biometric Passkey assertion and logs the user in.",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/auth/passkey/verify-registration",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "passkey_verify_registration",
+          "doc": "Validates and stores the client WebAuthn public key credential.",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/auth/personas",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_available_personas",
+          "doc": "Lists standard personas available for fast role demonstration and testing.",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/auth/switch-persona",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "switch_persona",
+          "doc": "Generates a signed JWT token for the requested actor persona or role name.",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/compliance/alerts",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_compliance_alerts",
+          "doc": "Fetches active compliance alerts for expiring driver licenses and insurance COIs.",
+          "group": "Other Operations",
+          "wrapper": "fetchComplianceAlerts",
+          "ui_callers": [
+            {
+              "file": "components/VendorDispatchPortal.tsx",
+              "how": "API wrapper `fetchComplianceAlerts`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/compliance/scan",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "trigger_compliance_scan",
+          "doc": "Triggers an on-demand fleet compliance expiration scan.",
+          "group": "Other Operations",
+          "wrapper": "triggerComplianceScan",
+          "ui_callers": [
+            {
+              "file": "components/VendorDispatchPortal.tsx",
+              "how": "API wrapper `triggerComplianceScan`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/coverage/evaluate",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "evaluate_coverage",
+          "doc": "Evaluates 4-state corridor coverage (BOOKABLE vs REQUEST_ONLY).",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/customers/lookup",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "lookup_customer_for_intake",
+          "doc": "Sub-20ms Caller Intake Lookup.",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/customers/{customer_id}",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_customer_profile",
+          "doc": "Returns complete customer CRM profile including VIP preferences and saved addresses.",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/customers/{customer_id}/addresses",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "add_customer_saved_address",
+          "doc": "Adds a frequent VIP destination for instant 1-click booking.",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/customers/{customer_id}/preferences",
+          "methods": [
+            "PATCH"
+          ],
+          "func_name": "update_customer_preferences",
+          "doc": "Updates 5-star VIP service preferences for consistent luxury experience.",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/dispatch/assignment-audits/{trip_id}",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_assignment_audit",
+          "doc": "Returns the transparent assignment score breakdown and neutrality justification.",
+          "group": "Other Operations",
+          "wrapper": "fetchAssignmentAudit",
+          "ui_callers": [
+            {
+              "file": "components/VendorDispatchPortal.tsx",
+              "how": "API wrapper `fetchAssignmentAudit`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/dispatch/pending-24h-alerts",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_pending_24h_dispatch_alerts",
+          "doc": "Returns real-time 24-Hour Just-In-Time Dispatch Alerts:",
+          "group": "Other Operations",
+          "wrapper": "fetchPending24hDispatchAlerts",
+          "ui_callers": [
+            {
+              "file": "components/VendorDispatchPortal.tsx",
+              "how": "API wrapper `fetchPending24hDispatchAlerts`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/dispatch/verify-eligibility",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "verify_pre_dispatch_eligibility",
+          "doc": "Performs live date-aware credential validation on the scheduled trip date.",
+          "group": "Other Operations",
+          "wrapper": "verifyPreDispatchEligibility",
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/flights/{flight_ident}/live-status",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_live_flight_status",
+          "doc": "Fetches real-time flight radar status, delay, terminal, and gate from FlightAware / AviationStack.",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/graph-rag/export",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "export_graph_rag",
+          "doc": "Exports full knowledge graph nodes and relation edges for visualizer.",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/VoiceAIStudio.tsx",
+              "how": "URL `/api/v1/graph-rag/export`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/graph-rag/neo4j/cypher",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "execute_cypher_query",
+          "doc": "Executes Cypher query on grounded graph nodes.",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/VoiceAIStudio.tsx",
+              "how": "URL `/api/v1/graph-rag/neo4j/cypher`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/graph-rag/neo4j/sync",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "sync_neo4j_aura",
+          "doc": "Syncs regulatory graph nodes and relations into Neo4j Aura database with Cypher statements.",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/VoiceAIStudio.tsx",
+              "how": "URL `/api/v1/graph-rag/neo4j/sync`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/graph-rag/paths",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "query_graph_rag_paths",
+          "doc": "Computes multi-hop paths with provenance citation chains.",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/VoiceAIStudio.tsx",
+              "how": "URL `/api/v1/graph-rag/paths`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/graph-rag/verify",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "verify_regulatory_claim",
+          "doc": "Tests claim against grounded citations and rejects hallucinations.",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/VoiceAIStudio.tsx",
+              "how": "URL `/api/v1/graph-rag/verify`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/hub/helicopter-config",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_hub_helicopter_config_endpoint",
+          "doc": "Returns current Hub Helicopter Feature Switch, Domestic-Only Rules, and FAA Part 135 status.",
+          "group": "Other Operations",
+          "wrapper": "fetchHelicopterHubConfig",
+          "ui_callers": [
+            {
+              "file": "components/HelicopterComplianceHubControl.tsx",
+              "how": "API wrapper `fetchHelicopterHubConfig`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/hub/helicopter-config",
+          "methods": [
+            "PUT"
+          ],
+          "func_name": "update_hub_helicopter_config_endpoint",
+          "doc": "Updates Hub Helicopter Feature Switch, permitting live toggle between Staging/Compliance Hold and Active.",
+          "group": "Other Operations",
+          "wrapper": "updateHelicopterHubConfig",
+          "ui_callers": [
+            {
+              "file": "components/HelicopterComplianceHubControl.tsx",
+              "how": "API wrapper `updateHelicopterHubConfig`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/hub/helicopter/validate",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "validate_helicopter_leg_endpoint",
+          "doc": "Authoritative pre-flight validation enforcing:",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/hub/heliports",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_hub_domestic_heliports",
+          "doc": "Returns directory of vetted domestic VIP heliports & vertiports.",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/hub/toll-registry",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_central_toll_registry",
+          "doc": "Centralized Global Hub Toll Rate Registry:",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/vendor/OperationsPricingResearchStudio.tsx",
+              "how": "URL `/api/v1/hub/toll-registry`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/hub/vendors/{vendor_id}/charge-auto-pay",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "charge_vendor_auto_pay_endpoint",
+          "doc": "Triggers direct Stripe card / ACH auto-debit against the vendor's primary payment method.",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/hub/vendors/{vendor_id}/charging-profile",
+          "methods": [
+            "PUT"
+          ],
+          "func_name": "update_vendor_charging_profile_endpoint",
+          "doc": "Global Hub Admin endpoint to configure customized monthly fees, per-ride take rates,",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/infrastructure/compliance-vault",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_compliance_vaults",
+          "doc": "Returns the authoritative compliance, licensing, and insurance audit vault for all sovereign cells.",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/intake/parse-enquiry",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "parse_omnichannel_enquiry",
+          "doc": "No docstring",
+          "group": "Other Operations",
+          "wrapper": "parseOmnichannelEnquiry",
+          "ui_callers": [
+            {
+              "file": "components/OmnichannelPortal.tsx",
+              "how": "API wrapper `parseOmnichannelEnquiry`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/itineraries/{itinerary_id}/book",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "book_multi_modal_itinerary",
+          "doc": "No docstring",
+          "group": "Other Operations",
+          "wrapper": "bookItinerary",
+          "ui_callers": [
+            {
+              "file": "components/CustomerPortal.tsx",
+              "how": "API wrapper `bookItinerary`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/maps/calculate-route",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "calculate_route_matrix",
+          "doc": "No docstring",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/maps/places-autocomplete",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "places_autocomplete",
+          "doc": "No docstring",
+          "group": "Other Operations",
+          "wrapper": "fetchPlacesAutocomplete",
+          "ui_callers": [
+            {
+              "file": "components/AddressAutocompleteInput.tsx",
+              "how": "URL `/api/v1/maps/places-autocomplete`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/maps/validate-address",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "validate_address",
+          "doc": "No docstring",
+          "group": "Other Operations",
+          "wrapper": "validateAddress",
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/media/{file_path:path}",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "serve_media_vault_file",
+          "doc": "Serves stored media assets from the sovereign media vault with high-speed streaming.",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/network/jobs",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_network_jobs",
+          "doc": "No docstring",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/public/vendor-onboarding/submit",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "submit_public_vendor_onboarding",
+          "doc": "Executes full automated onboarding:",
+          "group": "Other Operations",
+          "wrapper": "submitPublicVendorOnboarding",
+          "ui_callers": [
+            {
+              "file": "components/public/PublicVendorOnboardingPage.tsx",
+              "how": "API wrapper `submitPublicVendorOnboarding`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/public/vendor-onboarding/validate",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "validate_public_vendor_onboarding",
+          "doc": "Pre-flight validation for new black car operators applying via the public SaaS portal.",
+          "group": "Other Operations",
+          "wrapper": "validatePublicVendorOnboarding",
+          "ui_callers": [
+            {
+              "file": "components/public/PublicVendorOnboardingPage.tsx",
+              "how": "API wrapper `validatePublicVendorOnboarding`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/sourcing/manager-override",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "manager_phone_quote_override",
+          "doc": "Dispatcher phones vendor directly, agrees on net rate, and locks leg.",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/sourcing/opportunities",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_all_sourcing_opportunities",
+          "doc": "Returns all active out-of-market vendor sourcing tickets with live countdown timers,",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/sourcing/trigger-rfp",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "trigger_manual_sourcing_rfp",
+          "doc": "Manually triggers autonomous AI discovery and dual-delivery RFP for an out-of-market location.",
+          "group": "Other Operations",
+          "wrapper": "triggerManualSourcingRfp",
+          "ui_callers": [
+            {
+              "file": "components/SourcingConciergeDesk.tsx",
+              "how": "API wrapper `triggerManualSourcingRfp`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/system-summary",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_system_summary",
+          "doc": "No docstring",
+          "group": "Other Operations",
+          "wrapper": "fetchSystemSummary",
+          "ui_callers": [
+            {
+              "file": "components/VendorDispatchPortal.tsx",
+              "how": "API wrapper `fetchSystemSummary`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/system/runtime-mode",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_system_runtime_mode",
+          "doc": "Returns the container's operational mode and sovereign vendor isolation state.",
+          "group": "Other Operations",
+          "wrapper": "fetchSystemRuntimeModeApi",
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/telemetry/location",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "ingest_telemetry_ping",
+          "doc": "Ingests high-frequency chauffeur GPS coordinates and evaluates automated geofence transitions.",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/transit/inbound-plan-update",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "execute_inbound_plan_update",
+          "doc": "No docstring",
+          "group": "Other Operations",
+          "wrapper": "executeInboundPlanUpdate",
+          "ui_callers": [
+            {
+              "file": "components/FlightAwarePlanUpdaterHub.tsx",
+              "how": "API wrapper `executeInboundPlanUpdate`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/trips/{trip_id}",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_trip",
+          "doc": "No docstring",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/trips/{trip_id}/live-tracking",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_trip_live_tracking",
+          "doc": "No docstring",
+          "group": "Other Operations",
+          "wrapper": "fetchTripLiveTrackingApi",
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/trips/{trip_id}/live-tracking",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_trip_live_tracking",
+          "doc": "Returns real-time chauffeur telemetry, ETA countdown, vehicle details, and route coordinates.",
+          "group": "Other Operations",
+          "wrapper": "fetchTripLiveTrackingApi",
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/vendors",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_vendors",
+          "doc": "No docstring",
+          "group": "Other Operations",
+          "wrapper": "fetchVendors",
+          "ui_callers": [
+            {
+              "file": "components/CustomerPortal.tsx",
+              "how": "URL `/api/v1/vendors`"
+            },
+            {
+              "file": "components/DriverMobileDashboard.tsx",
+              "how": "URL `/api/v1/vendors`"
+            },
+            {
+              "file": "components/VendorDispatchPortal.tsx",
+              "how": "API wrapper `fetchVendors`, URL `/api/v1/vendors`"
+            },
+            {
+              "file": "components/VendorFleetAndPricingHub.tsx",
+              "how": "API wrapper `fetchVendors`"
+            },
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "URL `/api/v1/vendors`"
+            },
+            {
+              "file": "components/public/PublicFleetPage.tsx",
+              "how": "URL `/api/v1/vendors`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/account/delete-request",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "request_vendor_account_deletion",
+          "doc": "Submits a vendor account deletion request, decommission the cell, and halts traffic routing.",
+          "group": "Other Operations",
+          "wrapper": "requestVendorAccountDeletion",
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/comm-config",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_vendor_comm_config",
+          "doc": "No docstring",
+          "group": "Other Operations",
+          "wrapper": "fetchVendorCommConfig",
+          "ui_callers": [
+            {
+              "file": "components/VendorFleetAndPricingHub.tsx",
+              "how": "API wrapper `fetchVendorCommConfig`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/comm-config",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "save_vendor_comm_config",
+          "doc": "No docstring",
+          "group": "Other Operations",
+          "wrapper": "saveVendorCommConfig",
+          "ui_callers": [
+            {
+              "file": "components/VendorFleetAndPricingHub.tsx",
+              "how": "API wrapper `saveVendorCommConfig`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/config",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_vendor_intake_config",
+          "doc": "No docstring",
+          "group": "Other Operations",
+          "wrapper": "fetchVendorIntakeConfigApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `fetchVendorIntakeConfigApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/config",
+          "methods": [
+            "PUT"
+          ],
+          "func_name": "update_vendor_intake_config",
+          "doc": "No docstring",
+          "group": "Other Operations",
+          "wrapper": "updateVendorIntakeConfigApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `updateVendorIntakeConfigApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/customers",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_vendor_customers",
+          "doc": "Returns the authoritative customer directory and VIP profiles for a vendor cell.",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/customers",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "create_or_register_customer",
+          "doc": "Creates a new customer profile or updates existing by phone/email.",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/evaluate-multileg-strategy",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "evaluate_vendor_multileg_strategy",
+          "doc": "Evaluates an itinerary against vendor's sovereign multi-leg routing rules.",
+          "group": "Other Operations",
+          "wrapper": "evaluateVendorMultilegStrategy",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `evaluateVendorMultilegStrategy`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/media/upload-s3",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "upload_vendor_media_to_s3",
+          "doc": "Uploads vehicle showroom media to S3 (or authoritative sovereign media vault)",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/outbox/flush",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "flush_vendor_outbox_queue",
+          "doc": "Triggers immediate background worker flush of queued outbox events.",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/outbox/telemetry",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_vendor_outbox_telemetry",
+          "doc": "Returns live transactional outbox queue statistics and zero-loss status.",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/schedule",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_vendor_schedule",
+          "doc": "No docstring",
+          "group": "Other Operations",
+          "wrapper": "fetchVendorOperatingScheduleApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `fetchVendorOperatingScheduleApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/schedule",
+          "methods": [
+            "PUT"
+          ],
+          "func_name": "update_vendor_schedule",
+          "doc": "No docstring",
+          "group": "Other Operations",
+          "wrapper": "updateVendorOperatingScheduleApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `updateVendorOperatingScheduleApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/webhooks/events",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_webhook_events",
+          "doc": "Fetches chronological list of ingested external webhook and telemetry events.",
+          "group": "Other Operations",
+          "wrapper": "fetchWebhookEvents",
+          "ui_callers": [
+            {
+              "file": "components/VendorDispatchPortal.tsx",
+              "how": "API wrapper `fetchWebhookEvents`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/webhooks/simulate",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "simulate_webhook_event",
+          "doc": "Developer & Dispatcher one-click simulator for all live external webhook events.",
+          "group": "Other Operations",
+          "wrapper": "simulateWebhookEvent",
+          "ui_callers": [
+            {
+              "file": "components/VendorDispatchPortal.tsx",
+              "how": "API wrapper `simulateWebhookEvent`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/health",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "health",
+          "doc": "No docstring",
+          "group": "Other Operations",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        }
+      ]
+    },
+    "Autonomous Recovery & FlightAware Engine": {
+      "total": 25,
+      "completed": 25,
+      "gaps": 0,
+      "items": [
+        {
+          "path": "/api/ai/capabilities",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "capabilities",
+          "doc": "No docstring",
+          "group": "Autonomous Recovery & FlightAware Engine",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "Function `capabilities`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/ai/documents",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "documents",
+          "doc": "No docstring",
+          "group": "Autonomous Recovery & FlightAware Engine",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/DriverManagementModal.tsx",
+              "how": "Function `documents`"
+            },
+            {
+              "file": "components/DriverMobileDashboard.tsx",
+              "how": "Function `documents`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/ai/documents",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "add_document",
+          "doc": "No docstring",
+          "group": "Autonomous Recovery & FlightAware Engine",
+          "wrapper": "addAiDocumentApi",
+          "ui_callers": [
+            {
+              "file": "components/AIRecoveryHub.tsx",
+              "how": "API wrapper `addAiDocumentApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/ai/documents/{identifier}",
+          "methods": [
+            "DELETE"
+          ],
+          "func_name": "delete",
+          "doc": "No docstring",
+          "group": "Autonomous Recovery & FlightAware Engine",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "App.tsx",
+              "how": "Function `delete`"
+            },
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "Function `delete`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/ai/evaluate",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "evaluate",
+          "doc": "No docstring",
+          "group": "Autonomous Recovery & FlightAware Engine",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "Function `evaluate`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/ai/graph/edges",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "edge",
+          "doc": "No docstring",
+          "group": "Autonomous Recovery & FlightAware Engine",
+          "wrapper": "addAiGraphEdgeApi",
+          "ui_callers": [
+            {
+              "file": "components/AIRecoveryHub.tsx",
+              "how": "API wrapper `addAiGraphEdgeApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/ai/retrieve",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "search",
+          "doc": "No docstring",
+          "group": "Autonomous Recovery & FlightAware Engine",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "App.tsx",
+              "how": "Function `search`"
+            },
+            {
+              "file": "components/GlobalHubAdminPortal.tsx",
+              "how": "Function `search`"
+            },
+            {
+              "file": "components/VendorCommercialGuideModal.tsx",
+              "how": "Function `search`"
+            },
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "Function `search`"
+            },
+            {
+              "file": "components/public/CustomerBookingsLookupModal.tsx",
+              "how": "Function `search`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/ai/run",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "run",
+          "doc": "No docstring",
+          "group": "Autonomous Recovery & FlightAware Engine",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/GlobalHubAdminPortal.tsx",
+              "how": "Function `run`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/ai/runs",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "history",
+          "doc": "No docstring",
+          "group": "Autonomous Recovery & FlightAware Engine",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "App.tsx",
+              "how": "Function `history`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/ai/model-lifecycle",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_ai_model_lifecycle",
+          "doc": "Returns the automated model lifecycle registry, deprecation schedule,",
+          "group": "Autonomous Recovery & FlightAware Engine",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/GlobalHubAdminPortal.tsx",
+              "how": "URL `/api/v1/ai/model-lifecycle`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/ai/model-lifecycle/audit-sync",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "run_ai_model_lifecycle_audit",
+          "doc": "Triggers an on-demand monthly model deprecation audit and automatically",
+          "group": "Autonomous Recovery & FlightAware Engine",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/GlobalHubAdminPortal.tsx",
+              "how": "URL `/api/v1/ai/model-lifecycle/audit-sync`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/global-hub/radar/broadcast",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "broadcast_flight_radar_event",
+          "doc": "Multiplexes single incoming flight radar event to all affected vendor cells.",
+          "group": "Autonomous Recovery & FlightAware Engine",
+          "wrapper": "broadcastFlightRadarEventApi",
+          "ui_callers": [
+            {
+              "file": "components/AIRecoveryHub.tsx",
+              "how": "API wrapper `broadcastFlightRadarEventApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/global-hub/shared-ai/invoke",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "invoke_shared_ai_gateway",
+          "doc": "Invokes centralized AI gateway with token pooling and prompt caching.",
+          "group": "Autonomous Recovery & FlightAware Engine",
+          "wrapper": "invokeSharedAiGatewayApi",
+          "ui_callers": [
+            {
+              "file": "components/AIRecoveryHub.tsx",
+              "how": "API wrapper `invokeSharedAiGatewayApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/pricing/simulation-scenarios",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_pricing_simulation_scenarios",
+          "doc": "Fetch authoritative benchmark trip scenarios for quote calculation from MySQL database.",
+          "group": "Autonomous Recovery & FlightAware Engine",
+          "wrapper": "fetchVendorSimulationScenariosApi",
+          "ui_callers": [
+            {
+              "file": "components/AIRecoveryHub.tsx",
+              "how": "API wrapper `fetchVendorSimulationScenariosApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/pricing/simulation-scenarios",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "save_pricing_simulation_scenario",
+          "doc": "Persist a benchmark scenario to the MySQL database.",
+          "group": "Autonomous Recovery & FlightAware Engine",
+          "wrapper": "savePricingSimulationScenarioApi",
+          "ui_callers": [
+            {
+              "file": "components/AIRecoveryHub.tsx",
+              "how": "API wrapper `savePricingSimulationScenarioApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/recovery/incidents",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_incidents",
+          "doc": "No docstring",
+          "group": "Autonomous Recovery & FlightAware Engine",
+          "wrapper": "fetchIncidents",
+          "ui_callers": [
+            {
+              "file": "components/AIRecoveryHub.tsx",
+              "how": "API wrapper `fetchIncidents`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/recovery/simulate-flight-delay",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "simulate_flight_delay",
+          "doc": "No docstring",
+          "group": "Autonomous Recovery & FlightAware Engine",
+          "wrapper": "simulateFlightDelay",
+          "ui_callers": [
+            {
+              "file": "components/AIRecoveryHub.tsx",
+              "how": "API wrapper `simulateFlightDelay`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/transit/radar-stream",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_radar_stream",
+          "doc": "No docstring",
+          "group": "Autonomous Recovery & FlightAware Engine",
+          "wrapper": "fetchTransitRadarStream",
+          "ui_callers": [
+            {
+              "file": "components/FlightAwarePlanUpdaterHub.tsx",
+              "how": "API wrapper `fetchTransitRadarStream`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/transit/simulate-radar-delay",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "simulate_radar_delay",
+          "doc": "No docstring",
+          "group": "Autonomous Recovery & FlightAware Engine",
+          "wrapper": "simulateRadarDelay",
+          "ui_callers": [
+            {
+              "file": "components/FlightAwarePlanUpdaterHub.tsx",
+              "how": "API wrapper `simulateRadarDelay`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/ai-yield",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_vendor_ai_yield",
+          "doc": "No docstring",
+          "group": "Autonomous Recovery & FlightAware Engine",
+          "wrapper": "fetchVendorAiYieldApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorFleetAndPricingHub.tsx",
+              "how": "API wrapper `fetchVendorAiYieldApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/ai-yield/apply",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "apply_vendor_ai_yield",
+          "doc": "No docstring",
+          "group": "Autonomous Recovery & FlightAware Engine",
+          "wrapper": "applyVendorAiYieldApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorFleetAndPricingHub.tsx",
+              "how": "API wrapper `applyVendorAiYieldApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/ai-yield/train",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "train_vendor_ai_yield",
+          "doc": "No docstring",
+          "group": "Autonomous Recovery & FlightAware Engine",
+          "wrapper": "trainVendorAiYieldApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorFleetAndPricingHub.tsx",
+              "how": "API wrapper `trainVendorAiYieldApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/availability/check",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "check_fleet_availability",
+          "doc": "No docstring",
+          "group": "Autonomous Recovery & FlightAware Engine",
+          "wrapper": "checkFleetAvailabilityApi",
+          "ui_callers": [
+            {
+              "file": "components/AIRecoveryHub.tsx",
+              "how": "API wrapper `checkFleetAvailabilityApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/simulation-scenarios",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_vendor_simulation_scenarios",
+          "doc": "Fetch vendor-specific and global benchmark scenarios from MySQL database.",
+          "group": "Autonomous Recovery & FlightAware Engine",
+          "wrapper": "fetchVendorSimulationScenariosApi",
+          "ui_callers": [
+            {
+              "file": "components/AIRecoveryHub.tsx",
+              "how": "API wrapper `fetchVendorSimulationScenariosApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/webhooks/flightaware",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "webhook_flightaware",
+          "doc": "Ingests live FlightAware/Radar flight status updates and recalibrates chauffeur pickup times.",
+          "group": "Autonomous Recovery & FlightAware Engine",
+          "wrapper": "ingestFlightAwareWebhookApi",
+          "ui_callers": [
+            {
+              "file": "components/AIRecoveryHub.tsx",
+              "how": "API wrapper `ingestFlightAwareWebhookApi`"
+            }
+          ],
+          "is_complete": true
+        }
+      ]
+    },
+    "Dynamic Pricing & Instant Quotations": {
+      "total": 18,
+      "completed": 18,
+      "gaps": 0,
+      "items": [
+        {
+          "path": "/api/demo/quotes",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "quote",
+          "doc": "No docstring",
+          "group": "Dynamic Pricing & Instant Quotations",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "types.ts",
+              "how": "Function `quote`"
+            },
+            {
+              "file": "components/AIRecoveryHub.tsx",
+              "how": "Function `quote`"
+            },
+            {
+              "file": "components/CorporateBookerPortal.tsx",
+              "how": "Function `quote`"
+            },
+            {
+              "file": "components/CustomerPortal.tsx",
+              "how": "Function `quote`"
+            },
+            {
+              "file": "components/DispatcherPhoneBookingModal.tsx",
+              "how": "Function `quote`"
+            },
+            {
+              "file": "components/PublicVendorQuotePortal.tsx",
+              "how": "Function `quote`"
+            },
+            {
+              "file": "components/SourcingConciergeDesk.tsx",
+              "how": "Function `quote`"
+            },
+            {
+              "file": "components/VendorCommercialGuideModal.tsx",
+              "how": "Function `quote`"
+            },
+            {
+              "file": "components/VendorDispatchPortal.tsx",
+              "how": "Function `quote`"
+            },
+            {
+              "file": "components/VendorFleetAndPricingHub.tsx",
+              "how": "Function `quote`"
+            },
+            {
+              "file": "components/public/GlobalMarketplaceBookingPage.tsx",
+              "how": "Function `quote`"
+            },
+            {
+              "file": "components/public/PublicContactPage.tsx",
+              "how": "Function `quote`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/dispatch/pricing/quick-quote",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "dispatch_quick_quote",
+          "doc": "Calculates instantaneous live quote for dispatch phone intake orders.",
+          "group": "Dynamic Pricing & Instant Quotations",
+          "wrapper": "fetchQuickPhoneQuote",
+          "ui_callers": [
+            {
+              "file": "components/DispatcherPhoneBookingModal.tsx",
+              "how": "API wrapper `fetchQuickPhoneQuote`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/itineraries/quote",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "quote_multi_modal_itinerary",
+          "doc": "No docstring",
+          "group": "Dynamic Pricing & Instant Quotations",
+          "wrapper": "quoteMasterItinerary",
+          "ui_callers": [
+            {
+              "file": "components/CustomerPortal.tsx",
+              "how": "API wrapper `quoteMasterItinerary`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/itineraries/quote-matrix",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "quote_multi_modal_itinerary_matrix",
+          "doc": "Single-Pass Multi-Class Multi-Modal Itinerary Quoting:",
+          "group": "Dynamic Pricing & Instant Quotations",
+          "wrapper": "quoteMasterItineraryMatrix",
+          "ui_callers": [
+            {
+              "file": "components/CustomerPortal.tsx",
+              "how": "API wrapper `quoteMasterItineraryMatrix`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/pricing/fx-rates",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_fx_rates",
+          "doc": "No docstring",
+          "group": "Dynamic Pricing & Instant Quotations",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/GlobalHubAdminPortal.tsx",
+              "how": "URL `/api/v1/pricing/fx-rates`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/pricing/fx-rates/sync",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "sync_live_fx_rates",
+          "doc": "Synchronizes live daily mid-market FX rates from European Central Bank / Open Exchange Feed.",
+          "group": "Dynamic Pricing & Instant Quotations",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/GlobalHubAdminPortal.tsx",
+              "how": "URL `/api/v1/pricing/fx-rates/sync`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/pricing/research-simulate",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "run_pricing_research_simulation",
+          "doc": "Operations Pricing Research & Dynamic Comparison Simulation:",
+          "group": "Dynamic Pricing & Instant Quotations",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/vendor/OperationsPricingResearchStudio.tsx",
+              "how": "URL `/api/v1/pricing/research-simulate`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/pricing/tax-rules",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_regional_tax_rules",
+          "doc": "No docstring",
+          "group": "Dynamic Pricing & Instant Quotations",
+          "wrapper": "fetchRegionalTaxRulesApi",
+          "ui_callers": [
+            {
+              "file": "components/vendor/OperationsPricingResearchStudio.tsx",
+              "how": "API wrapper `fetchRegionalTaxRulesApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/quotes",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "request_quote",
+          "doc": "No docstring",
+          "group": "Dynamic Pricing & Instant Quotations",
+          "wrapper": "requestQuote",
+          "ui_callers": [
+            {
+              "file": "components/CorporateBookerPortal.tsx",
+              "how": "URL `/api/v1/quotes`"
+            },
+            {
+              "file": "components/CustomerPortal.tsx",
+              "how": "API wrapper `requestQuote`"
+            },
+            {
+              "file": "components/MultiVendorComparisonStudio.tsx",
+              "how": "URL `/api/v1/quotes`"
+            },
+            {
+              "file": "components/public/GlobalMarketplaceBookingPage.tsx",
+              "how": "URL `/api/v1/quotes`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/quotes/ai-validate-pricing",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "ai_validate_pricing_quote",
+          "doc": "Leverage Google Gemini / AI Market Intelligence to validate proposed quotes against regional benchmarks.",
+          "group": "Dynamic Pricing & Instant Quotations",
+          "wrapper": "aiValidatePricingQuoteApi",
+          "ui_callers": [
+            {
+              "file": "components/vendor/OperationsPricingResearchStudio.tsx",
+              "how": "API wrapper `aiValidatePricingQuoteApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/quotes/compare",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "compare_market_quotes",
+          "doc": "No docstring",
+          "group": "Dynamic Pricing & Instant Quotations",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/MultiVendorComparisonStudio.tsx",
+              "how": "URL `/api/v1/quotes/compare`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/quotes/matrix",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "request_quote_matrix",
+          "doc": "Lightning-Fast Single-Pass Multi-Class Vehicle Pricing Matrix (<50ms):",
+          "group": "Dynamic Pricing & Instant Quotations",
+          "wrapper": "requestQuoteMatrix",
+          "ui_callers": [
+            {
+              "file": "components/CustomerPortal.tsx",
+              "how": "API wrapper `requestQuoteMatrix`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/quotes/{quote_id}/book",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "accept_and_book",
+          "doc": "No docstring",
+          "group": "Dynamic Pricing & Instant Quotations",
+          "wrapper": "bookQuote",
+          "ui_callers": [
+            {
+              "file": "components/CustomerPortal.tsx",
+              "how": "API wrapper `bookQuote`"
+            },
+            {
+              "file": "components/MultiVendorComparisonStudio.tsx",
+              "how": "API wrapper `bookQuote`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/sourcing/rfp-details/{quote_token}",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_rfp_details_by_token",
+          "doc": "Public endpoint for external vendor quote submission landing page.",
+          "group": "Dynamic Pricing & Instant Quotations",
+          "wrapper": "fetchRfpDetailsByToken",
+          "ui_callers": [
+            {
+              "file": "components/PublicVendorQuotePortal.tsx",
+              "how": "API wrapper `fetchRfpDetailsByToken`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/sourcing/submit-quote",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "submit_vendor_quote",
+          "doc": "Called when an external discovered vendor submits their rate via 1-click quote link.",
+          "group": "Dynamic Pricing & Instant Quotations",
+          "wrapper": "submitVendorQuoteApi",
+          "ui_callers": [
+            {
+              "file": "components/PublicVendorQuotePortal.tsx",
+              "how": "API wrapper `submitVendorQuoteApi`"
+            },
+            {
+              "file": "components/SourcingConciergeDesk.tsx",
+              "how": "API wrapper `submitVendorQuoteApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/ai-validate-pricing",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "ai_validate_vendor_pricing",
+          "doc": "Leverage Google Gemini / AI Market Intelligence to validate a specific vendor's quote.",
+          "group": "Dynamic Pricing & Instant Quotations",
+          "wrapper": "aiValidateVendorPricingApi",
+          "ui_callers": [
+            {
+              "file": "components/vendor/OperationsPricingResearchStudio.tsx",
+              "how": "API wrapper `aiValidateVendorPricingApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/pricing-rules",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_vendor_pricing_rules",
+          "doc": "No docstring",
+          "group": "Dynamic Pricing & Instant Quotations",
+          "wrapper": "fetchVendorPricingRules",
+          "ui_callers": [
+            {
+              "file": "components/VendorFleetAndPricingHub.tsx",
+              "how": "API wrapper `fetchVendorPricingRules`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/pricing-rules",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "save_vendor_pricing_rule",
+          "doc": "No docstring",
+          "group": "Dynamic Pricing & Instant Quotations",
+          "wrapper": "saveVendorPricingRule",
+          "ui_callers": [
+            {
+              "file": "components/VendorFleetAndPricingHub.tsx",
+              "how": "API wrapper `saveVendorPricingRule`"
+            },
+            {
+              "file": "components/vendor/OperationsPricingResearchStudio.tsx",
+              "how": "API wrapper `saveVendorPricingRule`"
+            }
+          ],
+          "is_complete": true
+        }
+      ]
+    },
+    "Bookings, Inbound Leads & Reservations": {
+      "total": 26,
+      "completed": 26,
+      "gaps": 0,
+      "items": [
+        {
+          "path": "/api/v1/bookings",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_bookings",
+          "doc": "No docstring",
+          "group": "Bookings, Inbound Leads & Reservations",
+          "wrapper": "fetchBookings",
+          "ui_callers": [
+            {
+              "file": "components/AIRecoveryHub.tsx",
+              "how": "API wrapper `fetchBookings`"
+            },
+            {
+              "file": "components/DriverApp.tsx",
+              "how": "API wrapper `fetchBookings`"
+            },
+            {
+              "file": "components/DriverMobileDashboard.tsx",
+              "how": "API wrapper `fetchBookings`"
+            },
+            {
+              "file": "components/FlightAwarePlanUpdaterHub.tsx",
+              "how": "API wrapper `fetchBookings`"
+            },
+            {
+              "file": "components/VendorDispatchPortal.tsx",
+              "how": "API wrapper `fetchBookings`"
+            },
+            {
+              "file": "components/public/GlobalMarketplaceBookingPage.tsx",
+              "how": "URL `/api/v1/bookings`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/bookings/lookup",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "lookup_customer_bookings",
+          "doc": "Customer Self-Service Lookup:",
+          "group": "Bookings, Inbound Leads & Reservations",
+          "wrapper": "lookupBookingsApi",
+          "ui_callers": [
+            {
+              "file": "components/public/CustomerBookingsLookupModal.tsx",
+              "how": "API wrapper `lookupBookingsApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/bookings/{booking_id}",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_booking",
+          "doc": "No docstring",
+          "group": "Bookings, Inbound Leads & Reservations",
+          "wrapper": "fetchBooking",
+          "ui_callers": [
+            {
+              "file": "components/public/GlobalMarketplaceBookingPage.tsx",
+              "how": "URL `/api/v1/bookings`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/bookings/{booking_id}/calendar.ics",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_booking_calendar_ics",
+          "doc": "Generates standard RFC 5545 iCalendar (.ics) file for 1-click import into",
+          "group": "Bookings, Inbound Leads & Reservations",
+          "wrapper": "getBookingCalendarIcsUrl",
+          "ui_callers": [
+            {
+              "file": "components/CustomerPortal.tsx",
+              "how": "API wrapper `getBookingCalendarIcsUrl`"
+            },
+            {
+              "file": "components/public/CustomerBookingsLookupModal.tsx",
+              "how": "API wrapper `getBookingCalendarIcsUrl`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/bookings/{booking_id}/cancel",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "cancel_customer_booking",
+          "doc": "Authoritative Customer Self-Service Booking Cancellation:",
+          "group": "Bookings, Inbound Leads & Reservations",
+          "wrapper": "cancelBookingApi",
+          "ui_callers": [
+            {
+              "file": "components/BookingOperationsModal.tsx",
+              "how": "API wrapper `cancelBookingApi`"
+            },
+            {
+              "file": "components/CustomerPortal.tsx",
+              "how": "API wrapper `cancelBookingApi`"
+            },
+            {
+              "file": "components/public/CustomerBookingsLookupModal.tsx",
+              "how": "API wrapper `cancelBookingApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/bookings/{booking_id}/live-tracking",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_booking_live_tracking",
+          "doc": "No docstring",
+          "group": "Bookings, Inbound Leads & Reservations",
+          "wrapper": "fetchBookingLiveTrackingApi",
+          "ui_callers": [
+            {
+              "file": "components/public/LiveRideTrackingModal.tsx",
+              "how": "API wrapper `fetchBookingLiveTrackingApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/bookings/{booking_id}/live-tracking",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_booking_live_tracking",
+          "doc": "Returns live tracking for a booking by reference ID.",
+          "group": "Bookings, Inbound Leads & Reservations",
+          "wrapper": "fetchBookingLiveTrackingApi",
+          "ui_callers": [
+            {
+              "file": "components/public/LiveRideTrackingModal.tsx",
+              "how": "API wrapper `fetchBookingLiveTrackingApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/bookings/{booking_id}/master-invoice/html",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_master_invoice_html",
+          "doc": "Renders the official Master Consolidated Multi-Leg Tax Invoice (HTML / Print PDF).",
+          "group": "Bookings, Inbound Leads & Reservations",
+          "wrapper": "fetchBookingMasterInvoiceHtml",
+          "ui_callers": [
+            {
+              "file": "components/BookingOperationsModal.tsx",
+              "how": "API wrapper `fetchBookingMasterInvoiceHtml`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/bookings/{booking_id}/master-receipt/html",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_master_receipt_html",
+          "doc": "Renders the official Card Payment Receipt (HTML / Print PDF).",
+          "group": "Bookings, Inbound Leads & Reservations",
+          "wrapper": "fetchBookingMasterReceiptHtml",
+          "ui_callers": [
+            {
+              "file": "components/BookingOperationsModal.tsx",
+              "how": "API wrapper `fetchBookingMasterReceiptHtml`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/bookings/{booking_id}/terms-voucher",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_booking_terms_voucher",
+          "doc": "Returns structured printable terms & carriage voucher for this specific booking & vendor.",
+          "group": "Bookings, Inbound Leads & Reservations",
+          "wrapper": "fetchBookingTermsVoucher",
+          "ui_callers": [
+            {
+              "file": "components/CustomerPortal.tsx",
+              "how": "API wrapper `fetchBookingTermsVoucher`"
+            },
+            {
+              "file": "components/public/CustomerBookingsLookupModal.tsx",
+              "how": "API wrapper `fetchBookingTermsVoucher`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/corporate/bookings",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "create_corporate_booking",
+          "doc": "No docstring",
+          "group": "Bookings, Inbound Leads & Reservations",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/CorporateBookerPortal.tsx",
+              "how": "URL `/api/v1/corporate/bookings`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/coverage/inquiry",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "submit_sourcing_inquiry",
+          "doc": "Submits a sourcing inquiry ticket for an uncontracted REQUEST_ONLY corridor.",
+          "group": "Bookings, Inbound Leads & Reservations",
+          "wrapper": "submitSourcingInquiry",
+          "ui_callers": [
+            {
+              "file": "components/SourcingConciergeDesk.tsx",
+              "how": "API wrapper `submitSourcingInquiry`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/dispatch/bookings/phone-intake",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "create_phone_intake_booking",
+          "doc": "Creates authoritative reservation booked over the telephone by dispatcher.",
+          "group": "Bookings, Inbound Leads & Reservations",
+          "wrapper": "createManualPhoneBooking",
+          "ui_callers": [
+            {
+              "file": "components/DispatcherPhoneBookingModal.tsx",
+              "how": "API wrapper `createManualPhoneBooking`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/dispatch/bookings/{booking_id}/pod",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_booking_proof_of_delivery",
+          "doc": "Fetches the Digital Proof of Execution (POD) certificate, GPS log, and 24h Escrow status.",
+          "group": "Bookings, Inbound Leads & Reservations",
+          "wrapper": "fetchBookingPodApi",
+          "ui_callers": [
+            {
+              "file": "components/BookingOperationsModal.tsx",
+              "how": "API wrapper `fetchBookingPodApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/dispatch/bookings/{booking_id}/pod/dispute",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "dispute_booking_delivery",
+          "doc": "Originating vendor pauses 24h escrow settlement due to customer quality dispute.",
+          "group": "Bookings, Inbound Leads & Reservations",
+          "wrapper": "disputeBookingDeliveryApi",
+          "ui_callers": [
+            {
+              "file": "components/BookingOperationsModal.tsx",
+              "how": "API wrapper `disputeBookingDeliveryApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/dispatch/bookings/{booking_id}/pod/incidentals/approve",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "approve_booking_incidentals",
+          "doc": "Originating vendor approves incidentals and captures supplementary charge.",
+          "group": "Bookings, Inbound Leads & Reservations",
+          "wrapper": "approveBookingIncidentalsApi",
+          "ui_callers": [
+            {
+              "file": "components/BookingOperationsModal.tsx",
+              "how": "API wrapper `approveBookingIncidentalsApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/dispatch/bookings/{booking_id}/pod/incidentals/request",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "request_booking_incidentals",
+          "doc": "Performing vendor requests extra wait time, tolls, or stops.",
+          "group": "Bookings, Inbound Leads & Reservations",
+          "wrapper": "requestBookingIncidentalsApi",
+          "ui_callers": [
+            {
+              "file": "components/BookingOperationsModal.tsx",
+              "how": "API wrapper `requestBookingIncidentalsApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/dispatch/bookings/{booking_id}/process-payment",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "process_booking_payment_operations",
+          "doc": "Operations Team Fallback Payment Processor:",
+          "group": "Bookings, Inbound Leads & Reservations",
+          "wrapper": "processBookingPaymentOperationsApi",
+          "ui_callers": [
+            {
+              "file": "components/BookingOperationsModal.tsx",
+              "how": "API wrapper `processBookingPaymentOperationsApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/dispatch/bookings/{booking_id}/refund",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "process_booking_refund_operations",
+          "doc": "Operations Team Refund, Discount & Return Processor:",
+          "group": "Bookings, Inbound Leads & Reservations",
+          "wrapper": "processBookingRefundOperationsApi",
+          "ui_callers": [
+            {
+              "file": "components/BookingOperationsModal.tsx",
+              "how": "API wrapper `processBookingRefundOperationsApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/inquiries",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "create_inquiry_endpoint",
+          "doc": "Ingests public storefront VIP Inquiries & Quote Requests.",
+          "group": "Bookings, Inbound Leads & Reservations",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/VendorDispatchPortal.tsx",
+              "how": "URL `/api/v1/inquiries`"
+            },
+            {
+              "file": "components/public/PublicContactPage.tsx",
+              "how": "URL `/api/v1/inquiries`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/inquiries/{inquiry_id}",
+          "methods": [
+            "PATCH"
+          ],
+          "func_name": "update_inquiry_status",
+          "doc": "Updates status and notes for a VIP inquiry.",
+          "group": "Bookings, Inbound Leads & Reservations",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/VendorDispatchPortal.tsx",
+              "how": "URL `/api/v1/inquiries`"
+            },
+            {
+              "file": "components/public/PublicContactPage.tsx",
+              "how": "URL `/api/v1/inquiries`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/inquiries/{inquiry_id}/convert-booking",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "convert_inquiry_to_booking",
+          "doc": "Directly converts a VIP Inquiry into a real authoritative Booking and Trip in the database.",
+          "group": "Bookings, Inbound Leads & Reservations",
+          "wrapper": "convertInquiryToBookingApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorDispatchPortal.tsx",
+              "how": "API wrapper `convertInquiryToBookingApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/inquiries/{inquiry_id}/trigger-drip",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "trigger_inquiry_drip",
+          "doc": "Advances the Autonomous Multi-Touch Follow-Up Drip pipeline for unconverted inquiries.",
+          "group": "Bookings, Inbound Leads & Reservations",
+          "wrapper": "triggerInquiryDripApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorDispatchPortal.tsx",
+              "how": "API wrapper `triggerInquiryDripApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/support-desk/pods",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_regional_pods_endpoint",
+          "doc": "Returns all geographical staffing pods (US East, US West, EMEA) and localized airport coverage.",
+          "group": "Bookings, Inbound Leads & Reservations",
+          "wrapper": "fetchRegionalStaffingPods",
+          "ui_callers": [
+            {
+              "file": "components/GlobalSupportDeskHub.tsx",
+              "how": "API wrapper `fetchRegionalStaffingPods`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/bookings",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_vendor_bookings",
+          "doc": "Returns rich, authoritative bookings for this specific vendor cell from MySQL + in-memory store.",
+          "group": "Bookings, Inbound Leads & Reservations",
+          "wrapper": "fetchVendorBookingsApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorDispatchPortal.tsx",
+              "how": "API wrapper `fetchVendorBookingsApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/inquiries",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_vendor_inquiries",
+          "doc": "Returns all inquiries logged for a specific vendor cell.",
+          "group": "Bookings, Inbound Leads & Reservations",
+          "wrapper": "fetchVendorInquiriesApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorDispatchPortal.tsx",
+              "how": "API wrapper `fetchVendorInquiriesApi`"
+            }
+          ],
+          "is_complete": true
+        }
+      ]
+    },
+    "Vendor White-Label Branding & Cell Config": {
+      "total": 48,
+      "completed": 32,
+      "gaps": 16,
+      "items": [
+        {
+          "path": "/api/v1/bookings/{booking_id}/email-receipt",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_booking_email_receipt",
+          "doc": "Returns the rendered luxury HTML payment authorization email for a booking.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/infrastructure/cells",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_infrastructure_cells",
+          "doc": "Returns full infrastructure telemetry (CPU, Memory, Latency, Storage, AWS Region, Custom Domain, SSL, AWS Sync Status)",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/GlobalHubAdminPortal.tsx",
+              "how": "URL `/api/v1/infrastructure/cells`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/infrastructure/cells/bulk-push-aws",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "bulk_push_cells_to_aws",
+          "doc": "Bulk deploys multiple sovereign cells to AWS Cloud.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/GlobalHubAdminPortal.tsx",
+              "how": "URL `/api/v1/infrastructure/cells/bulk-push-aws`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/infrastructure/cells/{vendor_id}",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_cell_infrastructure",
+          "doc": "No docstring",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/GlobalHubAdminPortal.tsx",
+              "how": "URL `/api/v1/infrastructure/cells`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/infrastructure/cells/{vendor_id}/compliance-vault",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_cell_compliance_vault",
+          "doc": "Returns the legal and compliance documents (COI, Operating Authority, KYB, TCR) for a vendor cell.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/infrastructure/cells/{vendor_id}/domain-mapping",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_cell_domain_mapping",
+          "doc": "No docstring",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "fetchCellDomainMappingApi",
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/infrastructure/cells/{vendor_id}/domain-mapping",
+          "methods": [
+            "PUT"
+          ],
+          "func_name": "update_cell_domain_mapping",
+          "doc": "Updates the custom domain for a cell and creates Route53 CNAME + ACM validation records.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "updateCellDomainMappingApi",
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/infrastructure/cells/{vendor_id}/lifecycle",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "execute_cell_lifecycle",
+          "doc": "Controls sovereign cell container/pod lifecycle: start, stop, restart, suspend, scale.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/infrastructure/cells/{vendor_id}/push-to-aws",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "push_cell_infrastructure_to_aws",
+          "doc": "Automated One-Click AWS Cloud Push:",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/infrastructure/cells/{vendor_id}/start",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "start_sovereign_cell_endpoint",
+          "doc": "Restarts and re-enables traffic routing to the sovereign cell (ONLINE_HEALTHY).",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/infrastructure/cells/{vendor_id}/stop",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "stop_sovereign_cell_endpoint",
+          "doc": "Pauses and stops public traffic routing to the sovereign cell (SUSPENDED / STOPPED).",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/infrastructure/cells/{vendor_id}/terminate",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "terminate_sovereign_cell_endpoint",
+          "doc": "Permanently terminates the sovereign cell container, deregisters port, and decommissions cell.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/sourcing/inbound-email-webhook",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "receive_inbound_vendor_email_webhook",
+          "doc": "Ingests raw inbound email responses from AWS SES / SendGrid / Mailgun or test payloads.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/SourcingConciergeDesk.tsx",
+              "how": "URL `/api/v1/sourcing/inbound-email-webhook`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendor-cell/cells",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_vendor_cells",
+          "doc": "Lists all dynamically provisioned sovereign vendor cells.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "listVendorCellsApi",
+          "ui_callers": [
+            {
+              "file": "components/AIRecoveryHub.tsx",
+              "how": "API wrapper `listVendorCellsApi`"
+            },
+            {
+              "file": "components/VendorCellAndGlobalHubStudio.tsx",
+              "how": "API wrapper `listVendorCellsApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendor-cell/manifest-template",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_vendor_manifest_template",
+          "doc": "Returns the authoritative declarative YAML schema template for provisioning a new vendor cell.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "fetchVendorManifestTemplateApi",
+          "ui_callers": [
+            {
+              "file": "components/GlobalHubAdminPortal.tsx",
+              "how": "URL `/api/v1/vendor-cell/manifest-template`"
+            },
+            {
+              "file": "components/VendorCellAndGlobalHubStudio.tsx",
+              "how": "API wrapper `fetchVendorManifestTemplateApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendor-cell/spin-up",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "spin_up_vendor_cell",
+          "doc": "Declaratively spins up an isolated vendor cell with private partition, rate card & branding.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "spinUpVendorCellApi",
+          "ui_callers": [
+            {
+              "file": "components/GlobalHubAdminPortal.tsx",
+              "how": "URL `/api/v1/vendor-cell/spin-up`"
+            },
+            {
+              "file": "components/VendorCellAndGlobalHubStudio.tsx",
+              "how": "API wrapper `spinUpVendorCellApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendor-cell/validate-yaml",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "validate_vendor_yaml",
+          "doc": "Validates declarative vendor YAML manifest against schema, integrity, and collision checks.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "validateVendorYamlApi",
+          "ui_callers": [
+            {
+              "file": "components/GlobalHubAdminPortal.tsx",
+              "how": "URL `/api/v1/vendor-cell/validate-yaml`"
+            },
+            {
+              "file": "components/VendorCellAndGlobalHubStudio.tsx",
+              "how": "API wrapper `validateVendorYamlApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendor-cell/{vendor_id}/affiliate/farm-out",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "farm_out_affiliate_ride",
+          "doc": "Cross-dispatches overflow ride to an affiliated partner cell with 85/10/5 escrow clearing.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "farmOutAffiliateRide",
+          "ui_callers": [
+            {
+              "file": "components/VendorCellAndGlobalHubStudio.tsx",
+              "how": "API wrapper `farmOutAffiliateRide`"
+            },
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `farmOutAffiliateRide`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendor-cell/{vendor_id}/affiliate/records",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_vendor_affiliate_records",
+          "doc": "Retrieves all farmed-in, farmed-out, and earned commission records for a vendor cell.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "fetchVendorAffiliateRecords",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `fetchVendorAffiliateRecords`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendor-cell/{vendor_id}/booking/direct",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "create_vendor_cell_direct_booking",
+          "doc": "Executes direct booking inside the vendor's isolated cellular engine and queues outbox event.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/vendor-cell/{vendor_id}/circuit-breaker",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "toggle_vendor_cell_circuit_breaker",
+          "doc": "Sets circuit breaker status for graceful local fallback during upstream outages.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "toggleVendorCellCircuitBreakerApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorCellAndGlobalHubStudio.tsx",
+              "how": "API wrapper `toggleVendorCellCircuitBreakerApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendor-cell/{vendor_id}/email/config",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_vendor_email_config",
+          "doc": "Retrieves vendor's active BYOE email gateway settings.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "fetchVendorEmailConfigApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `fetchVendorEmailConfigApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendor-cell/{vendor_id}/email/config",
+          "methods": [
+            "PUT"
+          ],
+          "func_name": "update_vendor_email_config",
+          "doc": "Updates vendor's custom SMTP / AWS SES / SendGrid / Postmark configuration.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "updateVendorEmailConfigApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `updateVendorEmailConfigApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendor-cell/{vendor_id}/email/inbound-parse",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "parse_vendor_inbound_email",
+          "doc": "Parses inbound travel desk email RFQ and calculates instant sovereign quote.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "parseVendorInboundEmailApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorCellAndGlobalHubStudio.tsx",
+              "how": "API wrapper `parseVendorInboundEmailApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendor-cell/{vendor_id}/email/inbox",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_vendor_email_inbox",
+          "doc": "Retrieves full email telemetry: Inbound RFQs, Outbound confirmations, and active BYOE config.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "fetchVendorEmailInboxApi",
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/vendor-cell/{vendor_id}/email/outbound-dispatch",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "dispatch_vendor_outbound_email",
+          "doc": "Generates and dispatches branded outbound booking confirmation email with DKIM/SPF.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "dispatchVendorOutboundEmailApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorCellAndGlobalHubStudio.tsx",
+              "how": "API wrapper `dispatchVendorOutboundEmailApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendor-cell/{vendor_id}/email/rfqs/{rfq_id}/convert-booking",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "convert_email_rfq_to_booking",
+          "doc": "1-Click converts an Inbound Email RFQ directly into a confirmed reservation with Stripe Pre-Auth hold.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "convertEmailRfqToBookingApi",
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/vendor-cell/{vendor_id}/email/send-invoice",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "send_vendor_trip_invoice",
+          "doc": "Dispatches branded final PDF tax invoice and Stripe charge receipt upon ride completion.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "sendVendorTripInvoiceEmailApi",
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/vendor-cell/{vendor_id}/email/test",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "test_vendor_email_connection",
+          "doc": "Sends a live test verification email ping using the vendor's active email gateway.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "testVendorEmailConnectionApi",
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/vendor-cell/{vendor_id}/email/test-inbound",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "test_vendor_inbound_email_connection",
+          "doc": "Tests inbound IMAP/POP3 host, port, credentials, and mailbox polling readiness.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "testVendorInboundEmailConnectionApi",
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/vendor-cell/{vendor_id}/onboarding-invite",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "send_vendor_onboarding_invite",
+          "doc": "Dispatches a setup guidance email to the vendor owner with direct links to remaining milestones.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "sendVendorOnboardingInvite",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `sendVendorOnboardingInvite`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendor-cell/{vendor_id}/onboarding-status",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_vendor_onboarding_status",
+          "doc": "Retrieves the 7-milestone progressive onboarding readiness score and setup checklist.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "fetchVendorOnboardingStatus",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `fetchVendorOnboardingStatus`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendor-cell/{vendor_id}/outbox/sync",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "sync_vendor_outbox_to_global_hub",
+          "doc": "Asynchronously syncs queued outbox events from the vendor cell into the Global Hub.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "syncVendorOutboxToGlobalHubApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorCellAndGlobalHubStudio.tsx",
+              "how": "API wrapper `syncVendorOutboxToGlobalHubApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendor-cell/{vendor_id}/portal-config",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_vendor_portal_config",
+          "doc": "Retrieves white-label customer portal branding, colors, tariffs, and phone numbers.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "fetchVendorPortalConfig",
+          "ui_callers": [
+            {
+              "file": "App.tsx",
+              "how": "API wrapper `fetchVendorPortalConfig`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendor-cell/{vendor_id}/status",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_vendor_cell_status",
+          "doc": "Retrieves isolated cell status, circuit breaker health, outbox queue depth, and DB partition.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "fetchVendorCellStatusApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorCellAndGlobalHubStudio.tsx",
+              "how": "API wrapper `fetchVendorCellStatusApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendor-cell/{vendor_id}/team",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_vendor_team",
+          "doc": "Retrieves active team personnel roster (Owners, Dispatchers, Chauffeurs, Corporate Bookers).",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "fetchVendorTeam",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `fetchVendorTeam`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendor-cell/{vendor_id}/team",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "create_vendor_team_member",
+          "doc": "Creates/invites a new team member with assigned role and granular permissions.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "createVendorTeamMember",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `createVendorTeamMember`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendor-cell/{vendor_id}/team/roles-matrix",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_vendor_roles_matrix",
+          "doc": "Returns the platform-wide RBAC role hierarchy, allowed capabilities, and default permission sets.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "fetchVendorRolesMatrix",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `fetchVendorRolesMatrix`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendor-cell/{vendor_id}/team/{user_id}",
+          "methods": [
+            "DELETE"
+          ],
+          "func_name": "delete_vendor_team_member",
+          "doc": "Revokes access and removes a team member from the sovereign vendor cell.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "deleteVendorTeamMember",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `deleteVendorTeamMember`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendor-cell/{vendor_id}/team/{user_id}",
+          "methods": [
+            "PUT"
+          ],
+          "func_name": "update_vendor_team_member",
+          "doc": "Updates team member role, permissions, status, or details.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "updateVendorTeamMember",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `updateVendorTeamMember`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendor-cell/{vendor_id}/team/{user_id}/impersonate-token",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "generate_team_member_impersonate_token",
+          "doc": "Generates an instant signed JWT access token for testing or direct persona switching.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "generateTeamMemberImpersonateToken",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `generateTeamMemberImpersonateToken`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendor-portal/resolve-domain",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "resolve_vendor_domain",
+          "doc": "Resolves white-label branding, tariff card, and metadata from incoming domain/subdomain or encrypted token.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "resolveVendorDomainApi",
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/vendor-portal/resolve-token",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "resolve_vendor_token",
+          "doc": "Decrypts and authenticates a secure vendor token and returns its white-label branding profile.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "resolveVendorPortalTokenApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorCellAndGlobalHubStudio.tsx",
+              "how": "API wrapper `resolveVendorPortalTokenApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendor-portal/token/{vendor_id}",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "generate_vendor_token",
+          "doc": "Generates an encrypted, obfuscated URL token for a sovereign vendor cell.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "generateVendorPortalTokenApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorCellAndGlobalHubStudio.tsx",
+              "how": "API wrapper `generateVendorPortalTokenApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/register",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "register_vendor",
+          "doc": "No docstring",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "registerVendor",
+          "ui_callers": [
+            {
+              "file": "components/VendorRegistrationPortal.tsx",
+              "how": "API wrapper `registerVendor`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/branding",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_vendor_branding_settings",
+          "doc": "Retrieves white-label logo, operating code, and invoice custom footer for a vendor.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "fetchVendorBrandingSettingsApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `fetchVendorBrandingSettingsApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/branding",
+          "methods": [
+            "PUT"
+          ],
+          "func_name": "update_vendor_branding_settings",
+          "doc": "Updates vendor logo URL, brand color, operating code, and custom invoice footer.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "updateVendorBrandingSettingsApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `updateVendorBrandingSettingsApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/seo-schema",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_vendor_seo_schema",
+          "doc": "Generates dynamic JSON-LD Schema.org structured data for Google Search rich snippets.",
+          "group": "Vendor White-Label Branding & Cell Config",
+          "wrapper": "fetchVendorSeoSchemaApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `fetchVendorSeoSchemaApi`"
+            }
+          ],
+          "is_complete": true
+        }
+      ]
+    },
+    "Driver Management & Chauffeur Operations": {
+      "total": 14,
+      "completed": 14,
+      "gaps": 0,
+      "items": [
+        {
+          "path": "/api/v1/chauffeur/{driver_id}/duty-status",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_chauffeur_duty_status",
+          "doc": "Returns chauffeur shift hours and fatigue / rest compliance status.",
+          "group": "Driver Management & Chauffeur Operations",
+          "wrapper": "fetchChauffeurDutyStatusApi",
+          "ui_callers": [
+            {
+              "file": "components/DriverMobileDashboard.tsx",
+              "how": "API wrapper `fetchChauffeurDutyStatusApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/dispatch/assign-24h-driver",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "assign_24h_chauffeur",
+          "doc": "Assigns recommended or chosen chauffeur to a scheduled trip in the 24-hour dispatch window.",
+          "group": "Driver Management & Chauffeur Operations",
+          "wrapper": "assign24hChauffeur",
+          "ui_callers": [
+            {
+              "file": "components/VendorDispatchPortal.tsx",
+              "how": "API wrapper `assign24hChauffeur`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/driver/my-offers",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_driver_offers",
+          "doc": "No docstring",
+          "group": "Driver Management & Chauffeur Operations",
+          "wrapper": "fetchDriverOffers",
+          "ui_callers": [
+            {
+              "file": "components/DriverApp.tsx",
+              "how": "API wrapper `fetchDriverOffers`"
+            },
+            {
+              "file": "components/DriverMobileDashboard.tsx",
+              "how": "API wrapper `fetchDriverOffers`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/driver/offers/{offer_id}/accept",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "accept_offer",
+          "doc": "No docstring",
+          "group": "Driver Management & Chauffeur Operations",
+          "wrapper": "acceptDriverOffer",
+          "ui_callers": [
+            {
+              "file": "components/DriverApp.tsx",
+              "how": "API wrapper `acceptDriverOffer`"
+            },
+            {
+              "file": "components/DriverMobileDashboard.tsx",
+              "how": "API wrapper `acceptDriverOffer`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/driver/trips/{trip_id}/events",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "update_trip_event",
+          "doc": "No docstring",
+          "group": "Driver Management & Chauffeur Operations",
+          "wrapper": "updateTripStatus",
+          "ui_callers": [
+            {
+              "file": "components/DriverApp.tsx",
+              "how": "API wrapper `updateTripStatus`"
+            },
+            {
+              "file": "components/DriverMobileDashboard.tsx",
+              "how": "API wrapper `updateTripStatus`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/drivers/{driver_id}/documents",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_driver_documents",
+          "doc": "Returns all verified credential documents (TLC, medical, airport badges) for a chauffeur.",
+          "group": "Driver Management & Chauffeur Operations",
+          "wrapper": "fetchDriverDocuments",
+          "ui_callers": [
+            {
+              "file": "components/DriverMobileDashboard.tsx",
+              "how": "API wrapper `fetchDriverDocuments`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/drivers/{driver_id}/documents/upload",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "upload_driver_document_endpoint",
+          "doc": "Uploads a chauffeur credential photo/document directly from Driver Mobile App to S3 vault.",
+          "group": "Driver Management & Chauffeur Operations",
+          "wrapper": "uploadDriverDocumentApi",
+          "ui_callers": [
+            {
+              "file": "components/DriverManagementModal.tsx",
+              "how": "API wrapper `uploadDriverDocumentApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/recovery/simulate-driver-timeout",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "simulate_driver_timeout",
+          "doc": "No docstring",
+          "group": "Driver Management & Chauffeur Operations",
+          "wrapper": "simulateDriverTimeout",
+          "ui_callers": [
+            {
+              "file": "components/AIRecoveryHub.tsx",
+              "how": "API wrapper `simulateDriverTimeout`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/telemetry/driver-location",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "ingest_driver_location_ping",
+          "doc": "Ingests live GPS coordinates from the Driver Mobile Web App and persists real-time telemetry.",
+          "group": "Driver Management & Chauffeur Operations",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/DriverMobileDashboard.tsx",
+              "how": "URL `/api/v1/telemetry/driver-location`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendor-app/trips/settle-driver-payout",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "settle_driver_payout_endpoint",
+          "doc": "Processes driver compensation split, logs to MySQL payout ledger, and simulates instant Stripe transfer.",
+          "group": "Driver Management & Chauffeur Operations",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/DriverMobileDashboard.tsx",
+              "how": "URL `/api/v1/vendor-app/trips/settle-driver-payout`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/drivers",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_vendor_drivers",
+          "doc": "No docstring",
+          "group": "Driver Management & Chauffeur Operations",
+          "wrapper": "fetchVendorDriversApi",
+          "ui_callers": [
+            {
+              "file": "components/DriverManagementModal.tsx",
+              "how": "API wrapper `fetchVendorDriversApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/drivers",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_vendor_drivers",
+          "doc": "Returns the chauffeur roster strictly belonging to this specific vendor cell.",
+          "group": "Driver Management & Chauffeur Operations",
+          "wrapper": "fetchVendorDriversApi",
+          "ui_callers": [
+            {
+              "file": "components/DriverManagementModal.tsx",
+              "how": "API wrapper `fetchVendorDriversApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/drivers",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "create_vendor_driver",
+          "doc": "Enrolls a new chauffeur strictly scoped to this vendor cell.",
+          "group": "Driver Management & Chauffeur Operations",
+          "wrapper": "createVendorDriverApi",
+          "ui_callers": [
+            {
+              "file": "components/DriverManagementModal.tsx",
+              "how": "API wrapper `createVendorDriverApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/drivers/{driver_id}/compensation-model",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "update_driver_compensation_model",
+          "doc": "Updates a chauffeur's compensation structure (1099 Contractor split vs W-2 hourly vs salaried).",
+          "group": "Driver Management & Chauffeur Operations",
+          "wrapper": "updateDriverCompensationModelApi",
+          "ui_callers": [
+            {
+              "file": "components/DriverManagementModal.tsx",
+              "how": "API wrapper `updateDriverCompensationModelApi`"
+            }
+          ],
+          "is_complete": true
+        }
+      ]
+    },
+    "Corporate Accounts & B2B Portal": {
+      "total": 5,
+      "completed": 4,
+      "gaps": 1,
+      "items": [
+        {
+          "path": "/api/v1/corporate/accounts",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_corporate_accounts",
+          "doc": "No docstring",
+          "group": "Corporate Accounts & B2B Portal",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/CorporateBookerPortal.tsx",
+              "how": "URL `/api/v1/corporate/accounts`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/corporate/accounts",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "create_corporate_account",
+          "doc": "No docstring",
+          "group": "Corporate Accounts & B2B Portal",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/CorporateBookerPortal.tsx",
+              "how": "URL `/api/v1/corporate/accounts`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/corporate/accounts/{account_id}",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_corporate_account",
+          "doc": "No docstring",
+          "group": "Corporate Accounts & B2B Portal",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/CorporateBookerPortal.tsx",
+              "how": "URL `/api/v1/corporate/accounts`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/corporate/accounts/{account_id}/cost-centers",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "add_cost_center",
+          "doc": "No docstring",
+          "group": "Corporate Accounts & B2B Portal",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/corporate/validate-policy",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "validate_corporate_policy",
+          "doc": "No docstring",
+          "group": "Corporate Accounts & B2B Portal",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/CorporateBookerPortal.tsx",
+              "how": "URL `/api/v1/corporate/validate-policy`"
+            }
+          ],
+          "is_complete": true
+        }
+      ]
+    },
+    "Voice AI Concierge & Omnichannel Telephony": {
+      "total": 22,
+      "completed": 17,
+      "gaps": 5,
+      "items": [
+        {
+          "path": "/api/v1/corporate/invoices/{account_id}",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_corporate_invoices",
+          "doc": "No docstring",
+          "group": "Voice AI Concierge & Omnichannel Telephony",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/CorporateBookerPortal.tsx",
+              "how": "URL `/api/v1/corporate/invoices`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/corporate/invoices/{invoice_id}/csv",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "export_invoice_csv",
+          "doc": "No docstring",
+          "group": "Voice AI Concierge & Omnichannel Telephony",
+          "wrapper": "exportCorporateInvoiceCsvApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `exportCorporateInvoiceCsvApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/hub/vendors/{vendor_id}/send-invoice",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "send_vendor_invoice_endpoint",
+          "doc": "Generates and emails an official itemized monthly statement / invoice to the vendor.",
+          "group": "Voice AI Concierge & Omnichannel Telephony",
+          "wrapper": "sendVendorInvoiceFromHubApi",
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/support-desk/voice/resolve-inbound",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "resolve_inbound_voice_endpoint",
+          "doc": "Resolves an incoming voice call via dedicated local DID or 1-800 PIN extension,",
+          "group": "Voice AI Concierge & Omnichannel Telephony",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/support-desk/voice/twiml-inbound",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "get_inbound_twiml_xml",
+          "doc": "Returns dynamic TwiML XML to Twilio Voice carrier SIP trunks,",
+          "group": "Voice AI Concierge & Omnichannel Telephony",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/omnichannel/config",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "update_vendor_omnichannel_config",
+          "doc": "Configures BYOK custom keys vs Turnkey SaaS Gateway with automatic fail-safe fallback.",
+          "group": "Voice AI Concierge & Omnichannel Telephony",
+          "wrapper": "updateVendorOmnichannelConfigApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `updateVendorOmnichannelConfigApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/omnichannel/desk",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_vendor_omnichannel_desk",
+          "doc": "Retrieves consolidated omnichannel workspace (Voice Studio, WhatsApp/SMS chat, Email desk, SEO engine).",
+          "group": "Voice AI Concierge & Omnichannel Telephony",
+          "wrapper": "fetchOmnichannelWorkspaceApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `fetchOmnichannelWorkspaceApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/omnichannel/dial-call",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "record_voice_studio_call",
+          "doc": "Triggers a live outbound Twilio phone call and logs the voice session.",
+          "group": "Voice AI Concierge & Omnichannel Telephony",
+          "wrapper": "recordVoiceStudioCallApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `recordVoiceStudioCallApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/omnichannel/send-message",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "send_omnichannel_chat_message",
+          "doc": "Dispatches an outbound SMS or WhatsApp message with TCPA compliance checks.",
+          "group": "Voice AI Concierge & Omnichannel Telephony",
+          "wrapper": "sendOmnichannelMessageApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `sendOmnichannelMessageApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/telecom-compliance",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_vendor_telecom_compliance",
+          "doc": "Retrieves live A2P 10DLC Brand, Campaign, STIR/SHAKEN, and TCPA compliance status.",
+          "group": "Voice AI Concierge & Omnichannel Telephony",
+          "wrapper": "fetchVendorTelecomCompliance",
+          "ui_callers": [
+            {
+              "file": "components/VoiceAIStudio.tsx",
+              "how": "API wrapper `fetchVendorTelecomCompliance`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/telecom-compliance/inbound-sms",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "process_inbound_sms_compliance",
+          "doc": "Processes inbound SMS against TCPA opt-out keywords (STOP/HELP/START).",
+          "group": "Voice AI Concierge & Omnichannel Telephony",
+          "wrapper": "processInboundSmsComplianceApi",
+          "ui_callers": [
+            {
+              "file": "components/VoiceAIStudio.tsx",
+              "how": "API wrapper `processInboundSmsComplianceApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/telecom-compliance/register-brand",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "register_vendor_brand",
+          "doc": "Submits A2P 10DLC Brand registration to carrier vetting in-process.",
+          "group": "Voice AI Concierge & Omnichannel Telephony",
+          "wrapper": "registerVendor10DlcBrand",
+          "ui_callers": [
+            {
+              "file": "components/VoiceAIStudio.tsx",
+              "how": "API wrapper `registerVendor10DlcBrand`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/voice-call-intake",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "execute_voice_call_intake",
+          "doc": "No docstring",
+          "group": "Voice AI Concierge & Omnichannel Telephony",
+          "wrapper": "executeVoiceCallIntakeApi",
+          "ui_callers": [
+            {
+              "file": "components/VoiceAIStudio.tsx",
+              "how": "API wrapper `executeVoiceCallIntakeApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/voice/barge-in",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "trigger_voice_barge_in",
+          "doc": "No docstring",
+          "group": "Voice AI Concierge & Omnichannel Telephony",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/VoiceAIStudio.tsx",
+              "how": "URL `/api/v1/voice/barge-in`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/voice/consent",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "submit_voice_consent",
+          "doc": "No docstring",
+          "group": "Voice AI Concierge & Omnichannel Telephony",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/VoiceAIStudio.tsx",
+              "how": "URL `/api/v1/voice/consent`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/voice/session/{session_id}",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_voice_session",
+          "doc": "No docstring",
+          "group": "Voice AI Concierge & Omnichannel Telephony",
+          "wrapper": "fetchVoiceSessionApi",
+          "ui_callers": [
+            {
+              "file": "components/VoiceAIStudio.tsx",
+              "how": "API wrapper `fetchVoiceSessionApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/voice/simulate-call",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "simulate_voice_call",
+          "doc": "Simulates an end-to-end voice telephony call session with consent, quoting, and hold pre-auth.",
+          "group": "Voice AI Concierge & Omnichannel Telephony",
+          "wrapper": "simulateVoiceCallApi",
+          "ui_callers": [
+            {
+              "file": "components/VoiceAIStudio.tsx",
+              "how": "API wrapper `simulateVoiceCallApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/voice/utterance",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "process_voice_utterance",
+          "doc": "No docstring",
+          "group": "Voice AI Concierge & Omnichannel Telephony",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/VoiceAIStudio.tsx",
+              "how": "URL `/api/v1/voice/utterance`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/webhooks/twilio/voice",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "webhook_twilio_voice",
+          "doc": "Ingests Twilio Voice IVR inbound calls and returns TwiML speech XML with dynamic quote.",
+          "group": "Voice AI Concierge & Omnichannel Telephony",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/webhooks/twilio/whatsapp",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "webhook_twilio_whatsapp",
+          "doc": "Ingests Twilio WhatsApp inbound chat and returns quote text with deep-link checkout.",
+          "group": "Voice AI Concierge & Omnichannel Telephony",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/ws/voice/stream",
+          "methods": [
+            "WS/MOUNT"
+          ],
+          "func_name": "voice_websocket_stream",
+          "doc": "Bi-directional real-time WebSocket audio & turn-taking stream for Voice AI Concierge.",
+          "group": "Voice AI Concierge & Omnichannel Telephony",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/VoiceAIStudio.tsx",
+              "how": "URL `/ws/voice/stream`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/ws/voice/twilio/media",
+          "methods": [
+            "WS/MOUNT"
+          ],
+          "func_name": "twilio_voice_media_stream",
+          "doc": "Twilio Media Streams bi-directional audio WebSocket gateway.",
+          "group": "Voice AI Concierge & Omnichannel Telephony",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/VoiceAIStudio.tsx",
+              "how": "URL `/ws/voice/twilio/media`"
+            }
+          ],
+          "is_complete": true
+        }
+      ]
+    },
+    "Fleet Assets & Vehicle Inventory": {
+      "total": 10,
+      "completed": 10,
+      "gaps": 0,
+      "items": [
+        {
+          "path": "/api/v1/fleet/drivers",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_drivers",
+          "doc": "No docstring",
+          "group": "Fleet Assets & Vehicle Inventory",
+          "wrapper": "fetchDrivers",
+          "ui_callers": [
+            {
+              "file": "components/DriverManagementModal.tsx",
+              "how": "API wrapper `fetchDrivers`"
+            },
+            {
+              "file": "components/VendorDispatchPortal.tsx",
+              "how": "API wrapper `fetchDrivers`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/fleet/vehicle-options",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_vehicle_options",
+          "doc": "Authoritative Vehicle Class & Fleet Showroom Options from MySQL Database.",
+          "group": "Fleet Assets & Vehicle Inventory",
+          "wrapper": "fetchVehicleOptions",
+          "ui_callers": [
+            {
+              "file": "components/CustomerPortal.tsx",
+              "how": "API wrapper `fetchVehicleOptions`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/fleet/vehicles",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_vehicles",
+          "doc": "No docstring",
+          "group": "Fleet Assets & Vehicle Inventory",
+          "wrapper": "fetchAllVehicles",
+          "ui_callers": [
+            {
+              "file": "components/GlobalHubAdminPortal.tsx",
+              "how": "API wrapper `fetchAllVehicles`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/fleet-inventory",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_vendor_fleet_inventory",
+          "doc": "Returns the exclusive, isolated fleet inventory strictly owned by this specific vendor cell.",
+          "group": "Fleet Assets & Vehicle Inventory",
+          "wrapper": "fetchVendorFleetInventory",
+          "ui_callers": [
+            {
+              "file": "components/VendorFleetAndPricingHub.tsx",
+              "how": "API wrapper `fetchVendorFleetInventory`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/fleet-inventory",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "create_vendor_vehicle",
+          "doc": "Registers a new vehicle strictly bound to this sovereign vendor's fleet inventory with S3 photos.",
+          "group": "Fleet Assets & Vehicle Inventory",
+          "wrapper": "createVendorVehicle",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `createVendorVehicle`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/fleet-inventory/{vehicle_id}",
+          "methods": [
+            "DELETE"
+          ],
+          "func_name": "delete_vendor_vehicle",
+          "doc": "Decommissions and removes a vehicle from this vendor's inventory.",
+          "group": "Fleet Assets & Vehicle Inventory",
+          "wrapper": "deleteVendorVehicle",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `deleteVendorVehicle`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/fleet-inventory/{vehicle_id}",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_vendor_vehicle_detail",
+          "doc": "Retrieves detailed specifications for a vehicle in this vendor's inventory.",
+          "group": "Fleet Assets & Vehicle Inventory",
+          "wrapper": "fetchVendorVehicleDetail",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `fetchVendorVehicleDetail`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/fleet-inventory/{vehicle_id}",
+          "methods": [
+            "PUT"
+          ],
+          "func_name": "update_vendor_vehicle",
+          "doc": "Updates vehicle specifications, tariffs, amenities, photos, and operational status for this vendor's vehicle.",
+          "group": "Fleet Assets & Vehicle Inventory",
+          "wrapper": "updateVendorVehicle",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `updateVendorVehicle`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/fleet-inventory/{vehicle_id}/toggle-active",
+          "methods": [
+            "PATCH"
+          ],
+          "func_name": "toggle_vendor_vehicle_active",
+          "doc": "Enables or disables a vehicle from active fleet and customer rental showroom.",
+          "group": "Fleet Assets & Vehicle Inventory",
+          "wrapper": "toggleVehicleActive",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `toggleVehicleActive`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/fleet-inventory/{vehicle_id}/toggle-network",
+          "methods": [
+            "PATCH"
+          ],
+          "func_name": "toggle_vendor_vehicle_network",
+          "doc": "Toggles between GLOBAL_NETWORK_CONNECTED and LOCAL_PRIVATE_ONLY for this vendor's vehicle.",
+          "group": "Fleet Assets & Vehicle Inventory",
+          "wrapper": "toggleVehicleNetwork",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `toggleVehicleNetwork`"
+            }
+          ],
+          "is_complete": true
+        }
+      ]
+    },
+    "Global Affiliate Network & Ride Farm-Out": {
+      "total": 8,
+      "completed": 8,
+      "gaps": 0,
+      "items": [
+        {
+          "path": "/api/v1/global-hub/affiliates/knowledge-base",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_global_hub_affiliates_knowledge_base",
+          "doc": "Returns the central Global Hub Knowledge Base indexing all sovereign vendor availability & rules.",
+          "group": "Global Affiliate Network & Ride Farm-Out",
+          "wrapper": "fetchGlobalHubKnowledgeBase",
+          "ui_callers": [
+            {
+              "file": "components/VendorCellAndGlobalHubStudio.tsx",
+              "how": "API wrapper `fetchGlobalHubKnowledgeBase`"
+            },
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `fetchGlobalHubKnowledgeBase`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendor-network/exchange/ledger",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_vendor_network_exchange_ledger",
+          "doc": "Returns array of affiliate exchange records for dashboard ledgers.",
+          "group": "Global Affiliate Network & Ride Farm-Out",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "URL `/api/v1/vendor-network/exchange/ledger`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/affiliates/directory",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_global_affiliate_directory",
+          "doc": "Returns the Global Hub certified affiliate partner directory across all cities/countries.",
+          "group": "Global Affiliate Network & Ride Farm-Out",
+          "wrapper": "fetchGlobalAffiliateDirectory",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `fetchGlobalAffiliateDirectory`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/affiliates/farm-out",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "farm_out_ride_to_affiliate",
+          "doc": "Farms out a ride to another sovereign vendor cell with atomic clearinghouse split.",
+          "group": "Global Affiliate Network & Ride Farm-Out",
+          "wrapper": "farmOutAffiliateRide",
+          "ui_callers": [
+            {
+              "file": "components/VendorCellAndGlobalHubStudio.tsx",
+              "how": "API wrapper `farmOutAffiliateRide`"
+            },
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `farmOutAffiliateRide`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/affiliates/policy",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_vendor_affiliate_policy",
+          "doc": "Returns sovereign vendor farm-in and farm-out business policies.",
+          "group": "Global Affiliate Network & Ride Farm-Out",
+          "wrapper": "fetchVendorAffiliatePolicy",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `fetchVendorAffiliatePolicy`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/affiliates/policy",
+          "methods": [
+            "PUT"
+          ],
+          "func_name": "update_vendor_affiliate_policy",
+          "doc": "Updates vendor's sovereign business rules and broadcasts them to Global Hub Knowledge Base.",
+          "group": "Global Affiliate Network & Ride Farm-Out",
+          "wrapper": "updateVendorAffiliatePolicy",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `updateVendorAffiliatePolicy`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/affiliates/recommendations",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_affiliate_recommendations_for_ride",
+          "doc": "Algorithm: Matches out-of-market jobs to top certified affiliate partners",
+          "group": "Global Affiliate Network & Ride Farm-Out",
+          "wrapper": "fetchAffiliateRecommendations",
+          "ui_callers": [
+            {
+              "file": "components/VendorCellAndGlobalHubStudio.tsx",
+              "how": "API wrapper `fetchAffiliateRecommendations`"
+            },
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `fetchAffiliateRecommendations`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/affiliates/records",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_vendor_affiliate_records",
+          "doc": "Returns farmed-in and farmed-out affiliate rides with 85%/10%/5% revenue split ledger.",
+          "group": "Global Affiliate Network & Ride Farm-Out",
+          "wrapper": "fetchVendorAffiliateRecords",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `fetchVendorAffiliateRecords`"
+            }
+          ],
+          "is_complete": true
+        }
+      ]
+    },
+    "Global Hub Governance & Marketplace": {
+      "total": 8,
+      "completed": 5,
+      "gaps": 3,
+      "items": [
+        {
+          "path": "/api/v1/global-hub/analytics",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_global_hub_analytics",
+          "doc": "Retrieves aggregated multi-cell analytics, pooled AI token metrics, and cloud cost savings.",
+          "group": "Global Hub Governance & Marketplace",
+          "wrapper": "fetchGlobalHubAnalyticsApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorCellAndGlobalHubStudio.tsx",
+              "how": "API wrapper `fetchGlobalHubAnalyticsApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/global-hub/clearinghouse/ledger",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_global_hub_clearinghouse_ledger",
+          "doc": "Returns the Global Hub central clearinghouse ledger across all federation cells.",
+          "group": "Global Hub Governance & Marketplace",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/global-hub/dispatch-metrics",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_global_hub_dispatch_metrics",
+          "doc": "SuperAdmin & Dispatcher Observability: Returns live allocation counters, active tickets, and SLA timers.",
+          "group": "Global Hub Governance & Marketplace",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/GlobalHubAdminPortal.tsx",
+              "how": "URL `/api/v1/global-hub/dispatch-metrics`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/global-hub/dispatch-route",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "route_global_hub_booking",
+          "doc": "Autonomously routes an incoming Global Hub booking across verified city vendors",
+          "group": "Global Hub Governance & Marketplace",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/GlobalHubAdminPortal.tsx",
+              "how": "URL `/api/v1/global-hub/dispatch-route`"
+            },
+            {
+              "file": "components/public/GlobalMarketplaceBookingPage.tsx",
+              "how": "URL `/api/v1/global-hub/dispatch-route`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/global-hub/dispatch-sla-sweep",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "trigger_dispatch_sla_sweep",
+          "doc": "Background worker evaluation: Sweeps active dispatch tickets and auto-rolls unaccepted jobs or posts to The Wall.",
+          "group": "Global Hub Governance & Marketplace",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/payments/global-settlements",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_global_settlement_ledger",
+          "doc": "Returns real-time payment transactions, escrow records, and farm-in/farm-out settlements",
+          "group": "Global Hub Governance & Marketplace",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/GlobalHubAdminPortal.tsx",
+              "how": "URL `/api/v1/payments/global-settlements`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/payments/simulate-escrow-settlement",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "simulate_escrow_settlement_api",
+          "doc": "Simulates and executes a multi-vendor 85/10/5 escrow settlement via Stripe Connect clearinghouse.",
+          "group": "Global Hub Governance & Marketplace",
+          "wrapper": null,
+          "ui_callers": [],
+          "is_complete": false
+        },
+        {
+          "path": "/api/v1/settlements/split-records",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_split_settlements",
+          "doc": "Fetches 85/10/5 inter-vendor split escrow settlements.",
+          "group": "Global Hub Governance & Marketplace",
+          "wrapper": "fetchSplitSettlements",
+          "ui_callers": [
+            {
+              "file": "components/VendorDispatchPortal.tsx",
+              "how": "API wrapper `fetchSplitSettlements`"
+            }
+          ],
+          "is_complete": true
+        }
+      ]
+    },
+    "Support Ticketing Desk": {
+      "total": 21,
+      "completed": 21,
+      "gaps": 0,
+      "items": [
+        {
+          "path": "/api/v1/global-hub/support/sla-sweep",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "sweep_support_sla",
+          "doc": "Background worker evaluation: Sweeps all open tickets, detects SLA breaches, and auto-escalates to Hub.",
+          "group": "Support Ticketing Desk",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/hub/GlobalHubSupportTab.tsx",
+              "how": "URL `/api/v1/global-hub/support/sla-sweep`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/global-hub/support/tickets",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_global_hub_support_tickets",
+          "doc": "Global Hub SuperAdmin Observability: Network-wide ticket monitoring and SLA radar.",
+          "group": "Support Ticketing Desk",
+          "wrapper": "fetchGlobalHubSupportTicketsApi",
+          "ui_callers": [
+            {
+              "file": "components/hub/GlobalHubSupportTab.tsx",
+              "how": "API wrapper `fetchGlobalHubSupportTicketsApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/global-hub/support/tickets/{ticket_id}/escalate",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "escalate_ticket_to_global_hub",
+          "doc": "Escalates an unassigned or contentious ticket directly to the Central Global Hub clearinghouse.",
+          "group": "Support Ticketing Desk",
+          "wrapper": "escalateTicketToGlobalHubApi",
+          "ui_callers": [
+            {
+              "file": "components/vendor/VendorSupportInboxTab.tsx",
+              "how": "API wrapper `escalateTicketToGlobalHubApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/support-desk/config",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_support_desk_config",
+          "doc": "Returns global payment toggle, billing mode, and SLA configuration for Support Desk.",
+          "group": "Support Ticketing Desk",
+          "wrapper": "fetchSupportDeskConfig",
+          "ui_callers": [
+            {
+              "file": "components/GlobalSupportDeskHub.tsx",
+              "how": "API wrapper `fetchSupportDeskConfig`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/support-desk/config",
+          "methods": [
+            "PUT"
+          ],
+          "func_name": "update_support_desk_config",
+          "doc": "Enables/Disables the payment requirement (Free Preview vs Live Stripe Billing)",
+          "group": "Support Ticketing Desk",
+          "wrapper": "updateSupportDeskConfig",
+          "ui_callers": [
+            {
+              "file": "components/GlobalSupportDeskHub.tsx",
+              "how": "API wrapper `updateSupportDeskConfig`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/support-desk/overview",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_support_desk_overview",
+          "doc": "Returns real-time KPI overview for the Global Support Desk.",
+          "group": "Support Ticketing Desk",
+          "wrapper": "fetchSupportDeskOverview",
+          "ui_callers": [
+            {
+              "file": "components/GlobalSupportDeskHub.tsx",
+              "how": "API wrapper `fetchSupportDeskOverview`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/support-desk/plans",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_support_desk_plans",
+          "doc": "Returns all Support Desk subscription plans with live pricing and feature tiers.",
+          "group": "Support Ticketing Desk",
+          "wrapper": "fetchSupportDeskPlans",
+          "ui_callers": [
+            {
+              "file": "components/GlobalSupportDeskHub.tsx",
+              "how": "API wrapper `fetchSupportDeskPlans`"
+            },
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `fetchSupportDeskPlans`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/support-desk/plans/{plan_id}",
+          "methods": [
+            "PUT"
+          ],
+          "func_name": "update_support_desk_plan_endpoint",
+          "doc": "Global Hub Admin endpoint to dynamically update any Support Desk tier pricing,",
+          "group": "Support Ticketing Desk",
+          "wrapper": "updateSupportDeskPlan",
+          "ui_callers": [
+            {
+              "file": "components/GlobalSupportDeskHub.tsx",
+              "how": "API wrapper `updateSupportDeskPlan`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/support-desk/sla/evaluate-triggers",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "evaluate_sla_triggers_endpoint",
+          "doc": "Autonomous SLA escalation scanner evaluating T-25m driver alerts, T-15m affiliate rescue,",
+          "group": "Support Ticketing Desk",
+          "wrapper": "evaluateAutomatedSlaTriggers",
+          "ui_callers": [
+            {
+              "file": "components/GlobalSupportDeskHub.tsx",
+              "how": "API wrapper `evaluateAutomatedSlaTriggers`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/support-desk/subscribe",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "subscribe_vendor_support_endpoint",
+          "doc": "Enrolls a vendor into a Support Desk tier. If billing is in Free Preview,",
+          "group": "Support Ticketing Desk",
+          "wrapper": "subscribeVendorSupportDesk",
+          "ui_callers": [
+            {
+              "file": "components/GlobalSupportDeskHub.tsx",
+              "how": "API wrapper `subscribeVendorSupportDesk`"
+            },
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `subscribeVendorSupportDesk`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/support-desk/tickets",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_support_tickets",
+          "doc": "Lists support tickets across all vendors or filtered by vendor, status, or channel.",
+          "group": "Support Ticketing Desk",
+          "wrapper": "fetchSupportTickets",
+          "ui_callers": [
+            {
+              "file": "components/GlobalSupportDeskHub.tsx",
+              "how": "API wrapper `fetchSupportTickets`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/support-desk/tickets",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "create_support_ticket_endpoint",
+          "doc": "Creates an omnichannel customer or vendor support ticket.",
+          "group": "Support Ticketing Desk",
+          "wrapper": "createSupportTicket",
+          "ui_callers": [
+            {
+              "file": "components/GlobalSupportDeskHub.tsx",
+              "how": "API wrapper `createSupportTicket`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/support-desk/tickets/{ticket_id}",
+          "methods": [
+            "PUT"
+          ],
+          "func_name": "update_support_ticket_endpoint",
+          "doc": "Updates a ticket's status, priority, or resolution notes.",
+          "group": "Support Ticketing Desk",
+          "wrapper": "updateSupportTicket",
+          "ui_callers": [
+            {
+              "file": "components/GlobalSupportDeskHub.tsx",
+              "how": "API wrapper `updateSupportTicket`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/support-desk/tickets/{ticket_id}/mutate",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "mutate_ticket_booking_endpoint",
+          "doc": "Executes 1-click mutation for support agents:",
+          "group": "Support Ticketing Desk",
+          "wrapper": "mutateSupportTicketBooking",
+          "ui_callers": [
+            {
+              "file": "components/GlobalSupportDeskHub.tsx",
+              "how": "API wrapper `mutateSupportTicketBooking`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/support/tickets",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "create_customer_support_ticket",
+          "doc": "Creates an authoritative customer support ticket, attaches live booking/flight context,",
+          "group": "Support Ticketing Desk",
+          "wrapper": "createSupportTicketApi",
+          "ui_callers": [
+            {
+              "file": "components/public/CustomerSupportChatWidget.tsx",
+              "how": "API wrapper `createSupportTicketApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/support/tickets/lookup",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "lookup_customer_support_tickets",
+          "doc": "Searches customer support tickets by phone, email, booking reference, or ticket number.",
+          "group": "Support Ticketing Desk",
+          "wrapper": "lookupSupportTicketsApi",
+          "ui_callers": [
+            {
+              "file": "components/public/CustomerSupportChatWidget.tsx",
+              "how": "API wrapper `lookupSupportTicketsApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/support/tickets/{ticket_id}",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_support_ticket",
+          "doc": "Retrieves full ticket details, live SLA countdown timer, and message thread.",
+          "group": "Support Ticketing Desk",
+          "wrapper": "fetchSupportTicketApi",
+          "ui_callers": [
+            {
+              "file": "components/GlobalSupportDeskHub.tsx",
+              "how": "API wrapper `fetchSupportTicketApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/support/tickets/{ticket_id}/messages",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "add_ticket_message",
+          "doc": "Appends a new message to a ticket thread and dynamically updates status.",
+          "group": "Support Ticketing Desk",
+          "wrapper": "addTicketMessageApi",
+          "ui_callers": [
+            {
+              "file": "components/hub/GlobalHubSupportTab.tsx",
+              "how": "API wrapper `addTicketMessageApi`"
+            },
+            {
+              "file": "components/public/CustomerSupportChatWidget.tsx",
+              "how": "API wrapper `addTicketMessageApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/support/tickets",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_vendor_support_tickets",
+          "doc": "Returns all support tickets assigned to a specific carrier with SLA status.",
+          "group": "Support Ticketing Desk",
+          "wrapper": "fetchVendorSupportTicketsApi",
+          "ui_callers": [
+            {
+              "file": "components/vendor/VendorSupportInboxTab.tsx",
+              "how": "API wrapper `fetchVendorSupportTicketsApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/support/tickets/{ticket_id}/reply",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "reply_to_vendor_ticket",
+          "doc": "Allows a vendor dispatcher to reply to a customer ticket or record internal notes.",
+          "group": "Support Ticketing Desk",
+          "wrapper": "replyVendorTicketApi",
+          "ui_callers": [
+            {
+              "file": "components/vendor/VendorSupportInboxTab.tsx",
+              "how": "API wrapper `replyVendorTicketApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/support/tickets/{ticket_id}/resolve",
+          "methods": [
+            "PUT"
+          ],
+          "func_name": "resolve_vendor_ticket",
+          "doc": "Marks a vendor support ticket as RESOLVED.",
+          "group": "Support Ticketing Desk",
+          "wrapper": "resolveVendorTicketApi",
+          "ui_callers": [
+            {
+              "file": "components/hub/GlobalHubSupportTab.tsx",
+              "how": "API wrapper `resolveVendorTicketApi`"
+            },
+            {
+              "file": "components/vendor/VendorSupportInboxTab.tsx",
+              "how": "API wrapper `resolveVendorTicketApi`"
+            }
+          ],
+          "is_complete": true
+        }
+      ]
+    },
+    "Billing, Subscriptions & Stripe Connect": {
+      "total": 15,
+      "completed": 15,
+      "gaps": 0,
+      "items": [
+        {
+          "path": "/api/v1/hub/subscriptions/overview",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_hub_subscriptions_overview",
+          "doc": "Returns total Monthly Recurring Revenue (MRR), subscriber metrics, and all vendor subscription statuses.",
+          "group": "Billing, Subscriptions & Stripe Connect",
+          "wrapper": "fetchHubSubscriptionsOverview",
+          "ui_callers": [
+            {
+              "file": "components/GlobalHubAdminPortal.tsx",
+              "how": "API wrapper `fetchHubSubscriptionsOverview`, URL `/api/v1/hub/subscriptions/overview`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/hub/subscriptions/{vendor_id}/trigger-dunning-test",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "trigger_dunning_test_alert",
+          "doc": "Simulates a delinquent payment event and triggers warning alerts / grace period.",
+          "group": "Billing, Subscriptions & Stripe Connect",
+          "wrapper": "simulateVendorDunningAlertApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `simulateVendorDunningAlertApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/payments/stripe-architecture",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_stripe_architecture_status",
+          "doc": "Returns the comprehensive Stripe Connect multi-tenant setup,",
+          "group": "Billing, Subscriptions & Stripe Connect",
+          "wrapper": null,
+          "ui_callers": [
+            {
+              "file": "components/GlobalHubAdminPortal.tsx",
+              "how": "URL `/api/v1/payments/stripe-architecture`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/support-desk/subscriptions",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_support_desk_subscriptions",
+          "doc": "Lists all vendor support desk subscriptions and usage metrics.",
+          "group": "Billing, Subscriptions & Stripe Connect",
+          "wrapper": "fetchSupportDeskSubscriptions",
+          "ui_callers": [
+            {
+              "file": "components/GlobalSupportDeskHub.tsx",
+              "how": "API wrapper `fetchSupportDeskSubscriptions`"
+            },
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `fetchSupportDeskSubscriptions`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/stripe/connect-link",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "create_vendor_stripe_connect_link",
+          "doc": "Generates a secure, 1-click Stripe-hosted onboarding / KYC / bank verification link for a vendor.",
+          "group": "Billing, Subscriptions & Stripe Connect",
+          "wrapper": "createVendorStripeConnectLink",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `createVendorStripeConnectLink`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/stripe/connect-status",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_vendor_stripe_connect_status",
+          "doc": "Returns live Stripe Connect verification, payout status, and requirements for a vendor.",
+          "group": "Billing, Subscriptions & Stripe Connect",
+          "wrapper": "fetchVendorStripeConnectStatusApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `fetchVendorStripeConnectStatusApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/stripe/login-link",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "create_vendor_stripe_login_link",
+          "doc": "Generates a Single Sign-On link for the vendor to open their Stripe Express Dashboard.",
+          "group": "Billing, Subscriptions & Stripe Connect",
+          "wrapper": "createVendorStripeLoginLink",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `createVendorStripeLoginLink`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/subscription",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_vendor_subscription_details",
+          "doc": "Returns current subscription plan, billing cycle, invoice history, and dunning status for a vendor.",
+          "group": "Billing, Subscriptions & Stripe Connect",
+          "wrapper": "fetchVendorSubscription",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `fetchVendorSubscription`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/subscription/billing-portal",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "create_vendor_billing_portal_session",
+          "doc": "Creates a direct 1-click Stripe Customer Billing Portal session for updating payment methods and downloading invoices.",
+          "group": "Billing, Subscriptions & Stripe Connect",
+          "wrapper": "createVendorBillingPortalSession",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `createVendorBillingPortalSession`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/subscription/cancel",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "cancel_vendor_subscription",
+          "doc": "Cancels the vendor's recurring SaaS subscription.",
+          "group": "Billing, Subscriptions & Stripe Connect",
+          "wrapper": "cancelVendorSubscriptionApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `cancelVendorSubscriptionApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/subscription/clear-dunning",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "clear_vendor_dunning_alert",
+          "doc": "Clears past-due dunning state, restores account to good standing, and resets grace period.",
+          "group": "Billing, Subscriptions & Stripe Connect",
+          "wrapper": "clearVendorDunningAlertApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `clearVendorDunningAlertApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/subscription/pay-as-you-go",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "switch_vendor_to_pay_as_you_go",
+          "doc": "Switches the vendor to the Pay-As-You-Go ($0/mo fixed + 5% per ride) model.",
+          "group": "Billing, Subscriptions & Stripe Connect",
+          "wrapper": "switchVendorPayAsYouGoApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `switchVendorPayAsYouGoApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/subscription/simulate-dunning",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "trigger_dunning_test_alert",
+          "doc": "Simulates a delinquent payment event and triggers warning alerts / grace period.",
+          "group": "Billing, Subscriptions & Stripe Connect",
+          "wrapper": "simulateVendorDunningAlertApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `simulateVendorDunningAlertApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/subscription/upgrade",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "upgrade_vendor_subscription",
+          "doc": "Upgrades or switches the vendor's subscription plan.",
+          "group": "Billing, Subscriptions & Stripe Connect",
+          "wrapper": "upgradeVendorSubscriptionApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `upgradeVendorSubscriptionApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/webhooks/stripe",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "webhook_stripe",
+          "doc": "Ingests live Stripe Connect webhook lifecycle events (pre-auth, capture, 85/10/5 split).",
+          "group": "Billing, Subscriptions & Stripe Connect",
+          "wrapper": "simulateStripeWebhookApi",
+          "ui_callers": [
+            {
+              "file": "components/GlobalHubAdminPortal.tsx",
+              "how": "API wrapper `simulateStripeWebhookApi`"
+            }
+          ],
+          "is_complete": true
+        }
+      ]
+    },
+    "Payroll, Shifts & Settlements": {
+      "total": 5,
+      "completed": 5,
+      "gaps": 0,
+      "items": [
+        {
+          "path": "/api/v1/vendors/{vendor_id}/payouts/ledger",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_vendor_payouts_ledger",
+          "doc": "Returns live dynamic payout transfers, settled customer ride fares, and affiliate cleared splits",
+          "group": "Payroll, Shifts & Settlements",
+          "wrapper": "fetchVendorPayoutsLedger",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `fetchVendorPayoutsLedger`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/payroll/export",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "export_vendor_payroll_csv",
+          "doc": "Generates and downloads a payroll CSV formatted for Gusto, ADP, or Standard accounting systems.",
+          "group": "Payroll, Shifts & Settlements",
+          "wrapper": "exportPayrollCsvApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `exportPayrollCsvApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/payroll/process-trip",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "process_trip_payout",
+          "doc": "Processes driver earnings upon trip completion: triggers Stripe instant transfer if 1099, or logs shift accrual if W-2.",
+          "group": "Payroll, Shifts & Settlements",
+          "wrapper": "processTripPayoutApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `processTripPayoutApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/payroll/record-shift",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "record_driver_shift",
+          "doc": "Records driving shift hours and tips into the active pay period payroll ledger for W-2/salaried chauffeurs.",
+          "group": "Payroll, Shifts & Settlements",
+          "wrapper": "recordDriverShiftApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `recordDriverShiftApi`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/payroll/summary",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "get_vendor_payroll_summary",
+          "doc": "Retrieves live driver compensation summary, contractor payouts, and W-2 payroll accruals.",
+          "group": "Payroll, Shifts & Settlements",
+          "wrapper": "fetchVendorPayrollSummaryApi",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `fetchVendorPayrollSummaryApi`"
+            }
+          ],
+          "is_complete": true
+        }
+      ]
+    },
+    "Staff, Team & Role Security": {
+      "total": 4,
+      "completed": 4,
+      "gaps": 0,
+      "items": [
+        {
+          "path": "/api/v1/vendors/{vendor_id}/team",
+          "methods": [
+            "GET"
+          ],
+          "func_name": "list_vendor_team",
+          "doc": "Retrieves active team personnel roster (Owners, Dispatchers, Chauffeurs, Corporate Bookers).",
+          "group": "Staff, Team & Role Security",
+          "wrapper": "fetchVendorTeam",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `fetchVendorTeam`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/team",
+          "methods": [
+            "POST"
+          ],
+          "func_name": "create_vendor_team_member",
+          "doc": "Creates/invites a new team member with assigned role and granular permissions.",
+          "group": "Staff, Team & Role Security",
+          "wrapper": "createVendorTeamMember",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `createVendorTeamMember`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/team/{user_id}",
+          "methods": [
+            "DELETE"
+          ],
+          "func_name": "delete_vendor_team_member",
+          "doc": "Revokes access and removes a team member from the sovereign vendor cell.",
+          "group": "Staff, Team & Role Security",
+          "wrapper": "deleteVendorTeamMember",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `deleteVendorTeamMember`"
+            }
+          ],
+          "is_complete": true
+        },
+        {
+          "path": "/api/v1/vendors/{vendor_id}/team/{user_id}",
+          "methods": [
+            "PUT"
+          ],
+          "func_name": "update_vendor_team_member",
+          "doc": "Updates team member role, permissions, status, or details.",
+          "group": "Staff, Team & Role Security",
+          "wrapper": "updateVendorTeamMember",
+          "ui_callers": [
+            {
+              "file": "components/VendorOwnerDashboard.tsx",
+              "how": "API wrapper `updateVendorTeamMember`"
+            }
+          ],
+          "is_complete": true
+        }
+      ]
+    }
+  }
+}

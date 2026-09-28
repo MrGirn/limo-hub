@@ -18,13 +18,14 @@ from app.domain_models import (
 )
 from app.database import db
 from app.database_mysql import (
-    mysql_db, QuoteModel, BookingModel, TripModel, TripEventModel
+    mysql_db, QuoteModel, BookingModel, TripModel, TripEventModel, CustomerModel
 )
 from app.services.pricing_service import PricingService
 from app.services.dispatch_service import DispatchService
 from app.services.stripe_payment_service import StripePaymentService
 from app.services.twilio_notification_service import TwilioNotificationService
 from app.services.email_notification_service import EmailNotificationService
+from app.services.fleet_availability_service import FleetAvailabilityService
 
 logger = logging.getLogger("BookingService")
 
@@ -178,26 +179,23 @@ class BookingService:
         if not quote:
             raise ValueError(f"Quote {quote_id} not found or has expired. Please select a vehicle to refresh pricing.")
 
-        # Check vehicle maintenance status for quote's vendor
-        req_cls_str = quote.vehicle_class.value if hasattr(quote.vehicle_class, "value") else str(quote.vehicle_class)
-        v_norm = quote.vendor_id.replace("-", "_")
-        v_alias = quote.vendor_id.replace("_", "-")
-        matching_vehs = [
-            veh for veh in db.vehicles.values()
-            if (
-                getattr(veh, "vendor_id", "") in (quote.vendor_id, v_norm, v_alias)
-                or veh.id.startswith(f"veh_{v_norm}")
-                or veh.id.startswith(f"veh_{v_alias}")
-                or veh.id.startswith(f"veh_{quote.vendor_id}")
-            ) and (
-                (veh.vehicle_class.value if hasattr(veh.vehicle_class, "value") else str(veh.vehicle_class)) == req_cls_str
-            )
-        ]
-        if matching_vehs and not any(
-            veh.is_active is True and getattr(veh, "status", "AVAILABLE") not in ("MAINTENANCE", "DISABLED", "UNDER_REPAIR")
-            for veh in matching_vehs
-        ):
-            raise ValueError(f"Vehicle class {req_cls_str} is currently under maintenance / out of service for {quote.vendor_id} and cannot be booked.")
+        # Smart Fleet Availability, Operating Schedule & Time-Window Overlap Evaluation
+        avail = FleetAvailabilityService.evaluate_trip_availability(
+            vendor_id=quote.vendor_id,
+            vehicle_class=quote.vehicle_class,
+            pickup_time_utc=pickup_time_utc,
+            estimated_duration_minutes=45,
+            service_type=quote.service_type,
+            hourly_hours=getattr(quote, "hourly_hours", None),
+            origin_address=quote.pickup_address,
+            destination_address=quote.dropoff_address
+        )
+        if not avail.get("is_available", True):
+            raise ValueError(avail.get("message", "Requested vehicle class is unavailable for this time window."))
+
+        is_farm_out = avail.get("farm_out", False)
+        servicing_vendor_id = avail.get("servicing_vendor_id", quote.vendor_id) if is_farm_out else quote.vendor_id
+        assigned_veh_id = avail.get("assigned_vehicle_id")
 
         booking_id = f"bk-{uuid.uuid4().hex[:8]}"
         trip_id = f"trip-{uuid.uuid4().hex[:8]}"
@@ -235,7 +233,8 @@ class BookingService:
             id=trip_id,
             booking_id=booking_id,
             tenant_id=quote.tenant_id,
-            vendor_id=quote.vendor_id,
+            vendor_id=servicing_vendor_id,
+            vehicle_id=assigned_veh_id,
             status=TripStatus.SCHEDULED,
             pickup_time_utc=pickup_time_utc,
             pickup_address=quote.pickup_address,
@@ -283,15 +282,60 @@ class BookingService:
         )
         db.bookings[booking.id] = booking
 
-        # Authoritative MySQL Persistence
+        # Authoritative MySQL Persistence & Customer CRM Profile Sync
         session = mysql_db.get_session()
         if session:
             try:
+                # 1. Upsert Customer Profile in CRM
+                p_name = booking.party.passenger_name or booking.party.booker_name or "VIP Guest"
+                p_email = (booking.party.passenger_email or booking.party.booker_email or "").strip().lower()
+                p_phone = (booking.party.passenger_phone or booking.party.booker_phone or "").strip()
+                
+                customer_rec = None
+                if p_phone or p_email:
+                    query_filter = []
+                    if p_phone:
+                        query_filter.append(CustomerModel.phone == p_phone)
+                    if p_email:
+                        query_filter.append(CustomerModel.email == p_email)
+                    
+                    from sqlalchemy import or_
+                    customer_rec = session.query(CustomerModel).filter(
+                        CustomerModel.vendor_id == booking.vendor_id,
+                        or_(*query_filter)
+                    ).first()
+
+                if not customer_rec:
+                    cust_id = f"cust-{uuid.uuid4().hex[:10]}"
+                    customer_rec = CustomerModel(
+                        id=cust_id,
+                        vendor_id=booking.vendor_id,
+                        full_name=p_name,
+                        email=p_email or f"{cust_id}@client.guest",
+                        phone=p_phone or "+10000000000",
+                        preferred_vehicle_class=booking.vehicle_class.value,
+                        vip_tier="VIP",
+                        total_trips_completed=1,
+                        lifetime_spend_usd=Decimal(str(booking.total_amount or 0)),
+                        chauffeur_etiquette_notes=booking.party.special_instructions or "First-class executive passenger",
+                        created_at=datetime.now(timezone.utc)
+                    )
+                    session.add(customer_rec)
+                else:
+                    customer_rec.total_trips_completed = (customer_rec.total_trips_completed or 0) + 1
+                    customer_rec.lifetime_spend_usd = (customer_rec.lifetime_spend_usd or Decimal("0.00")) + Decimal(str(booking.total_amount or 0))
+                    customer_rec.preferred_vehicle_class = booking.vehicle_class.value
+                    if booking.party.special_instructions:
+                        customer_rec.chauffeur_etiquette_notes = booking.party.special_instructions
+                    customer_rec.updated_at = datetime.now(timezone.utc)
+
+                # 2. Persist Booking & Trip Models
                 b_model = BookingModel(
                     id=booking.id,
                     tenant_id=booking.tenant_id,
                     vendor_id=booking.vendor_id,
                     quote_id=booking.quote_id,
+                    customer_id=customer_rec.id if customer_rec else None,
                     status=booking.status.value,
                     service_type=booking.service_type.value,
                     vehicle_class=booking.vehicle_class.value,
@@ -328,7 +372,7 @@ class BookingService:
                 session.commit()
             except Exception as e:
                 session.rollback()
-                logger.warning(f"MySQL Booking/Trip sync note: {e}")
+                logger.warning(f"MySQL Booking/Customer CRM sync note: {e}")
             finally:
                 session.close()
 

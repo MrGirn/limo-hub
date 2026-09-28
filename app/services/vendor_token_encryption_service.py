@@ -25,9 +25,14 @@ ENCRYPTION_SECRET = os.getenv("LIMO_CELL_ENCRYPTION_SECRET", DEFAULT_SECRET)
 class VendorTokenEncryptionService:
     """Handles symmetric authenticated encryption and decryption of vendor URL tokens."""
 
-    def __init__(self, secret: str = ENCRYPTION_SECRET):
+    def __init__(self, secret: Optional[str] = None):
+        is_prod = os.getenv("PROD_MODE", "").lower() in ("true", "1") or os.getenv("ENVIRONMENT", "").lower() in ("prod", "production")
+        configured_secret = secret or os.getenv("LIMO_CELL_ENCRYPTION_SECRET")
+        if is_prod and (not configured_secret or configured_secret == DEFAULT_SECRET):
+            logger.warning("SECURITY WARNING: LIMO_CELL_ENCRYPTION_SECRET must be set to a cryptographically strong unique secret in production.")
+        effective_secret = configured_secret or DEFAULT_SECRET
         # Derive 32-byte base64 URL-safe Fernet key using SHA-256
-        key_bytes = hashlib.sha256(secret.encode("utf-8")).digest()
+        key_bytes = hashlib.sha256(effective_secret.encode("utf-8")).digest()
         self.fernet_key = base64.urlsafe_b64encode(key_bytes)
         self.cipher = Fernet(self.fernet_key)
 

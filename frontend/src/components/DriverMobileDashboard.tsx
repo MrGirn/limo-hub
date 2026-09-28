@@ -7,7 +7,7 @@ import {
   Upload, Camera, FileText, CheckCheck, Eye, Lock
 } from 'lucide-react';
 import { DriverOffer, Trip, TripStatus, DriverCredentialDocument, DriverDocumentType } from '../types';
-import { fetchDriverOffers, acceptDriverOffer, updateTripStatus, fetchBookings, extractErrorMessage, fetchDriverDocuments, uploadDriverDocument } from '../api';
+import { fetchDriverOffers, acceptDriverOffer, updateTripStatus, fetchBookings, extractErrorMessage, fetchDriverDocuments, uploadDriverDocument, fetchChauffeurDutyStatusApi } from '../api';
 
 export const DriverMobileDashboard: React.FC = () => {
   const [offers, setOffers] = useState<DriverOffer[]>([]);
@@ -16,8 +16,8 @@ export const DriverMobileDashboard: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [waitTimer, setWaitTimer] = useState(0);
   const [dutyStatus, setDutyStatus] = useState<'ON_DUTY' | 'ON_BREAK' | 'OFF_DUTY'>('ON_DUTY');
-  const [drivingHoursToday, setDrivingHoursToday] = useState(3.4);
-  const [offerCountdown, setOfferCountdown] = useState(112);
+  const [drivingHoursToday, setDrivingHoursToday] = useState(0.0);
+  const [offerCountdown, setOfferCountdown] = useState(120);
   const [activeDriverTab, setActiveDriverTab] = useState<'mission' | 'earnings' | 'shift' | 'credentials'>('mission');
   const [instantPayoutNotice, setInstantPayoutNotice] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -68,6 +68,21 @@ export const DriverMobileDashboard: React.FC = () => {
       } else {
         setActiveTrip(null);
         setActiveBooking(null);
+      }
+
+      // Fetch authoritative shift & duty compliance from neutral dispatch engine
+      try {
+        const dutyRes = await fetchChauffeurDutyStatusApi(driverProfile.id || 'drv_01');
+        if (dutyRes && dutyRes.duty_status) {
+          if (dutyRes.duty_status.is_on_duty !== undefined) {
+            setDutyStatus(dutyRes.duty_status.is_on_duty ? 'ON_DUTY' : 'OFF_DUTY');
+          }
+          if (dutyRes.duty_status.driving_hours_today !== undefined) {
+            setDrivingHoursToday(dutyRes.duty_status.driving_hours_today);
+          }
+        }
+      } catch (dutyErr) {
+        console.warn('Could not load duty compliance status:', dutyErr);
       }
 
       // Fetch live driver credentials and documents from Sovereign Vault (GAP-D1)
@@ -501,7 +516,7 @@ export const DriverMobileDashboard: React.FC = () => {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div>
                         <span style={{ fontSize: '10px', fontWeight: 800, color: '#A16207', background: '#FEF08A', padding: '2px 6px', borderRadius: '4px', border: '1px solid #FDE047' }}>
-                          GUARANTEED NET CHAUFFEUR PAYOUT (65% + TIPS)
+                          GUARANTEED NET CHAUFFEUR PAYOUT ({driverProfile.commission_pct}% + TIPS)
                         </span>
                         <div style={{ fontSize: '28px', fontWeight: 900, color: '#0F172A', marginTop: '4px' }}>
                           ${estNet.toFixed(2)}
@@ -517,7 +532,7 @@ export const DriverMobileDashboard: React.FC = () => {
                     {/* Fare Calculation Breakdown */}
                     <div style={{ padding: '10px', backgroundColor: '#FFFBEB', borderRadius: '8px', border: '1px solid #FDE68A', fontSize: '11px', display: 'flex', justifyContent: 'space-between', color: '#78350F' }}>
                       <span>Gross Fare: <strong>${estGross.toFixed(2)}</strong></span>
-                      <span>Base Cut (65%): <strong>${estBaseCut.toFixed(2)}</strong></span>
+                      <span>Base Cut ({driverProfile.commission_pct}%): <strong>${estBaseCut.toFixed(2)}</strong></span>
                       <span>Tips & Tolls: <strong>+${(estTip + estToll).toFixed(2)}</strong></span>
                     </div>
 

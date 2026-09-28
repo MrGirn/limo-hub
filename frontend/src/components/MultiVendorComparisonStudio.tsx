@@ -3,9 +3,10 @@ import {
   Building2, Car, Shield, Sparkles, CheckCircle2, ArrowRight, 
   DollarSign, MapPin, Clock, CreditCard, RefreshCw, Award, Zap,
   TrendingDown, Info, ShieldCheck, Check, Sliders, ChevronRight,
-  Plane, Navigation
+  Plane, Navigation, Loader2
 } from 'lucide-react';
-import { VehicleClass, ServiceType } from '../types';
+import { VehicleClass, ServiceType, BookingParty } from '../types';
+import { bookQuote } from '../api';
 
 interface VendorCandidate {
   vendor_id: string;
@@ -103,7 +104,36 @@ export const MultiVendorComparisonStudio: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [comparison, setComparison] = useState<MarketComparisonData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [bookedQuoteId, setBookedQuoteId] = useState<string | null>(null);
+  const [bookingInProgressQuoteId, setBookingInProgressQuoteId] = useState<string | null>(null);
+  const [confirmedBooking, setConfirmedBooking] = useState<{ quoteId: string; bookingId: string } | null>(null);
+
+  const handleBookQuote = async (candidate: VendorCandidate) => {
+    setBookingInProgressQuoteId(candidate.quote_id);
+    setError(null);
+    try {
+      const party: BookingParty = {
+        passenger_name: 'Executive VIP Client',
+        passenger_phone: '+1 (555) 019-2831',
+        booker_name: 'Corporate Travel Concierge',
+        booker_phone: '+1 (555) 019-2831',
+        booker_email: 'dispatch@limo-ops.com',
+        passenger_count: 1,
+        luggage_count: 2,
+        special_instructions: 'Direct VIP dispatch via multi-vendor comparison studio'
+      };
+      const pickupTime = new Date(Date.now() + 3600000 * 2).toISOString();
+      const res = await bookQuote(candidate.quote_id, party, pickupTime);
+      setConfirmedBooking({
+        quoteId: candidate.quote_id,
+        bookingId: res.id || `#BKG-${candidate.quote_id.slice(0, 8).toUpperCase()}`
+      });
+    } catch (err: any) {
+      setError(err.message || 'Failed to dispatch booking to sovereign vendor');
+    } finally {
+      setBookingInProgressQuoteId(null);
+    }
+  };
+
 
   // Load and merge live vendor cell corridors
   useEffect(() => {
@@ -523,28 +553,41 @@ export const MultiVendorComparisonStudio: React.FC = () => {
                         </span>
                       </div>
 
-                      <button
-                        onClick={() => setBookedQuoteId(cand.quote_id)}
-                        className={`w-full py-2.5 rounded-xl font-semibold text-xs transition-all flex items-center justify-center gap-2 ${
-                          bookedQuoteId === cand.quote_id
-                            ? 'bg-emerald-600 text-white'
-                            : isWinner
-                            ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20'
-                            : 'bg-slate-800 hover:bg-slate-700 text-slate-200'
-                        }`}
-                      >
-                        {bookedQuoteId === cand.quote_id ? (
-                          <>
-                            <CheckCircle2 className="w-4 h-4 text-emerald-200" />
-                            Dispatched to Sovereign Cell
-                          </>
-                        ) : (
-                          <>
-                            Instant Book & Dispatch
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </>
-                        )}
-                      </button>
+                      {confirmedBooking && confirmedBooking.quoteId === cand.quote_id ? (
+                        <div className="bg-emerald-950/60 border border-emerald-500/50 rounded-xl p-3 text-center">
+                          <div className="flex items-center justify-center gap-1.5 text-emerald-400 font-bold text-xs mb-0.5">
+                            <CheckCircle2 className="w-4 h-4" />
+                            Confirmed & Dispatched
+                          </div>
+                          <div className="text-[11px] font-mono text-emerald-300">
+                            Ref: {confirmedBooking.bookingId}
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleBookQuote(cand)}
+                          disabled={bookingInProgressQuoteId === cand.quote_id}
+                          className={`w-full py-2.5 rounded-xl font-semibold text-xs transition-all flex items-center justify-center gap-2 ${
+                            bookingInProgressQuoteId === cand.quote_id
+                              ? 'bg-blue-800 text-white cursor-wait opacity-80'
+                              : isWinner
+                              ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20'
+                              : 'bg-slate-800 hover:bg-slate-700 text-slate-200'
+                          }`}
+                        >
+                          {bookingInProgressQuoteId === cand.quote_id ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              Securing Sovereign Dispatch...
+                            </>
+                          ) : (
+                            <>
+                              Instant Book & Dispatch
+                              <ArrowRight className="w-3.5 h-3.5" />
+                            </>
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
                 );

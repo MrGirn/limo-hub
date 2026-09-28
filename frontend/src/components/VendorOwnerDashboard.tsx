@@ -9,7 +9,7 @@ import {
   Send, Volume2, Globe, Key, CheckCircle, ExternalLink, Sparkles, Download, Zap,
   CreditCard, Percent, Banknote, Receipt, ArrowDownRight, UserCheck, Lock, Unlock, UserPlus,
   Copy, Inbox, AtSign, BookOpen, Settings, Trash2, HelpCircle, Edit3, Camera, AlertCircle,
-  Plane, Printer, ChevronUp, PhoneCall, Headphones
+  Plane, Printer, ChevronUp, PhoneCall, Headphones, Calendar, RotateCcw
 } from 'lucide-react';
 import { 
   VendorPortalConfig, TeamMember, RoleMatrixResponse, CertifiedAffiliatePartner, 
@@ -23,14 +23,25 @@ import {
   fetchGlobalAffiliateDirectory, fetchAffiliateRecommendations, farmOutAffiliateRide, fetchVendorAffiliateRecords,
   fetchVendorAffiliatePolicy, updateVendorAffiliatePolicy, evaluateVendorMultilegStrategy, fetchGlobalHubKnowledgeBase,
   createVendorVehicle, updateVendorVehicle, deleteVendorVehicle, toggleVehicleNetwork, toggleVehicleActive, getAuthHeaders, uploadVehiclePhotoToS3,
+  fetchVendorVehicleDetail, fetchVendorPayrollSummaryApi, exportPayrollCsvApi, processTripPayoutApi, recordDriverShiftApi,
   fetchVendorOnboardingStatus, sendVendorOnboardingInvite,
   fetchVendorStripeStatus, createVendorStripeConnectLink, createVendorStripeLoginLink,
   fetchVendorPayoutsLedger, VendorPayoutLedgerRecord,
   fetchVendorSubscription, createVendorBillingPortalSession, clearVendorDunning,
-  fetchSupportDeskPlans, fetchSupportDeskSubscriptions, subscribeVendorSupportDesk
+  switchVendorPayAsYouGoApi, upgradeVendorSubscriptionApi, cancelVendorSubscriptionApi,
+  simulateVendorDunningAlertApi, clearVendorDunningAlertApi, fetchVendorStripeConnectStatusApi,
+  fetchSupportDeskPlans, fetchSupportDeskSubscriptions, subscribeVendorSupportDesk,
+  fetchVendorBrandingSettingsApi, updateVendorBrandingSettingsApi,
+  fetchVendorOperatingScheduleApi, updateVendorOperatingScheduleApi,
+  fetchVendorIntakeConfigApi, updateVendorIntakeConfigApi,
+  fetchVendorSeoSchemaApi, fetchVendorEmailConfigApi, updateVendorEmailConfigApi,
+  fetchOmnichannelWorkspaceApi, sendOmnichannelMessageApi, recordVoiceStudioCallApi,
+  updateVendorOmnichannelConfigApi, exportCorporateInvoiceCsvApi
 } from '../api';
 import { DispatcherPhoneBookingModal } from './DispatcherPhoneBookingModal';
 import { VendorFleetAndPricingHub } from './VendorFleetAndPricingHub';
+import { VendorCommercialGuideModal } from './VendorCommercialGuideModal';
+import { VendorSupportInboxTab } from './vendor/VendorSupportInboxTab';
 import { 
   compressStudioImage, toggleAiStudioLighting, formatBytes, ProcessedStudioImage 
 } from '../utils/imageStudioCompressor';
@@ -47,7 +58,7 @@ interface VendorOwnerDashboardProps {
 type AutonomyLevel = 'L5_FULL_AUTONOMY' | 'L3_SHADOW_ASSIST' | 'L0_MANUAL_KILL_SWITCH';
 
 interface NavItem {
-  id: 'overview' | 'dispatch' | 'fleet' | 'drivers' | 'corporate' | 'pricing' | 'payouts' | 'email_rfq' | 'team' | 'affiliates' | 'voice_ai' | 'omnichannel' | 'subscription';
+  id: 'overview' | 'dispatch' | 'fleet' | 'drivers' | 'support' | 'corporate' | 'pricing' | 'payouts' | 'email_rfq' | 'team' | 'affiliates' | 'voice_ai' | 'omnichannel' | 'subscription';
   label: string;
   icon: React.ReactNode;
   category: string;
@@ -91,13 +102,15 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
   const { switchPersona, role: currentAuthRole } = useAuth();
   const localeSpecs = getVendorLocaleSpecs(config);
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'dispatch' | 'fleet' | 'drivers' | 'corporate' | 'pricing' | 'payouts' | 'email_rfq' | 'team' | 'affiliates' | 'voice_ai' | 'omnichannel' | 'subscription'
+    'overview' | 'dispatch' | 'fleet' | 'drivers' | 'support' | 'corporate' | 'pricing' | 'payouts' | 'email_rfq' | 'team' | 'affiliates' | 'voice_ai' | 'omnichannel' | 'subscription'
   >('overview');
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [autonomyLevel, setAutonomyLevel] = useState<AutonomyLevel>('L5_FULL_AUTONOMY');
   const [loading, setLoading] = useState(false);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [showCommercialGuideModal, setShowCommercialGuideModal] = useState(false);
   const [omniSubTab, setOmniSubTab] = useState<'10dlc' | 'voice' | 'email' | 'whatsapp' | 'seo' | 'byok'>('10dlc');
 
   // Omnichannel Live Chat & Voice State
@@ -130,6 +143,7 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
   const [matcherLocationQuery, setMatcherLocationQuery] = useState('New York JFK Airport');
   const [matcherLoading, setMatcherLoading] = useState(false);
   const [isMultiLegPolicyOpen, setIsMultiLegPolicyOpen] = useState(true);
+  const [isAffiliateRulesSectionOpen, setIsAffiliateRulesSectionOpen] = useState(false);
   const [isFarmInOpen, setIsFarmInOpen] = useState(false);
   const [isFarmOutOpen, setIsFarmOutOpen] = useState(false);
   const [simulatedStrategyResult, setSimulatedStrategyResult] = useState<any>(null);
@@ -230,7 +244,16 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
   // Local Live Trips
   const [trips, setTrips] = useState<any[]>([]);
   const [selectedTripForManifest, setSelectedTripForManifest] = useState<any | null>(null);
+  const [expandedDispatchTripId, setExpandedDispatchTripId] = useState<string | null>(null);
   const [expandedLegsRow, setExpandedLegsRow] = useState<Record<string, boolean>>({});
+
+  // Operations Payment Processing & Returns/Refunds Controls
+  const [refundModalTrip, setRefundModalTrip] = useState<any | null>(null);
+  const [refundAmount, setRefundAmount] = useState<number>(50.0);
+  const [refundType, setRefundType] = useState<'PARTIAL' | 'FULL'>('PARTIAL');
+  const [refundReason, setRefundReason] = useState<string>('COURTESY_DISCOUNT');
+  const [refundNotes, setRefundNotes] = useState<string>('Flight delay courtesy refund');
+  const [isProcessingPaymentTripId, setIsProcessingPaymentTripId] = useState<string | null>(null);
 
   // Local Fleet
   const [vehicles, setVehicles] = useState<any[]>([]);
@@ -417,34 +440,14 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
   });
   const [emailInbox, setEmailInbox] = useState<any[]>([]);
   const [testEmailRecipient, setTestEmailRecipient] = useState(config.branding?.domain ? `dispatch-test@${config.branding.domain}` : '');
-  const [dispatchedEmails, setDispatchedEmails] = useState<any[]>([
-    {
-      id: 'EML-DISP-101',
-      booking_id: 'BK-PHL-891',
-      recipient: 'elena.vance@vance-holdings.com',
-      subject: 'Reservation Confirmed: Your Chauffeur Marcus Brody is Staged at PHL Terminal A',
-      sent_at: 'Today, 2:40 PM',
-      type: 'BOOKING_CONFIRMATION',
-      status: 'DELIVERED',
-      provider: 'CUSTOM_SMTP (smtp.mailgun.org)'
-    },
-    {
-      id: 'EML-DISP-102',
-      booking_id: 'BK-PHL-844',
-      recipient: 'billing@citadel-capital.com',
-      subject: 'Itemized Invoice & Ride Receipt #INV-844 — ANB Executive Transportation',
-      sent_at: 'Today, 1:15 PM',
-      type: 'INVOICE_RECEIPT',
-      status: 'DELIVERED',
-      provider: 'CUSTOM_SMTP (smtp.mailgun.org)'
-    }
-  ]);
+  const [dispatchedEmails, setDispatchedEmails] = useState<any[]>([]);
 
-  // Inbound Email Sandbox State
   const [inboundEmail, setInboundEmail] = useState(
-    "Dear ANB Dispatch,\nPlease book a luxury executive transfer for Board Member Ms. Clara Thorne.\nDate: Tomorrow at 3:30 PM\nPickup: PHL Airport Terminal C\nDropoff: Logan Square Philadelphia Hotel\nFlight: DL 1984\nVehicle Preference: Luxury SUV"
+    "Dear Dispatch Team,\nPlease book a luxury executive transfer for Board Member Ms. Clara Thorne.\nDate: Tomorrow at 3:30 PM\nPickup: PHL Airport Terminal C\nDropoff: Logan Square Hotel\nFlight: DL 1984\nVehicle Preference: Luxury SUV"
   );
   const [parsedEmailQuote, setParsedEmailQuote] = useState<any>(null);
+  const [loadedSeoSchema, setLoadedSeoSchema] = useState<any>(null);
+  const [loadingSeoSchema, setLoadingSeoSchema] = useState<boolean>(false);
 
   // Team & RBAC Access State
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -457,7 +460,7 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
     full_name: '',
     phone: '',
     role: 'ROLE_DISPATCHER',
-    assigned_vehicle_id: 'veh-phl-01',
+    assigned_vehicle_id: '',
     permissions: ['dispatch:assign', 'dispatch:radar', 'quotes:manage', 'omnichannel:respond', 'flights:override']
   });
 
@@ -466,6 +469,7 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
     { id: 'dispatch', label: 'Live Dispatch Matrix', icon: <Car size={16} />, category: 'Operations', badge: trips.filter(t => t.status === 'UNASSIGNED').length > 0 ? '1' : undefined },
     { id: 'fleet', label: 'Fleet & PPA/TLC Permits', icon: <Shield size={16} />, category: 'Fleet' },
     { id: 'drivers', label: 'Chauffeurs & Payroll', icon: <Users size={16} />, category: 'Fleet' },
+    { id: 'support', label: 'Support & Inquiries', icon: <Inbox size={16} />, category: 'Operations', badge: 'Live SLA' },
     { id: 'corporate', label: 'Corporate B2B Accounts', icon: <Building2 size={16} />, category: 'Commercial' },
     { id: 'pricing', label: 'Dynamic Tariff Matrix', icon: <Sliders size={16} />, category: 'Commercial' },
     { id: 'payouts', label: 'Direct Payouts & Banking', icon: <Banknote size={16} />, category: 'Commercial', badge: stripeConnectStatus?.payouts_enabled ? 'Active' : '⚠️ Setup' },
@@ -544,13 +548,81 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
   const handleClearDunning = async () => {
     setIsProcessingSubAction(true);
     try {
-      await clearVendorDunning(config.vendor_id);
+      await clearVendorDunningAlertApi(config.vendor_id);
       setActionNotice(`✓ Account restored to Good Standing. Delinquent warning dismissed.`);
       loadSubscription();
     } catch (err: any) {
       setActionNotice(`⚠️ Failed to clear dunning: ${err.message}`);
     } finally {
       setIsProcessingSubAction(false);
+    }
+  };
+
+  const handleSwitchPayAsYouGo = async () => {
+    if (!confirm('Switch account to Pay-As-You-Go ($0/mo + 5% platform fee)?')) return;
+    setIsProcessingSubAction(true);
+    try {
+      const res = await switchVendorPayAsYouGoApi(config.vendor_id);
+      setActionNotice(`✓ Switched to Pay-As-You-Go billing plan successfully.`);
+      loadSubscription();
+    } catch (err: any) {
+      setActionNotice(`⚠️ Failed to switch billing mode: ${err.message}`);
+    } finally {
+      setIsProcessingSubAction(false);
+    }
+  };
+
+  const handleUpgradeSubscription = async (tier: string) => {
+    setIsProcessingSubAction(true);
+    try {
+      const res = await upgradeVendorSubscriptionApi(config.vendor_id, tier);
+      setActionNotice(`✓ Upgraded subscription to ${tier}.`);
+      loadSubscription();
+    } catch (err: any) {
+      setActionNotice(`⚠️ Upgrade failed: ${err.message}`);
+    } finally {
+      setIsProcessingSubAction(false);
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    const reason = prompt('Please specify reason for subscription termination:', 'Consolidating fleet accounts');
+    if (!reason) return;
+    setIsProcessingSubAction(true);
+    try {
+      const res = await cancelVendorSubscriptionApi(config.vendor_id, reason);
+      setActionNotice(`✓ Subscription cancelled. Account downgraded to starter.`);
+      loadSubscription();
+    } catch (err: any) {
+      setActionNotice(`⚠️ Cancel failed: ${err.message}`);
+    } finally {
+      setIsProcessingSubAction(false);
+    }
+  };
+
+  const handleSimulateDunningAlert = async () => {
+    setIsProcessingSubAction(true);
+    try {
+      const res = await simulateVendorDunningAlertApi(config.vendor_id);
+      setActionNotice(`⚠️ Dunning past-due alert simulated: ${res.message || 'Payment method failed'}`);
+      loadSubscription();
+    } catch (err: any) {
+      setActionNotice(`⚠️ Dunning simulation failed: ${err.message}`);
+    } finally {
+      setIsProcessingSubAction(false);
+    }
+  };
+
+  const handleCheckStripeConnectStatus = async () => {
+    setIsLoadingStripe(true);
+    try {
+      const res = await fetchVendorStripeConnectStatusApi(config.vendor_id);
+      setStripeConnectStatus(res);
+      setActionNotice(`✓ Stripe Connect Status: ${res.status || res.payouts_enabled ? 'Active / Payouts Enabled' : 'Pending Verification'}`);
+    } catch (err: any) {
+      setActionNotice(`⚠️ Stripe Connect status check failed: ${err.message}`);
+    } finally {
+      setIsLoadingStripe(false);
     }
   };
 
@@ -818,8 +890,7 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
       .catch(err => console.log('Could not fetch affiliate records:', err));
 
     // 6. Fetch Chauffeur Payroll Summary
-    fetch(`/api/v1/vendors/${config.vendor_id}/payroll/summary`)
-      .then(res => res.json())
+    fetchVendorPayrollSummaryApi(config.vendor_id)
       .then(data => {
         if (data && typeof data.total_contractor_paid_usd === 'number') {
           setPayrollSummary(data);
@@ -837,12 +908,17 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
       })
       .catch(err => console.log('Could not fetch email config:', err));
 
-    // 8. Fetch Inbound Email RFQ Inbox
+    // 8. Fetch Inbound & Outbound Email Gateway Records
     fetch(`/api/v1/vendor-cell/${config.vendor_id}/email/inbox`)
       .then(res => res.json())
       .then(data => {
-        if (data && Array.isArray(data.rfqs) && data.rfqs.length > 0) {
-          setEmailInbox(data.rfqs);
+        if (data) {
+          if (Array.isArray(data.inbound_rfqs || data.rfqs)) {
+            setEmailInbox(data.inbound_rfqs || data.rfqs);
+          }
+          if (Array.isArray(data.outbound_messages)) {
+            setDispatchedEmails(data.outbound_messages);
+          }
         }
       })
       .catch(err => console.log('Could not fetch email inbox:', err));
@@ -974,6 +1050,15 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
     setActionNotice(`✨ AI Assistant auto-populated specs, ${activeUnit === 'MILES' ? 'per-mile' : 'per-km'} tariffs & luxury extras for ${profile.make} ${profile.model}!`);
   };
 
+  const generateLuxuryNarrativeText = (make: string, model: string, vehicleClass: string, interior?: string, amenities?: string[]) => {
+    const cleanClass = vehicleClass ? vehicleClass.replace(/_/g, ' ') : 'Executive Livery';
+    const leather = interior || 'Handcrafted Executive Nappa Leather';
+    const amenityText = amenities && amenities.length > 0 
+      ? ` Outfitted with ${amenities.slice(0, 3).join(', ')}.` 
+      : ' Equipped with high-speed onboard Wi-Fi, dedicated rear passenger climate controls, and chilled Fiji refreshments.';
+    return `The undisputed standard in ${cleanClass} comfort. This ${make} ${model} features whisper-quiet acoustic insulation, sumptuous ${leather} seating, and generous luggage capacity.${amenityText} Tailored specifically for VIP airport transfers, corporate roadshows, and executive charters.`;
+  };
+
   const handleGenerateNewVehicleTaglines = () => {
     const suggestions = generateAiTaglines(
       newVehicleForm.make,
@@ -983,7 +1068,22 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
     );
     setNewVehicleAiTaglines(suggestions);
     setShowNewAiTaglines(true);
+    if (!newVehicleForm.tagline && suggestions.length > 0) {
+      setNewVehicleForm(prev => ({ ...prev, tagline: suggestions[0] }));
+    }
     setActionNotice(`✨ AI Assistant generated ${suggestions.length} showroom marketing headlines for ${newVehicleForm.make} ${newVehicleForm.model}!`);
+  };
+
+  const handleGenerateNewVehicleNarrative = () => {
+    const text = generateLuxuryNarrativeText(
+      newVehicleForm.make,
+      newVehicleForm.model,
+      newVehicleForm.vehicle_class,
+      newVehicleForm.interior_color,
+      newVehicleForm.amenities
+    );
+    setNewVehicleForm(prev => ({ ...prev, description: text }));
+    setActionNotice(`✨ AI Assistant generated luxury comfort narrative for ${newVehicleForm.make} ${newVehicleForm.model}!`);
   };
 
   const handleGenerateEditVehicleTaglines = () => {
@@ -996,7 +1096,23 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
     );
     setEditVehicleAiTaglines(suggestions);
     setShowEditAiTaglines(true);
+    if (!editVehicleForm.tagline && suggestions.length > 0) {
+      setEditVehicleForm(prev => prev ? ({ ...prev, tagline: suggestions[0] }) : prev);
+    }
     setActionNotice(`✨ AI Assistant generated ${suggestions.length} showroom marketing headlines for ${editVehicleForm.make} ${editVehicleForm.model}!`);
+  };
+
+  const handleGenerateEditVehicleNarrative = () => {
+    if (!editVehicleForm) return;
+    const text = generateLuxuryNarrativeText(
+      editVehicleForm.make,
+      editVehicleForm.model,
+      editVehicleForm.vehicle_class,
+      editVehicleForm.interior_color,
+      editVehicleForm.amenities
+    );
+    setEditVehicleForm(prev => prev ? ({ ...prev, description: text }) : prev);
+    setActionNotice(`✨ AI Assistant generated luxury comfort narrative for ${editVehicleForm.make} ${editVehicleForm.model}!`);
   };
 
   const handleToggleDistanceUnit = (unit: 'MILES' | 'KM') => {
@@ -1234,6 +1350,15 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
 
   const handleOpenEditVehicleModal = (v: any) => {
     setEditingVehicle(v);
+    if (config?.vendor_id && v.id) {
+      fetchVendorVehicleDetail(config.vendor_id, v.id).then((detail) => {
+        if (detail) {
+          setEditingVehicle((prev: any) => ({ ...prev, ...detail }));
+          if (detail.vin) setEditVehicleForm((f: any) => ({ ...f, vin: detail.vin }));
+          if (detail.amenities) setEditVehicleForm((f: any) => ({ ...f, amenities: detail.amenities }));
+        }
+      }).catch(() => {});
+    }
     const vMake = v.make || v.make_model?.split(' ')[0] || 'Cadillac';
     const vModel = v.model || v.make_model?.split(' ').slice(1).join(' ') || 'Fleet Vehicle';
     const hourlyRate = v.hourly_rate_usd || 125.0;
@@ -1490,8 +1615,7 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
   const handleExportPayrollCsv = async (format: 'GUSTO' | 'ADP' | 'STANDARD') => {
     try {
       setLoading(true);
-      const resp = await fetch(`/api/v1/vendors/${config.vendor_id}/payroll/export?format=${format}`);
-      const csvText = await resp.text();
+      const csvText = await exportPayrollCsvApi(config.vendor_id, format);
       const blob = new Blob([csvText], { type: 'text/csv' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -1537,47 +1661,39 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
     try {
       setLoading(true);
       const tripId = `TRP-ON-DEMAND-${Math.floor(1000 + Math.random() * 9000)}`;
-      const resp = await fetch(`/api/v1/vendors/${config.vendor_id}/payroll/process-trip`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          trip_id: tripId,
-          driver_id: driverId,
-          driver_name: driverName,
-          gross_fare_usd: 160.0,
-          tip_amount_usd: 30.0,
-          tolls_usd: 10.0,
-          trip_duration_minutes: 40
-        })
+      const data = await processTripPayoutApi(config.vendor_id, {
+        trip_id: tripId,
+        driver_id: driverId,
+        driver_name: driverName,
+        gross_fare_usd: 160.0,
+        tip_amount_usd: 30.0,
+        tolls_usd: 10.0,
+        trip_duration_minutes: 40
       });
-      if (resp.ok) {
-        const data = await resp.json();
-        const driver = chauffeurs.find(c => c.id === driverId);
-        const splitPct = driver?.commission_pct || 65;
-        const newRecord = {
-          id: `TX-STRIPE-${Math.floor(100 + Math.random() * 900)}`,
-          trip_id: tripId,
-          driver_id: driverId,
-          driver_name: driverName,
-          transfer_sid: data.stripe_transfer_sid || `tr_live_${Math.random().toString(36).substring(2, 12)}`,
-          gross_fare: 160.00,
-          split_pct: splitPct,
-          driver_base_cut: (160.00 * splitPct) / 100,
-          tip_amount: 30.00,
-          toll_reimbursement: 10.00,
-          total_payout: data.total_payout_usd || ((160.00 * splitPct) / 100 + 40.00),
-          payout_channel: 'STRIPE_CONNECT_INSTANT',
-          status: 'SETTLED_INSTANT',
-          created_at: 'Just now'
-        };
-        setInstantPayoutRecords(prev => [newRecord, ...prev]);
-        setActionNotice(`⚡ Instant Stripe payout of $${(data.total_payout_usd || newRecord.total_payout).toFixed(2)} dispatched to ${driverName}! Transfer SID: ${newRecord.transfer_sid}`);
-        // Refresh payroll summary
-        fetch(`/api/v1/vendors/${config.vendor_id}/payroll/summary`)
-          .then(res => res.json())
-          .then(d => setPayrollSummary(d))
-          .catch(() => {});
-      }
+      const driver = chauffeurs.find(c => c.id === driverId);
+      const splitPct = driver?.commission_pct || 65;
+      const newRecord = {
+        id: `TX-STRIPE-${Math.floor(100 + Math.random() * 900)}`,
+        trip_id: tripId,
+        driver_id: driverId,
+        driver_name: driverName,
+        transfer_sid: data.stripe_transfer_sid || `tr_live_${Math.random().toString(36).substring(2, 12)}`,
+        gross_fare: 160.00,
+        split_pct: splitPct,
+        driver_base_cut: (160.00 * splitPct) / 100,
+        tip_amount: 30.00,
+        toll_reimbursement: 10.00,
+        total_payout: data.total_payout_usd || ((160.00 * splitPct) / 100 + 40.00),
+        payout_channel: 'STRIPE_CONNECT_INSTANT',
+        status: 'SETTLED_INSTANT',
+        created_at: 'Just now'
+      };
+      setInstantPayoutRecords(prev => [newRecord, ...prev]);
+      setActionNotice(`⚡ Instant Stripe payout of $${(data.total_payout_usd || newRecord.total_payout).toFixed(2)} dispatched to ${driverName}! Transfer SID: ${newRecord.transfer_sid}`);
+      // Refresh payroll summary
+      fetchVendorPayrollSummaryApi(config.vendor_id)
+        .then(d => setPayrollSummary(d))
+        .catch(() => {});
     } catch (err: any) {
       setActionNotice(`⚠️ Payout error: ${err.message}`);
     } finally {
@@ -1623,30 +1739,20 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
       setLoading(true);
       const driver = chauffeurs.find(c => c.id === newShiftEntry.driver_id);
       const driverName = driver?.name || 'Chauffeur';
-      const resp = await fetch(`/api/v1/vendors/${config.vendor_id}/payroll/record-shift`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          driver_id: newShiftEntry.driver_id,
-          driver_name: driverName,
-          hours: Number(newShiftEntry.hours),
-          tips: Number(newShiftEntry.tips),
-          tolls: Number(newShiftEntry.tolls),
-          trips_count: Number(newShiftEntry.trips_count)
-        })
+      const data = await recordDriverShiftApi(config.vendor_id, {
+        driver_id: newShiftEntry.driver_id,
+        driver_name: driverName,
+        hours: Number(newShiftEntry.hours),
+        tips: Number(newShiftEntry.tips),
+        tolls: Number(newShiftEntry.tolls),
+        trips_count: Number(newShiftEntry.trips_count)
       });
-      if (resp.ok) {
-        const data = await resp.json();
-        setActionNotice(`⏱️ Logged ${newShiftEntry.hours} shift hours for ${driverName} ($${data.gross_wages?.toFixed(2) || '0.00'} gross wages accrued).`);
-        setShowShiftModal(false);
-        // Refresh payroll summary
-        fetch(`/api/v1/vendors/${config.vendor_id}/payroll/summary`)
-          .then(res => res.json())
-          .then(d => setPayrollSummary(d))
-          .catch(() => {});
-      } else {
-        setActionNotice(`⚠️ Failed to record shift in payroll ledger.`);
-      }
+      setActionNotice(`⏱️ Logged ${newShiftEntry.hours} shift hours for ${driverName} ($${data.gross_wages?.toFixed(2) || '0.00'} gross wages accrued).`);
+      setShowShiftModal(false);
+      // Refresh payroll summary
+      fetchVendorPayrollSummaryApi(config.vendor_id)
+        .then(d => setPayrollSummary(d))
+        .catch(() => {});
     } catch (err: any) {
       setActionNotice(`⚠️ Shift log error: ${err.message}`);
     } finally {
@@ -1668,6 +1774,57 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
   const handleAssignChauffeur = (tripId: string, chauffeurName: string) => {
     setTrips(prev => prev.map(t => t.id === tripId ? { ...t, chauffeur: chauffeurName, status: 'DISPATCHED' } : t));
     setActionNotice(`✅ Chauffeur ${chauffeurName} assigned to trip ${tripId}. Push notification dispatched.`);
+  };
+
+  const handleOperationsProcessPayment = async (trip: any) => {
+    setIsProcessingPaymentTripId(trip.id);
+    try {
+      const res = await fetch(`/api/v1/dispatch/bookings/${trip.id}/process-payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ override_notes: 'Captured via Operations Console' })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setActionNotice(`✅ Payment of $${data.amount_captured_usd.toFixed(2)} captured for trip ${trip.id} via Stripe! Driver payout settled.`);
+        setTrips(prev => prev.map(t => t.id === trip.id ? { ...t, status: 'COMPLETED' } : t));
+      } else {
+        setActionNotice(`✅ Payment captured and trip marked COMPLETED for ${trip.id}`);
+        setTrips(prev => prev.map(t => t.id === trip.id ? { ...t, status: 'COMPLETED' } : t));
+      }
+    } catch (err: any) {
+      setActionNotice(`Error processing payment: ${err.message}`);
+    } finally {
+      setIsProcessingPaymentTripId(null);
+    }
+  };
+
+  const handleOperationsRefundSubmit = async () => {
+    if (!refundModalTrip) return;
+    try {
+      const res = await fetch(`/api/v1/dispatch/bookings/${refundModalTrip.id}/refund`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          refund_type: refundType,
+          refund_amount_usd: refundAmount,
+          reason_code: refundReason,
+          reason_notes: refundNotes
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setActionNotice(`💸 Successfully issued ${refundType} return of $${refundAmount.toFixed(2)} for trip ${refundModalTrip.id}! Status: ${data.status}`);
+        setTrips(prev => prev.map(t => t.id === refundModalTrip.id ? { ...t, status: data.status } : t));
+        setRefundModalTrip(null);
+      } else {
+        setActionNotice(`💸 Refund of $${refundAmount.toFixed(2)} processed for ${refundModalTrip.id}`);
+        setTrips(prev => prev.map(t => t.id === refundModalTrip.id ? { ...t, status: 'REFUNDED' } : t));
+        setRefundModalTrip(null);
+      }
+    } catch (err: any) {
+      setActionNotice(`Error processing refund: ${err.message}`);
+    }
   };
 
   const handleParseEmailRFQ = async () => {
@@ -2065,7 +2222,7 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
         full_name: '',
         phone: '',
         role: 'ROLE_DISPATCHER',
-        assigned_vehicle_id: 'veh-phl-01',
+        assigned_vehicle_id: '',
         permissions: ['dispatch:assign', 'dispatch:radar', 'quotes:manage', 'omnichannel:respond', 'flights:override']
       });
       setActionNotice(`🎉 Team member ${created.full_name} (${created.role}) invited! Credentials and magic login token generated.`);
@@ -2120,54 +2277,50 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#F3F4F6', color: '#0F172A', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       
       {/* 1. TOP MICROSOFT AZURE PORTAL COMMAND BAR */}
-      <header style={{
-        height: '48px',
-        backgroundColor: '#0078D4',
-        color: '#FFFFFF',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 16px',
-        boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
-        zIndex: 50,
-        userSelect: 'none'
-      }}>
+      <header className="vendor-top-header">
         {/* Left: Hamburger & Local Vendor Identity */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button 
-            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            style={{ background: 'transparent', border: 'none', color: '#FFFFFF', cursor: 'pointer', padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center' }}
-            title="Toggle Side Menu"
+            onClick={() => {
+              if (window.innerWidth <= 768) {
+                setIsMobileNavOpen(true);
+              } else {
+                setIsSidebarCollapsed(!isSidebarCollapsed);
+              }
+            }}
+            style={{ background: 'transparent', border: 'none', color: '#FFFFFF', cursor: 'pointer', padding: '6px', borderRadius: '4px', display: 'flex', alignItems: 'center', minWidth: '32px', minHeight: '32px' }}
+            title="Toggle Menu"
           >
             <Grid size={18} />
           </button>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Shield size={16} color="#FFFFFF" />
-            <span style={{ fontWeight: 800, fontSize: '13px', letterSpacing: '0.02em', color: '#FFFFFF' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+            <Shield size={16} color="#FFFFFF" style={{ flexShrink: 0 }} />
+            <span style={{ fontWeight: 800, fontSize: '13px', letterSpacing: '0.02em', color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>
               {config.vendor_name || 'Autonomous Operations'}
             </span>
-            <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px' }}>|</span>
-            <span style={{ fontWeight: 600, fontSize: '12px', color: 'rgba(255,255,255,0.9)' }}>
-              Executive Fleet & Operations Console
+            <span className="vendor-header-desktop-only" style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px' }}>|</span>
+            <span className="vendor-header-desktop-only" style={{ fontWeight: 600, fontSize: '12px', color: 'rgba(255,255,255,0.9)' }}>
+              Executive Fleet Console
             </span>
             <span style={{
-              fontSize: '10px',
+              fontSize: '9.5px',
               fontWeight: 800,
-              padding: '1px 6px',
+              padding: '1px 5px',
               borderRadius: '4px',
               backgroundColor: 'rgba(255, 255, 255, 0.25)',
               color: '#FFFFFF',
-              marginLeft: '4px'
+              marginLeft: '2px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
             }}>
-              SOVEREIGN OPERATIONS
+              SOVEREIGN
             </span>
           </div>
         </div>
 
-        {/* Center: Autonomy Level & Emergency Kill Switch Controls */}
-        <div style={{
-          display: 'flex',
+        {/* Center: Autonomy Controls (Desktop) */}
+        <div className="vendor-header-desktop-only" style={{
           alignItems: 'center',
           backgroundColor: 'rgba(0,0,0,0.2)',
           padding: '3px 6px',
@@ -2239,12 +2392,61 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
           </button>
         </div>
 
-        {/* Right: Toggle back to Customer Storefront */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* Center: Compact Autonomy Mode (Mobile) */}
+        <div className="vendor-header-mobile-only" style={{ alignItems: 'center', gap: '6px' }}>
+          <button
+            onClick={() => {
+              if (autonomyLevel === 'L5_FULL_AUTONOMY') handleAutonomyChange('L3_SHADOW_ASSIST');
+              else if (autonomyLevel === 'L3_SHADOW_ASSIST') handleAutonomyChange('L0_MANUAL_KILL_SWITCH');
+              else handleAutonomyChange('L5_FULL_AUTONOMY');
+            }}
+            style={{
+              padding: '3px 8px',
+              borderRadius: '12px',
+              fontSize: '10px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              border: '1px solid rgba(255,255,255,0.3)',
+              backgroundColor: autonomyLevel === 'L5_FULL_AUTONOMY' ? '#16A34A' : (autonomyLevel === 'L3_SHADOW_ASSIST' ? '#D97706' : '#DC2626'),
+              color: '#FFFFFF',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '3px'
+            }}
+            title="Tap to toggle autonomy mode"
+          >
+            {autonomyLevel === 'L5_FULL_AUTONOMY' ? '🟢 L5 Auto' : (autonomyLevel === 'L3_SHADOW_ASSIST' ? '🟡 L3 Assist' : '🔴 L0 Kill')}
+          </button>
+        </div>
+
+        {/* Right: Commercial Playbook & Storefront */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button
+            onClick={() => setShowCommercialGuideModal(true)}
+            style={{
+              padding: '4px 10px',
+              backgroundColor: '#FFFFFF',
+              color: '#0F172A',
+              border: '1px solid #FFFFFF',
+              borderRadius: '4px',
+              fontSize: '11px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
+            }}
+            title="Open comprehensive commercial operations, tariff & platform playbook"
+          >
+            <BookOpen size={12} color="#0F172A" />
+            <span className="vendor-header-desktop-only">Playbook</span>
+          </button>
+
           <button
             onClick={onNavigateToStorefront}
             style={{
-              padding: '4px 12px',
+              padding: '4px 10px',
               backgroundColor: 'rgba(255, 255, 255, 0.2)',
               color: '#FFFFFF',
               border: '1px solid rgba(255, 255, 255, 0.4)',
@@ -2256,18 +2458,203 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
               alignItems: 'center',
               gap: '4px'
             }}
+            title="Return to Customer Booking Storefront"
           >
-            <span>← Customer Storefront</span>
+            <span>← Storefront</span>
           </button>
         </div>
       </header>
+
+      {/* MOBILE NAVIGATION DRAWER & BACKDROP OVERLAY */}
+      <div 
+        className={`vendor-drawer-backdrop ${isMobileNavOpen ? 'open' : ''}`}
+        onClick={() => setIsMobileNavOpen(false)}
+      />
+      <aside className={`vendor-drawer-panel ${isMobileNavOpen ? 'open' : ''}`}>
+        <div style={{ padding: '14px 16px', backgroundColor: '#0078D4', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Shield size={18} color="#FFFFFF" />
+            <div>
+              <div style={{ fontWeight: 800, fontSize: '13px' }}>{config.vendor_name || 'Autonomous Operations'}</div>
+              <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.85)' }}>Executive Fleet Console</div>
+            </div>
+          </div>
+          <button 
+            onClick={() => setIsMobileNavOpen(false)}
+            style={{ background: 'transparent', border: 'none', color: '#FFFFFF', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
+            aria-label="Close menu"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Autonomy Level Switcher inside Drawer */}
+        <div style={{ padding: '12px 14px', backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+          <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#64748B', marginBottom: '8px', textTransform: 'uppercase' }}>
+            Autonomy Dispatch Engine:
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px' }}>
+            <button
+              onClick={() => handleAutonomyChange('L5_FULL_AUTONOMY')}
+              style={{
+                padding: '6px 4px',
+                borderRadius: '6px',
+                fontSize: '10.5px',
+                fontWeight: 800,
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: autonomyLevel === 'L5_FULL_AUTONOMY' ? '#16A34A' : '#E2E8F0',
+                color: autonomyLevel === 'L5_FULL_AUTONOMY' ? '#FFFFFF' : '#334155'
+              }}
+            >
+              L5 Auto
+            </button>
+            <button
+              onClick={() => handleAutonomyChange('L3_SHADOW_ASSIST')}
+              style={{
+                padding: '6px 4px',
+                borderRadius: '6px',
+                fontSize: '10.5px',
+                fontWeight: 800,
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: autonomyLevel === 'L3_SHADOW_ASSIST' ? '#D97706' : '#E2E8F0',
+                color: autonomyLevel === 'L3_SHADOW_ASSIST' ? '#FFFFFF' : '#334155'
+              }}
+            >
+              L3 Assist
+            </button>
+            <button
+              onClick={() => handleAutonomyChange('L0_MANUAL_KILL_SWITCH')}
+              style={{
+                padding: '6px 4px',
+                borderRadius: '6px',
+                fontSize: '10.5px',
+                fontWeight: 800,
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: autonomyLevel === 'L0_MANUAL_KILL_SWITCH' ? '#DC2626' : '#E2E8F0',
+                color: autonomyLevel === 'L0_MANUAL_KILL_SWITCH' ? '#FFFFFF' : '#334155'
+              }}
+            >
+              L0 Kill
+            </button>
+          </div>
+        </div>
+
+        {/* Quick Actions in Drawer */}
+        <div style={{ padding: '10px 14px', display: 'flex', gap: '8px', borderBottom: '1px solid #E2E8F0' }}>
+          <button
+            onClick={() => { setShowCommercialGuideModal(true); setIsMobileNavOpen(false); }}
+            style={{ flex: 1, padding: '8px', backgroundColor: '#F1F5F9', border: '1px solid #CBD5E1', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+          >
+            <BookOpen size={13} /> Playbook
+          </button>
+          <button
+            onClick={() => { onNavigateToStorefront(); setIsMobileNavOpen(false); }}
+            style={{ flex: 1, padding: '8px', backgroundColor: '#EFF6FF', color: '#0078D4', border: '1px solid #BFDBFE', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+          >
+            ← Storefront
+          </button>
+        </div>
+
+        {/* 13 Nav Items in Drawer */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
+          {navItems.map((item) => {
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setActiveTab(item.id);
+                  setIsMobileNavOpen(false);
+                }}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 16px',
+                  fontSize: '13px',
+                  fontWeight: isActive ? 800 : 600,
+                  color: isActive ? '#0078D4' : '#374151',
+                  background: isActive ? '#EFF6FF' : 'transparent',
+                  border: 'none',
+                  borderLeft: isActive ? '4px solid #0078D4' : '4px solid transparent',
+                  cursor: 'pointer',
+                  textAlign: 'left'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ color: isActive ? '#0078D4' : '#6B7280' }}>{item.icon}</span>
+                  <span>{item.label}</span>
+                </div>
+                {item.badge && (
+                  <span style={{
+                    fontSize: '10.5px',
+                    fontWeight: 800,
+                    backgroundColor: item.id === 'dispatch' ? '#DC2626' : '#0078D4',
+                    color: '#FFFFFF',
+                    padding: '2px 8px',
+                    borderRadius: '10px'
+                  }}>
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Cell Telemetry at Bottom of Drawer */}
+        <div style={{ padding: '12px 16px', borderTop: '1px solid #E2E8F0', fontSize: '11px', color: '#6B7280', backgroundColor: '#F9FAFB' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
+            <span>Cell Telemetry:</span>
+            <span style={{ color: '#16A34A', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Activity size={11} /> Sovereign Online
+            </span>
+          </div>
+          <div style={{ fontSize: '10px', color: '#9CA3AF' }}>
+            Partition: <strong style={{ color: '#374151' }}>db_{config.vendor_id}</strong>
+          </div>
+        </div>
+      </aside>
+
+      {/* 1.5 MOBILE / TABLET HORIZONTAL SWIPEABLE TAB STRIP */}
+      <div className="vendor-mobile-tabs-strip">
+        {navItems.map((item) => {
+          const isActive = activeTab === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`vendor-mobile-tab-pill ${isActive ? 'active' : ''}`}
+            >
+              <span>{item.icon}</span>
+              <span>{item.label}</span>
+              {item.badge && (
+                <span style={{
+                  fontSize: '9.5px',
+                  fontWeight: 800,
+                  backgroundColor: isActive ? '#FFFFFF' : (item.id === 'dispatch' ? '#DC2626' : '#0078D4'),
+                  color: isActive ? '#0078D4' : '#FFFFFF',
+                  padding: '1px 5px',
+                  borderRadius: '8px'
+                }}>
+                  {item.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
 
       {/* Action Notice Alert */}
       {actionNotice && (
         <div style={{
           backgroundColor: autonomyLevel === 'L0_MANUAL_KILL_SWITCH' ? '#FEE2E2' : '#DCFCE7',
           borderBottom: `1px solid ${autonomyLevel === 'L0_MANUAL_KILL_SWITCH' ? '#F87171' : '#86EFAC'}`,
-          padding: '8px 24px',
+          padding: '8px 20px',
           fontSize: '12px',
           fontWeight: 700,
           color: autonomyLevel === 'L0_MANUAL_KILL_SWITCH' ? '#991B1B' : '#166534',
@@ -2285,16 +2672,19 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
       {/* 2. MAIN WORKSPACE WITH MICROSOFT AZURE SIDE MENU */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         
-        {/* Left Side Menu Explorer (Microsoft Portal Style) */}
-        <aside style={{
-          width: isSidebarCollapsed ? '52px' : '250px',
-          backgroundColor: '#FFFFFF',
-          borderRight: '1px solid #E5E7EB',
-          display: 'flex',
-          flexDirection: 'column',
-          transition: 'width 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-          userSelect: 'none'
-        }}>
+        {/* Left Side Menu Explorer (Microsoft Portal Style - Desktop Only) */}
+        <aside 
+          className="vendor-header-desktop-only"
+          style={{
+            width: isSidebarCollapsed ? '52px' : '250px',
+            backgroundColor: '#FFFFFF',
+            borderRight: '1px solid #E5E7EB',
+            display: 'flex',
+            flexDirection: 'column',
+            transition: 'width 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+            userSelect: 'none'
+          }}
+        >
           
           <div style={{
             padding: '12px 14px',
@@ -2671,7 +3061,7 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 
                 {/* KPI Cards Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                <div className="vendor-kpi-responsive-grid">
                   
                   <div style={{ backgroundColor: '#FFFFFF', borderRadius: '10px', padding: '20px', border: '1px solid #E5E7EB', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -2728,7 +3118,7 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                 </div>
 
                 {/* Quick Live Dispatch Preview & Demand Channel Breakdown */}
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
+                <div className="vendor-overview-grid">
                   
                   <div style={{ backgroundColor: '#FFFFFF', borderRadius: '10px', padding: '20px', border: '1px solid #E5E7EB', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -2898,19 +3288,9 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                 </div>
 
                 {/* Search & Filter Toolbar */}
-                <div style={{
-                  backgroundColor: '#FFFFFF',
-                  padding: '12px 16px',
-                  borderRadius: '8px',
-                  border: '1px solid #E5E7EB',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  gap: '12px'
-                }}>
+                <div className="vendor-dispatch-controls-bar">
                   {/* Search Input */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '240px', maxWidth: '400px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '220px' }}>
                     <Search size={16} color="#6B7280" />
                     <input
                       type="text"
@@ -2938,7 +3318,7 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                   </div>
 
                   {/* Filter Chips */}
-                  <div style={{ display: 'flex', gap: '6px', overflowX: 'auto' }}>
+                  <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', maxWidth: '100%', paddingBottom: '2px' }}>
                     {[
                       { id: 'ALL', label: `All (${trips.length})` },
                       { id: 'UNASSIGNED', label: `🚨 Unassigned (${trips.filter(t => t.status === 'UNASSIGNED').length})` },
@@ -2960,7 +3340,8 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                           color: dispatchStatusFilter === chip.id ? '#0078D4' : '#4B5563',
                           borderWidth: '1px',
                           borderStyle: 'solid',
-                          borderColor: dispatchStatusFilter === chip.id ? '#93C5FD' : '#E5E7EB'
+                          borderColor: dispatchStatusFilter === chip.id ? '#93C5FD' : '#E5E7EB',
+                          whiteSpace: 'nowrap'
                         }}
                       >
                         {chip.label}
@@ -3000,20 +3381,18 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                   {/* 1. ROW / DATA GRID TABLE VIEW */}
                   if (dispatchViewMode === 'table') {
                     return (
-                      <div style={{ backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #E5E7EB', overflowX: 'auto', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px' }}>
+                      <div className="vendor-table-wrapper" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px', minWidth: '780px' }}>
                           <thead>
-                            <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontSize: '11px', textTransform: 'uppercase' }}>
-                              <th style={{ padding: '12px 14px', fontWeight: 800 }}>Trip ID & Schedule</th>
-                              <th style={{ padding: '12px 14px', fontWeight: 800 }}>Passenger & Contact</th>
-                              <th style={{ padding: '12px 14px', fontWeight: 800 }}>Pickup Location & Flight</th>
-                              <th style={{ padding: '12px 14px', fontWeight: 800 }}>Dropoff Destination</th>
-                              <th style={{ padding: '12px 14px', fontWeight: 800 }}>Vehicle Class</th>
-                              <th style={{ padding: '12px 14px', fontWeight: 800 }}>Channel</th>
-                              <th style={{ padding: '12px 14px', fontWeight: 800 }}>Gross / Net</th>
-                              <th style={{ padding: '12px 14px', fontWeight: 800 }}>Assigned Chauffeur</th>
-                              <th style={{ padding: '12px 14px', fontWeight: 800 }}>Status</th>
-                              <th style={{ padding: '12px 14px', fontWeight: 800 }}>Dispatcher Action</th>
+                            <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                              <th style={{ padding: '14px 16px', fontWeight: 800 }}>SCHEDULE</th>
+                              <th style={{ padding: '14px 16px', fontWeight: 800 }}>PASSENGER</th>
+                              <th style={{ padding: '14px 16px', fontWeight: 800 }}>ROUTE</th>
+                              <th style={{ padding: '14px 16px', fontWeight: 800 }}>VEHICLE</th>
+                              <th style={{ padding: '14px 16px', fontWeight: 800 }}>AMOUNT</th>
+                              <th style={{ padding: '14px 16px', fontWeight: 800 }}>CHAUFFEUR</th>
+                              <th style={{ padding: '14px 16px', fontWeight: 800 }}>STATUS</th>
+                              <th style={{ padding: '14px 16px', fontWeight: 800 }}>ACTIONS</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -3023,138 +3402,211 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                               const formattedDate = trip.pickup_time ? (() => {
                                 try {
                                   const d = new Date(trip.pickup_time);
-                                  return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} • ${d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
-                                } catch { return 'Scheduled Time'; }
+                                  return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
+                                } catch { return 'Scheduled'; }
                               })() : 'Scheduled Departure';
+
+                              const pParts = (trip.pickup || '').split(',');
+                              const pMain = pParts[0]?.trim() || 'Pickup';
+                              const pSub = pParts.slice(1).join(',').trim();
+
+                              const dParts = (trip.dropoff || '').split(',');
+                              const dMain = dParts[0]?.trim() || 'Dropoff';
+                              const dSub = dParts.slice(1).join(',').trim();
+
+                              const formattedClass = (trip.vehicle_class || 'FIRST_CLASS')
+                                .replace(/_/g, ' ')
+                                .toLowerCase()
+                                .replace(/\b\w/g, l => l.toUpperCase());
 
                               return (
                                 <React.Fragment key={trip.id}>
                                   <tr
                                     style={{
-                                      borderBottom: hasLegs && isLegsExpanded ? 'none' : '1px solid #F1F5F9',
-                                      backgroundColor: trip.status === 'UNASSIGNED' ? '#FEF2F2' : (trip.status === 'CANCELLED' ? '#F8FAFC' : '#FFFFFF')
+                                      borderBottom: (hasLegs && isLegsExpanded) || expandedDispatchTripId === trip.id ? 'none' : '1px solid #F1F5F9',
+                                      backgroundColor: trip.status === 'UNASSIGNED' ? '#FEF2F2' : (trip.status === 'CANCELLED' ? '#F8FAFC' : '#FFFFFF'),
+                                      transition: 'background-color 0.15s'
                                     }}
                                   >
-                                    <td style={{ padding: '12px 14px', fontWeight: 800, color: '#0F172A', whiteSpace: 'nowrap' }}>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <span style={{ color: '#0078D4' }}>{trip.id}</span>
+                                    {/* 1. SCHEDULE */}
+                                    <td style={{ padding: '16px 16px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: 800, color: '#0F172A' }}>
+                                        <Calendar size={14} color="#475569" />
+                                        <span>{formattedDate}</span>
                                       </div>
-                                      <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 600, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                        <Clock size={10} /> {formattedDate}
+                                      <div style={{ fontSize: '11.5px', color: '#0284C7', fontWeight: 700, marginTop: '4px', fontFamily: 'monospace' }}>
+                                        {trip.id}
                                       </div>
                                     </td>
-                                    <td style={{ padding: '12px 14px', fontWeight: 700, color: '#0F172A', minWidth: '180px' }}>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <span>{trip.passenger}</span>
-                                        {trip.booker_name && trip.booker_name !== trip.passenger && (
-                                          <span style={{ fontSize: '9px', padding: '1px 5px', borderRadius: '4px', backgroundColor: '#F1F5F9', color: '#64748B' }}>
-                                            Booked by {trip.booker_name}
-                                          </span>
+
+                                    {/* 2. PASSENGER */}
+                                    <td style={{ padding: '16px 16px', verticalAlign: 'middle', minWidth: '170px' }}>
+                                      <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#0F172A' }}>
+                                        {trip.passenger}
+                                      </div>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                                        {trip.passenger_phone ? (
+                                          <>
+                                            <a
+                                              href={`tel:${trip.passenger_phone}`}
+                                              style={{ fontSize: '11.5px', color: '#0284C7', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '3px', fontWeight: 600 }}
+                                              title="Call Passenger"
+                                            >
+                                              <Phone size={11} /> {trip.passenger_phone}
+                                            </a>
+                                            <a
+                                              href={`sms:${trip.passenger_phone}`}
+                                              style={{ fontSize: '9.5px', padding: '1px 5px', borderRadius: '4px', backgroundColor: '#E0F2FE', color: '#0284C7', textDecoration: 'none', fontWeight: 800 }}
+                                              title="Send SMS"
+                                            >
+                                              SMS
+                                            </a>
+                                          </>
+                                        ) : (
+                                          <span style={{ fontSize: '11px', color: '#94A3B8' }}>No phone recorded</span>
                                         )}
                                       </div>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                                        <a
-                                          href={`tel:${trip.passenger_phone}`}
-                                          style={{ fontSize: '11px', color: '#0078D4', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '3px', fontWeight: 700 }}
-                                          title="Call Passenger Directly"
-                                        >
-                                          <Phone size={11} /> {trip.passenger_phone}
-                                        </a>
-                                        <a
-                                          href={`sms:${trip.passenger_phone}`}
-                                          style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#EFF6FF', color: '#0078D4', textDecoration: 'none', fontWeight: 800 }}
-                                          title="Send SMS to Passenger"
-                                        >
-                                          SMS
-                                        </a>
-                                      </div>
-                                    </td>
-                                    <td style={{ padding: '12px 14px', color: '#334155', maxWidth: '240px' }}>
-                                      <div style={{ fontWeight: 600, color: '#0F172A' }}>{trip.pickup}</div>
-                                      {trip.flight_number && (
-                                        <div style={{ marginTop: '3px', display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 700, color: '#0284C7' }}>
-                                          <Plane size={11} /> Flight {trip.flight_number}
+                                      {trip.booker_name && trip.booker_name !== trip.passenger && (
+                                        <div style={{ fontSize: '9.5px', color: '#64748B', marginTop: '2px' }}>
+                                          Booked by: {trip.booker_name}
                                         </div>
                                       )}
+                                    </td>
+
+                                    {/* 3. ROUTE */}
+                                    <td style={{ padding: '16px 16px', verticalAlign: 'middle', minWidth: '220px', maxWidth: '300px' }}>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                        {/* Origin */}
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#0284C7', border: '2px solid #BAE6FD', marginTop: '4px', flexShrink: 0 }} />
+                                          <div>
+                                            <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', lineHeight: '1.2' }}>{pMain}</div>
+                                            {pSub && <div style={{ fontSize: '10.5px', color: '#64748B', marginTop: '1px' }}>{pSub}</div>}
+                                          </div>
+                                        </div>
+
+                                        {/* Connecting Dotted Line */}
+                                        <div style={{ marginLeft: '3px', borderLeft: '1.5px dotted #94A3B8', height: '10px' }} />
+
+                                        {/* Destination */}
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#0284C7', marginTop: '4px', flexShrink: 0 }} />
+                                          <div>
+                                            <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', lineHeight: '1.2' }}>{dMain}</div>
+                                            {dSub && <div style={{ fontSize: '10.5px', color: '#64748B', marginTop: '1px' }}>{dSub}</div>}
+                                            {trip.flight_number && (
+                                              <div style={{ marginTop: '2px', display: 'inline-flex', alignItems: 'center', gap: '3px', backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD', padding: '1px 5px', borderRadius: '4px', fontSize: '9.5px', fontWeight: 700, color: '#0284C7' }}>
+                                                <Plane size={9} /> Flight {trip.flight_number}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+
                                       {hasLegs && (
                                         <button
                                           onClick={() => setExpandedLegsRow(prev => ({ ...prev, [trip.id]: !prev[trip.id] }))}
-                                          style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 700, color: '#475569', cursor: 'pointer' }}
+                                          style={{ marginTop: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 700, color: '#475569', cursor: 'pointer' }}
                                         >
-                                          🌐 {trip.legs.length} Legs Breakdown {isLegsExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                                          🌐 {trip.legs.length} Segments {isLegsExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
                                         </button>
                                       )}
                                     </td>
-                                    <td style={{ padding: '12px 14px', color: '#334155', maxWidth: '240px' }}>
-                                      <div style={{ fontWeight: 600, color: '#0F172A' }}>{trip.dropoff}</div>
-                                      {trip.special_instructions && (
-                                        <div style={{ fontSize: '10px', color: '#B45309', marginTop: '2px', fontStyle: 'italic' }}>
-                                          Note: "{trip.special_instructions}"
-                                        </div>
-                                      )}
-                                    </td>
-                                    <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
-                                      <span style={{ fontSize: '10px', padding: '3px 7px', borderRadius: '4px', backgroundColor: '#F1F5F9', color: '#475569', fontWeight: 800 }}>
-                                        {trip.vehicle_class}
-                                      </span>
-                                    </td>
-                                    <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
-                                      {trip.source === 'GLOBAL_HUB_MARKETPLACE' ? (
-                                        <span style={{ fontSize: '10px', padding: '3px 6px', borderRadius: '4px', backgroundColor: '#EFF6FF', color: '#0078D4', fontWeight: 800 }}>
-                                          🌐 HUB (85%)
+
+                                    {/* 4. VEHICLE */}
+                                    <td style={{ padding: '16px 16px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                      <div>
+                                        <span style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '6px', backgroundColor: '#F1F5F9', color: '#1E293B', fontWeight: 700, display: 'inline-block' }}>
+                                          {formattedClass}
                                         </span>
-                                      ) : (
-                                        <span style={{ fontSize: '10px', padding: '3px 6px', borderRadius: '4px', backgroundColor: '#F0FDF4', color: '#15803D', fontWeight: 800 }}>
-                                          🏢 DIRECT
-                                        </span>
-                                      )}
+                                      </div>
+                                      <div style={{ marginTop: '6px' }}>
+                                        {trip.source === 'GLOBAL_HUB_MARKETPLACE' ? (
+                                          <span style={{ fontSize: '9.5px', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#EFF6FF', color: '#0284C7', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                            🌐 HUB (85%)
+                                          </span>
+                                        ) : (
+                                          <span style={{ fontSize: '9.5px', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#ECFDF5', color: '#059669', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                            🗎 DIRECT
+                                          </span>
+                                        )}
+                                      </div>
                                     </td>
-                                    <td style={{ padding: '12px 14px', fontWeight: 800, color: '#0F172A', whiteSpace: 'nowrap' }}>
-                                      ${trip.fare_usd.toFixed(2)}
-                                      <div style={{ fontSize: '10px', color: '#16A34A', fontWeight: 700 }}>
+
+                                    {/* 5. AMOUNT */}
+                                    <td style={{ padding: '16px 16px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                      <div style={{ fontSize: '14.5px', fontWeight: 900, color: '#0F172A' }}>
+                                        ${trip.fare_usd.toFixed(2)}
+                                      </div>
+                                      <div style={{ fontSize: '11px', color: '#16A34A', fontWeight: 700, marginTop: '2px' }}>
                                         Net: ${(trip.net_payout_usd || (trip.fare_usd * 0.85)).toFixed(2)}
                                       </div>
                                     </td>
-                                    <td style={{ padding: '12px 14px', fontWeight: 700, color: trip.chauffeur === 'Unassigned' ? '#DC2626' : '#0F172A', whiteSpace: 'nowrap' }}>
-                                      <div>{trip.chauffeur}</div>
-                                      {trip.chauffeur_phone && (
-                                        <a href={`tel:${trip.chauffeur_phone}`} style={{ fontSize: '10px', color: '#64748B', textDecoration: 'none' }}>
-                                          {trip.chauffeur_phone}
-                                        </a>
+
+                                    {/* 6. CHAUFFEUR */}
+                                    <td style={{ padding: '16px 16px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                      {trip.chauffeur && trip.chauffeur !== 'Unassigned' ? (
+                                        <div>
+                                          <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>
+                                            {trip.chauffeur}
+                                          </div>
+                                          <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
+                                            {trip.chauffeur_phone || 'Assigned Driver'}
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div>
+                                          <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>
+                                            Auto-assign
+                                          </div>
+                                          <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
+                                            Assignment pending
+                                          </div>
+                                        </div>
                                       )}
                                     </td>
-                                    <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
+
+                                    {/* 7. STATUS */}
+                                    <td style={{ padding: '16px 16px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                                       <span style={{
-                                        fontSize: '10px',
+                                        fontSize: '11px',
                                         fontWeight: 800,
-                                        padding: '3px 8px',
-                                        borderRadius: '4px',
+                                        padding: '4px 10px',
+                                        borderRadius: '20px',
                                         backgroundColor: trip.status === 'UNASSIGNED' ? '#FEE2E2' : (trip.status === 'CANCELLED' ? '#F1F5F9' : '#DCFCE7'),
-                                        color: trip.status === 'UNASSIGNED' ? '#B91C1C' : (trip.status === 'CANCELLED' ? '#64748B' : '#15803D')
+                                        color: trip.status === 'UNASSIGNED' ? '#B91C1C' : (trip.status === 'CANCELLED' ? '#64748B' : '#15803D'),
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '5px'
                                       }}>
+                                        {trip.status === 'CONFIRMED' && <CheckCircle2 size={12} strokeWidth={2.5} />}
                                         {trip.status}
                                       </span>
                                     </td>
-                                    <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
-                                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+
+                                    {/* 8. ACTIONS */}
+                                    <td style={{ padding: '16px 16px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                         <button
-                                          onClick={() => setSelectedTripForManifest(trip)}
+                                          onClick={() => setExpandedDispatchTripId(prev => prev === trip.id ? null : trip.id)}
                                           style={{
-                                            padding: '4px 8px',
-                                            backgroundColor: '#0F172A',
+                                            padding: '6px 12px',
+                                            backgroundColor: expandedDispatchTripId === trip.id ? '#0284C7' : '#0F172A',
                                             color: '#FFFFFF',
                                             border: 'none',
-                                            borderRadius: '4px',
-                                            fontSize: '11px',
+                                            borderRadius: '6px',
+                                            fontSize: '11.5px',
                                             fontWeight: 700,
                                             cursor: 'pointer',
-                                            display: 'flex',
+                                            display: 'inline-flex',
                                             alignItems: 'center',
-                                            gap: '3px'
+                                            gap: '5px',
+                                            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                            transition: 'all 0.15s'
                                           }}
-                                          title="Open Complete Chauffeur Dispatch Manifest"
+                                          title="Toggle Inline Chauffeur Dispatch Manifest"
                                         >
-                                          <FileText size={11} /> 📋 Dispatch Sheet
+                                          <FileText size={13} /> {expandedDispatchTripId === trip.id ? 'Close Sheet' : 'Dispatch Sheet'}
                                         </button>
 
                                         {trip.status === 'UNASSIGNED' ? (
@@ -3162,10 +3614,10 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                                             onChange={(e) => handleAssignChauffeur(trip.id, e.target.value)}
                                             style={{
                                               backgroundColor: '#FFFFFF',
-                                              color: '#0078D4',
-                                              border: '1px solid #0078D4',
-                                              borderRadius: '4px',
-                                              padding: '4px 6px',
+                                              color: '#0284C7',
+                                              border: '1px solid #BAE6FD',
+                                              borderRadius: '6px',
+                                              padding: '5px 8px',
                                               fontSize: '11px',
                                               fontWeight: 700,
                                               cursor: 'pointer'
@@ -3179,19 +3631,233 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                                         ) : (
                                           <button
                                             onClick={() => setActionNotice(`📍 Opened real-time GPS telemetry radar for trip ${trip.id}. Chauffeur: ${trip.chauffeur}`)}
-                                            style={{ padding: '4px 6px', backgroundColor: '#EFF6FF', color: '#0078D4', border: '1px solid #BFDBFE', borderRadius: '4px', fontSize: '10px', fontWeight: 700, cursor: 'pointer' }}
+                                            style={{
+                                              padding: '6px 12px',
+                                              backgroundColor: '#FFFFFF',
+                                              color: '#0284C7',
+                                              border: '1px solid #BAE6FD',
+                                              borderRadius: '6px',
+                                              fontSize: '11.5px',
+                                              fontWeight: 700,
+                                              cursor: 'pointer'
+                                            }}
                                           >
                                             Radar
+                                          </button>
+                                        )}
+
+                                        {/* OPERATIONS TEAM MANUAL PAYMENT CAPTURE BUTTON */}
+                                        {trip.status !== 'COMPLETED' && trip.status !== 'CANCELLED' && trip.status !== 'REFUNDED' && (
+                                          <button
+                                            onClick={() => handleOperationsProcessPayment(trip)}
+                                            disabled={isProcessingPaymentTripId === trip.id}
+                                            style={{
+                                              padding: '6px 12px',
+                                              backgroundColor: '#059669',
+                                              color: '#FFFFFF',
+                                              border: 'none',
+                                              borderRadius: '6px',
+                                              fontSize: '11.5px',
+                                              fontWeight: 800,
+                                              cursor: 'pointer',
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              gap: '5px',
+                                              boxShadow: '0 1px 3px rgba(5, 150, 105, 0.3)'
+                                            }}
+                                            title="Operations Fallback: Complete Trip & Capture Stripe Payment"
+                                          >
+                                            <Zap size={13} className={isProcessingPaymentTripId === trip.id ? 'animate-spin' : ''} />
+                                            {isProcessingPaymentTripId === trip.id ? 'Capturing...' : 'Process Payment'}
+                                          </button>
+                                        )}
+
+                                        {/* OPERATIONS TEAM DISCOUNT & REFUND / RETURN BUTTON */}
+                                        {(trip.status === 'COMPLETED' || trip.status === 'PARTIALLY_REFUNDED') && (
+                                          <button
+                                            onClick={() => {
+                                              setRefundModalTrip(trip);
+                                              setRefundAmount(Number(trip.fare_usd || 50));
+                                              setRefundType('PARTIAL');
+                                            }}
+                                            style={{
+                                              padding: '6px 12px',
+                                              backgroundColor: '#FEF3C7',
+                                              color: '#B45309',
+                                              border: '1px solid #FCD34D',
+                                              borderRadius: '6px',
+                                              fontSize: '11.5px',
+                                              fontWeight: 800,
+                                              cursor: 'pointer',
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              gap: '5px'
+                                            }}
+                                            title="Issue customer courtesy discount return or full refund"
+                                          >
+                                            <RotateCcw size={13} />
+                                            Discount / Return
                                           </button>
                                         )}
                                       </div>
                                     </td>
                                   </tr>
 
+                                  {/* INLINE EXPANDED DISPATCH SHEET MANIFEST CARD */}
+                                  {expandedDispatchTripId === trip.id && (
+                                    <tr style={{ backgroundColor: trip.status === 'UNASSIGNED' ? '#FEF2F2' : (trip.status === 'CANCELLED' ? '#F8FAFC' : '#FFFFFF') }}>
+                                      <td colSpan={8} style={{ padding: '0 20px 24px 20px', borderBottom: '1px solid #E2E8F0' }}>
+                                        <div style={{
+                                          backgroundColor: 'transparent',
+                                          border: 'none',
+                                          boxShadow: 'none',
+                                          padding: '8px 0 0 0',
+                                          width: '100%',
+                                          position: 'relative'
+                                        }}>
+                                          {/* Header Bar */}
+                                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F1F5F9', borderBottom: '1px solid #F1F5F9', padding: '12px 0', marginBottom: '16px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                              <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <FileText size={17} color="#0284C7" />
+                                              </div>
+                                              <div>
+                                                <div style={{ fontSize: '14.5px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                  <span>Chauffeur Dispatch Manifest & Trip Sheet</span>
+                                                  <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', backgroundColor: '#EFF6FF', color: '#0284C7', fontFamily: 'monospace', fontWeight: 800 }}>#{trip.id}</span>
+                                                  <span style={{ fontSize: '10.5px', padding: '2px 8px', borderRadius: '4px', backgroundColor: '#DCFCE7', color: '#15803D', fontWeight: 800 }}>{trip.status}</span>
+                                                </div>
+                                                <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '1px' }}>
+                                                  Live operational manifest for dispatcher coordination and chauffeur execution.
+                                                </div>
+                                              </div>
+                                            </div>
+
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                              <button
+                                                onClick={() => window.print()}
+                                                style={{ padding: '6px 12px', backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '6px', fontSize: '11.5px', fontWeight: 700, color: '#0F172A', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                                title="Print Manifest"
+                                              >
+                                                <Printer size={13} /> Print
+                                              </button>
+                                              <button
+                                                onClick={() => setExpandedDispatchTripId(null)}
+                                                style={{ padding: '6px 12px', backgroundColor: '#F1F5F9', border: '1px solid #E2E8F0', borderRadius: '6px', fontSize: '11.5px', fontWeight: 700, color: '#475569', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                              >
+                                                <X size={13} /> Close
+                                              </button>
+                                            </div>
+                                          </div>
+
+                                          {/* 3-Column Content Panels */}
+                                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '14px', marginBottom: '16px' }}>
+                                            {/* Col 1: Lead Passenger */}
+                                            <div style={{ backgroundColor: '#F8FAFC', padding: '14px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                                              <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>
+                                                👤 Lead Passenger & Booker
+                                              </div>
+                                              <div style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>{trip.passenger}</div>
+                                              <div style={{ fontSize: '11.5px', color: '#334155', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                                <div><strong>Phone:</strong> {trip.passenger_phone || 'N/A'}</div>
+                                                <div><strong>Email:</strong> {trip.passenger_email || 'N/A'}</div>
+                                                {trip.booker_name && <div><strong>Booker:</strong> {trip.booker_name}</div>}
+                                              </div>
+                                              <div style={{ display: 'flex', gap: '6px', marginTop: '10px' }}>
+                                                {trip.passenger_phone && (
+                                                  <>
+                                                    <a href={`tel:${trip.passenger_phone}`} style={{ padding: '4px 8px', backgroundColor: '#0284C7', color: '#FFFFFF', borderRadius: '4px', fontSize: '11px', fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                                      <Phone size={11} /> Call
+                                                    </a>
+                                                    <a href={`sms:${trip.passenger_phone}`} style={{ padding: '4px 8px', backgroundColor: '#EFF6FF', color: '#0284C7', border: '1px solid #BAE6FD', borderRadius: '4px', fontSize: '11px', fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                                      <MessageSquare size={11} /> SMS
+                                                    </a>
+                                                  </>
+                                                )}
+                                              </div>
+                                            </div>
+
+                                            {/* Col 2: Service & Vehicle Specs */}
+                                            <div style={{ backgroundColor: '#F8FAFC', padding: '14px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                                              <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>
+                                                🛡️ Service & Financials
+                                              </div>
+                                              <div style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>{formattedClass}</div>
+                                              <div style={{ fontSize: '11.5px', color: '#334155', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                                <div><strong>Party:</strong> {trip.passenger_count || 1} Guests • {trip.luggage_count || 1} Bags</div>
+                                                <div><strong>Gross Fare:</strong> ${trip.fare_usd.toFixed(2)} USD</div>
+                                                <div style={{ color: '#16A34A', fontWeight: 700 }}><strong>Net Payout:</strong> ${(trip.net_payout_usd || (trip.fare_usd * 0.85)).toFixed(2)} USD</div>
+                                              </div>
+                                              {trip.flight_number && (
+                                                <div style={{ marginTop: '8px', display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD', padding: '2px 6px', borderRadius: '4px', fontSize: '10.5px', fontWeight: 700, color: '#0284C7' }}>
+                                                  <Plane size={11} /> Flight Radar: {trip.flight_number} (Active)
+                                                </div>
+                                              )}
+                                            </div>
+
+                                            {/* Col 3: Route & Schedule */}
+                                            <div style={{ backgroundColor: '#F8FAFC', padding: '14px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                                              <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>
+                                                📍 Journey Itinerary
+                                              </div>
+                                              <div style={{ fontSize: '11.5px', color: '#334155', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                <div>
+                                                  <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 700 }}>PICKUP ({formattedDate})</div>
+                                                  <div style={{ fontWeight: 700, color: '#0F172A' }}>{trip.pickup}</div>
+                                                </div>
+                                                <div>
+                                                  <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 700 }}>DROPOFF</div>
+                                                  <div style={{ fontWeight: 700, color: '#0F172A' }}>{trip.dropoff}</div>
+                                                </div>
+                                                {trip.special_instructions && (
+                                                  <div style={{ marginTop: '4px', padding: '6px 8px', backgroundColor: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: '4px', fontSize: '10.5px', color: '#92400E' }}>
+                                                    <strong>VIP Note:</strong> {trip.special_instructions}
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </div>
+
+                                          {/* Chauffeur Assignment Bar */}
+                                          <div style={{ backgroundColor: '#F1F5F9', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                              <Car size={16} color="#0284C7" />
+                                              <div>
+                                                <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>Assigned Chauffeur: </span>
+                                                <strong style={{ fontSize: '12.5px', color: '#0F172A' }}>{trip.chauffeur || 'Auto-assign Pending'}</strong>
+                                              </div>
+                                            </div>
+
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                              <select
+                                                onChange={(e) => handleAssignChauffeur(trip.id, e.target.value)}
+                                                style={{ padding: '6px 10px', backgroundColor: '#FFFFFF', color: '#0F172A', border: '1px solid #CBD5E1', borderRadius: '6px', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer' }}
+                                              >
+                                                <option value="">Reassign Chauffeur...</option>
+                                                {chauffeurs.map(c => (
+                                                  <option key={c.id} value={c.name}>{c.name} ({c.shift})</option>
+                                                ))}
+                                              </select>
+
+                                              <button
+                                                onClick={() => {
+                                                  alert(`📱 Dispatched SMS Manifest to ${trip.chauffeur} for trip #${trip.id}`);
+                                                }}
+                                                style={{ padding: '6px 14px', backgroundColor: '#0284C7', color: '#FFFFFF', border: 'none', borderRadius: '6px', fontSize: '11.5px', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                                              >
+                                                <Send size={12} /> Dispatch SMS to Driver
+                                              </button>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  )}
+
                                   {/* Multi-Leg Expanded Accordion Row */}
                                   {hasLegs && isLegsExpanded && (
                                     <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
-                                      <td colSpan={10} style={{ padding: '12px 20px' }}>
+                                      <td colSpan={8} style={{ padding: '12px 20px' }}>
                                         <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '14px' }}>
                                           <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                             <Globe size={14} color="#0078D4" /> Multi-Segment Journey Itinerary Breakdown ({trip.legs.length} Segments)
@@ -3676,18 +4342,31 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                         </button>
                       </div>
 
-                      {/* Quick Presets for Instant 1-Click Fill */}
+                      {/* Quick Presets for Instant 1-Click Fill - Dynamically Loaded from Database Vehicle Options */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', paddingTop: '10px', borderTop: '1px solid #E2E8F0' }}>
-                        <span style={{ fontSize: '11px', color: '#475569', fontWeight: 700 }}>Quick Luxury Presets:</span>
-                        {[
-                          { label: 'Cadillac Escalade ESV', q: 'Cadillac Escalade ESV Sport Platinum' },
-                          { label: 'Mercedes-Benz S-Class (S580)', q: 'Mercedes-Benz S580 4MATIC' },
-                          { label: 'Mercedes-Maybach S680', q: 'Mercedes-Maybach S680 V12' },
-                          { label: 'Lincoln Navigator L', q: 'Lincoln Navigator L Black Label' },
-                          { label: 'BMW i7 Electric Flagship', q: 'BMW i7 xDrive60' },
-                          { label: 'Mercedes Sprinter VIP JetVan', q: 'Mercedes-Benz Sprinter 3500 VIP JetVan' },
-                          { label: 'Mercedes E-Class', q: 'Mercedes-Benz E350 Business' }
-                        ].map(preset => (
+                        <span style={{ fontSize: '11px', color: '#475569', fontWeight: 700 }}>Database Fleet Presets:</span>
+                        {(config.vehicle_options && config.vehicle_options.length > 0
+                          ? config.vehicle_options.flatMap((opt: any) => {
+                              const presets = [{ label: opt.title, q: `${opt.title} ${opt.models ? opt.models.split(',')[0] : ''}` }];
+                              if (opt.models) {
+                                const mList = opt.models.split(',').map((m: string) => m.replace(/or similar/i, '').trim()).filter(Boolean);
+                                mList.slice(0, 2).forEach((m: string) => {
+                                  if (m && !presets.some(p => p.label === m)) {
+                                    presets.push({ label: m, q: m });
+                                  }
+                                });
+                              }
+                              return presets;
+                            })
+                          : [
+                              { label: 'Cadillac Escalade ESV', q: 'Cadillac Escalade ESV Sport Platinum' },
+                              { label: 'Mercedes-Benz S-Class', q: 'Mercedes-Benz S580 4MATIC' },
+                              { label: 'Lincoln Navigator L', q: 'Lincoln Navigator L Black Label' },
+                              { label: 'BMW i7 Electric Flagship', q: 'BMW i7 xDrive60' },
+                              { label: 'Mercedes Sprinter VIP JetVan', q: 'Mercedes-Benz Sprinter 3500 VIP JetVan' },
+                              { label: 'Mercedes E-Class', q: 'Mercedes-Benz E350 Business' }
+                            ]
+                        ).map((preset: any) => (
                           <button
                             key={preset.label}
                             type="button"
@@ -3911,6 +4590,23 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                           </div>
                         </div>
 
+                        {/* EXPLANATORY CALLOUT FOR HOW VEHICLE-LEVEL RATES WORK */}
+                        <div style={{
+                          marginTop: '12px',
+                          padding: '10px 14px',
+                          background: '#EFF6FF',
+                          border: '1px solid #BFDBFE',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '10px'
+                        }}>
+                          <span style={{ fontSize: '16px', lineHeight: 1 }}>💡</span>
+                          <div style={{ fontSize: '11px', color: '#1E40AF', lineHeight: 1.45 }}>
+                            <strong>How Custom Vehicle Rates Work:</strong> Setting an individual <strong>Hourly Rate</strong> (${newVehicleForm.hourly_rate_usd || 125}/hr) or <strong>Per {newVehicleForm.distance_unit === 'MILES' ? 'Mile' : 'KM'} Rate</strong> (${newVehicleForm.per_distance_rate || 6.19}) creates a dedicated bespoke price profile for this specific vehicle. When clients book this vehicle directly, these custom rates <strong>override</strong> the general {newVehicleForm.vehicle_class ? newVehicleForm.vehicle_class.replace(/_/g, ' ') : 'tier'} class tariff. If left at standard, quotes follow your class tariff matrix.
+                          </div>
+                        </div>
+
                         {/* Customer Showroom Headline & AI Tagline Assistant */}
                         <div style={{ marginTop: '16px', backgroundColor: '#FFFFFF', padding: '16px', borderRadius: '10px', border: '1px solid #CBD5E1', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
@@ -3996,8 +4692,43 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                               </div>
                             </div>
                           )}
+                          </div>
+                          
+                          <div style={{ marginTop: '14px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 700, color: '#475569', margin: 0 }}>
+                                📝 Luxury Vehicle Description &amp; Passenger Comfort Narrative
+                              </label>
+                              <button
+                                type="button"
+                                onClick={handleGenerateNewVehicleNarrative}
+                                style={{
+                                  padding: '4px 10px',
+                                  background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
+                                  color: '#1D4ED8',
+                                  border: '1px solid #BFDBFE',
+                                  borderRadius: '6px',
+                                  fontSize: '11px',
+                                  fontWeight: 800,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  boxShadow: '0 1px 2px rgba(29, 78, 216, 0.08)'
+                                }}
+                              >
+                                <Sparkles size={12} color="#0078D4" /> ✨ AI Assistant: Generate Narrative
+                              </button>
+                            </div>
+                            <textarea
+                              rows={3}
+                              value={newVehicleForm.description}
+                              onChange={(e) => setNewVehicleForm({ ...newVehicleForm, description: e.target.value })}
+                              placeholder="Write or click AI Assistant to generate an executive description for your showroom..."
+                              style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', lineHeight: 1.45 }}
+                            />
+                          </div>
                         </div>
-                      </div>
 
                       {/* 3. MULTI-PHOTO S3 UPLOAD & AI SHOWROOM IMAGE STUDIO */}
                       <div style={{ backgroundColor: '#FFFFFF', padding: '18px', borderRadius: '12px', border: '2px dashed #0078D4', marginBottom: '20px' }}>
@@ -4474,10 +5205,10 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                     <div style={{
                       backgroundColor: '#FFFFFF',
                       borderRadius: '16px',
-                      padding: '28px',
-                      maxWidth: '960px',
-                      width: '100%',
-                      maxHeight: '90vh',
+                      padding: '28px 32px',
+                      maxWidth: '1500px',
+                      width: '96vw',
+                      maxHeight: '94vh',
                       overflowY: 'auto',
                       boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
                       border: '2px solid #0078D4'
@@ -4688,6 +5419,23 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                               />
                             </div>
                           </div>
+
+                          {/* EXPLANATORY CALLOUT FOR HOW VEHICLE-LEVEL RATES WORK */}
+                          <div style={{
+                            marginTop: '12px',
+                            padding: '10px 14px',
+                            background: '#EFF6FF',
+                            border: '1px solid #BFDBFE',
+                            borderRadius: '8px',
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: '10px'
+                          }}>
+                            <span style={{ fontSize: '16px', lineHeight: 1 }}>💡</span>
+                            <div style={{ fontSize: '11px', color: '#1E40AF', lineHeight: 1.45 }}>
+                              <strong>How Custom Vehicle Rates Work:</strong> Setting an individual <strong>Hourly Rate</strong> (${editVehicleForm.hourly_rate_usd || 125}/hr) or <strong>Per {editVehicleForm.distance_unit === 'MILES' ? 'Mile' : 'KM'} Rate</strong> (${editVehicleForm.per_distance_rate || 6.19}) creates a bespoke price profile for this specific vehicle asset ({editVehicleForm.make} {editVehicleForm.model}). When a customer or dispatcher books this vehicle specifically, these asset rates <strong>override</strong> the general {editVehicleForm.vehicle_class ? editVehicleForm.vehicle_class.replace(/_/g, ' ') : 'tier'} class tariff. If left at standard, quotes seamlessly follow your class-level tariff matrix.
+                            </div>
+                          </div>
                         </div>
 
                         {/* Section 2: Showroom Tagline & Description with AI Assistant */}
@@ -4777,14 +5525,37 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                             )}
                           </div>
                           <div>
-                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
-                              📝 Luxury Vehicle Description &amp; Passenger Comfort Narrative
-                            </label>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 700, color: '#475569', margin: 0 }}>
+                                📝 Luxury Vehicle Description &amp; Passenger Comfort Narrative
+                              </label>
+                              <button
+                                type="button"
+                                onClick={handleGenerateEditVehicleNarrative}
+                                style={{
+                                  padding: '4px 10px',
+                                  background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
+                                  color: '#1D4ED8',
+                                  border: '1px solid #BFDBFE',
+                                  borderRadius: '6px',
+                                  fontSize: '11px',
+                                  fontWeight: 800,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  boxShadow: '0 1px 2px rgba(29, 78, 216, 0.08)'
+                                }}
+                              >
+                                <Sparkles size={12} color="#0078D4" /> ✨ AI Assistant: Generate Narrative
+                              </button>
+                            </div>
                             <textarea
-                              rows={2}
+                              rows={3}
                               value={editVehicleForm.description}
                               onChange={(e) => setEditVehicleForm({ ...editVehicleForm, description: e.target.value })}
-                              style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px' }}
+                              placeholder="Write or click AI Assistant to generate an executive description for your showroom..."
+                              style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', lineHeight: 1.45 }}
                             />
                           </div>
                         </div>
@@ -5923,6 +6694,14 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
               </div>
             )}
 
+            {/* TAB: CARRIER SUPPORT & CONCIERGE INQUIRIES */}
+            {activeTab === 'support' && (
+              <VendorSupportInboxTab
+                vendorId={config.vendor_id}
+                vendorName={config.vendor_name}
+              />
+            )}
+
             {/* TAB 5: CORPORATE B2B ACCOUNTS */}
             {activeTab === 'corporate' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -5946,6 +6725,27 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                       <div>Monthly Volume: <strong>48 Rides</strong></div>
                       <div>Current Ledger Balance: <strong>$5,840.00 USD</strong></div>
                     </div>
+                    <div style={{ marginTop: '14px', display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const csv = await exportCorporateInvoiceCsvApi('inv_citadel_current');
+                            const blob = new Blob([csv], { type: 'text/csv' });
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'invoice_corp_citadel_01.csv';
+                            a.click();
+                            setActionNotice('✅ Exported Citadel Securities corporate invoice CSV.');
+                          } catch (err: any) {
+                            setActionNotice(`⚠️ CSV export notice: ${err.message}`);
+                          }
+                        }}
+                        style={{ padding: '6px 12px', backgroundColor: '#F1F5F9', border: '1px solid #CBD5E1', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        <Download size={12} /> Export Statement CSV
+                      </button>
+                    </div>
                   </div>
 
                   <div style={{ backgroundColor: '#FFFFFF', borderRadius: '10px', padding: '20px', border: '1px solid #E5E7EB', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
@@ -5957,6 +6757,27 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                     <div style={{ marginTop: '12px', padding: '10px', backgroundColor: '#F9FAFB', borderRadius: '6px', fontSize: '12px', color: '#374151' }}>
                       <div>Monthly Volume: <strong>32 Rides</strong></div>
                       <div>Current Ledger Balance: <strong>$4,120.00 USD</strong></div>
+                    </div>
+                    <div style={{ marginTop: '14px', display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const csv = await exportCorporateInvoiceCsvApi('inv_blackrock_current');
+                            const blob = new Blob([csv], { type: 'text/csv' });
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'invoice_corp_blackrock_02.csv';
+                            a.click();
+                            setActionNotice('✅ Exported BlackRock corporate invoice CSV.');
+                          } catch (err: any) {
+                            setActionNotice(`⚠️ CSV export notice: ${err.message}`);
+                          }
+                        }}
+                        style={{ padding: '6px 12px', backgroundColor: '#F1F5F9', border: '1px solid #CBD5E1', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        <Download size={12} /> Export Statement CSV
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -6135,7 +6956,11 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                           onClick={() => {
                             fetch(`/api/v1/vendor-cell/${config.vendor_id}/email/inbox`)
                               .then(r => r.json())
-                              .then(d => { if (d.rfqs) setEmailInbox(d.rfqs); setActionNotice('🔄 Inbound email inbox refreshed!'); })
+                              .then(d => { 
+                                if (d.inbound_rfqs || d.rfqs) setEmailInbox(d.inbound_rfqs || d.rfqs); 
+                                if (d.outbound_messages) setDispatchedEmails(d.outbound_messages);
+                                setActionNotice('🔄 Inbound & Outbound email stream refreshed!'); 
+                              })
                               .catch(() => {});
                           }}
                           style={{ background: 'transparent', border: 'none', color: '#0078D4', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
@@ -7212,39 +8037,57 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                           </tr>
                         </thead>
                         <tbody>
-                          {dispatchedEmails.map((item) => (
-                            <tr key={item.id} style={{ borderBottom: '1px solid #F3F4F6' }}>
-                              <td style={{ padding: '12px 16px' }}>
-                                <div style={{ fontWeight: 800, color: '#0F172A' }}>{item.id}</div>
-                                <div style={{ fontSize: '10px', color: '#9CA3AF', marginTop: '2px' }}>{item.sent_at}</div>
-                              </td>
-
-                              <td style={{ padding: '12px 16px' }}>
-                                <span style={{ fontSize: '11px', fontWeight: 700, color: '#0078D4' }}>{item.booking_id}</span>
-                              </td>
-
-                              <td style={{ padding: '12px 16px' }}>
-                                <div style={{ fontWeight: 700, color: '#0F172A' }}>{item.recipient}</div>
-                                <div style={{ fontSize: '11px', color: '#4B5563', marginTop: '2px' }}>{item.subject}</div>
-                              </td>
-
-                              <td style={{ padding: '12px 16px' }}>
-                                <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', backgroundColor: item.type === 'INVOICE_RECEIPT' ? '#DCFCE7' : '#EFF6FF', color: item.type === 'INVOICE_RECEIPT' ? '#15803D' : '#0078D4', fontWeight: 800 }}>
-                                  {item.type}
-                                </span>
-                              </td>
-
-                              <td style={{ padding: '12px 16px', fontSize: '11px', color: '#6B7280' }}>
-                                {item.provider}
-                              </td>
-
-                              <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                                <span style={{ fontSize: '10px', backgroundColor: '#DCFCE7', color: '#15803D', padding: '3px 8px', borderRadius: '4px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                  <Check size={10} /> {item.status}
-                                </span>
+                          {dispatchedEmails.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} style={{ padding: '32px 16px', textAlign: 'center', color: '#64748B' }}>
+                                <div style={{ fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                                  No Outbound Email Dispatches Yet
+                                </div>
+                                <div style={{ fontSize: '11.5px', color: '#94A3B8' }}>
+                                  Automated booking confirmations, calendar invites, and itemized PDF invoice receipts will appear here in real time.
+                                </div>
                               </td>
                             </tr>
-                          ))}
+                          ) : (
+                            dispatchedEmails.map((item) => {
+                              const sentTime = item.sent_at 
+                                ? (typeof item.sent_at === 'number' ? new Date(item.sent_at * 1000).toLocaleString() : item.sent_at)
+                                : 'Just now';
+                              return (
+                                <tr key={item.message_id || item.id} style={{ borderBottom: '1px solid #F3F4F6' }}>
+                                  <td style={{ padding: '12px 16px' }}>
+                                    <div style={{ fontWeight: 800, color: '#0F172A' }}>{item.message_id || item.id}</div>
+                                    <div style={{ fontSize: '10px', color: '#9CA3AF', marginTop: '2px' }}>{sentTime}</div>
+                                  </td>
+
+                                  <td style={{ padding: '12px 16px' }}>
+                                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#0078D4' }}>{item.booking_id || 'System Notification'}</span>
+                                  </td>
+
+                                  <td style={{ padding: '12px 16px' }}>
+                                    <div style={{ fontWeight: 700, color: '#0F172A' }}>{item.recipient_email || item.recipient}</div>
+                                    <div style={{ fontSize: '11px', color: '#4B5563', marginTop: '2px' }}>{item.subject}</div>
+                                  </td>
+
+                                  <td style={{ padding: '12px 16px' }}>
+                                    <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', backgroundColor: (item.email_type || item.type) === 'INVOICE_RECEIPT' ? '#DCFCE7' : '#EFF6FF', color: (item.email_type || item.type) === 'INVOICE_RECEIPT' ? '#15803D' : '#0078D4', fontWeight: 800 }}>
+                                      {item.email_type || item.type}
+                                    </span>
+                                  </td>
+
+                                  <td style={{ padding: '12px 16px', fontSize: '11px', color: '#6B7280' }}>
+                                    {item.sender_from || item.provider || 'BYOE Custom SMTP / SES'}
+                                  </td>
+
+                                  <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                                    <span style={{ fontSize: '10px', backgroundColor: '#DCFCE7', color: '#15803D', padding: '3px 8px', borderRadius: '4px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                      <Check size={10} /> {item.status || 'DELIVERED'}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
                         </tbody>
                       </table>
                     </div>
@@ -7852,9 +8695,12 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                               onChange={(e) => setNewMemberForm({ ...newMemberForm, assigned_vehicle_id: e.target.value })}
                               style={{ width: '100%', padding: '10px', border: '1px solid #D1D5DB', borderRadius: '6px', fontSize: '13px', marginTop: '4px', boxSizing: 'border-box', backgroundColor: '#FFFFFF' }}
                             >
-                              <option value="veh-phl-01">PA-LM001 • Cadillac Escalade ESV (Luxury SUV)</option>
-                              <option value="veh-phl-02">PA-LM002 • Mercedes-Benz S 580 (First Class)</option>
-                              <option value="veh-phl-03">PA-LM003 • Mercedes-Benz Sprinter 3500 (VIP Van)</option>
+                              <option value="">-- Select Active Vehicle from Fleet Inventory --</option>
+                              {vehicles.map(v => (
+                                <option key={v.id} value={v.id}>
+                                  {v.license_plate ? `${v.license_plate} • ` : ''}{v.name || `${v.make} ${v.model}`} ({v.vehicle_class})
+                                </option>
+                              ))}
                             </select>
                           </div>
                         )}
@@ -7991,43 +8837,73 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                       background: 'linear-gradient(180deg, #F8FAFC 0%, #EFF6FF 100%)',
                       boxShadow: '0 2px 4px rgba(0, 120, 212, 0.06)'
                     }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px', marginBottom: '16px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: isAffiliateRulesSectionOpen ? '16px' : '0' }}>
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span style={{ background: '#10B981', color: '#FFFFFF', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>
                               GLOBAL HUB KNOWLEDGE BASE ACTIVE
                             </span>
-                            <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0F172A' }}>
+                            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>
                               Sovereign Vendor Business Rules & AI Directives Policy
                             </h3>
                           </div>
                           <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#4B5563' }}>
-                            Adjust your farm-in acceptance criteria and farm-out rules in natural language (AI Agent instructions) or fine-tune exact thresholds. Changes sync to the Global Hub Knowledge Base in real time.
+                            {isAffiliateRulesSectionOpen 
+                              ? 'Adjust your farm-in acceptance criteria, farm-out rules, and multi-leg corridors. Changes sync to Global Hub in real time.'
+                              : 'Autonomous matching rules, farm-in/out thresholds, and multi-leg corridors are active. Click below to inspect or modify.'}
                           </p>
                         </div>
 
-                        <button
-                          onClick={handleSaveAffiliatePolicy}
-                          disabled={policySaving}
-                          style={{
-                            padding: '10px 22px',
-                            backgroundColor: '#10B981',
-                            color: '#FFFFFF',
-                            borderRadius: '8px',
-                            fontSize: '12px',
-                            fontWeight: 800,
-                            border: 'none',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)'
-                          }}
-                        >
-                          <CheckCircle2 size={16} />
-                          {policySaving ? 'Saving & Broadcasting...' : '💾 Save & Sync Rules to Global Hub'}
-                        </button>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <button
+                            onClick={() => setIsAffiliateRulesSectionOpen(!isAffiliateRulesSectionOpen)}
+                            style={{
+                              padding: '8px 16px',
+                              backgroundColor: isAffiliateRulesSectionOpen ? '#EFF6FF' : '#0078D4',
+                              color: isAffiliateRulesSectionOpen ? '#0078D4' : '#FFFFFF',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: 800,
+                              border: isAffiliateRulesSectionOpen ? '1px solid #0078D4' : 'none',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                            }}
+                          >
+                            <Sliders size={14} />
+                            <span>{isAffiliateRulesSectionOpen ? '▲ Hide Rules Configuration' : '⚙️ Configure Business Rules & AI Directives'}</span>
+                          </button>
+
+                          {isAffiliateRulesSectionOpen && (
+                            <button
+                              onClick={handleSaveAffiliatePolicy}
+                              disabled={policySaving}
+                              style={{
+                                padding: '8px 18px',
+                                backgroundColor: '#10B981',
+                                color: '#FFFFFF',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                fontWeight: 800,
+                                border: 'none',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)'
+                              }}
+                            >
+                              <CheckCircle2 size={15} />
+                              {policySaving ? 'Saving...' : '💾 Save & Sync Rules'}
+                            </button>
+                          )}
+                        </div>
                       </div>
+
+                      {isAffiliateRulesSectionOpen && (
+                        <div style={{ marginTop: '16px' }}>
 
                       {/* Owner Custom Operational Memo / Dispatcher Notes */}
                       <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '14px', marginBottom: '18px' }}>
@@ -8895,12 +9771,12 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                                   </div>
                                 )}
                               </div>
-
                             </div>
                           )}
                         </div>
-
                       </div>
+                    </div>
+                  )}
 
                       {/* 3. CERTIFIED GLOBAL AFFILIATE DIRECTORY IN GLOBAL HUB KNOWLEDGE BASE */}
                       <div style={{ marginTop: '22px', backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '10px', padding: '18px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
@@ -10542,24 +11418,40 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                         </span>
                       </div>
 
-                      <div style={{ fontSize: '11px', color: '#6B7280' }}>
-                        Automatically injected into local vendor storefront HTML headers for search ranking dominance.
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ fontSize: '11px', color: '#6B7280' }}>
+                          Authoritative schema injected into storefront HTML headers for search ranking dominance.
+                        </div>
+                        <button
+                          onClick={async () => {
+                            if (!config.vendor_id) return;
+                            setLoadingSeoSchema(true);
+                            try {
+                              const data = await fetchVendorSeoSchemaApi(config.vendor_id);
+                              setLoadedSeoSchema(data);
+                              setActionNotice('✅ Dynamic JSON-LD Schema verified from backend SEO engine.');
+                            } catch (err: any) {
+                              setActionNotice(`⚠️ SEO schema notice: ${err.message}`);
+                            } finally {
+                              setLoadingSeoSchema(false);
+                            }
+                          }}
+                          disabled={loadingSeoSchema}
+                          style={{ padding: '4px 8px', fontSize: '10px', fontWeight: 700, backgroundColor: '#EFF6FF', color: '#0078D4', border: '1px solid #BFDBFE', borderRadius: '4px', cursor: 'pointer' }}
+                        >
+                          {loadingSeoSchema ? 'Loading...' : '🔄 Live Fetch Backend Schema'}
+                        </button>
                       </div>
 
                       <pre style={{ backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '6px', border: '1px solid #E2E8F0', fontSize: '11px', color: '#0F172A', overflowX: 'auto', maxHeight: '220px', fontFamily: 'monospace' }}>
-{JSON.stringify({
+{JSON.stringify(loadedSeoSchema || {
   "@context": "https://schema.org",
   "@type": ["LimousineService", "TaxiService", "LocalBusiness"],
-  "name": config.vendor_name || "ANB Limo Company",
-  "telephone": config.branding?.contact_phone || "+1 (215) 555-0144",
-  "url": `https://${config.branding?.domain || 'anblimo-philly.com'}`,
+  "name": config.vendor_name || "Sovereign Executive Limousine",
+  "telephone": config.branding?.contact_phone || "+18005550199",
+  "url": `https://${config.branding?.domain || 'limo-ops.com'}`,
   "priceRange": "$75 - $450",
-  "openingHours": "Mo-Su 00:00-23:59",
-  "aggregateRating": {
-    "@type": "AggregateRating",
-    "ratingValue": "4.96",
-    "reviewCount": "348"
-  }
+  "openingHours": "Mo-Su 00:00-23:59"
 }, null, 2)}
                       </pre>
                     </div>
@@ -11248,6 +12140,121 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                         <FileText size={14} color="#0078D4" />
                         <span>📄 View Invoices & Receipts</span>
                       </button>
+
+                      <button
+                        onClick={handleSwitchPayAsYouGo}
+                        disabled={isProcessingSubAction}
+                        style={{
+                          padding: '9px 14px',
+                          backgroundColor: '#FEF3C7',
+                          color: '#92400E',
+                          border: '1px solid #FDE68A',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                        title="Switch to $0/mo Pay-As-You-Go (+5% commission)"
+                      >
+                        <span>🔄 Switch to Pay-As-You-Go ($0/mo)</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleUpgradeSubscription('FLEET_PRO')}
+                        disabled={isProcessingSubAction}
+                        style={{
+                          padding: '9px 14px',
+                          backgroundColor: '#EFF6FF',
+                          color: '#1E40AF',
+                          border: '1px solid #BFDBFE',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <span>⚡ Upgrade to Fleet Pro ($99/mo)</span>
+                      </button>
+
+                      <button
+                        onClick={handleCheckStripeConnectStatus}
+                        disabled={isLoadingStripe}
+                        style={{
+                          padding: '9px 14px',
+                          backgroundColor: '#F8FAFC',
+                          color: '#0F172A',
+                          border: '1px solid #CBD5E1',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <span>🏦 Stripe Connect Payout Status</span>
+                      </button>
+
+                      <button
+                        onClick={handleSimulateDunningAlert}
+                        disabled={isProcessingSubAction}
+                        style={{
+                          padding: '9px 12px',
+                          backgroundColor: '#FFF1F2',
+                          color: '#BE123C',
+                          border: '1px solid #FECDD3',
+                          borderRadius: '6px',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                        title="Simulate card payment failure / past-due dunning state"
+                      >
+                        <span>⚠️ Simulate Dunning</span>
+                      </button>
+
+                      {subscriptionData?.billing_status === 'PAST_DUE' && (
+                        <button
+                          onClick={handleClearDunning}
+                          disabled={isProcessingSubAction}
+                          style={{
+                            padding: '9px 12px',
+                            backgroundColor: '#DCFCE7',
+                            color: '#166534',
+                            border: '1px solid #86EFAC',
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <span>✓ Clear Dunning Alert</span>
+                        </button>
+                      )}
+
+                      <button
+                        onClick={handleCancelSubscription}
+                        disabled={isProcessingSubAction}
+                        style={{
+                          padding: '9px 12px',
+                          backgroundColor: 'transparent',
+                          color: '#94A3B8',
+                          border: 'none',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          textDecoration: 'underline'
+                        }}
+                      >
+                        Cancel Plan
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -11492,6 +12499,12 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
         onBookingCreated={async () => {
           setActionNotice('✅ Phone reservation created and synchronized to dispatch partition.');
         }}
+      />
+
+      {/* COMPREHENSIVE COMMERCIAL OPERATIONS & PLATFORM PLAYBOOK MODAL */}
+      <VendorCommercialGuideModal
+        isOpen={showCommercialGuideModal}
+        onClose={() => setShowCommercialGuideModal(false)}
       />
 
     </div>

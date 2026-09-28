@@ -1,0 +1,206 @@
+version: '3.8'
+
+services:
+  # -------------------------------------------------------------
+  # 1. Authoritative MySQL 8.0 Staging Database
+  # -------------------------------------------------------------
+  limo-mysql-db:
+    image: mysql:8.0
+    container_name: limo-mysql-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-LimoExecutiveStaging2026!}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-limo_db}
+      MYSQL_USER: ${MYSQL_USER:-limo_app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-LimoAppSecretPass2026!}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_staging_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-LimoExecutiveStaging2026!}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - limo-staging-net
+
+  # -------------------------------------------------------------
+  # 2. Central Global Federation Hub (Port 8000)
+  # -------------------------------------------------------------
+  limo-global-hub:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: limo-global-hub
+    restart: always
+    depends_on:
+      limo-mysql-db:
+        condition: service_healthy
+    environment:
+      - ENVIRONMENT=staging
+      - HUB_MODE=true
+      - IS_SOVEREIGN_CELL=false
+      - MYSQL_HOST=limo-mysql-db
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-limo_db}
+      - MYSQL_USER=${MYSQL_USER:-limo_app}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-LimoAppSecretPass2026!}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-sk_test_mock_holder}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID:-AC_mock_holder}
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY:-AIza_mock_holder}
+    ports:
+      - "8000:8000"
+    networks:
+      - limo-staging-net
+
+  # -------------------------------------------------------------
+  # 3. Primary Sovereign Cell: ANB Limo Executive Philly (Port 8001)
+  # -------------------------------------------------------------
+  limo-cell-anb-philly:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: limo-cell-anb-philly
+    restart: always
+    depends_on:
+      limo-mysql-db:
+        condition: service_healthy
+    environment:
+      - ENVIRONMENT=staging
+      - HUB_MODE=false
+      - IS_SOVEREIGN_CELL=true
+      - SOVEREIGN_VENDOR_ID=vendor_anb_philly
+      - VENDOR_NAME=ANB Limo Executive Chauffeurs
+      - VENDOR_MARKET_CITY=Philadelphia
+      - PRIMARY_GLOBAL_HUB_URL=http://limo-global-hub:8000
+      - MYSQL_HOST=limo-mysql-db
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-limo_db}
+      - MYSQL_USER=${MYSQL_USER:-limo_app}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-LimoAppSecretPass2026!}
+    ports:
+      - "8001:8000"
+    networks:
+      - limo-staging-net
+
+  # -------------------------------------------------------------
+  # 4. Regional Sovereign Cell: New York Executive (Port 8002)
+  # -------------------------------------------------------------
+  limo-cell-ny-executive:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: limo-cell-ny-executive
+    restart: always
+    depends_on:
+      limo-mysql-db:
+        condition: service_healthy
+    environment:
+      - ENVIRONMENT=staging
+      - HUB_MODE=false
+      - IS_SOVEREIGN_CELL=true
+      - SOVEREIGN_VENDOR_ID=vendor_ny_executive
+      - VENDOR_NAME=New York Executive Chauffeurs
+      - VENDOR_MARKET_CITY=New York
+      - PRIMARY_GLOBAL_HUB_URL=http://limo-global-hub:8000
+      - MYSQL_HOST=limo-mysql-db
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-limo_db}
+      - MYSQL_USER=${MYSQL_USER:-limo_app}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-LimoAppSecretPass2026!}
+    ports:
+      - "8002:8000"
+    networks:
+      - limo-staging-net
+
+  # -------------------------------------------------------------
+  # 5. Regional Sovereign Cell: Boston VIP Chauffeur (Port 8003)
+  # -------------------------------------------------------------
+  limo-cell-boston-vip:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: limo-cell-boston-vip
+    restart: always
+    depends_on:
+      limo-mysql-db:
+        condition: service_healthy
+    environment:
+      - ENVIRONMENT=staging
+      - HUB_MODE=false
+      - IS_SOVEREIGN_CELL=true
+      - SOVEREIGN_VENDOR_ID=vendor_boston_vip
+      - VENDOR_NAME=Boston VIP Chauffeur
+      - VENDOR_MARKET_CITY=Boston
+      - PRIMARY_GLOBAL_HUB_URL=http://limo-global-hub:8000
+      - MYSQL_HOST=limo-mysql-db
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-limo_db}
+      - MYSQL_USER=${MYSQL_USER:-limo_app}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-LimoAppSecretPass2026!}
+    ports:
+      - "8003:8000"
+    networks:
+      - limo-staging-net
+
+  # -------------------------------------------------------------
+  # 6. Regional Sovereign Cell: Miami Prestige Limousine (Port 8004)
+  # -------------------------------------------------------------
+  limo-cell-miami-prestige:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: limo-cell-miami-prestige
+    restart: always
+    depends_on:
+      limo-mysql-db:
+        condition: service_healthy
+    environment:
+      - ENVIRONMENT=staging
+      - HUB_MODE=false
+      - IS_SOVEREIGN_CELL=true
+      - SOVEREIGN_VENDOR_ID=vendor_miami_prestige
+      - VENDOR_NAME=Miami Prestige Limousine
+      - VENDOR_MARKET_CITY=Miami
+      - PRIMARY_GLOBAL_HUB_URL=http://limo-global-hub:8000
+      - MYSQL_HOST=limo-mysql-db
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-limo_db}
+      - MYSQL_USER=${MYSQL_USER:-limo_app}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-LimoAppSecretPass2026!}
+    ports:
+      - "8004:8000"
+    networks:
+      - limo-staging-net
+
+  # -------------------------------------------------------------
+  # 7. Reverse Proxy with Automated SSL (Caddy)
+  # -------------------------------------------------------------
+  limo-caddy-proxy:
+    image: caddy:2-alpine
+    container_name: limo-caddy-proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - limo-global-hub
+      - limo-cell-anb-philly
+      - limo-cell-ny-executive
+    networks:
+      - limo-staging-net
+
+volumes:
+  mysql_staging_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  limo-staging-net:
+    driver: bridge

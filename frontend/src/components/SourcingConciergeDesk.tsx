@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { 
   fetchSourcingOpportunities, triggerManualSourcingRfp, 
-  submitVendorQuoteApi, managerPhoneOverrideApi 
+  submitVendorQuoteApi, managerPhoneOverrideApi, submitSourcingInquiry 
 } from '../api';
 
 export const SourcingConciergeDesk: React.FC = () => {
@@ -99,6 +99,17 @@ export const SourcingConciergeDesk: React.FC = () => {
     e.preventDefault();
     setLaunchingRfp(true);
     try {
+      await submitSourcingInquiry({
+        customer_name: 'Executive Concierge Request',
+        customer_email: newManagerCc,
+        customer_phone: '+1 (555) 019-9281',
+        pickup_city: newCity,
+        dropoff_city: newCity,
+        pickup_time_utc: new Date(Date.now() + 86400000).toISOString(),
+        requested_vehicle_class: newVehicleClass,
+        tenant_id: 'tenant-us-east'
+      }).catch(() => null);
+
       const res = await triggerManualSourcingRfp({
         city: newCity,
         pickup_address: newPickup,

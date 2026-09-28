@@ -9,6 +9,7 @@ import hmac
 import hashlib
 import json
 import base64
+import secrets
 from enum import Enum
 from typing import List, Optional, Dict, Any, Set
 from pydantic import BaseModel, Field
@@ -217,23 +218,38 @@ def verify_access_token(token: str) -> Optional[UserSession]:
         return None
 
 
+def is_production_mode() -> bool:
+    """Evaluates whether the application is running in an authoritative production environment."""
+    return os.getenv("PROD_MODE", "").lower() in ("true", "1") or os.getenv("ENVIRONMENT", "").lower() in ("prod", "production")
+
+
 def get_current_user(
     request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Security(security_bearer)
 ) -> UserSession:
     """
-    FastAPI Dependency to authenticate current request via Bearer Token,
-    or fallback to X-Actor-Impersonate header for development testing.
+    FastAPI Dependency to authenticate current request via Bearer Token.
+    In development mode ONLY, permits developer impersonation headers.
+    In production mode, strictly requires valid, cryptographically verified JWT bearer tokens.
     """
-    # 1. Bearer Token Auth
+    # 1. Bearer Token Auth (Authoritative)
     if credentials and credentials.credentials:
         session = verify_access_token(credentials.credentials)
         if session:
             return session
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid, expired, or tampered JWT access token"
+        )
     
-    # 2. X-Actor-Impersonate Header (Fast persona testing)
+    # 2. X-Actor-Impersonate Header (Strictly Restricted to Local Dev / Sandbox)
     impersonate_header = request.headers.get("X-Actor-Role") or request.headers.get("X-Actor-Impersonate")
     if impersonate_header:
+        if is_production_mode():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Security violation: Actor impersonation is strictly disabled in production mode"
+            )
         key = impersonate_header.lower().replace("role_", "")
         if key in ACTOR_PERSONAS:
             return ACTOR_PERSONAS[key]
@@ -241,14 +257,33 @@ def get_current_user(
             if persona.role.value == impersonate_header.upper():
                 return persona
     
-    # 3. Default dev session if demo api key provided
+    # 3. API Key Auth (Non-production only for demo keys)
     api_key = request.headers.get("X-API-Key")
-    demo_key = os.getenv("DEMO_API_KEY", "dev-local-demo-key-2026")
-    if api_key and (api_key == demo_key or api_key == "limo-demo-secret-key-2026"):
-        return ACTOR_PERSONAS["superadmin"]
+    if api_key:
+        if is_production_mode():
+            prod_api_key = os.getenv("ADMIN_API_KEY")
+            if prod_api_key and secrets.compare_digest(api_key, prod_api_key):
+                return ACTOR_PERSONAS["superadmin"]
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid admin API key"
+            )
+        demo_key = os.getenv("DEMO_API_KEY", "dev-local-demo-key-2026")
+        if secrets.compare_digest(api_key, demo_key) or secrets.compare_digest(api_key, "limo-demo-secret-key-2026"):
+            return ACTOR_PERSONAS["superadmin"]
     
-    # Default public / customer session for seamless web exploration
+    # Default public / customer session for public browsing in dev mode
     return ACTOR_PERSONAS["customer"]
+
+
+def require_authenticated_user(user: UserSession = Depends(get_current_user)) -> UserSession:
+    """Ensures caller has a verified active session and is not an anonymous unauthenticated client."""
+    if not user or not user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required: Valid session token must be provided"
+        )
+    return user
 
 
 def require_roles(allowed_roles: List[UserRole]):

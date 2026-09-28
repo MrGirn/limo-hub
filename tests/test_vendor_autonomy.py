@@ -5,7 +5,7 @@ Fleet Inventory Network Partitioning, and Omnichannel Plan Rescheduling.
 
 import unittest
 from decimal import Decimal
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from app.domain_models import (
     VehicleClass, NetworkParticipationMode, VendorPricingRule,
@@ -146,7 +146,7 @@ class VendorAutonomyTests(unittest.TestCase):
             passenger_count=2,
             luggage_count=2
         )
-        booking = BookingService.accept_quote_and_book(q.id, party, datetime.now(timezone.utc))
+        booking = BookingService.accept_quote_and_book(q.id, party, datetime.now(timezone.utc) + timedelta(hours=2))
 
         req = PlanUpdateRequest(
             booking_id=booking.id,

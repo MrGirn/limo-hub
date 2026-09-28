@@ -25,9 +25,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy backend application source, config, and tests
+# Copy backend application source, config, packages, and tests
 COPY app/ ./app/
 COPY config/ ./config/
+COPY packages/ ./packages/
 COPY scripts/ ./scripts/
 COPY tests/ ./tests/
 

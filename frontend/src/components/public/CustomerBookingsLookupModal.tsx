@@ -14,6 +14,9 @@ import {
   cancelBookingApi,
   fetchBookingTermsVoucher
 } from '../../api';
+import { CustomerSupportChatWidget } from './CustomerSupportChatWidget';
+import { LiveRideTrackingModal } from './LiveRideTrackingModal';
+import { BookingOperationsModal } from '../BookingOperationsModal';
 
 interface CustomerBookingsLookupModalProps {
   isOpen: boolean;
@@ -33,11 +36,17 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
   const [hasSearched, setHasSearched] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // Live Tracking Modal State
+  const [liveTrackingBookingId, setLiveTrackingBookingId] = useState<string | null>(null);
+
   // Cancellation State
   const [cancelModalBooking, setCancelModalBooking] = useState<Booking | null>(null);
   const [cancellingBookingId, setCancellingBookingId] = useState<string | null>(null);
   const [cancelResult, setCancelResult] = useState<{ id: string; message: string; isWithinWindow: boolean } | null>(null);
   const [downloadingVoucherId, setDownloadingVoucherId] = useState<string | null>(null);
+  const [supportModalBooking, setSupportModalBooking] = useState<Booking | null>(null);
+  const [viewingDocBookingId, setViewingDocBookingId] = useState<string | null>(null);
+  const [viewingDocType, setViewingDocType] = useState<'invoice' | 'receipt'>('invoice');
 
   // Timer Tick for Live Countdown calculation
   const [currentTick, setCurrentTick] = useState<number>(Date.now());
@@ -280,7 +289,7 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
       <div className="lookup-modal-content">
         
         {/* Modal Header */}
-        <div style={{
+        <div className="lookup-header-bar" style={{
           padding: '24px 28px 20px 28px',
           borderBottom: '1px solid #EAE6DF',
           display: 'flex',
@@ -319,12 +328,13 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
         </div>
 
         {/* Search Input Bar */}
-        <div style={{ padding: '20px 28px', borderBottom: '1px solid #F1F5F9', backgroundColor: '#FFFFFF' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid #F1F5F9', backgroundColor: '#FFFFFF' }}>
           <form 
             onSubmit={(e) => {
               e.preventDefault();
               handleSearch();
             }}
+            className="lookup-search-form"
             style={{ display: 'flex', gap: '10px' }}
           >
             <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center' }}>
@@ -341,7 +351,8 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
                   border: '1.5px solid #CBD5E1',
                   fontSize: '13.5px',
                   outline: 'none',
-                  backgroundColor: '#F8FAFC'
+                  backgroundColor: '#F8FAFC',
+                  boxSizing: 'border-box'
                 }}
               />
               {searchQuery && (
@@ -365,6 +376,7 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
             <button
               type="submit"
               disabled={loading}
+              className="lookup-submit-btn"
               style={{
                 padding: '12px 24px',
                 backgroundColor: '#0A192F',
@@ -376,6 +388,7 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '8px'
               }}
             >
@@ -385,7 +398,7 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
           </form>
 
           {/* Quick search suggestions */}
-          <div style={{ display: 'flex', gap: '8px', marginTop: '10px', alignItems: 'center', fontSize: '11px', color: '#64748B' }}>
+          <div className="lookup-quick-search-bar" style={{ display: 'flex', gap: '8px', marginTop: '10px', alignItems: 'center', fontSize: '11px', color: '#64748B', flexWrap: 'wrap' }}>
             <span>Quick search:</span>
             <button
               type="button"
@@ -508,8 +521,8 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
                     }}
                   >
                     {/* Top Row: Ref + Status + Pre-Auth Fare */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div className="lookup-card-top-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '14px', color: '#0A192F' }}>
                           #{b.id}
                         </span>
@@ -544,7 +557,7 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
 
                     {/* DYNAMIC VENDOR-GOVERNED CANCELLATION COUNTDOWN BANNER */}
                     {!isCancelled && (
-                      <div style={{
+                      <div className="lookup-countdown-banner" style={{
                         backgroundColor: countdown.badgeBg,
                         border: `1px solid ${countdown.badgeBorder}`,
                         borderRadius: '8px',
@@ -553,9 +566,10 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        gap: '10px'
+                        gap: '10px',
+                        flexWrap: 'wrap'
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '200px' }}>
                           <Clock size={15} color={countdown.badgeText} style={{ flexShrink: 0 }} />
                           <div>
                             <div style={{ fontSize: '12px', fontWeight: 800, color: countdown.badgeText }}>
@@ -613,7 +627,7 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
                     </div>
 
                     {/* Date & Chauffeur Row with Transit Flight Badge */}
-                    <div style={{ backgroundColor: '#F8FAFC', padding: '12px 14px', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+                    <div className="lookup-date-driver-row" style={{ backgroundColor: '#F8FAFC', padding: '12px 14px', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Calendar size={15} color="#0A192F" />
                         <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#0F172A' }}>{pickupTimeFormatted}</span>
@@ -633,42 +647,139 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
                     </div>
 
                     {/* Action Buttons Toolbar: Calendar Sync, PDF Voucher & Cancellation */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '14px' }}>
+                    <div className="lookup-card-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '14px' }}>
                       
-                      {/* Left: PDF Terms Voucher */}
-                      <button
-                        type="button"
-                        onClick={() => handleDownloadTerms(b)}
-                        disabled={downloadingVoucherId === b.id}
-                        style={{
-                          padding: '7px 12px',
-                          borderRadius: '6px',
-                          border: '1px solid #CBD5E1',
-                          backgroundColor: '#FFFFFF',
-                          color: '#0F172A',
-                          fontSize: '11.5px',
-                          fontWeight: 700,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {downloadingVoucherId === b.id ? (
-                          <>
-                            <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
-                            <span>Generating PDF...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Download size={13} color="#9A7B4F" />
-                            <span>PDF Voucher &amp; Terms</span>
-                          </>
-                        )}
-                      </button>
+                      {/* Left: PDF Terms Voucher & Live Support */}
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadTerms(b)}
+                          disabled={downloadingVoucherId === b.id}
+                          className="lookup-voucher-btn"
+                          style={{
+                            padding: '7px 12px',
+                            borderRadius: '6px',
+                            border: '1px solid #CBD5E1',
+                            backgroundColor: '#FFFFFF',
+                            color: '#0F172A',
+                            fontSize: '11.5px',
+                            fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {downloadingVoucherId === b.id ? (
+                            <>
+                              <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
+                              <span>Generating PDF...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Download size={13} color="#9A7B4F" />
+                              <span>PDF Voucher &amp; Terms</span>
+                            </>
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setSupportModalBooking(b)}
+                          style={{
+                            padding: '7px 12px',
+                            borderRadius: '6px',
+                            border: '1px solid #D97706',
+                            backgroundColor: '#0F172A',
+                            color: '#FFFFFF',
+                            fontSize: '11.5px',
+                            fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <Sparkles size={13} color="#F59E0B" />
+                          <span>💬 Contact Support</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setViewingDocBookingId(b.id);
+                            setViewingDocType('invoice');
+                          }}
+                          style={{
+                            padding: '7px 12px',
+                            borderRadius: '6px',
+                            border: '1px solid #CBD5E1',
+                            backgroundColor: '#FFFFFF',
+                            color: '#0F172A',
+                            fontSize: '11.5px',
+                            fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <FileText size={13} color="#0078D4" />
+                          <span>📄 Master Invoice</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setViewingDocBookingId(b.id);
+                            setViewingDocType('receipt');
+                          }}
+                          style={{
+                            padding: '7px 12px',
+                            borderRadius: '6px',
+                            border: '1px solid #CBD5E1',
+                            backgroundColor: '#FFFFFF',
+                            color: '#0F172A',
+                            fontSize: '11.5px',
+                            fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <span>💳 Receipt</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setLiveTrackingBookingId(b.id)}
+                          style={{
+                            padding: '7px 12px',
+                            borderRadius: '6px',
+                            border: '1px solid #0078D4',
+                            backgroundColor: '#EFF6FF',
+                            color: '#0078D4',
+                            fontSize: '11.5px',
+                            fontWeight: 800,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <MapPin size={13} color="#0078D4" />
+                          <span>📍 Live Radar</span>
+                        </button>
+                      </div>
 
                       {/* Right Calendar Sync Group */}
-                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      <div className="lookup-calendar-group" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                         {/* Google Calendar */}
                         <a
                           href={generateGoogleCalendarUrl(b)}
@@ -685,6 +796,7 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
                             fontWeight: 700,
                             display: 'flex',
                             alignItems: 'center',
+                            justifyContent: 'center',
                             gap: '5px',
                             cursor: 'pointer'
                           }}
@@ -708,6 +820,7 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
                             fontWeight: 700,
                             display: 'flex',
                             alignItems: 'center',
+                            justifyContent: 'center',
                             gap: '5px',
                             cursor: 'pointer'
                           }}
@@ -732,15 +845,15 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
                             fontWeight: 700,
                             display: 'flex',
                             alignItems: 'center',
+                            justifyContent: 'center',
                             gap: '5px',
                             cursor: 'pointer'
                           }}
                         >
                           <Calendar size={12} color="#0078D4" />
-                          <span>Outlook 365</span>
+                          <span>Outlook</span>
                         </a>
                       </div>
-
                     </div>
 
                   </div>
@@ -876,6 +989,40 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
             </div>
           </div>
         </div>
+      )}
+
+      {/* RIDE-SPECIFIC CUSTOMER SUPPORT CHAT WIDGET */}
+      {supportModalBooking && (
+        <CustomerSupportChatWidget
+          initialBookingId={supportModalBooking.id}
+          initialCustomerName={supportModalBooking.party?.passenger_name || ''}
+          initialCustomerPhone={supportModalBooking.party?.passenger_phone || ''}
+          initialCustomerEmail={(supportModalBooking.party as any)?.passenger_email || (supportModalBooking.party as any)?.email || ''}
+          vendorId={supportModalBooking.vendor_id || 'vendor_anb_philly'}
+          vendorName="Executive Concierge"
+          isOpenExternal={true}
+          onCloseExternal={() => setSupportModalBooking(null)}
+        />
+      )}
+
+      {/* LIVE CHAUFFEUR RADAR & TELEMETRY TRACKING MODAL */}
+      {liveTrackingBookingId && (
+        <LiveRideTrackingModal
+          bookingId={liveTrackingBookingId}
+          isOpen={!!liveTrackingBookingId}
+          onClose={() => setLiveTrackingBookingId(null)}
+        />
+      )}
+
+      {/* CUSTOMER INVOICE & RECEIPT MODAL */}
+      {viewingDocBookingId && (
+        <BookingOperationsModal
+          bookingId={viewingDocBookingId}
+          isOpen={!!viewingDocBookingId}
+          initialTab={viewingDocType}
+          onClose={() => setViewingDocBookingId(null)}
+          onSuccess={() => {}}
+        />
       )}
 
     </div>

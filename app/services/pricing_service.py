@@ -255,7 +255,8 @@ class PricingService:
         pickup_time_utc: Optional[datetime] = None,
         meet_and_greet_inside: bool = False,
         child_seats: Optional[Any] = None,
-        accessibility: Optional[Any] = None
+        accessibility: Optional[Any] = None,
+        vehicle_id: Optional[str] = None
     ) -> Quote:
         from app.services.vendor_pricing_ai_service import VendorPricingAIService
 
@@ -275,6 +276,16 @@ class PricingService:
         per_hour_rate = round_cur(custom_rule.hourly_rate_net * fx_multiplier)
         hourly_min_hours = getattr(custom_rule, "hourly_minimum_hours", 2) or 2
         min_fare = round_cur(custom_rule.minimum_fare_net * fx_multiplier)
+
+        # 2b. Vehicle-Level Asset Override (if vehicle_id is provided)
+        if vehicle_id:
+            veh = db.vehicles.get(vehicle_id)
+            if veh:
+                if getattr(veh, "hourly_rate_usd", None) is not None and float(veh.hourly_rate_usd) > 0:
+                    per_hour_rate = round_cur(Decimal(str(veh.hourly_rate_usd)) * fx_multiplier)
+                if getattr(veh, "per_km_usd", None) is not None and float(veh.per_km_usd) > 0:
+                    per_mile_rate = round_cur(Decimal(str(veh.per_km_usd)) * Decimal("1.60934") * fx_multiplier)
+
         vendor_dh = getattr(custom_rule, "deadhead_rate_per_mile", None) or getattr(vendor, "deadhead_rate_per_mile", None)
         if vendor_dh is not None:
             deadhead_rate = round_cur(Decimal(str(vendor_dh)) * fx_multiplier)
@@ -312,7 +323,7 @@ class PricingService:
             departure_time_utc=ref_time
         )
 
-        passenger_trip_miles = distance_miles or maps_calc["passenger_trip_miles"]
+        passenger_trip_miles = Decimal(str(distance_miles)) if distance_miles is not None else Decimal(str(maps_calc["passenger_trip_miles"]))
         passenger_trip_km = maps_calc.get("passenger_trip_km", round(passenger_trip_miles * Decimal("1.60934"), 2))
         outbound_miles = maps_calc["outbound_positioning_miles"]
         outbound_km = maps_calc.get("outbound_positioning_km", round(outbound_miles * Decimal("1.60934"), 2))
@@ -340,7 +351,7 @@ class PricingService:
 
         line_items: List[QuoteLineItem] = []
 
-        # 5. Itemize Charges Based on Service Type
+        # 5. Itemize Charges Based on Service Type and Active Vendor Pricing Model
         outbound_positioning_net = Decimal("0.00")
         return_deadhead_net = Decimal("0.00")
         estimated_tolls_net = Decimal("0.00")
@@ -352,29 +363,60 @@ class PricingService:
         meet_greet_net = Decimal("0.00")
         passenger_distance_net = Decimal("0.00")
 
-        if service_type == ServiceType.HOURLY_AS_DIRECTED:
+        from app.domain_models import PricingModelType, TaxGratuityDisplayMode
+        pricing_model = getattr(custom_rule, "pricing_model_type", PricingModelType.DYNAMIC_MATRIX)
+        if isinstance(pricing_model, str):
+            try:
+                pricing_model = PricingModelType(pricing_model)
+            except Exception:
+                pricing_model = PricingModelType.DYNAMIC_MATRIX
+
+        tg_mode = getattr(custom_rule, "tax_gratuity_display_mode", TaxGratuityDisplayMode.ITEMIZED_SEPARATE)
+        if isinstance(tg_mode, str):
+            try:
+                tg_mode = TaxGratuityDisplayMode(tg_mode)
+            except Exception:
+                tg_mode = TaxGratuityDisplayMode.ITEMIZED_SEPARATE
+
+        if pricing_model == PricingModelType.FLAT_ALL_INCLUSIVE_PER_MILE and service_type != ServiceType.HOURLY_AS_DIRECTED:
+            flat_rate = round_cur(Decimal(str(getattr(custom_rule, "flat_per_mile_all_inclusive", Decimal("5.50")))) * fx_multiplier)
+            raw_flat = round_cur(passenger_trip_miles * flat_rate)
+            core_transportation_subtotal = max(raw_flat, min_fare)
+            subtotal_net = core_transportation_subtotal
+            est_duration = maps_calc["passenger_duration_minutes"]
+            passenger_distance_net = core_transportation_subtotal
+            line_items.append(QuoteLineItem(
+                description=f"Flat All-Inclusive Mileage ({passenger_trip_miles:.1f} mi @ {flat_rate} {target_currency}/mi - Fuel, Tolls & Staging Included)",
+                quantity=1,
+                unit_price_net=core_transportation_subtotal,
+                total_net=core_transportation_subtotal,
+                tax_rate=tax_rate,
+                tax_amount=Decimal("0.00") if tg_mode == TaxGratuityDisplayMode.ALL_INCLUSIVE_BUNDLED else round_cur(core_transportation_subtotal * tax_rate),
+                total_gross=core_transportation_subtotal if tg_mode == TaxGratuityDisplayMode.ALL_INCLUSIVE_BUNDLED else round_cur(core_transportation_subtotal * (Decimal("1.00") + tax_rate))
+            ))
+        elif service_type == ServiceType.HOURLY_AS_DIRECTED or pricing_model == PricingModelType.FLAT_HOURLY_CHARTER:
             hours = max(hourly_min_hours, hourly_hours or hourly_min_hours)
             hourly_total_net = round_cur(Decimal(hours) * per_hour_rate)
             core_transportation_subtotal = hourly_total_net
             est_duration = hours * 60
             
             line_items.append(QuoteLineItem(
-                description=f"Hourly As-Directed Chauffeur Service ({hours} Hours Dedicated)",
+                description=f"Hourly Dedicated Chauffeur Charter ({hours} Hours Dedicated @ {per_hour_rate} {target_currency}/hr)",
                 quantity=hours,
                 unit_price_net=per_hour_rate,
                 total_net=hourly_total_net,
                 tax_rate=tax_rate,
-                tax_amount=round_cur(hourly_total_net * tax_rate),
-                total_gross=round_cur(hourly_total_net * (Decimal("1.00") + tax_rate))
+                tax_amount=Decimal("0.00") if tg_mode == TaxGratuityDisplayMode.ALL_INCLUSIVE_BUNDLED else round_cur(hourly_total_net * tax_rate),
+                total_gross=hourly_total_net if tg_mode == TaxGratuityDisplayMode.ALL_INCLUSIVE_BUNDLED else round_cur(hourly_total_net * (Decimal("1.00") + tax_rate))
             ))
 
-            # Dynamic Toll Pass-Through for Intercity / Multi-Zone Hourly Charters
+            # Toll Pass-Through for Intercity Hourly
             if dropoff_address and dropoff_address.strip() and dropoff_address.strip().lower() != pickup_address.strip().lower():
                 detected_tolls = GoogleMapsService.detect_corridor_tolls(pickup_address, dropoff_address)
                 estimated_tolls_net = round_cur(detected_tolls * fx_multiplier)
                 if estimated_tolls_net > 0:
                     line_items.append(QuoteLineItem(
-                        description="Bridge, Tunnel & Turnpike Tolls (Municipal / E-ZPass pass-through)",
+                        description="Bridge, Tunnel & Turnpike Tolls (Municipal Pass-through)",
                         quantity=1,
                         unit_price_net=estimated_tolls_net,
                         total_net=estimated_tolls_net,
@@ -383,7 +425,7 @@ class PricingService:
                         total_gross=estimated_tolls_net
                     ))
         else:
-            # Point-to-Point & Airport Transfer
+            # DYNAMIC_MATRIX / VEHICLE_SPECIFIC_PREMIUM
             passenger_distance_net = round_cur(passenger_trip_miles * per_mile_rate)
             
             # Base Fleet Reservation Line Item
@@ -436,7 +478,7 @@ class PricingService:
                     total_gross=round_cur(return_deadhead_net * (Decimal("1.00") + tax_rate))
                 ))
 
-            # Dynamic Highway, Bridge & Turnpike Tolls (Pass-through via TollGuru / Google Routes API)
+            # Dynamic Highway, Bridge & Turnpike Tolls
             detected_tolls = GoogleMapsService.detect_corridor_tolls(pickup_address, dropoff_address or "")
             estimated_tolls_net = round_cur(detected_tolls * fx_multiplier)
             if estimated_tolls_net > 0:
@@ -450,7 +492,7 @@ class PricingService:
                     total_gross=estimated_tolls_net
                 ))
 
-            # Airport VIP Terminal Access & Live Flight Radar Tracking
+            # Airport VIP Terminal Access
             if is_airport_mission:
                 airport_train_surcharge_net = airport_fee_net
                 line_items.append(QuoteLineItem(
@@ -463,7 +505,7 @@ class PricingService:
                     total_gross=round_cur(airport_train_surcharge_net * (Decimal("1.00") + tax_rate))
                 ))
 
-            # Regional Congestion / Environmental Surcharge (e.g. London Congestion)
+            # Regional Congestion Surcharge
             if regional_rule.congestion_charge > 0:
                 congestion_surcharge_net = round_cur(regional_rule.congestion_charge * fx_multiplier)
                 line_items.append(QuoteLineItem(
@@ -476,7 +518,7 @@ class PricingService:
                     total_gross=round_cur(congestion_surcharge_net * (Decimal("1.00") + tax_rate))
                 ))
 
-            # Inside Baggage Claim Meet & Greet with Digital Name Sign
+            # Inside Baggage Claim Meet & Greet
             if meet_and_greet_inside:
                 meet_greet_net = inside_meet_greet_fee_net
                 line_items.append(QuoteLineItem(
@@ -489,7 +531,7 @@ class PricingService:
                     total_gross=round_cur(meet_greet_net * (Decimal("1.00") + tax_rate))
                 ))
 
-            # Peak Rush-Hour Traffic Delay Adjustment (07:00-09:30 & 16:30-19:30 weekdays)
+            # Peak Rush-Hour Traffic Delay
             hour = ref_time.hour
             is_weekday = ref_time.weekday() < 5
             if is_weekday and ((7 <= hour <= 9) or (16 <= hour <= 19)):
@@ -504,7 +546,7 @@ class PricingService:
                     total_gross=round_cur(rush_hour_net * (Decimal("1.00") + tax_rate))
                 ))
 
-            # Late-Night / Midnight Surcharge (23:00 to 05:30 window)
+            # Late-Night Surcharge
             if hour >= 23 or hour <= 5:
                 late_night_net = late_night_surcharge_net
                 line_items.append(QuoteLineItem(
@@ -551,7 +593,7 @@ class PricingService:
                         total_gross=round_cur(seat_total_net * (Decimal("1.00") + tax_rate))
                     ))
 
-            # Wheelchair Accessibility & Hydraulic Ramp Staging
+            # Wheelchair Accessibility
             if accessibility and (getattr(accessibility, "wheelchair_accessible_vehicle_needed", False) or getattr(accessibility, "requires_ramp_or_lift", False)):
                 ramp_rate = getattr(custom_rule, "wheelchair_lift_surcharge_net", Decimal("45.00")) * fx_multiplier
                 ramp_total_net = round_cur(ramp_rate)
@@ -568,11 +610,10 @@ class PricingService:
             core_transportation_subtotal = (
                 base_fee + passenger_distance_net + outbound_positioning_net + return_deadhead_net
             )
-
             est_duration = maps_calc["passenger_duration_minutes"]
 
         # 6. Dynamic Fuel Surcharge (% of base transportation fare)
-        if fuel_surcharge_pct > Decimal("0.00"):
+        if fuel_surcharge_pct > Decimal("0.00") and pricing_model == PricingModelType.DYNAMIC_MATRIX:
             fuel_surcharge_net = round_cur(core_transportation_subtotal * fuel_surcharge_pct)
             if fuel_surcharge_net > 0:
                 line_items.append(QuoteLineItem(
@@ -586,7 +627,7 @@ class PricingService:
                 ))
 
         # 7. Dynamic Operational & Administrative Service Charge (% of base fare)
-        if service_charge_pct > Decimal("0.00"):
+        if service_charge_pct > Decimal("0.00") and pricing_model == PricingModelType.DYNAMIC_MATRIX:
             service_charge_net = round_cur(core_transportation_subtotal * service_charge_pct)
             if service_charge_net > 0:
                 line_items.append(QuoteLineItem(
@@ -598,6 +639,25 @@ class PricingService:
                     tax_amount=round_cur(service_charge_net * tax_rate),
                     total_gross=round_cur(service_charge_net * (Decimal("1.00") + tax_rate))
                 ))
+
+        # 7b. Out-of-Town & Long-Distance Driver Stay & Sustenance Allowance (Hotel + Meals Combined)
+        enable_stay = getattr(custom_rule, "enable_out_of_town_stay", False)
+        stay_rate = round_cur(Decimal(str(getattr(custom_rule, "out_of_town_stay_rate_net", Decimal("300.00")))) * fx_multiplier)
+        overnight_thresh = Decimal(str(getattr(custom_rule, "overnight_distance_threshold_miles", Decimal("250.00"))))
+
+        is_out_of_town = (passenger_trip_miles >= overnight_thresh) or (service_type == ServiceType.HOURLY_AS_DIRECTED and (hourly_hours or 0) >= 12)
+        if enable_stay and is_out_of_town:
+            estimated_nights = max(1, int(passenger_trip_miles // Decimal("350.00")) if passenger_trip_miles >= overnight_thresh else 1)
+            stay_total_net = round_cur(Decimal(estimated_nights) * stay_rate)
+            line_items.append(QuoteLineItem(
+                description=f"Out-of-Town Chauffeur Overnight Stay & Sustenance Allowance ({estimated_nights} Night{'s' if estimated_nights > 1 else ''} @ {stay_rate} {target_currency}/night - Hotel & Meals Included)",
+                quantity=estimated_nights,
+                unit_price_net=stay_rate,
+                total_net=stay_total_net,
+                tax_rate=Decimal("0.00"),
+                tax_amount=Decimal("0.00"),
+                total_gross=stay_total_net
+            ))
 
         # Compute running subtotal from all line items
         subtotal_net = sum((item.total_net for item in line_items), Decimal("0.00"))
@@ -612,12 +672,12 @@ class PricingService:
                 unit_price_net=adjustment,
                 total_net=adjustment,
                 tax_rate=tax_rate,
-                tax_amount=round_cur(adjustment * tax_rate),
-                total_gross=round_cur(adjustment * (Decimal("1.00") + tax_rate))
+                tax_amount=Decimal("0.00") if tg_mode == TaxGratuityDisplayMode.ALL_INCLUSIVE_BUNDLED else round_cur(adjustment * tax_rate),
+                total_gross=adjustment if tg_mode == TaxGratuityDisplayMode.ALL_INCLUSIVE_BUNDLED else round_cur(adjustment * (Decimal("1.00") + tax_rate))
             ))
 
         # 8. Dynamic Credit Card Processing / Merchant Clearing Fee
-        if credit_card_fee_pct > Decimal("0.00"):
+        if credit_card_fee_pct > Decimal("0.00") and pricing_model == PricingModelType.DYNAMIC_MATRIX:
             cc_fee_net = round_cur(subtotal_net * credit_card_fee_pct)
             if cc_fee_net > 0:
                 line_items.append(QuoteLineItem(
@@ -633,17 +693,22 @@ class PricingService:
 
         subtotal_net = round_cur(subtotal_net)
         
-        # 9. Regional Taxes & Dynamic Gratuity
-        # Calculate taxable base (excluding toll and CC pass-throughs with 0% tax)
+        # 9. Regional Taxes & Dynamic Gratuity Inclusivity Resolution
         taxable_base = sum((item.total_net for item in line_items if item.tax_rate > Decimal("0.00")), Decimal("0.00"))
-        tax_amount = round_cur(sum((item.tax_amount for item in line_items), Decimal("0.00")))
+        gratuity_rate = Decimal(str(getattr(custom_rule, "gratuity_rate", Decimal("0.20")) or Decimal("0.20")))
         
-        include_grat = getattr(custom_rule, "include_gratuity_in_billing", False)
-        gratuity_rate = Decimal(str(custom_rule.gratuity_rate)) if (include_grat and custom_rule and custom_rule.gratuity_rate) else Decimal("0.00")
-        gratuity_amount = round_cur(taxable_base * gratuity_rate) if gratuity_rate > 0 else Decimal("0.00")
-        
-        total_gross = subtotal_net + tax_amount
-        final_payable_amount = total_gross + gratuity_amount
+        if tg_mode == TaxGratuityDisplayMode.ALL_INCLUSIVE_BUNDLED:
+            # All taxes and chauffeur gratuity are included inside the total price
+            tax_amount = Decimal("0.00")
+            gratuity_amount = Decimal("0.00")
+            total_gross = subtotal_net
+            final_payable_amount = subtotal_net
+        else:
+            tax_amount = round_cur(sum((item.tax_amount for item in line_items), Decimal("0.00")))
+            include_grat = getattr(custom_rule, "include_gratuity_in_billing", True)
+            gratuity_amount = round_cur(taxable_base * gratuity_rate) if (include_grat and gratuity_rate > 0) else Decimal("0.00")
+            total_gross = subtotal_net + tax_amount
+            final_payable_amount = total_gross + gratuity_amount
 
         now = datetime.now(timezone.utc)
         quote_id = f"q-{uuid.uuid4().hex[:8]}"
@@ -654,6 +719,8 @@ class PricingService:
             vendor_id=vendor_id,
             service_type=service_type,
             vehicle_class=vehicle_class,
+            pricing_model_type=pricing_model,
+            tax_gratuity_display_mode=tg_mode,
             pickup_address=pickup_address,
             dropoff_address=dropoff_address,
             transit_info=transit_info,
@@ -785,15 +852,48 @@ class PricingService:
         resolved_distance = distance_miles or maps_calc["passenger_trip_miles"]
 
         matrix: Dict[str, Quote] = {}
-        all_classes = [
-            VehicleClass.BUSINESS_SEDAN,
-            VehicleClass.FIRST_CLASS,
+        # Resolve active vehicle classes for this vendor from authoritative database
+        active_classes_set = set()
+        from app.database_mysql import mysql_db, VehicleModel
+        norm_id = vendor_id.replace("-", "_") if vendor_id else ""
+        alias_id = vendor_id.replace("_", "-") if vendor_id else ""
+        session = mysql_db.get_session()
+        if session:
+            try:
+                v_rows = session.query(VehicleModel).filter(
+                    (VehicleModel.vendor_id == vendor_id) |
+                    (VehicleModel.vendor_id == norm_id) |
+                    (VehicleModel.vendor_id == alias_id)
+                ).all()
+                for vr in v_rows:
+                    if vr.is_active:
+                        active_classes_set.add(vr.vehicle_class)
+            except Exception:
+                pass
+            finally:
+                session.close()
+
+        for v in getattr(db, "vehicles", {}).values():
+            v_vid = getattr(v, "vendor_id", "")
+            if v_vid in (vendor_id, norm_id, alias_id) or v.id.startswith(f"veh_{norm_id}") or v.id.startswith(f"veh_{alias_id}"):
+                vc_val = v.vehicle_class.value if hasattr(v.vehicle_class, "value") else str(v.vehicle_class)
+                if getattr(v, "is_active", True):
+                    active_classes_set.add(vc_val)
+
+        all_classes_ordered = [
             VehicleClass.LUXURY_SUV,
+            VehicleClass.FIRST_CLASS,
+            VehicleClass.ELECTRIC_VIP,
             VehicleClass.BUSINESS_VAN,
-            VehicleClass.ELECTRIC_VIP
+            VehicleClass.BUSINESS_SEDAN
         ]
 
-        for vc in all_classes:
+        if active_classes_set:
+            target_classes = [vc for vc in all_classes_ordered if vc.value in active_classes_set]
+        else:
+            target_classes = all_classes_ordered
+
+        for vc in target_classes:
             q = PricingService.calculate_quote(
                 tenant_id=tenant_id,
                 vendor_id=vendor_id,

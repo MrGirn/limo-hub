@@ -16,7 +16,7 @@ import {
 import { 
   fetchSupportDeskPlans, updateSupportDeskPlan, fetchSupportDeskConfig, 
   updateSupportDeskConfig, subscribeVendorSupportDesk, fetchSupportDeskSubscriptions, 
-  fetchSupportTickets, createSupportTicket, updateSupportTicket, 
+  fetchSupportTickets, fetchSupportTicketApi, createSupportTicket, updateSupportTicket, 
   mutateSupportTicketBooking, fetchSupportDeskOverview,
   fetchRegionalStaffingPods, resolveInboundVoiceCall, evaluateAutomatedSlaTriggers
 } from '../api';
@@ -601,7 +601,12 @@ export const GlobalSupportDeskHub: React.FC = () => {
                 return (
                   <div
                     key={t.id}
-                    onClick={() => setSelectedTicket(t)}
+                    onClick={() => {
+                      setSelectedTicket(t);
+                      fetchSupportTicketApi(t.id).then(detail => {
+                        if (detail) setSelectedTicket(detail as any);
+                      }).catch(() => {});
+                    }}
                     style={{
                       padding: '14px',
                       borderRadius: '8px',

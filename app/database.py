@@ -4,6 +4,7 @@ Provides multi-tenant partitioning, pre-seeded US executive fleet (Escalade, S 5
 certified chauffeurs, NYC/LA vendor depots, and active trip telemetry.
 """
 
+import json
 import logging
 from typing import Dict, List, Optional, Any
 from decimal import Decimal
@@ -18,13 +19,15 @@ from app.domain_models import (
     VendorCommConfig, TransitRadarEvent, PlanUpdateRequest, DistanceUnit,
     VendorFrequentRoute, CorporateAccount, DepartmentCostCenter, CorporateTravelPolicy,
     CorporateInvoice, CorporateInvoiceLineItem, RegionalTaxRule, FXRateSnapshot,
-    Customer, CustomerSavedAddress
+    Customer, CustomerSavedAddress, VehicleClassOption, ProofOfDeliveryRecord,
+    IncidentalChargeRequest
 )
 from app.database_mysql import (
     mysql_db, TenantModel, VendorModel, VehicleModel, DriverModel,
     QuoteModel, BookingModel, TripModel, TripEventModel, IncidentModel,
     CustomerModel, CustomerSavedAddressModel, VendorEmailConfigModel,
-    VendorPricingRuleModel, VendorTeamMemberModel, VendorOmnichannelConfigModel
+    VendorPricingRuleModel, VendorTeamMemberModel, VendorOmnichannelConfigModel,
+    VehicleClassOptionModel, CentralTollRecordModel, ProofOfDeliveryModel
 )
 
 
@@ -33,6 +36,7 @@ class LimoDatabase:
         self.tenants: Dict[str, Tenant] = {}
         self.vendors: Dict[str, Vendor] = {}
         self.vehicles: Dict[str, Vehicle] = {}
+        self.vehicle_class_options: Dict[str, VehicleClassOption] = {}
         self.drivers: Dict[str, Driver] = {}
         self.quotes: Dict[str, Quote] = {}
         self.bookings: Dict[str, Booking] = {}
@@ -66,12 +70,19 @@ class LimoDatabase:
         
         # Customer CRM & 5-Star VIP Preference Subsystem
         self.customers: Dict[str, Customer] = {}
+        self.vip_inquiries: Dict[str, Dict[str, Any]] = {}
+        self.passkey_credentials: Dict[str, Dict[str, Any]] = {}
+        self.passkey_challenges: Dict[str, str] = {}
         
         # Vendor Autonomy & Operational Subsystems
         self.vendor_pricing_rules: Dict[str, Dict[str, VendorPricingRule]] = {}  # vendor_id -> { vehicle_class -> rule }
         self.vendor_ai_metrics: Dict[str, VendorAIDynamicPricingMetrics] = {}     # vendor_id -> AI Dynamic Yield Metrics
         self.vendor_comm_configs: Dict[str, VendorCommConfig] = {}               # vendor_id -> AWS SES / Custom SMTP
         self.transit_radar_events: List[TransitRadarEvent] = []                  # Live FlightAware & Transit logs
+        
+        # Centralized Global Hub Shared Services Subsystem
+        self.central_toll_registry: Dict[str, Dict[str, Any]] = {}              # corridor_key -> { toll_usd, roundtrip_toll_usd, cached_at, hits, provider }
+        self.proof_of_deliveries: Dict[str, ProofOfDeliveryRecord] = {}         # trip_id/booking_id -> ProofOfDeliveryRecord
         
         self.seed_defaults()
         self.sync_from_mysql_if_available()
@@ -226,7 +237,13 @@ class LimoDatabase:
                         deadhead_rate_per_mile=Decimal(str(v.deadhead_rate_per_mile or "1.75")),
                         rating=v.rating,
                         is_verified=v.is_verified,
-                        network_sharing_enabled=v.network_sharing_enabled
+                        network_sharing_enabled=v.network_sharing_enabled,
+                        vendor_operating_code=getattr(v, 'vendor_operating_code', None) or f"VND-{abs(hash(v.id)) % 9000 + 1000}",
+                        logo_image_url=getattr(v, 'logo_image_url', None),
+                        brand_primary_color=getattr(v, 'brand_primary_color', '#0078D4') or '#0078D4',
+                        invoice_prefix=getattr(v, 'invoice_prefix', 'INV') or 'INV',
+                        receipt_prefix=getattr(v, 'receipt_prefix', 'REC') or 'REC',
+                        invoice_custom_footer=getattr(v, 'invoice_custom_footer', None)
                     )
                 # Load vehicles
                 for veh in session.query(VehicleModel).all():
@@ -245,6 +262,31 @@ class LimoDatabase:
                         is_active=veh.is_active,
                         current_lat=veh.current_lat,
                         current_lng=veh.current_lng
+                    )
+                # Load vehicle class options
+                for vopt in session.query(VehicleClassOptionModel).filter_by(is_active=True).all():
+                    features = []
+                    if vopt.features_json:
+                        try:
+                            features = json.loads(vopt.features_json)
+                        except Exception:
+                            features = [f.strip() for f in vopt.features_json.split(",") if f.strip()]
+                    self.vehicle_class_options[vopt.id] = VehicleClassOption(
+                        id=vopt.id,
+                        tenant_id=vopt.tenant_id,
+                        vendor_id=vopt.vendor_id,
+                        type=VehicleClass(vopt.vehicle_class) if vopt.vehicle_class in [e.value for e in VehicleClass] else VehicleClass.FIRST_CLASS,
+                        title=vopt.title,
+                        subtitle=vopt.subtitle,
+                        models=vopt.models,
+                        pax=vopt.pax,
+                        luggage=vopt.luggage,
+                        features=features,
+                        badge=vopt.badge,
+                        photo_url=vopt.photo_url,
+                        fallback_icon=vopt.fallback_icon,
+                        sort_order=vopt.sort_order,
+                        is_active=vopt.is_active
                     )
                 # Load drivers
                 for d in session.query(DriverModel).all():
@@ -301,6 +343,22 @@ class LimoDatabase:
                         lifetime_spend_usd=Decimal(str(c_db.lifetime_spend_usd or "0.00")),
                         saved_addresses=saved_addrs
                     )
+
+                # Load Centralized Global Hub Toll Rate Registry
+                try:
+                    for toll in session.query(CentralTollRecordModel).all():
+                        self.central_toll_registry[toll.corridor_key] = {
+                            "corridor_key": toll.corridor_key,
+                            "origin": toll.origin,
+                            "destination": toll.destination,
+                            "toll_usd": str(toll.toll_usd),
+                            "roundtrip_toll_usd": str(toll.roundtrip_toll_usd),
+                            "provider": toll.provider,
+                            "hits": toll.hits,
+                            "cached_at": toll.cached_at.isoformat() if toll.cached_at else datetime.now(timezone.utc).isoformat()
+                        }
+                except Exception:
+                    pass
 
                 # Load bookings
                 for b in session.query(BookingModel).all():
@@ -447,6 +505,12 @@ class LimoDatabase:
                     existing_v.office_address = v.office_address
                     existing_v.office_city = v.office_city
                     existing_v.office_state = v.office_state
+                    existing_v.vendor_operating_code = v.vendor_operating_code
+                    existing_v.logo_image_url = v.logo_image_url
+                    existing_v.brand_primary_color = v.brand_primary_color
+                    existing_v.invoice_prefix = v.invoice_prefix
+                    existing_v.receipt_prefix = v.receipt_prefix
+                    existing_v.invoice_custom_footer = v.invoice_custom_footer
                 session.flush()
 
                 # Upsert vehicles belonging to this vendor

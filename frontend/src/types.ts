@@ -104,6 +104,8 @@ export interface Quote {
   wait_net: number;
   
   subtotal_net: number;
+  pricing_model_type?: PricingModelType;
+  tax_gratuity_display_mode?: TaxGratuityDisplayMode;
   tax_rate: number;
   tax_amount: number;
   gratuity_rate: number;
@@ -403,9 +405,23 @@ export interface VendorRegistrationForm {
   insurance_policy_number: string;
 }
 
+export type PricingModelType = 
+  | 'DYNAMIC_MATRIX'
+  | 'FLAT_ALL_INCLUSIVE_PER_MILE'
+  | 'FLAT_HOURLY_CHARTER'
+  | 'VEHICLE_SPECIFIC_PREMIUM';
+
+export type TaxGratuityDisplayMode = 
+  | 'ITEMIZED_SEPARATE'
+  | 'ALL_INCLUSIVE_BUNDLED';
+
 export interface VendorPricingRule {
   vendor_id: string;
   vehicle_class: VehicleClass;
+  pricing_model_type?: PricingModelType;
+  tax_gratuity_display_mode?: TaxGratuityDisplayMode;
+  flat_per_mile_all_inclusive?: number;
+  flat_per_km_all_inclusive?: number;
   base_rate_net: number;
   per_mile_rate_net: number;
   per_km_rate_net: number;
@@ -430,6 +446,14 @@ export interface VendorPricingRule {
   tax_rate: number;
   include_gratuity_in_billing?: boolean;
   gratuity_rate: number;
+  enable_out_of_town_stay?: boolean;
+  out_of_town_stay_rate_net?: number;
+  enable_driver_lodging?: boolean;
+  driver_lodging_rate_net?: number;
+  enable_driver_per_diem?: boolean;
+  driver_per_diem_rate_net?: number;
+  overnight_distance_threshold_miles?: number;
+  daily_standby_min_hours?: number;
   currency: string;
   distance_unit: DistanceUnit;
   updated_at?: string;
@@ -743,6 +767,50 @@ export interface VendorPortalConfig {
     corporate_accounts_count?: number;
     [key: string]: any;
   };
+  vehicle_options?: VehicleOption[];
+  fleet_vehicles?: VehicleOption[];
+}
+
+export interface VehiclePhoto {
+  url: string;
+  caption?: string;
+  viewType?: 'EXTERIOR' | 'CABIN' | 'SEATING' | 'LUGGAGE' | 'DETAILS';
+}
+
+export interface VehicleOption {
+  id?: string;
+  tenant_id?: string;
+  vendor_id?: string;
+  type: VehicleClass;
+  categoryName?: string;
+  title: string;
+  subtitle?: string;
+  models: string;
+  makeModel?: string;
+  year?: string;
+  tagline?: string;
+  pax: number;
+  luggage: number;
+  multiplier?: number;
+  features: string[];
+  badge?: string;
+  badgeColor?: string;
+  desc?: string;
+  specs?: {
+    seatingType?: string;
+    soundSystem?: string;
+    connectivity?: string;
+    climate?: string;
+    beverage?: string;
+    safetyRating?: string;
+    [key: string]: any;
+  };
+  amenities?: string[];
+  photoUrl: string;
+  photos?: VehiclePhoto[];
+  fallbackIcon?: string;
+  sort_order?: number;
+  is_active?: boolean;
 }
 
 export interface SystemRuntimeMode {

@@ -8,7 +8,7 @@ import {
   Award, Star, HeartHandshake, Phone, ArrowUpRight, HelpCircle,
   Snowflake, Zap, Layers, Info, Download, Loader2
 } from 'lucide-react';
-import { ServiceType, VehicleClass, Quote, Booking, BookingParty, MasterItinerary, LegMode, FulfilmentType } from '../types';
+import { ServiceType, VehicleClass, Quote, Booking, BookingParty, MasterItinerary, LegMode, FulfilmentType, VehicleOption } from '../types';
 import { 
   requestQuote, 
   requestQuoteMatrix,
@@ -20,73 +20,13 @@ import {
   generateGoogleCalendarUrl, 
   generateOutlookCalendarUrl,
   cancelBookingApi,
-  fetchBookingTermsVoucher
+  fetchBookingTermsVoucher,
+  fetchVehicleOptions
 } from '../api';
 import { AddressAutocompleteInput } from './AddressAutocompleteInput';
 import { CustomerBookingsLookupModal } from './public/CustomerBookingsLookupModal';
 
-const US_VEHICLE_OPTIONS = [
-  {
-    type: 'LUXURY_SUV' as VehicleClass,
-    title: 'Executive SUV',
-    subtitle: 'Luxury Full-Size SUV',
-    models: 'Chevrolet Suburban, Cadillac Escalade or similar',
-    pax: 6,
-    luggage: 6,
-    features: ['Spacious leather interior', 'Climate control'],
-    badge: 'Most Popular',
-    photoUrl: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=400&q=80',
-    fallbackIcon: 'SUV'
-  },
-  {
-    type: 'FIRST_CLASS' as VehicleClass,
-    title: 'First Class Sedan',
-    subtitle: 'Diplomatic Flagship Sedan',
-    models: 'Mercedes-Benz S-Class, BMW 7 Series or similar',
-    pax: 3,
-    luggage: 3,
-    features: ['Executive legroom', 'Active air suspension'],
-    badge: 'Flagship Luxury',
-    photoUrl: 'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&w=400&q=80',
-    fallbackIcon: 'SEDAN'
-  },
-  {
-    type: 'ELECTRIC_VIP' as VehicleClass,
-    title: 'Electric VIP Lounge',
-    subtitle: 'Zero-Emission Executive Cabin',
-    models: 'Tesla Model X, Mercedes EQS or similar',
-    pax: 3,
-    luggage: 3,
-    features: ['Zero emissions', 'Whisper quiet cabin'],
-    badge: 'Zero Emission',
-    photoUrl: 'https://images.unsplash.com/photo-1560958089-b8a1929cea89?auto=format&fit=crop&w=400&q=80',
-    fallbackIcon: 'EV'
-  },
-  {
-    type: 'BUSINESS_VAN' as VehicleClass,
-    title: 'Executive Sprinter VIP',
-    subtitle: 'High-Roof Jet Class Van',
-    models: 'Mercedes-Benz Sprinter or similar',
-    pax: 12,
-    luggage: 14,
-    features: ['High-roof walk-in', 'Conference seating'],
-    badge: 'Group & Delegation',
-    photoUrl: 'https://images.unsplash.com/photo-1570125909232-eb263c188f7e?auto=format&fit=crop&w=400&q=80',
-    fallbackIcon: 'VAN'
-  },
-  {
-    type: 'BUSINESS_SEDAN' as VehicleClass,
-    title: 'Business Sedan',
-    subtitle: 'Corporate Executive Sedan',
-    models: 'Toyota Camry, Hyundai Sonata or similar',
-    pax: 3,
-    luggage: 3,
-    features: ['Corporate reliability', 'Clean interior'],
-    badge: 'Corporate Standard',
-    photoUrl: 'https://images.unsplash.com/photo-1550355291-bbee04a92027?auto=format&fit=crop&w=400&q=80',
-    fallbackIcon: 'SEDAN'
-  }
-];
+
 
 const TIME_SLOTS = [
   '12:00 AM', '12:30 AM', '01:00 AM', '01:30 AM', '02:00 AM', '02:30 AM',
@@ -140,6 +80,18 @@ export interface CustomerPortalProps {
     pickupDate?: string;
     pickupTime?: string;
     passengers?: number;
+    passengerName?: string;
+    customer_name?: string;
+    booker_name?: string;
+    passengerEmail?: string;
+    email?: string;
+    booker_email?: string;
+    passengerPhone?: string;
+    phone?: string;
+    booker_phone?: string;
+    message?: string;
+    special_instructions?: string;
+    [key: string]: any;
   };
   isStandalonePublicSite?: boolean;
 }
@@ -190,6 +142,34 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
     }
   ]);
 
+  // Dynamic Showroom Vehicle Options from Database / Config Cache
+  const [dynamicVehicleOptions, setDynamicVehicleOptions] = useState<VehicleOption[]>(config?.vehicle_options || []);
+
+  useEffect(() => {
+    if (config?.vehicle_options && config.vehicle_options.length > 0) {
+      setDynamicVehicleOptions(config.vehicle_options);
+      return;
+    }
+    fetchVehicleOptions(config?.vendor_id)
+      .then(opts => {
+        if (Array.isArray(opts) && opts.length > 0) {
+          setDynamicVehicleOptions(opts);
+        }
+      })
+      .catch(() => {});
+  }, [config?.vendor_id, config?.vehicle_options]);
+
+  const vehicleOptions: VehicleOption[] = (dynamicVehicleOptions && dynamicVehicleOptions.length > 0)
+    ? dynamicVehicleOptions
+    : (config?.vehicle_options || []);
+
+  // Ensure selected vehicleClass matches an active option available in this vendor's fleet inventory
+  useEffect(() => {
+    if (vehicleOptions.length > 0 && !vehicleOptions.some(v => v.type === vehicleClass)) {
+      setVehicleClass(vehicleOptions[0].type);
+    }
+  }, [vehicleOptions, vehicleClass]);
+
   // Sync initial details if navigated from Quick Quote Widget or Fleet page
   useEffect(() => {
     if (initialDetails) {
@@ -215,6 +195,22 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
       if (initialDetails.pickupDate) setTripDate(initialDetails.pickupDate);
       if (initialDetails.pickupTime) setTripTime(initialDetails.pickupTime);
       if (initialDetails.passengers) setPassengersCount(initialDetails.passengers);
+
+      if (initialDetails.passengerName || initialDetails.customer_name || initialDetails.booker_name) {
+        const pName = initialDetails.passengerName || initialDetails.customer_name || initialDetails.booker_name || '';
+        const pEmail = initialDetails.passengerEmail || initialDetails.email || initialDetails.booker_email || '';
+        const pPhone = initialDetails.passengerPhone || initialDetails.phone || initialDetails.booker_phone || '';
+        setParty(prev => ({
+          ...prev,
+          booker_name: pName,
+          booker_email: pEmail,
+          booker_phone: pPhone,
+          passenger_name: pName,
+          passenger_phone: pPhone,
+          passenger_email: pEmail,
+          special_instructions: initialDetails.message || initialDetails.special_instructions || prev.special_instructions || ''
+        }));
+      }
 
       setItineraryLegs(prev => [{
         ...prev[0],
@@ -469,7 +465,9 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
     setLoadingQuote(true);
     setQuoteError(null);
     try {
-      const classes: VehicleClass[] = ['LUXURY_SUV', 'FIRST_CLASS', 'ELECTRIC_VIP', 'BUSINESS_VAN', 'BUSINESS_SEDAN'];
+      const classes: VehicleClass[] = (vehicleOptions && vehicleOptions.length > 0)
+        ? vehicleOptions.map(v => v.type)
+        : ['LUXURY_SUV', 'FIRST_CLASS', 'ELECTRIC_VIP', 'BUSINESS_VAN', 'BUSINESS_SEDAN'];
 
       if (bookingMode === 'ITINERARY_PLANNER' || hasReturnTrip) {
         let legsToQuote: any[] = [];
@@ -633,7 +631,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
       const updated = [...itineraryLegs];
       if (updated[selectedLegIndex]) {
         updated[selectedLegIndex].vehicle_class = vc;
-        const opt = US_VEHICLE_OPTIONS.find(o => o.type === vc);
+        const opt = vehicleOptions.find(o => o.type === vc);
         updated[selectedLegIndex].vehicle_title = opt?.title || vc;
         setItineraryLegs(updated);
       }
@@ -646,7 +644,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
 
   const handleApplyVehicleToAllLegs = (vc: VehicleClass) => {
     setVehicleClass(vc);
-    const opt = US_VEHICLE_OPTIONS.find(o => o.type === vc);
+    const opt = vehicleOptions.find(o => o.type === vc);
     const updated = itineraryLegs.map(l => ({
       ...l,
       vehicle_class: vc,
@@ -858,7 +856,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
     Number(activeQuoteObj.subtotal_net).toFixed(2) : 
     (resolvedTotalNumber > 0 ? Math.max(0, resolvedTotalNumber - gratuityVal - tollsVal - taxVal).toFixed(2) : '0.00');
 
-  const selectedVehicleObj = US_VEHICLE_OPTIONS.find(v => v.type === vehicleClass) || US_VEHICLE_OPTIONS[0];
+  const selectedVehicleObj = vehicleOptions.find(v => v.type === vehicleClass) || vehicleOptions[0];
 
   return (
     <div style={{ backgroundColor: '#FBF9F5', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
@@ -983,302 +981,265 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
       <div className="customer-portal-main-container">
         
         {wizardStep === 5 && booking ? (
-          /* STEP 5: CONFIRMED CARD ESCROW MISSION WITH CALENDAR & DUAL NOTIFICATION */
+          /* STEP 5: SIMPLIFIED ELEGANT EXECUTIVE CONFIRMATION RECEIPT */
           <div style={{ 
             backgroundColor: '#FFFFFF', 
             borderRadius: '16px', 
             border: '1px solid #E2E8F0', 
-            padding: '48px 36px', 
-            textAlign: 'center', 
-            maxWidth: '880px', 
+            padding: '40px 32px', 
+            maxWidth: '720px', 
             margin: '0 auto',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.06)' 
+            boxShadow: '0 10px 30px rgba(0,0,0,0.05)' 
           }}>
-            <div style={{ width: '68px', height: '68px', borderRadius: '50%', backgroundColor: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', boxShadow: '0 4px 12px rgba(22,163,74,0.15)' }}>
-              <CheckCircle2 size={40} />
-            </div>
-            
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '20px', fontSize: '11px', fontWeight: 800, color: '#9A7B4F', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '12px' }}>
-              <ShieldCheck size={14} color="#16A34A" />
-              CONFIRMED · ESCROW PRE-AUTH ACTIVE
-            </div>
-
-            <h2 style={{ fontFamily: '"Libre Baskerville", Georgia, serif', fontSize: '32px', fontWeight: 700, color: '#0A192F', margin: '4px 0 10px 0' }}>
-              Your Chauffeur Mission is Secured
-            </h2>
-            
-            <p style={{ color: '#64748B', fontSize: '15px', maxWidth: '580px', margin: '0 auto 24px auto', lineHeight: '1.6' }}>
-              Confirmation reference <strong style={{ color: '#0078D4', fontFamily: 'monospace', fontSize: '16px' }}>#{booking.id}</strong>. Your dedicated chauffeur has been reserved with white-glove meet & greet.
-            </p>
-
-            {/* DYNAMIC VENDOR-GOVERNED CANCELLATION POLICY & COUNTDOWN BANNER */}
-            {(() => {
-              const policy = booking.cancellation_policy;
-              const cutoffHours = policy?.cutoff_hours || 2;
-              const vendorName = policy?.vendor_name || 'Operating Carrier';
-              const pickupDate = booking.pickup_time_utc ? new Date(booking.pickup_time_utc) : new Date(Date.now() + 24 * 3600 * 1000);
-              const deadlineDate = policy?.deadline_utc ? new Date(policy.deadline_utc) : new Date(pickupDate.getTime() - cutoffHours * 3600 * 1000);
-              const now = new Date();
-              const diffMs = deadlineDate.getTime() - now.getTime();
-              const isFreeActive = diffMs > 0;
-              const totalHours = Math.floor(diffMs / (1000 * 60 * 60));
-              const remainingMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-              const timeRemainingStr = totalHours > 0 ? `${totalHours}h ${remainingMinutes}m remaining` : `${remainingMinutes}m remaining`;
-              const isUrgent = totalHours === 0 && isFreeActive;
-
-              return (
-                <div style={{
-                  backgroundColor: isFreeActive ? (isUrgent ? '#FEF3C7' : '#F0FDF4') : '#F8FAFC',
-                  border: `1px solid ${isFreeActive ? (isUrgent ? '#FDE68A' : '#BBF7D0') : '#E2E8F0'}`,
-                  borderRadius: '12px',
-                  padding: '16px 20px',
-                  marginBottom: '24px',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '14px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{
-                      width: '36px',
-                      height: '36px',
-                      borderRadius: '50%',
-                      backgroundColor: isFreeActive ? (isUrgent ? '#FDE68A' : '#DCFCE7') : '#E2E8F0',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0
-                    }}>
-                      <Clock size={18} color={isFreeActive ? (isUrgent ? '#92400E' : '#166534') : '#64748B'} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '13px', fontWeight: 800, color: isFreeActive ? (isUrgent ? '#92400E' : '#166534') : '#0F172A' }}>
-                        {isFreeActive 
-                          ? (isUrgent ? `Free Cancellation Ending Soon · ${timeRemainingStr}` : `Complimentary Cancellation Active · ${timeRemainingStr}`)
-                          : 'Free Cancellation Window Closed'}
-                      </div>
-                      <div style={{ fontSize: '11.5px', color: isFreeActive ? (isUrgent ? '#78350F' : '#14532D') : '#64748B', marginTop: '2px' }}>
-                        {isFreeActive 
-                          ? `Cancel free of charge until ${deadlineDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at ${deadlineDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} under ${vendorName}'s ${cutoffHours}-hour business rule (100% Pre-Auth Escrow Release).`
-                          : `Chauffeur has been dispatched. Cancellations are subject to standard late policy under ${vendorName}.`}
-                      </div>
-                    </div>
-                  </div>
-
-                  {isFreeActive && booking.trip?.status !== 'CANCELLED' && (
-                    <button
-                      onClick={() => handleCancelBooking(booking.id)}
-                      disabled={cancellingBooking}
-                      style={{
-                        padding: '8px 14px',
-                        backgroundColor: '#FFFFFF',
-                        border: `1px solid ${isUrgent ? '#F59E0B' : '#86EFAC'}`,
-                        borderRadius: '6px',
-                        color: isUrgent ? '#92400E' : '#166534',
-                        fontSize: '12px',
-                        fontWeight: 800,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      <Trash2 size={13} />
-                      <span>{cancellingBooking ? 'Releasing...' : 'Cancel Ride (0 Fees)'}</span>
-                    </button>
-                  )}
-                </div>
-              );
-            })()}
-
-            {/* ITINERARY & SUMMARY CARD */}
-            <div style={{ backgroundColor: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '24px', textAlign: 'left', marginBottom: '24px' }}>
-              <div className="mission-pickup-dest-grid" style={{ gap: '20px' }}>
-                <div>
-                  <div style={{ fontSize: '11px', fontWeight: 800, color: '#9A7B4F', textTransform: 'uppercase', letterSpacing: '0.05em' }}>PICKUP LOCATION</div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A', marginTop: '4px' }}>{booking.pickup_address}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '11px', fontWeight: 800, color: '#9A7B4F', textTransform: 'uppercase', letterSpacing: '0.05em' }}>DESTINATION</div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A', marginTop: '4px' }}>{booking.dropoff_address}</div>
-                </div>
+            {/* 1. Header with Checkmark & Ref */}
+            <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+              <div style={{ 
+                width: '60px', 
+                height: '60px', 
+                borderRadius: '50%', 
+                backgroundColor: '#DCFCE7', 
+                color: '#16A34A', 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                marginBottom: '16px',
+                boxShadow: '0 4px 14px rgba(22,163,74,0.15)' 
+              }}>
+                <CheckCircle2 size={34} />
               </div>
-
-              <div className="mission-details-3col" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #E2E8F0', gap: '16px', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>PASSENGER</div>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>{booking.party?.passenger_name}</div>
-                  <div style={{ fontSize: '11px', color: '#9A7B4F' }}>{booking.party?.passenger_phone}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>SCHEDULED PICKUP</div>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>
-                    {booking.pickup_time_utc ? new Date(booking.pickup_time_utc).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Scheduled'}
-                  </div>
-                  <div style={{ fontSize: '11px', color: '#9A7B4F' }}>60-min complimentary wait</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>GUARANTEED ESCROW</div>
-                  <div style={{ fontSize: '22px', fontWeight: 900, color: '#166534' }}>${Number(booking.total_amount || 0).toFixed(2)} USD</div>
-                  <div style={{ fontSize: '10px', color: '#16A34A', fontWeight: 700 }}>Zero Pre-Ride Charge</div>
-                </div>
-              </div>
+              
+              <h2 style={{ fontFamily: '"Libre Baskerville", Georgia, serif', fontSize: '28px', fontWeight: 700, color: '#0A192F', margin: '0 0 6px 0' }}>
+                Reservation Confirmed
+              </h2>
+              
+              <p style={{ color: '#64748B', fontSize: '14.5px', margin: 0 }}>
+                Booking Reference <strong style={{ color: '#0A192F', fontFamily: 'monospace', fontSize: '15px' }}>#{booking.id}</strong> · Confirmation sent to <strong style={{ color: '#0A192F' }}>{booking.party?.booker_email || (booking.party as any)?.passenger_email || 'your email'}</strong>
+              </p>
             </div>
 
-            {/* 1-CLICK CALENDAR INTEGRATION TOOLBAR */}
-            <div style={{ backgroundColor: '#F1F5F9', borderRadius: '12px', padding: '20px', marginBottom: '24px', border: '1px solid #E2E8F0', textAlign: 'left' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Calendar size={18} color="#0A192F" />
-                  <span style={{ fontSize: '13px', fontWeight: 800, color: '#0A192F' }}>Add Journey to Your Calendar</span>
-                </div>
-                <span style={{ fontSize: '11px', color: '#64748B' }}>Includes 60-min departure alarm & chauffeur notes</span>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
-                {/* Google Calendar */}
-                <a
-                  href={generateGoogleCalendarUrl(booking)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    padding: '10px 14px',
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #CBD5E1',
-                    borderRadius: '8px',
-                    color: '#1E293B',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    textDecoration: 'none',
-                    transition: 'all 0.15s'
-                  }}
-                >
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg" alt="Google" style={{ width: '16px', height: '16px' }} />
-                  Google Calendar
-                </a>
-
-                {/* Apple / Outlook .ICS Download */}
-                <a
-                  href={getBookingCalendarIcsUrl(booking.id)}
-                  download={`Executive-Mission-${booking.id}.ics`}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    padding: '10px 14px',
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #CBD5E1',
-                    borderRadius: '8px',
-                    color: '#1E293B',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    textDecoration: 'none',
-                    transition: 'all 0.15s'
-                  }}
-                >
-                  <Download size={15} color="#0A192F" />
-                  Apple / Outlook .ICS
-                </a>
-
-                {/* Office 365 Web Calendar */}
-                <a
-                  href={generateOutlookCalendarUrl(booking)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    padding: '10px 14px',
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #CBD5E1',
-                    borderRadius: '8px',
-                    color: '#1E293B',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    textDecoration: 'none',
-                    transition: 'all 0.15s'
-                  }}
-                >
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/d/df/Microsoft_Office_Outlook_%282018%E2%80%93present%29.svg" alt="Outlook" style={{ width: '16px', height: '16px' }} />
-                  Outlook Web / 365
-                </a>
-              </div>
-            </div>
-
-            {/* CANCELLATION SUCCESS BANNER */}
+            {/* CANCELLATION SUCCESS BANNER (If cancelled) */}
             {cancellationResult && (
               <div style={{
                 backgroundColor: '#FEF2F2',
                 border: '1px solid #FECACA',
-                borderRadius: '12px',
-                padding: '18px 24px',
-                marginBottom: '24px',
+                borderRadius: '10px',
+                padding: '14px 18px',
+                marginBottom: '20px',
                 textAlign: 'left',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '14px'
+                gap: '12px'
               }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <CheckCircle2 size={20} color="#DC2626" />
-                </div>
-                <div>
-                  <div style={{ fontSize: '14px', fontWeight: 800, color: '#991B1B' }}>
-                    Reservation #{cancellationResult.booking_id} Cancelled
-                  </div>
-                  <div style={{ fontSize: '12.5px', color: '#7F1D1D', marginTop: '2px' }}>
-                    {cancellationResult.message || '100% Pre-Authorization escrow hold has been released back to your card. No cancellation fees applied.'}
-                  </div>
+                <CheckCircle2 size={18} color="#DC2626" />
+                <div style={{ fontSize: '13px', color: '#991B1B' }}>
+                  <strong>Reservation #{cancellationResult.booking_id} Cancelled.</strong> {cancellationResult.message || 'Escrow hold released back to your card.'}
                 </div>
               </div>
             )}
 
-            {/* DUAL NOTIFICATION & DELIVERY SUMMARY */}
-            <div className="mission-pickup-dest-grid" style={{ gap: '14px', marginBottom: '24px', textAlign: 'left' }}>
-              {/* Booker Notification */}
-              <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                  <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <FileText size={13} color="#2563EB" />
+            {/* 2. Unified Trip Receipt Card */}
+            <div style={{ 
+              backgroundColor: '#F8FAFC', 
+              borderRadius: '12px', 
+              border: '1px solid #E2E8F0', 
+              padding: '24px', 
+              marginBottom: '24px' 
+            }}>
+              {/* Route Display */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                  <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#10B981', marginTop: '5px', flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>PICKUP</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A', marginTop: '2px' }}>{booking.pickup_address}</div>
                   </div>
-                  <span style={{ fontSize: '12px', fontWeight: 800, color: '#1E293B' }}>Booker Terms PDF &amp; Receipt</span>
                 </div>
-                <div style={{ fontSize: '11px', color: '#64748B', lineHeight: '1.5' }}>
-                  Dispatched to <strong style={{ color: '#0F172A' }}>{booking.party?.booker_email || (booking.party as any)?.passenger_email || 'Executive Booker'}</strong> with carrier terms PDF, cancellation link, and calendar invite attached.
+
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                  <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#9A7B4F', marginTop: '5px', flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>DESTINATION</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A', marginTop: '2px' }}>{booking.dropoff_address || 'As Directed'}</div>
+                  </div>
                 </div>
               </div>
 
-              {/* Passenger Notification */}
-              <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                  <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#F0FDF4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Phone size={13} color="#16A34A" />
+              {/* 4-Col Key Details Grid */}
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', 
+                gap: '16px', 
+                paddingTop: '18px', 
+                borderTop: '1px solid #E2E8F0',
+                alignItems: 'center'
+              }}>
+                <div>
+                  <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>DATE & TIME</div>
+                  <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#0F172A', marginTop: '2px' }}>
+                    {booking.pickup_time_utc ? new Date(booking.pickup_time_utc).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Scheduled'}
                   </div>
-                  <span style={{ fontSize: '12px', fontWeight: 800, color: '#1E293B' }}>Passenger Mobile SMS &amp; Radar Link</span>
                 </div>
-                <div style={{ fontSize: '11px', color: '#64748B', lineHeight: '1.5' }}>
-                  SMS dispatched to <strong style={{ color: '#0F172A' }}>{booking.party?.passenger_phone || 'Passenger Phone'}</strong> with meet &amp; greet PIN and 1-click self-service cancellation link.
+
+                <div>
+                  <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>PASSENGER</div>
+                  <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#0F172A', marginTop: '2px' }}>{booking.party?.passenger_name || 'Passenger'}</div>
+                  <div style={{ fontSize: '11px', color: '#64748B' }}>{booking.party?.passenger_phone}</div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>VEHICLE TIER</div>
+                  <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#0F172A', marginTop: '2px' }}>
+                    {vehicleOptions.find(v => v.type === booking.vehicle_class)?.title || 'Executive Vehicle'}
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>TOTAL FARE</div>
+                  <div style={{ fontSize: '20px', fontWeight: 900, color: '#0A192F', marginTop: '2px' }}>
+                    ${Number(booking.total_amount || 0).toFixed(2)} <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748B' }}>USD</span>
+                  </div>
+                  <div style={{ fontSize: '10.5px', color: '#16A34A', fontWeight: 700 }}>All-Inclusive Guaranteed</div>
                 </div>
               </div>
+
+              {/* Cancellation Notice Strip */}
+              {(() => {
+                const policy = booking.cancellation_policy;
+                const cutoffHours = policy?.cutoff_hours || 2;
+                const pickupDate = booking.pickup_time_utc ? new Date(booking.pickup_time_utc) : new Date(Date.now() + 24 * 3600 * 1000);
+                const deadlineDate = policy?.deadline_utc ? new Date(policy.deadline_utc) : new Date(pickupDate.getTime() - cutoffHours * 3600 * 1000);
+                const now = new Date();
+                const isFreeActive = (deadlineDate.getTime() - now.getTime()) > 0;
+
+                return (
+                  <div style={{ 
+                    marginTop: '16px', 
+                    paddingTop: '14px', 
+                    borderTop: '1px dashed #CBD5E1', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    fontSize: '12px',
+                    color: '#64748B',
+                    flexWrap: 'wrap',
+                    gap: '8px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Clock size={14} color="#16A34A" />
+                      <span>
+                        {isFreeActive 
+                          ? `Free cancellation until ${deadlineDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at ${deadlineDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
+                          : 'Chauffeur staged / dispatched'}
+                      </span>
+                    </div>
+
+                    {isFreeActive && booking.trip?.status !== 'CANCELLED' && (
+                      <button
+                        onClick={() => handleCancelBooking(booking.id)}
+                        disabled={cancellingBooking}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#DC2626',
+                          fontSize: '11.5px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          padding: 0,
+                          textDecoration: 'underline'
+                        }}
+                      >
+                        {cancellingBooking ? 'Cancelling...' : 'Cancel ride (0 fee)'}
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
-            {/* ACTION BUTTONS & DOCUMENT CENTER */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
-              {/* Download Terms & Voucher PDF */}
+            {/* 3. Calendar Quick-Add Pills */}
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              gap: '12px', 
+              marginBottom: '28px',
+              flexWrap: 'wrap'
+            }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748B' }}>Add to calendar:</span>
+              
+              <a
+                href={generateGoogleCalendarUrl(booking)}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 12px',
+                  backgroundColor: '#F8FAFC',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '20px',
+                  color: '#1E293B',
+                  fontSize: '11.5px',
+                  fontWeight: 700,
+                  textDecoration: 'none'
+                }}
+              >
+                <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg" alt="Google" style={{ width: '13px', height: '13px' }} />
+                Google
+              </a>
+
+              <a
+                href={getBookingCalendarIcsUrl(booking.id)}
+                download={`Executive-Mission-${booking.id}.ics`}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 12px',
+                  backgroundColor: '#F8FAFC',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '20px',
+                  color: '#1E293B',
+                  fontSize: '11.5px',
+                  fontWeight: 700,
+                  textDecoration: 'none'
+                }}
+              >
+                <Download size={12} color="#0A192F" />
+                Apple / iCal
+              </a>
+
+              <a
+                href={generateOutlookCalendarUrl(booking)}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 12px',
+                  backgroundColor: '#F8FAFC',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '20px',
+                  color: '#1E293B',
+                  fontSize: '11.5px',
+                  fontWeight: 700,
+                  textDecoration: 'none'
+                }}
+              >
+                <img src="https://upload.wikimedia.org/wikipedia/commons/d/df/Microsoft_Office_Outlook_%282018%E2%80%93present%29.svg" alt="Outlook" style={{ width: '13px', height: '13px' }} />
+                Outlook
+              </a>
+            </div>
+
+            {/* 4. Streamlined Actions Row */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
               <button 
                 onClick={() => handleDownloadTermsVoucher(booking.id)}
                 disabled={downloadingVoucher}
                 style={{ 
-                  padding: '12px 20px', 
+                  padding: '11px 20px', 
                   backgroundColor: '#0A192F', 
                   color: '#FFFFFF', 
                   border: 'none', 
@@ -1286,21 +1247,20 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
                   fontSize: '13px', 
                   fontWeight: 700, 
                   cursor: 'pointer',
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
                   gap: '8px',
-                  boxShadow: '0 2px 8px rgba(10,25,47,0.2)'
+                  boxShadow: '0 2px 8px rgba(10,25,47,0.15)'
                 }}
               >
-                <Download size={15} />
-                <span>{downloadingVoucher ? 'Generating Document...' : 'Download Terms & Voucher PDF'}</span>
+                <Download size={14} />
+                <span>{downloadingVoucher ? 'Generating...' : 'Download Receipt PDF'}</span>
               </button>
 
-              {/* View in My Bookings */}
               <button 
                 onClick={() => setShowLookupModal(true)}
                 style={{ 
-                  padding: '12px 20px', 
+                  padding: '11px 18px', 
                   backgroundColor: '#FFFFFF', 
                   color: '#0A192F', 
                   border: '1px solid #CBD5E1', 
@@ -1308,44 +1268,19 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
                   fontSize: '13px', 
                   fontWeight: 700, 
                   cursor: 'pointer',
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '8px'
+                  gap: '6px'
                 }}
               >
-                <Calendar size={15} />
-                My Bookings &amp; Schedule
+                <Calendar size={14} />
+                My Bookings
               </button>
 
-              {/* Self-Service Cancellation */}
-              {booking.trip?.status !== 'CANCELLED' && (
-                <button 
-                  onClick={() => handleCancelBooking(booking.id)}
-                  disabled={cancellingBooking}
-                  style={{ 
-                    padding: '12px 20px', 
-                    backgroundColor: '#FEF2F2', 
-                    color: '#991B1B', 
-                    border: '1px solid #FECACA', 
-                    borderRadius: '8px', 
-                    fontSize: '13px', 
-                    fontWeight: 700, 
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}
-                >
-                  <Trash2 size={15} color="#DC2626" />
-                  <span>{cancellingBooking ? 'Releasing Hold...' : 'Manage / Cancel Booking'}</span>
-                </button>
-              )}
-
-              {/* Book Another */}
               <button 
                 onClick={() => { setWizardStep(1); setBooking(null); setAcceptedTerms(false); setCancellationResult(null); }}
                 style={{ 
-                  padding: '12px 20px', 
+                  padding: '11px 18px', 
                   backgroundColor: '#F8FAFC', 
                   color: '#64748B', 
                   border: '1px solid #E2E8F0', 
@@ -1355,7 +1290,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
                   cursor: 'pointer' 
                 }}
               >
-                Book Another Journey
+                Book Another Ride
               </button>
             </div>
           </div>
@@ -2140,7 +2075,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
                                 </div>
 
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
-                                  {US_VEHICLE_OPTIONS.map((opt) => {
+                                  {vehicleOptions.map((opt) => {
                                     const isChosen = (leg.vehicle_class || 'FIRST_CLASS') === opt.type;
                                     const isOptUnderMaint = activeFleetClasses[opt.type] === false;
                                     return (
@@ -2348,7 +2283,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
 
                   {/* Vehicle Cards List */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    {US_VEHICLE_OPTIONS.map((veh) => {
+                    {vehicleOptions.map((veh) => {
                       const isSelected = vehicleClass === veh.type;
                       const isExpanded = Boolean(expandedVehicles[veh.type] ?? isSelected);
                       const qData = vehicleQuotes[veh.type];
@@ -2469,7 +2404,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
                               </div>
                             </div>
 
-                            {/* Far Right: Pricing & Chevron */}
+                            {/* Far Right: Pricing */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
                               <div style={{ textAlign: 'right' }}>
                                 {isUnderMaintenance ? (
@@ -2487,58 +2422,9 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
                                   </>
                                 )}
                               </div>
-
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (!isUnderMaintenance) toggleExpandVehicle(veh.type);
-                                }}
-                                disabled={isUnderMaintenance}
-                                style={{ background: 'none', border: 'none', color: isUnderMaintenance ? '#CBD5E1' : '#0A192F', cursor: isUnderMaintenance ? 'not-allowed' : 'pointer', padding: '4px' }}
-                              >
-                                {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                              </button>
                             </div>
 
                           </div>
-
-                          {/* Expandable Pricing Breakdown & Vendor Disclosure Drawer */}
-                          {isExpanded && qData && (
-                            <div className="vehicle-drawer-grid" style={{ gridTemplateColumns: (hasReturnTrip || (qData.legs && qData.legs.length > 1)) ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)' }}>
-                              {(hasReturnTrip || (qData.legs && qData.legs.length > 1)) ? (
-                                <>
-                                  <div style={{ backgroundColor: '#FFFFFF', padding: '8px 10px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
-                                    <div style={{ fontWeight: 800, color: '#0A192F', marginBottom: '2px' }}>
-                                      Outbound Leg: ${Number(qData.legs?.[0]?.total_gross || qData.legs?.[0]?.total_leg_amt || (Number(fareAmount) / 2)).toFixed(2)}
-                                    </div>
-                                    <div>{qData.legs?.[0]?.assigned_vendor_name || 'ANB Limo Philadelphia (PA)'}</div>
-                                  </div>
-                                  <div style={{ backgroundColor: '#FFFFFF', padding: '8px 10px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
-                                    <div style={{ fontWeight: 800, color: '#0A192F', marginBottom: '2px' }}>
-                                      Return Leg: ${Number(qData.legs?.[1]?.total_gross || qData.legs?.[1]?.total_leg_amt || (Number(fareAmount) / 2)).toFixed(2)}
-                                    </div>
-                                    <div>{qData.legs?.[1]?.assigned_vendor_name || 'New York Executive Fleet (NY)'}</div>
-                                  </div>
-                                </>
-                              ) : (
-                                <>
-                                  <div>
-                                    <span style={{ fontWeight: 700, color: '#0A192F' }}>Base Fleet Tariff: </span>
-                                    <span>${qData.base_net ? Number(qData.base_net).toFixed(2) : ((Number(fareAmount) * 0.45).toFixed(2))}</span>
-                                  </div>
-                                  <div>
-                                    <span style={{ fontWeight: 700, color: '#0A192F' }}>Tolls & Port Authority: </span>
-                                    <span>${qData.estimated_tolls_net ? Number(qData.estimated_tolls_net).toFixed(2) : 'Included'}</span>
-                                  </div>
-                                  <div>
-                                    <span style={{ fontWeight: 700, color: '#0A192F' }}>Sales Tax: </span>
-                                    <span>${qData.tax_amount ? Number(qData.tax_amount).toFixed(2) : 'Included'}</span>
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          )}
 
                         </div>
                       );
@@ -2684,7 +2570,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
                       </div>
                       <div>
                         <div style={{ fontSize: '14px', fontWeight: 800, color: '#0A192F' }}>
-                          {US_VEHICLE_OPTIONS.find(v => v.type === vehicleClass)?.title || 'Executive Vehicle'}
+                          {vehicleOptions.find(v => v.type === vehicleClass)?.title || 'Executive Vehicle'}
                         </div>
                         <div style={{ fontSize: '11.5px', color: '#64748B' }}>
                           All-inclusive guaranteed rate (includes all tolls, airport fees & applicable taxes)
@@ -3070,143 +2956,83 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
                   </span>
                 </div>
 
-                {/* Live Real Google Map Route Container or Route Preview Placeholder */}
+                {/* Clean Starting & Ending Journey Route Visualizer */}
                 {(() => {
-                  const embedUrl = getGoogleMapsEmbedUrl();
-                  const dirUrl = getGoogleMapsDirectionsUrl();
-
-                  if (embedUrl) {
-                    return (
-                      <div style={{ 
-                        borderRadius: '10px', 
-                        overflow: 'hidden', 
-                        border: '1px solid #CBD5E1', 
-                        marginBottom: '18px',
-                        backgroundColor: '#E2E8F0',
-                        position: 'relative',
-                        height: '165px',
-                        boxShadow: '0 2px 8px rgba(15, 23, 42, 0.08)'
-                      }}>
-                        <iframe
-                          title="Live Google Map Route"
-                          src={embedUrl}
-                          width="100%"
-                          height="100%"
-                          style={{
-                            border: 0,
-                            display: 'block',
-                            width: '100%',
-                            height: '100%'
-                          }}
-                          loading="lazy"
-                          referrerPolicy="no-referrer-when-downgrade"
-                        />
-
-                        {/* Floating Live Radar Badge Overlay */}
-                        <div style={{
-                          position: 'absolute',
-                          top: '8px',
-                          left: '8px',
-                          backgroundColor: 'rgba(10, 25, 47, 0.88)',
-                          backdropFilter: 'blur(6px)',
-                          border: '1px solid rgba(255,255,255,0.15)',
-                          borderRadius: '6px',
-                          padding: '3px 8px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          pointerEvents: 'none',
-                          zIndex: 2
-                        }}>
-                          <span style={{
-                            width: '6px',
-                            height: '6px',
-                            borderRadius: '50%',
-                            backgroundColor: '#10B981',
-                            boxShadow: '0 0 6px #10B981'
-                          }} />
-                          <span style={{
-                            fontSize: '9.5px',
-                            fontWeight: 800,
-                            color: '#FFFFFF',
-                            letterSpacing: '0.04em',
-                            textTransform: 'uppercase'
-                          }}>
-                            Live Google Map
-                          </span>
-                        </div>
-
-                        {/* External Full Map Link */}
-                        {dirUrl && (
-                          <a
-                            href={dirUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              position: 'absolute',
-                              top: '8px',
-                              right: '8px',
-                              backgroundColor: 'rgba(255, 255, 255, 0.94)',
-                              backdropFilter: 'blur(4px)',
-                              border: '1px solid #CBD5E1',
-                              borderRadius: '5px',
-                              padding: '3px 7px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              fontSize: '10px',
-                              fontWeight: 700,
-                              color: '#0A192F',
-                              textDecoration: 'none',
-                              boxShadow: '0 1px 4px rgba(0,0,0,0.12)',
-                              zIndex: 2
-                            }}
-                            title="Open live route in Google Maps"
-                          >
-                            <span>Full Map</span>
-                            <ArrowUpRight size={11} color="#9A7B4F" />
-                          </a>
-                        )}
-                      </div>
-                    );
-                  }
+                  const effPickup = pickupAddress?.trim() || (bookingMode === 'ITINERARY_PLANNER' ? itineraryLegs[0]?.origin_address?.trim() : '') || '';
+                  const effDropoff = dropoffAddress?.trim() || (bookingMode === 'ITINERARY_PLANNER' ? itineraryLegs[itineraryLegs.length - 1]?.destination_address?.trim() : '') || '';
+                  const hasRoute = effPickup && effDropoff;
 
                   return (
                     <div style={{
                       borderRadius: '10px',
-                      border: '1px dashed #CBD5E1',
+                      border: '1px solid #E2E8F0',
                       marginBottom: '18px',
-                      backgroundColor: '#F8FAFC',
-                      height: '145px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
+                      backgroundColor: '#FFFFFF',
                       padding: '16px',
-                      textAlign: 'center',
-                      boxShadow: '0 1px 4px rgba(15, 23, 42, 0.03)'
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
                     }}>
-                      <div style={{
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '50%',
-                        backgroundColor: '#FDFBF7',
-                        border: '1px solid #EAE6DF',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginBottom: '8px'
-                      }}>
-                        <Route size={18} color="#9A7B4F" />
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                        {/* Route Pin Indicator Graphics */}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '3px' }}>
+                          <div style={{
+                            width: '10px',
+                            height: '10px',
+                            borderRadius: '50%',
+                            backgroundColor: '#0F172A',
+                            border: '2px solid #FFFFFF',
+                            boxShadow: '0 0 0 1px #0F172A'
+                          }} />
+                          <div style={{ width: '2px', height: '36px', backgroundColor: '#CBD5E1', margin: '3px 0' }} />
+                          <div style={{
+                            width: '10px',
+                            height: '10px',
+                            borderRadius: '2px',
+                            backgroundColor: '#0F172A',
+                            border: '2px solid #FFFFFF',
+                            boxShadow: '0 0 0 1px #0F172A'
+                          }} />
+                        </div>
+
+                        {/* Origin & Destination Addresses */}
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '56px' }}>
+                          <div>
+                            <div style={{ fontSize: '10px', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                              Origin (Pickup)
+                            </div>
+                            <div style={{ fontSize: '13px', fontWeight: 700, color: effPickup ? '#0F172A' : '#94A3B8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {effPickup ? effPickup.split(',')[0] : 'Enter pickup location'}
+                            </div>
+                          </div>
+
+                          <div style={{ marginTop: '10px' }}>
+                            <div style={{ fontSize: '10px', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                              {selectedRideType === 'HOURLY' ? 'Charter Type' : 'Destination (Dropoff)'}
+                            </div>
+                            <div style={{ fontSize: '13px', fontWeight: 700, color: selectedRideType === 'HOURLY' ? '#0F172A' : (effDropoff ? '#0F172A' : '#94A3B8'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {selectedRideType === 'HOURLY'
+                                ? `${hourlyHours} Hours As Directed`
+                                : (effDropoff ? effDropoff.split(',')[0] : 'Enter destination')}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div style={{ fontSize: '12px', fontWeight: 700, color: '#0F172A' }}>
-                        Live Route &amp; Map Preview
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#64748B', marginTop: '3px', maxWidth: '240px', lineHeight: '1.4' }}>
-                        {selectedRideType === 'HOURLY'
-                          ? 'Enter pickup location to preview on map'
-                          : 'Enter both pickup & destination addresses to preview live route'}
-                      </div>
+
+                      {/* Route Status Bar */}
+                      {hasRoute && (
+                        <div style={{
+                          marginTop: '12px',
+                          paddingTop: '10px',
+                          borderTop: '1px solid #F1F5F9',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          fontSize: '11px',
+                          color: '#475569'
+                        }}>
+                          <span>🛣️ Direct In-Service Route</span>
+                          <span style={{ color: '#0F172A', fontWeight: 700 }}>● Route Configured</span>
+                        </div>
+                      )}
                     </div>
                   );
                 })()}
@@ -3400,31 +3226,73 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
                         </div>
                       )}
 
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Base Fleet Tariff</span>
-                        <span style={{ fontWeight: 600, color: '#0F172A' }}>${baseTariffFormatted}</span>
-                      </div>
+                      {activeQuoteObj?.line_items && activeQuoteObj.line_items.length > 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {activeQuoteObj.line_items.map((item: any, idx: number) => (
+                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', fontSize: '11.5px' }}>
+                              <span style={{ color: '#334155', lineHeight: 1.35 }}>{item.description}</span>
+                              <span style={{ fontWeight: 700, color: '#0F172A', whiteSpace: 'nowrap' }}>
+                                ${Number(item.total_net !== undefined ? item.total_net : item.total_gross || 0).toFixed(2)}
+                              </span>
+                            </div>
+                          ))}
 
-                      {Number(tollsAndFeesFormatted) > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>Tolls & Corridor Fees</span>
-                          <span style={{ fontWeight: 600, color: '#0F172A' }}>${tollsAndFeesFormatted}</span>
-                        </div>
-                      )}
+                          {childSeatCost > 0 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', fontSize: '11.5px', color: '#64748B' }}>
+                              <span>Child Safety &amp; Booster Seats</span>
+                              <span style={{ fontWeight: 700, color: '#0F172A' }}>${childSeatCost.toFixed(2)}</span>
+                            </div>
+                          )}
 
-                      {/* Only show Chauffeur Gratuity if vendor business rule includes it */}
-                      {gratuityVal > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>Chauffeur Gratuity {activeQuoteObj?.gratuity_rate ? `(${(Number(activeQuoteObj.gratuity_rate) * 100).toFixed(0)}%)` : ''}</span>
-                          <span style={{ fontWeight: 600, color: '#0F172A' }}>${gratuityFormatted}</span>
-                        </div>
-                      )}
+                          {carbonOffsetCost > 0 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', fontSize: '11.5px', color: '#64748B' }}>
+                              <span>Carbon Offset Initiative</span>
+                              <span style={{ fontWeight: 700, color: '#0F172A' }}>${carbonOffsetCost.toFixed(2)}</span>
+                            </div>
+                          )}
 
-                      {Number(taxesFormatted) > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>State Taxes & Surcharges</span>
-                          <span style={{ fontWeight: 600, color: '#0F172A' }}>${taxesFormatted}</span>
+                          {Number(taxesFormatted) > 0 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', fontSize: '11.5px', color: '#64748B' }}>
+                              <span>State &amp; Municipal Sales Taxes {activeQuoteObj?.tax_rate ? `(${(Number(activeQuoteObj.tax_rate) * 100).toFixed(2)}%)` : ''}</span>
+                              <span style={{ fontWeight: 700, color: '#0F172A' }}>${taxesFormatted}</span>
+                            </div>
+                          )}
+
+                          {gratuityVal > 0 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', fontSize: '11.5px', color: '#64748B' }}>
+                              <span>Chauffeur Gratuity {activeQuoteObj?.gratuity_rate ? `(${(Number(activeQuoteObj.gratuity_rate) * 100).toFixed(0)}%)` : ''}</span>
+                              <span style={{ fontWeight: 700, color: '#0F172A' }}>${gratuityFormatted}</span>
+                            </div>
+                          )}
                         </div>
+                      ) : (
+                        <>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Base Fleet Tariff</span>
+                            <span style={{ fontWeight: 600, color: '#0F172A' }}>${baseTariffFormatted}</span>
+                          </div>
+
+                          {Number(tollsAndFeesFormatted) > 0 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span>Tolls &amp; Corridor Fees</span>
+                              <span style={{ fontWeight: 600, color: '#0F172A' }}>${tollsAndFeesFormatted}</span>
+                            </div>
+                          )}
+
+                          {gratuityVal > 0 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span>Chauffeur Gratuity {activeQuoteObj?.gratuity_rate ? `(${(Number(activeQuoteObj.gratuity_rate) * 100).toFixed(0)}%)` : ''}</span>
+                              <span style={{ fontWeight: 600, color: '#0F172A' }}>${gratuityFormatted}</span>
+                            </div>
+                          )}
+
+                          {Number(taxesFormatted) > 0 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span>State Taxes &amp; Surcharges</span>
+                              <span style={{ fontWeight: 600, color: '#0F172A' }}>${taxesFormatted}</span>
+                            </div>
+                          )}
+                        </>
                       )}
 
                       <div style={{ height: '1px', backgroundColor: '#EAE6DF', margin: '4px 0' }} />

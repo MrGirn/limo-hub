@@ -154,9 +154,9 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
               />
             </div>
 
-            {/* Book a Ride Button */}
+            {/* Book a Ride Button (Compact on Mobile or in Drawer) */}
             <button
-              className="public-header__book"
+              className="public-header__book public-header-desktop-only"
               onClick={() => handleNavClick('BOOKING')}
             >
               Book a Ride
@@ -166,6 +166,7 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
             {onOpenOwnerPortal && (
               <button
                 type="button"
+                className="public-header-desktop-only"
                 onClick={onOpenOwnerPortal}
                 style={{
                   background: '#0F172A',
@@ -211,6 +212,23 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
           aria-label="Mobile Navigation"
         >
           <button
+            onClick={() => handleNavClick('BOOKING')}
+            aria-current={activeTab === 'BOOKING' ? 'page' : undefined}
+            style={{ fontWeight: 800, color: '#D4AF37', fontSize: '15px' }}
+          >
+            ✨ Book an Executive Ride
+          </button>
+          <button
+            onClick={() => {
+              setIsMobileMenuOpen(false);
+              setIsLookupModalOpen(true);
+            }}
+            style={{ color: '#9A7B4F', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}
+          >
+            <Calendar size={16} />
+            <span>My Bookings &amp; Ride Status</span>
+          </button>
+          <button
             onClick={() => handleNavClick('FLEET')}
             aria-current={activeTab === 'FLEET' ? 'page' : undefined}
           >
@@ -235,31 +253,25 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
             Contact
           </button>
           <button
-            onClick={() => handleNavClick('BOOKING')}
-            aria-current={activeTab === 'BOOKING' ? 'page' : undefined}
-            style={{ fontWeight: 800, color: '#D4AF37' }}
-          >
-            ✨ Book a Ride
-          </button>
-          <button
-            onClick={() => {
-              setIsMobileMenuOpen(false);
-              setIsLookupModalOpen(true);
-            }}
-            style={{ color: '#9A7B4F', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Calendar size={16} />
-            <span>My Bookings</span>
-          </button>
-          <button
             onClick={() => {
               setIsMobileMenuOpen(false);
               setIsAuthDropdownOpen(true);
             }}
             style={{ borderTop: '1px solid var(--border)', marginTop: '4px', paddingTop: '12px' }}
           >
-            Sign In
+            Sign In / Accounts
           </button>
+          {onOpenOwnerPortal && (
+            <button
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                onOpenOwnerPortal();
+              }}
+              style={{ color: '#0078D4', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <span>🏢 Owner Console</span>
+            </button>
+          )}
         </div>
 
       </header>

@@ -1,5 +1,5 @@
 {
-  "total": 374,
+  "total": 821,
   "by_file": {
     "app\\business_api.py": [
       {
@@ -10,49 +10,97 @@
       },
       {
         "file": "app\\business_api.py",
-        "line": 640,
+        "line": 238,
+        "type": "SIMULATION_KEYWORD",
+        "content": "@router.post(\"/pricing/research-simulate\", response_model=Dict[str, Any])"
+      },
+      {
+        "file": "app\\business_api.py",
+        "line": 241,
+        "type": "SIMULATION_KEYWORD",
+        "content": "Operations Pricing Research & Dynamic Comparison Simulation:"
+      },
+      {
+        "file": "app\\business_api.py",
+        "line": 246,
+        "type": "SIMULATION_KEYWORD",
+        "content": "4. Custom Interactive Simulation (Live Sliders & Strategies)"
+      },
+      {
+        "file": "app\\business_api.py",
+        "line": 314,
+        "type": "SIMULATION_KEYWORD",
+        "content": "# 5. Interactive Custom Simulation Evaluation (Overrides from Sliders)"
+      },
+      {
+        "file": "app\\business_api.py",
+        "line": 839,
+        "type": "SIMULATION_KEYWORD",
+        "content": "# Stripe Capture Simulation / Execution"
+      },
+      {
+        "file": "app\\business_api.py",
+        "line": 1336,
         "type": "SIMULATION_KEYWORD",
         "content": "@router.post(\"/recovery/simulate-flight-delay\")"
       },
       {
         "file": "app\\business_api.py",
-        "line": 654,
+        "line": 1350,
         "type": "SIMULATION_KEYWORD",
         "content": "@router.post(\"/recovery/simulate-driver-timeout\")"
       },
       {
         "file": "app\\business_api.py",
-        "line": 1223,
+        "line": 1917,
+        "type": "SIMULATION_KEYWORD",
+        "content": "@router.get(\"/pricing/simulation-scenarios\", response_model=List[PricingSimulationScenario])"
+      },
+      {
+        "file": "app\\business_api.py",
+        "line": 1924,
+        "type": "SIMULATION_KEYWORD",
+        "content": "@router.get(\"/vendors/{vendor_id}/simulation-scenarios\", response_model=List[PricingSimulationScenario])"
+      },
+      {
+        "file": "app\\business_api.py",
+        "line": 1931,
+        "type": "SIMULATION_KEYWORD",
+        "content": "@router.post(\"/pricing/simulation-scenarios\", response_model=PricingSimulationScenario)"
+      },
+      {
+        "file": "app\\business_api.py",
+        "line": 1986,
         "type": "SIMULATION_KEYWORD",
         "content": "@router.post(\"/transit/simulate-radar-delay\", response_model=TransitRadarEvent)"
       },
       {
         "file": "app\\business_api.py",
-        "line": 1634,
+        "line": 2600,
         "type": "SIMULATION_KEYWORD",
         "content": "@router.post(\"/webhooks/simulate\")"
       },
       {
         "file": "app\\business_api.py",
-        "line": 1682,
+        "line": 2648,
         "type": "SIMULATION_KEYWORD",
         "content": "return {\"success\": True, \"twiml\": twiml, \"summary\": \"Voice IVR simulation complete.\"}"
       },
       {
         "file": "app\\business_api.py",
-        "line": 1702,
+        "line": 2668,
         "type": "SIMULATION_KEYWORD",
         "content": "raise HTTPException(status_code=400, detail=f\"Unknown simulation type: {dto.simulation_type}\")"
       },
       {
         "file": "app\\business_api.py",
-        "line": 1943,
+        "line": 2909,
         "type": "SIMULATION_KEYWORD",
         "content": "@router.post(\"/voice/simulate-call\")"
       },
       {
         "file": "app\\business_api.py",
-        "line": 4819,
+        "line": 5911,
         "type": "SIMULATION_KEYWORD",
         "content": "@router.post(\"/vendors/{vendor_id}/subscription/simulate-dunning\")"
       }
@@ -60,31 +108,31 @@
     "app\\database.py": [
       {
         "file": "app\\database.py",
-        "line": 328,
+        "line": 378,
         "type": "HARDCODED_TAX_RATE",
         "content": "tax_rate=Decimal(str(q_model.tax_rate or \"0.08875\")),"
       },
       {
         "file": "app\\database.py",
-        "line": 506,
+        "line": 556,
         "type": "MOCK_KEYWORD",
         "content": "3. Corporate Travel Accounts directory without fake dummy trips or mock bookings."
       },
       {
         "file": "app\\database.py",
-        "line": 506,
+        "line": 556,
         "type": "FAKE_KEYWORD",
         "content": "3. Corporate Travel Accounts directory without fake dummy trips or mock bookings."
       },
       {
         "file": "app\\database.py",
-        "line": 506,
+        "line": 556,
         "type": "DUMMY_KEYWORD",
         "content": "3. Corporate Travel Accounts directory without fake dummy trips or mock bookings."
       },
       {
         "file": "app\\database.py",
-        "line": 566,
+        "line": 616,
         "type": "HARDCODED_TAX_RATE",
         "content": "vat_or_sales_tax_rate=Decimal(\"0.08875\"),"
       }
@@ -92,39 +140,57 @@
     "app\\database_mysql.py": [
       {
         "file": "app\\database_mysql.py",
-        "line": 222,
+        "line": 260,
         "type": "HARDCODED_TAX_RATE",
         "content": "tax_rate = Column(Numeric(6, 4), default=Decimal(\"0.08875\"))"
       },
       {
         "file": "app\\database_mysql.py",
-        "line": 418,
+        "line": 462,
         "type": "HARDCODED_TAX_RATE",
         "content": "tax_rate = Column(Numeric(6, 4), default=Decimal(\"0.08875\"))"
+      },
+      {
+        "file": "app\\database_mysql.py",
+        "line": 476,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"\"\"Authoritative benchmark scenarios for tariff calculation and comparison simulation.\"\"\""
+      },
+      {
+        "file": "app\\database_mysql.py",
+        "line": 846,
+        "type": "MOCK_KEYWORD",
+        "content": "# Real Data First: Only ensure core base tenants exist, no fake mock scenarios or synthetic fleet"
+      },
+      {
+        "file": "app\\database_mysql.py",
+        "line": 846,
+        "type": "FAKE_KEYWORD",
+        "content": "# Real Data First: Only ensure core base tenants exist, no fake mock scenarios or synthetic fleet"
       }
     ],
     "app\\domain_models.py": [
       {
         "file": "app\\domain_models.py",
-        "line": 137,
+        "line": 155,
         "type": "HARDCODED_TAX_RATE",
         "content": "tax_rate: Decimal = Decimal(\"0.08875\")"
       },
       {
         "file": "app\\domain_models.py",
-        "line": 679,
+        "line": 753,
         "type": "HARDCODED_TAX_RATE",
         "content": "vat_or_sales_tax_rate: Decimal                  # e.g. 0.08875, 0.20, 0.20, 0.10, 0.05"
       },
       {
         "file": "app\\domain_models.py",
-        "line": 887,
+        "line": 1008,
         "type": "HARDCODED_TAX_RATE",
         "content": "tax_rate: Decimal = Decimal(\"0.08875\")"
       },
       {
         "file": "app\\domain_models.py",
-        "line": 1052,
+        "line": 1186,
         "type": "HARDCODED_TAX_RATE",
         "content": "tax_rate: Decimal = Decimal(\"0.08875\")"
       }
@@ -143,20 +209,6 @@
         "line": 34,
         "type": "SIMULATION_KEYWORD",
         "content": "# Curated Seed Directory for popular uncontracted luxury corridors (Google Places / TLC simulation)"
-      },
-      {
-        "file": "app\\services\\autonomous_vendor_sourcing_service.py",
-        "line": 464,
-        "type": "HARDCODED_TAX_RATE",
-        "content": "tax = (subtotal_fare * Decimal(\"0.08875\")).quantize(Decimal(\"0.01\"), rounding=ROUND_HALF_UP)"
-      }
-    ],
-    "app\\services\\aws_ses_service.py": [
-      {
-        "file": "app\\services\\aws_ses_service.py",
-        "line": 62,
-        "type": "SIMULATION_KEYWORD",
-        "content": "# Log simulated AWS SES delivery"
       }
     ],
     "app\\services\\email_notification_service.py": [
@@ -186,7 +238,7 @@
     "app\\services\\pricing_service.py": [
       {
         "file": "app\\services\\pricing_service.py",
-        "line": 83,
+        "line": 84,
         "type": "HARDCODED_TAX_RATE",
         "content": "vat_or_sales_tax_rate=Decimal(\"0.08875\"), airport_access_fee=Decimal(\"18.00\"), congestion_charge=Decimal(\"0.00\"), currency=\"USD\""
       }
@@ -227,20 +279,6 @@
         "content": "return True  # Dev / Simulation mode"
       }
     ],
-    "app\\services\\twilio_notification_service.py": [
-      {
-        "file": "app\\services\\twilio_notification_service.py",
-        "line": 121,
-        "type": "SIMULATION_KEYWORD",
-        "content": "logger.info(f\"[VOICE CALL SIMULATION] To: {to_number} | Message: {message_to_speak}\")"
-      },
-      {
-        "file": "app\\services\\twilio_notification_service.py",
-        "line": 122,
-        "type": "SIMULATION_KEYWORD",
-        "content": "return {\"success\": True, \"simulated\": True, \"to\": to_number}"
-      }
-    ],
     "app\\services\\vendor_onboarding_service.py": [
       {
         "file": "app\\services\\vendor_onboarding_service.py",
@@ -252,7 +290,19 @@
     "app\\services\\vendor_pricing_ai_service.py": [
       {
         "file": "app\\services\\vendor_pricing_ai_service.py",
-        "line": 235,
+        "line": 313,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"\"\"Fetch authoritative simulation benchmark scenarios from MySQL database.\"\"\""
+      },
+      {
+        "file": "app\\services\\vendor_pricing_ai_service.py",
+        "line": 435,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"\"\"Persist a custom or modified simulation scenario to MySQL database.\"\"\""
+      },
+      {
+        "file": "app\\services\\vendor_pricing_ai_service.py",
+        "line": 516,
         "type": "SIMULATION_KEYWORD",
         "content": "\"\"\"Simulate neural telemetry analysis over vendor historical bookings to dynamically optimize pricing curve.\"\"\""
       }
@@ -268,13 +318,13 @@
     "app\\services\\voice_stream_service.py": [
       {
         "file": "app\\services\\voice_stream_service.py",
-        "line": 232,
+        "line": 233,
         "type": "DUMMY_KEYWORD",
         "content": "# Synthesize dummy PCM binary header + duration"
       },
       {
         "file": "app\\services\\voice_stream_service.py",
-        "line": 279,
+        "line": 280,
         "type": "SIMULATION_KEYWORD",
         "content": "# Simulated audio frame ingestion"
       }
@@ -962,61 +1012,91 @@
     "frontend\\src\\api.ts": [
       {
         "file": "frontend\\src\\api.ts",
-        "line": 395,
+        "line": 504,
         "type": "SIMULATION_KEYWORD",
         "content": "const res = await fetch(`${BASE_URL}/api/v1/recovery/simulate-flight-delay`, {"
       },
       {
         "file": "frontend\\src\\api.ts",
-        "line": 403,
+        "line": 512,
         "type": "SIMULATION_KEYWORD",
         "content": "if (!res.ok) throw new Error('Failed to simulate flight delay');"
       },
       {
         "file": "frontend\\src\\api.ts",
-        "line": 520,
+        "line": 622,
+        "type": "SIMULATION_KEYWORD",
+        "content": "? `${BASE_URL}/api/v1/vendors/${vendorId}/simulation-scenarios`"
+      },
+      {
+        "file": "frontend\\src\\api.ts",
+        "line": 623,
+        "type": "SIMULATION_KEYWORD",
+        "content": ": `${BASE_URL}/api/v1/pricing/simulation-scenarios`;"
+      },
+      {
+        "file": "frontend\\src\\api.ts",
+        "line": 629,
+        "type": "SIMULATION_KEYWORD",
+        "content": "const fallbackRes = await fetch(`${BASE_URL}/api/v1/pricing/simulation-scenarios`, { headers: getAuthHeaders() }).catch(() => null);"
+      },
+      {
+        "file": "frontend\\src\\api.ts",
+        "line": 637,
+        "type": "SIMULATION_KEYWORD",
+        "content": "const res = await fetch(`${BASE_URL}/api/v1/pricing/simulation-scenarios`, {"
+      },
+      {
+        "file": "frontend\\src\\api.ts",
+        "line": 642,
+        "type": "SIMULATION_KEYWORD",
+        "content": "if (!res.ok) throw new Error('Failed to save simulation scenario');"
+      },
+      {
+        "file": "frontend\\src\\api.ts",
+        "line": 655,
         "type": "SIMULATION_KEYWORD",
         "content": "const res = await fetch(`${BASE_URL}/api/v1/recovery/simulate-driver-timeout`, {"
       },
       {
         "file": "frontend\\src\\api.ts",
-        "line": 528,
+        "line": 663,
         "type": "SIMULATION_KEYWORD",
         "content": "if (!res.ok) throw new Error('Failed to simulate driver timeout');"
       },
       {
         "file": "frontend\\src\\api.ts",
-        "line": 680,
+        "line": 815,
         "type": "SIMULATION_KEYWORD",
         "content": "const res = await fetch(`${BASE_URL}/api/v1/transit/simulate-radar-delay`, {"
       },
       {
         "file": "frontend\\src\\api.ts",
-        "line": 685,
+        "line": 820,
         "type": "SIMULATION_KEYWORD",
         "content": "if (!res.ok) throw new Error('Failed to simulate radar delay');"
       },
       {
         "file": "frontend\\src\\api.ts",
-        "line": 781,
+        "line": 916,
         "type": "SIMULATION_KEYWORD",
         "content": "const res = await fetch(`${BASE_URL}/api/v1/webhooks/simulate`, {"
       },
       {
         "file": "frontend\\src\\api.ts",
-        "line": 786,
+        "line": 921,
         "type": "SIMULATION_KEYWORD",
         "content": "if (!res.ok) throw new Error('Failed to simulate webhook');"
       },
       {
         "file": "frontend\\src\\api.ts",
-        "line": 1679,
+        "line": 1814,
         "type": "SIMULATION_KEYWORD",
         "content": "const res = await fetch(`${BASE_URL}/api/v1/vendors/${encodeURIComponent(vendorId)}/subscription/simulate-dunning`, {"
       },
       {
         "file": "frontend\\src\\api.ts",
-        "line": 1685,
+        "line": 1820,
         "type": "SIMULATION_KEYWORD",
         "content": "throw new Error(extractErrorMessage(err, 'Failed to simulate dunning alert'));"
       }
@@ -1120,147 +1200,141 @@
     "frontend\\src\\components\\CustomerPortal.tsx": [
       {
         "file": "frontend\\src\\components\\CustomerPortal.tsx",
-        "line": 1436,
+        "line": 1454,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder={selectedRideType === 'AIRPORT' ? 'Enter airport (e.g. JFK, PHL, EWR) or address' : 'Enter pickup address or landmark'}"
       },
       {
         "file": "frontend\\src\\components\\CustomerPortal.tsx",
-        "line": 1480,
+        "line": 1498,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"Enter hotel, landmark, or street\""
       },
       {
         "file": "frontend\\src\\components\\CustomerPortal.tsx",
-        "line": 1621,
+        "line": 1639,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder={selectedRideType === 'AIRPORT' ? 'e.g. BA 177' : selectedRideType === 'HOURLY' ? 'e.g. Manhattan Financial District & Midtown' "
       },
       {
         "file": "frontend\\src\\components\\CustomerPortal.tsx",
-        "line": 1886,
+        "line": 1904,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"Enter airport, hotel, or street address\""
       },
       {
         "file": "frontend\\src\\components\\CustomerPortal.tsx",
-        "line": 1896,
+        "line": 1914,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"Enter destination hotel, landmark, or airport\""
       },
       {
         "file": "frontend\\src\\components\\CustomerPortal.tsx",
-        "line": 1988,
+        "line": 2006,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g. BA 177\""
       },
       {
         "file": "frontend\\src\\components\\CustomerPortal.tsx",
-        "line": 2637,
+        "line": 2606,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g. Eleanor Vance\""
       },
       {
         "file": "frontend\\src\\components\\CustomerPortal.tsx",
-        "line": 2653,
+        "line": 2622,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g. +1 (555) 234-5678\""
       },
       {
         "file": "frontend\\src\\components\\CustomerPortal.tsx",
-        "line": 2683,
+        "line": 2652,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g. Arthur Davies\""
       },
       {
         "file": "frontend\\src\\components\\CustomerPortal.tsx",
-        "line": 2699,
+        "line": 2668,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g. billing@executive-corp.com\""
       },
       {
         "file": "frontend\\src\\components\\CustomerPortal.tsx",
-        "line": 2727,
+        "line": 2696,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"4242  4242  4242  4242\""
       },
       {
         "file": "frontend\\src\\components\\CustomerPortal.tsx",
-        "line": 2768,
+        "line": 2737,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"MM / YY\""
       },
       {
         "file": "frontend\\src\\components\\CustomerPortal.tsx",
-        "line": 2795,
+        "line": 2764,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"CVC\""
       },
       {
         "file": "frontend\\src\\components\\CustomerPortal.tsx",
-        "line": 2821,
+        "line": 2790,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"ZIP\""
-      },
-      {
-        "file": "frontend\\src\\components\\CustomerPortal.tsx",
-        "line": 2990,
-        "type": "PLACEHOLDER_KEYWORD",
-        "content": "{/* Live Real Google Map Route Container or Route Preview Placeholder */}"
       }
     ],
     "frontend\\src\\components\\DispatcherPhoneBookingModal.tsx": [
       {
         "file": "frontend\\src\\components\\DispatcherPhoneBookingModal.tsx",
-        "line": 660,
+        "line": 651,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g. Jonathan Vance\""
       },
       {
         "file": "frontend\\src\\components\\DispatcherPhoneBookingModal.tsx",
-        "line": 671,
+        "line": 662,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"+1 (267) 555-0199\""
       },
       {
         "file": "frontend\\src\\components\\DispatcherPhoneBookingModal.tsx",
-        "line": 682,
+        "line": 673,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"jvance@vanceholdings.com\""
       },
       {
         "file": "frontend\\src\\components\\DispatcherPhoneBookingModal.tsx",
-        "line": 695,
+        "line": 686,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g. Vance Holdings Executive Travel\""
       },
       {
         "file": "frontend\\src\\components\\DispatcherPhoneBookingModal.tsx",
-        "line": 705,
+        "line": 696,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g. PO-8821\""
       },
       {
         "file": "frontend\\src\\components\\DispatcherPhoneBookingModal.tsx",
-        "line": 831,
+        "line": 822,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g. 30 S 17th St, Philadelphia, PA\""
       },
       {
         "file": "frontend\\src\\components\\DispatcherPhoneBookingModal.tsx",
-        "line": 844,
+        "line": 835,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g. Philadelphia International Airport (PHL) Terminal D\""
       },
       {
         "file": "frontend\\src\\components\\DispatcherPhoneBookingModal.tsx",
-        "line": 859,
+        "line": 850,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g. AA 1842\""
       },
       {
         "file": "frontend\\src\\components\\DispatcherPhoneBookingModal.tsx",
-        "line": 869,
+        "line": 860,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"American Airlines\""
       }
@@ -1306,57 +1380,115 @@
     "frontend\\src\\components\\GlobalHubAdminPortal.tsx": [
       {
         "file": "frontend\\src\\components\\GlobalHubAdminPortal.tsx",
-        "line": 59,
+        "line": 62,
         "type": "MOCK_KEYWORD",
         "content": "// Connected Cells with Dynamic Real-Time Backend Telemetry (Zero Static / Mock Data)"
       },
       {
         "file": "frontend\\src\\components\\GlobalHubAdminPortal.tsx",
-        "line": 655,
+        "line": 632,
         "type": "SIMULATION_KEYWORD",
         "content": "console.log('Simulation failed:', err);"
       },
       {
         "file": "frontend\\src\\components\\GlobalHubAdminPortal.tsx",
-        "line": 760,
+        "line": 737,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"Search sovereign cells, custom domains, AWS regions, and telemetry... (Ctrl + /)\""
       },
       {
         "file": "frontend\\src\\components\\GlobalHubAdminPortal.tsx",
-        "line": 1836,
+        "line": 1815,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g. vip.nyexecutive.com\""
       },
       {
         "file": "frontend\\src\\components\\GlobalHubAdminPortal.tsx",
-        "line": 2080,
+        "line": 2101,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"Enter vendor YAML spec...\""
       },
       {
         "file": "frontend\\src\\components\\GlobalHubAdminPortal.tsx",
-        "line": 2511,
+        "line": 2532,
         "type": "SIMULATION_KEYWORD",
         "content": "No active SLA countdown tickets. Use \"Simulate NYC Round-Robin Booking\" button to test."
       },
       {
         "file": "frontend\\src\\components\\GlobalHubAdminPortal.tsx",
-        "line": 2709,
+        "line": 2730,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"Search enquiries by passenger, corridor, vendor, or ID...\""
       },
       {
         "file": "frontend\\src\\components\\GlobalHubAdminPortal.tsx",
-        "line": 3367,
+        "line": 3388,
         "type": "SIMULATION_KEYWORD",
         "content": "{/* 4. Dunning Simulation */}"
       },
       {
         "file": "frontend\\src\\components\\GlobalHubAdminPortal.tsx",
-        "line": 3384,
+        "line": 3405,
         "type": "SIMULATION_KEYWORD",
         "content": "title=\"Simulate Delinquent Payment Warning\""
+      }
+    ],
+    "frontend\\src\\components\\GlobalSupportDeskHub.tsx": [
+      {
+        "file": "frontend\\src\\components\\GlobalSupportDeskHub.tsx",
+        "line": 559,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Search passenger, booking #, flight...\""
+      },
+      {
+        "file": "frontend\\src\\components\\GlobalSupportDeskHub.tsx",
+        "line": 991,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. 1044 for ANB Philly, 1099 for NY Exec\""
+      },
+      {
+        "file": "frontend\\src\\components\\GlobalSupportDeskHub.tsx",
+        "line": 1018,
+        "type": "SIMULATION_KEYWORD",
+        "content": "<span>Simulate Inbound Call &amp; Pop Context</span>"
+      },
+      {
+        "file": "frontend\\src\\components\\GlobalSupportDeskHub.tsx",
+        "line": 1068,
+        "type": "SIMULATION_KEYWORD",
+        "content": "<div style={{ fontWeight: 700, fontSize: '13px' }}>No Call Simulation Run Yet</div>"
+      },
+      {
+        "file": "frontend\\src\\components\\GlobalSupportDeskHub.tsx",
+        "line": 1579,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. Jonathan Vance\""
+      },
+      {
+        "file": "frontend\\src\\components\\GlobalSupportDeskHub.tsx",
+        "line": 1593,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. +1 (215) 555-0199\""
+      },
+      {
+        "file": "frontend\\src\\components\\GlobalSupportDeskHub.tsx",
+        "line": 1608,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. Flight DL 1842 delayed 45m \u00b7 Push Chauffeur Staging\""
+      },
+      {
+        "file": "frontend\\src\\components\\GlobalSupportDeskHub.tsx",
+        "line": 1622,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Enter detailed caller request or operational notes...\""
+      }
+    ],
+    "frontend\\src\\components\\HelicopterComplianceHubControl.tsx": [
+      {
+        "file": "frontend\\src\\components\\HelicopterComplianceHubControl.tsx",
+        "line": 107,
+        "type": "SIMULATION_KEYWORD",
+        "content": "reason: e.message || 'Simulation call failed'"
       }
     ],
     "frontend\\src\\components\\MicrosoftPortalShell.tsx": [
@@ -1458,75 +1590,89 @@
     "frontend\\src\\components\\VendorCellAndGlobalHubStudio.tsx": [
       {
         "file": "frontend\\src\\components\\VendorCellAndGlobalHubStudio.tsx",
-        "line": 611,
+        "line": 598,
         "type": "SIMULATION_KEYWORD",
         "content": "Trip the circuit breaker to simulate total Global Cloud disconnection. The vendor cell will immediately switch to sovereign deterministic fa"
       },
       {
         "file": "frontend\\src\\components\\VendorCellAndGlobalHubStudio.tsx",
-        "line": 914,
+        "line": 901,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g. AA 1204 (Free 60-min airport delay protection)\""
       },
       {
         "file": "frontend\\src\\components\\VendorCellAndGlobalHubStudio.tsx",
-        "line": 1065,
+        "line": 1052,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"Ask a question about your trip...\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorCellAndGlobalHubStudio.tsx",
+        "line": 1315,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"# Paste or load vendor cell YAML manifest here...\""
+      }
+    ],
+    "frontend\\src\\components\\VendorCommercialGuideModal.tsx": [
+      {
+        "file": "frontend\\src\\components\\VendorCommercialGuideModal.tsx",
+        "line": 1406,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Search concepts (e.g. 'deadhead', 'Escalade override', 'dispatch status', '1099 payroll')...\""
       }
     ],
     "frontend\\src\\components\\VendorDispatchPortal.tsx": [
       {
         "file": "frontend\\src\\components\\VendorDispatchPortal.tsx",
-        "line": 166,
+        "line": 183,
         "type": "SIMULATION_KEYWORD",
         "content": "setSimulationNotification(res.summary || res.transition_note || `Simulated ${type} event successfully.`);"
       },
       {
         "file": "frontend\\src\\components\\VendorDispatchPortal.tsx",
-        "line": 171,
+        "line": 188,
         "type": "SIMULATION_KEYWORD",
         "content": "setSimulationNotification(`Simulation error: ${e.message}`);"
       },
       {
         "file": "frontend\\src\\components\\VendorDispatchPortal.tsx",
-        "line": 666,
+        "line": 683,
         "type": "SIMULATION_KEYWORD",
         "content": "Simulate customer calling the VIP dispatch line \u2192 Instant binding quote spoken \u2192 Verbal booking confirmation on call."
       },
       {
         "file": "frontend\\src\\components\\VendorDispatchPortal.tsx",
-        "line": 685,
+        "line": 702,
         "type": "SIMULATION_KEYWORD",
         "content": "alert(`\ud83d\udcde [LIVE VOICE CALL SIMULATION]\\n\\nAI Spoken Response:\\n\"${data.voice_spoken_response}\"\\n\\nStripe Payment Status: ${data.payment_statu"
       },
       {
         "file": "frontend\\src\\components\\VendorDispatchPortal.tsx",
-        "line": 688,
+        "line": 705,
         "type": "SIMULATION_KEYWORD",
         "content": "alert('Phone simulation error: ' + e.message);"
       },
       {
         "file": "frontend\\src\\components\\VendorDispatchPortal.tsx",
-        "line": 855,
+        "line": 1247,
         "type": "SIMULATION_KEYWORD",
         "content": "{/* Right Column: Selected Booking Detail & Simulated Radar Map */}"
       },
       {
         "file": "frontend\\src\\components\\VendorDispatchPortal.tsx",
-        "line": 866,
+        "line": 1258,
         "type": "SIMULATION_KEYWORD",
         "content": "{/* Telemetry Simulation Map Box */}"
       },
       {
         "file": "frontend\\src\\components\\VendorDispatchPortal.tsx",
-        "line": 1194,
+        "line": 1587,
         "type": "SIMULATION_KEYWORD",
         "content": "<Plane size={14} color=\"#2563EB\" /> Simulate Flight Delay (+45m)"
       },
       {
         "file": "frontend\\src\\components\\VendorDispatchPortal.tsx",
-        "line": 1203,
+        "line": 1596,
         "type": "SIMULATION_KEYWORD",
         "content": "<Plane size={14} color=\"#059669\" /> Simulate Touchdown / Wheels-Down"
       }
@@ -1534,25 +1680,37 @@
     "frontend\\src\\components\\VendorFleetAndPricingHub.tsx": [
       {
         "file": "frontend\\src\\components\\VendorFleetAndPricingHub.tsx",
-        "line": 804,
-        "type": "PLACEHOLDER_KEYWORD",
-        "content": "placeholder=\"smtp.mailgun.org\""
+        "line": 127,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "const taxRate = Number(rule.tax_rate || 0.08875);"
       },
       {
         "file": "frontend\\src\\components\\VendorFleetAndPricingHub.tsx",
-        "line": 815,
-        "type": "PLACEHOLDER_KEYWORD",
-        "content": "placeholder=\"dispatch@vendor.com\""
+        "line": 197,
+        "type": "SIMULATION_KEYWORD",
+        "content": "name: 'Custom Parameter Simulation',"
       },
       {
         "file": "frontend\\src\\components\\VendorFleetAndPricingHub.tsx",
-        "line": 832,
+        "line": 478,
+        "type": "SIMULATION_KEYWORD",
+        "content": "// Active simulation scenario"
+      },
+      {
+        "file": "frontend\\src\\components\\VendorFleetAndPricingHub.tsx",
+        "line": 521,
+        "type": "SIMULATION_KEYWORD",
+        "content": "// Simulated Quotes"
+      },
+      {
+        "file": "frontend\\src\\components\\VendorFleetAndPricingHub.tsx",
+        "line": 1624,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"+1 800 555 0199\""
       },
       {
         "file": "frontend\\src\\components\\VendorFleetAndPricingHub.tsx",
-        "line": 845,
+        "line": 1637,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"+1 917 555 0199\""
       }
@@ -1560,309 +1718,315 @@
     "frontend\\src\\components\\VendorOwnerDashboard.tsx": [
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 2809,
+        "line": 3230,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"Search bookings by Passenger, Trip ID, Route, Driver...\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 3677,
+        "line": 4397,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g. 1GYS4HK78R0198...\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 3720,
+        "line": 4440,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g. Obsidian Black Metallic\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 3732,
+        "line": 4452,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g. Jet Black Nappa Leather\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 3839,
+        "line": 4576,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g. The Undisputed American Executive Standard in Chauffeur Luxury\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 4093,
+        "line": 4660,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Write or click AI Assistant to generate an executive description for your showroom...\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 4865,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"Add custom amenity (e.g. \ud83c\udfa7 Noise Cancelling Bang & Olufsen)...\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 4834,
+        "line": 5490,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Write or click AI Assistant to generate an executive description for your showroom...\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 5646,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"Add custom amenity...\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 6414,
+        "line": 7173,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"dispatch@yourlimo.com\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 6425,
+        "line": 7184,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"ANB Executive Transportation Dispatch\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 6437,
+        "line": 7196,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"support@yourlimo.com\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 6456,
+        "line": 7215,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"smtp.mailgun.org\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 6502,
+        "line": 7261,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"postmaster@yourlimo.com\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 6521,
+        "line": 7280,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 6555,
+        "line": 7314,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"AKIAIOSFODNN7EXAMPLE\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 6574,
+        "line": 7333,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 6620,
+        "line": 7379,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"SG.\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 6639,
+        "line": 7398,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022-\u2022\u2022\u2022\u2022-\u2022\u2022\u2022\u2022-\u2022\u2022\u2022\u2022-\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 6660,
+        "line": 7419,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"smtp.gmail.com\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 6682,
+        "line": 7441,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"dispatch@yourdomain.com\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 6701,
+        "line": 7460,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"xxxx xxxx xxxx xxxx\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 6723,
+        "line": 7482,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"smtp.office365.com\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 6745,
+        "line": 7504,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"dispatch@yourcompany.com\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 6764,
+        "line": 7523,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 6819,
+        "line": 7578,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"rfq@yourlimo.com\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 6838,
+        "line": 7597,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"imap.mailgun.org or imap.gmail.com\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 6882,
+        "line": 7641,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"rfq@yourlimo.com\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 6901,
+        "line": 7660,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 6914,
+        "line": 7673,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"INBOX\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 7046,
+        "line": 7805,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"dispatch-test@limo-ops.com\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 7485,
+        "line": 8262,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"Search personnel by name or email...\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 7751,
+        "line": 8528,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g., Marcus Vance\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 7764,
+        "line": 8541,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g., marcus@anblimo.com\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 7775,
+        "line": 8552,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"+1 (215) 555-0199\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 8001,
+        "line": 8811,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g. ANB Limousine sovereign operations: VIP airport and corporate transfers priority.\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 8086,
+        "line": 8896,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"Write in plain English what jobs your fleet accepts...\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 8286,
+        "line": 9096,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"Write plain English rules for choosing affiliate partners in other cities...\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 8821,
+        "line": 9631,
         "type": "SIMULATION_KEYWORD",
         "content": "{/* Simulation Result Output Card */}"
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 8999,
+        "line": 9809,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"Enter destination address, airport code, or international city (e.g. Heathrow Terminal 5, 50 Hudson Yards NY, CDG Paris, Beverl"
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 9180,
+        "line": 9990,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"Search by Trip ID, Passenger, Route, Partner Company, or City...\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 9605,
+        "line": 10415,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g. Johnathan Doe\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 9615,
+        "line": 10425,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"+1 (215) 555-0100\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 9668,
+        "line": 10478,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g. JFK Airport Terminal 4\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 9680,
+        "line": 10490,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g. The Plaza Hotel, 5th Ave\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 9967,
+        "line": 10777,
         "type": "SIMULATION_KEYWORD",
         "content": "Simulate Carrier Inbound"
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 10291,
-        "type": "SIMULATION_KEYWORD",
-        "content": "onClick={() => setActionNotice('\u25b6\ufe0f Playing simulated Twilio Voice media recording for call_9821...')}"
-      },
-      {
-        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 10291,
-        "type": "SIMULATED_UI_ACTION",
-        "content": "onClick={() => setActionNotice('\u25b6\ufe0f Playing simulated Twilio Voice media recording for call_9821...')}"
-      },
-      {
-        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 10310,
-        "type": "SIMULATION_KEYWORD",
-        "content": "onClick={() => setActionNotice('\u25b6\ufe0f Playing simulated Twilio Voice media recording for call_9822...')}"
-      },
-      {
-        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 10310,
-        "type": "SIMULATED_UI_ACTION",
-        "content": "onClick={() => setActionNotice('\u25b6\ufe0f Playing simulated Twilio Voice media recording for call_9822...')}"
-      },
-      {
-        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 10462,
+        "line": 11274,
         "type": "PLACEHOLDER_KEYWORD",
-        "content": "placeholder=\"Type reply to passenger (David Sterling)...\""
+        "content": "placeholder=\"Type reply to passenger...\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 10620,
+        "line": 11427,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\""
       },
       {
         "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
-        "line": 10631,
+        "line": 11438,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 12191,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"+1 (800) 555-5466\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 12204,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"+1 (215) 555-0199\""
+      },
+      {
+        "file": "frontend\\src\\components\\VendorOwnerDashboard.tsx",
+        "line": 12217,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Thank you for calling...\""
       }
     ],
     "frontend\\src\\components\\VendorRegistrationPortal.tsx": [
@@ -1953,12 +2117,70 @@
         "content": "placeholder=\"Enter operational claim to verify against statutory graph...\""
       }
     ],
+    "frontend\\src\\components\\hub\\GlobalHubSupportTab.tsx": [
+      {
+        "file": "frontend\\src\\components\\hub\\GlobalHubSupportTab.tsx",
+        "line": 236,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Search ticket #, passenger, vendor...\""
+      },
+      {
+        "file": "frontend\\src\\components\\hub\\GlobalHubSupportTab.tsx",
+        "line": 484,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Post central clearinghouse reply or note...\""
+      }
+    ],
     "frontend\\src\\components\\public\\CustomerBookingsLookupModal.tsx": [
       {
         "file": "frontend\\src\\components\\public\\CustomerBookingsLookupModal.tsx",
-        "line": 159,
+        "line": 343,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"Enter Booking Ref (e.g. #itin-bk-), Mobile Phone, or Booker Email...\""
+      }
+    ],
+    "frontend\\src\\components\\public\\CustomerSupportChatWidget.tsx": [
+      {
+        "file": "frontend\\src\\components\\public\\CustomerSupportChatWidget.tsx",
+        "line": 364,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"John Doe\""
+      },
+      {
+        "file": "frontend\\src\\components\\public\\CustomerSupportChatWidget.tsx",
+        "line": 385,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"(215) 555-0199\""
+      },
+      {
+        "file": "frontend\\src\\components\\public\\CustomerSupportChatWidget.tsx",
+        "line": 408,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"bk-74fc6670\""
+      },
+      {
+        "file": "frontend\\src\\components\\public\\CustomerSupportChatWidget.tsx",
+        "line": 428,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"name@acme.com\""
+      },
+      {
+        "file": "frontend\\src\\components\\public\\CustomerSupportChatWidget.tsx",
+        "line": 451,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. Where is my driver? Or please change pickup to 6:30 PM.\""
+      },
+      {
+        "file": "frontend\\src\\components\\public\\CustomerSupportChatWidget.tsx",
+        "line": 590,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Type your message...\""
+      },
+      {
+        "file": "frontend\\src\\components\\public\\CustomerSupportChatWidget.tsx",
+        "line": 630,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Enter Phone, Email, or #SUP-...\""
       }
     ],
     "frontend\\src\\components\\public\\GlobalMarketplaceBookingPage.tsx": [
@@ -1987,22 +2209,66 @@
         "content": "placeholder=\"e.g. BA 178 / DL 492\""
       }
     ],
+    "frontend\\src\\components\\public\\LiveRideTrackingModal.tsx": [
+      {
+        "file": "frontend\\src\\components\\public\\LiveRideTrackingModal.tsx",
+        "line": 23,
+        "type": "SIMULATION_KEYWORD",
+        "content": "const [simulating, setSimulating] = useState(false);"
+      },
+      {
+        "file": "frontend\\src\\components\\public\\LiveRideTrackingModal.tsx",
+        "line": 47,
+        "type": "SIMULATION_KEYWORD",
+        "content": "// Simulation steps for interactive testing"
+      },
+      {
+        "file": "frontend\\src\\components\\public\\LiveRideTrackingModal.tsx",
+        "line": 73,
+        "type": "SIMULATION_KEYWORD",
+        "content": "console.warn('Simulation ping notice:', err.message);"
+      },
+      {
+        "file": "frontend\\src\\components\\public\\LiveRideTrackingModal.tsx",
+        "line": 523,
+        "type": "SIMULATION_KEYWORD",
+        "content": "{/* Dev Simulation Bar for Quick Interactive Testing */}"
+      },
+      {
+        "file": "frontend\\src\\components\\public\\LiveRideTrackingModal.tsx",
+        "line": 546,
+        "type": "SIMULATION_KEYWORD",
+        "content": "disabled={simulating}"
+      },
+      {
+        "file": "frontend\\src\\components\\public\\LiveRideTrackingModal.tsx",
+        "line": 562,
+        "type": "SIMULATION_KEYWORD",
+        "content": "<span>{simulating ? 'Broadcasting...' : 'Broadcast Next GPS Ping'}</span>"
+      }
+    ],
     "frontend\\src\\components\\public\\PublicAuthDropdown.tsx": [
       {
         "file": "frontend\\src\\components\\public\\PublicAuthDropdown.tsx",
-        "line": 358,
+        "line": 344,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"executive@luxury.com\""
+      },
+      {
+        "file": "frontend\\src\\components\\public\\PublicAuthDropdown.tsx",
+        "line": 461,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"executive@citadel.com\""
       },
       {
         "file": "frontend\\src\\components\\public\\PublicAuthDropdown.tsx",
-        "line": 408,
+        "line": 510,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g. Jordan Belfort\""
       },
       {
         "file": "frontend\\src\\components\\public\\PublicAuthDropdown.tsx",
-        "line": 431,
+        "line": 532,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"client@luxury.com\""
       }
@@ -2010,19 +2276,31 @@
     "frontend\\src\\components\\public\\PublicAuthModal.tsx": [
       {
         "file": "frontend\\src\\components\\public\\PublicAuthModal.tsx",
-        "line": 284,
+        "line": 84,
+        "type": "SIMULATION_KEYWORD",
+        "content": "// If browser rejects or user cancels native prompt, continue with simulated token assertion"
+      },
+      {
+        "file": "frontend\\src\\components\\public\\PublicAuthModal.tsx",
+        "line": 386,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"executive@luxury.com\""
+      },
+      {
+        "file": "frontend\\src\\components\\public\\PublicAuthModal.tsx",
+        "line": 506,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"executive@citadel.com\""
       },
       {
         "file": "frontend\\src\\components\\public\\PublicAuthModal.tsx",
-        "line": 322,
+        "line": 544,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g. Jordan Belfort\""
       },
       {
         "file": "frontend\\src\\components\\public\\PublicAuthModal.tsx",
-        "line": 333,
+        "line": 555,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"client@luxury.com\""
       }
@@ -2030,25 +2308,25 @@
     "frontend\\src\\components\\public\\PublicContactPage.tsx": [
       {
         "file": "frontend\\src\\components\\public\\PublicContactPage.tsx",
-        "line": 205,
+        "line": 408,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g. Eleanor Vance\""
       },
       {
         "file": "frontend\\src\\components\\public\\PublicContactPage.tsx",
-        "line": 216,
+        "line": 419,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g. e.vance@citadel.com\""
       },
       {
         "file": "frontend\\src\\components\\public\\PublicContactPage.tsx",
-        "line": 229,
+        "line": 432,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"+1 (215) 555-0144\""
       },
       {
         "file": "frontend\\src\\components\\public\\PublicContactPage.tsx",
-        "line": 256,
+        "line": 459,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"Provide trip dates, itinerary details, passenger counts, or specific vehicle preferences...\""
       }
@@ -2056,7 +2334,19 @@
     "frontend\\src\\components\\public\\PublicHomePage.tsx": [
       {
         "file": "frontend\\src\\components\\public\\PublicHomePage.tsx",
-        "line": 291,
+        "line": 253,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. Philadelphia Int'l Airport (PHL)\""
+      },
+      {
+        "file": "frontend\\src\\components\\public\\PublicHomePage.tsx",
+        "line": 265,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. The Ritz-Carlton, Center City\""
+      },
+      {
+        "file": "frontend\\src\\components\\public\\PublicHomePage.tsx",
+        "line": 279,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"e.g. AA 1842 / DL 402\""
       }
@@ -2093,26 +2383,56 @@
         "content": "placeholder=\"e.g. CA-ROYAL1\""
       }
     ],
-    "packages\\global_hub\\backend\\services\\marketplace_router.py": [
+    "frontend\\src\\components\\vendor\\OperationsPricingResearchStudio.tsx": [
       {
-        "file": "packages\\global_hub\\backend\\services\\marketplace_router.py",
-        "line": 55,
-        "type": "HARDCODED_TAX_RATE",
-        "content": "tax = fare * Decimal(\"0.08875\")"
+        "file": "frontend\\src\\components\\vendor\\OperationsPricingResearchStudio.tsx",
+        "line": 100,
+        "type": "SIMULATION_KEYWORD",
+        "content": "// Live Simulation Response & Loading"
       },
       {
-        "file": "packages\\global_hub\\backend\\services\\marketplace_router.py",
-        "line": 67,
-        "type": "HARDCODED_TAX_RATE",
-        "content": "leg_total = (sub + (sub * Decimal(\"0.08875\")) + (sub * Decimal(\"0.20\"))).quantize(Decimal(\"0.01\"), rounding=ROUND_HALF_UP)"
+        "file": "frontend\\src\\components\\vendor\\OperationsPricingResearchStudio.tsx",
+        "line": 125,
+        "type": "SIMULATION_KEYWORD",
+        "content": "const res = await fetch('/api/v1/pricing/research-simulate', {"
+      },
+      {
+        "file": "frontend\\src\\components\\vendor\\OperationsPricingResearchStudio.tsx",
+        "line": 149,
+        "type": "SIMULATION_KEYWORD",
+        "content": "throw new Error(`Simulation failed (${res.statusText})`);"
+      },
+      {
+        "file": "frontend\\src\\components\\vendor\\OperationsPricingResearchStudio.tsx",
+        "line": 155,
+        "type": "SIMULATION_KEYWORD",
+        "content": "setError(err.message || 'Error running live pricing simulation');"
+      },
+      {
+        "file": "frontend\\src\\components\\vendor\\OperationsPricingResearchStudio.tsx",
+        "line": 695,
+        "type": "SIMULATION_KEYWORD",
+        "content": "Simulated Unit Economics & Margin Health"
       }
     ],
-    "packages\\vendor_app\\backend\\api.py": [
+    "frontend\\src\\components\\vendor\\VendorSupportInboxTab.tsx": [
       {
-        "file": "packages\\vendor_app\\backend\\api.py",
-        "line": 119,
-        "type": "HARDCODED_TAX_RATE",
-        "content": "tax = subtotal * Decimal(\"0.08875\")"
+        "file": "frontend\\src\\components\\vendor\\VendorSupportInboxTab.tsx",
+        "line": 231,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"Search ticket #, passenger, phone...\""
+      },
+      {
+        "file": "frontend\\src\\components\\vendor\\VendorSupportInboxTab.tsx",
+        "line": 540,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder={isInternalNote ? 'Type internal dispatcher note...' : 'Reply to passenger...'}"
+      },
+      {
+        "file": "frontend\\src\\components\\vendor\\VendorSupportInboxTab.tsx",
+        "line": 614,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "placeholder=\"e.g. Chauffeur confirmed pickup time shifted to 6:30 PM. Passenger notified.\""
       }
     ],
     "packages\\vendor_app\\backend\\services\\auth_service.py": [
@@ -2163,6 +2483,2374 @@
         "line": 326,
         "type": "PLACEHOLDER_KEYWORD",
         "content": "placeholder=\"dispatch@anblimo-philly.com\""
+      }
+    ],
+    "scratch\\analyze_audit.py": [
+      {
+        "file": "scratch\\analyze_audit.py",
+        "line": 31,
+        "type": "MOCK_KEYWORD",
+        "content": "if \"simulate\" in line_str.lower() or \"mock\" in line_str.lower() or \"fake\" in line_str.lower():"
+      },
+      {
+        "file": "scratch\\analyze_audit.py",
+        "line": 31,
+        "type": "SIMULATION_KEYWORD",
+        "content": "if \"simulate\" in line_str.lower() or \"mock\" in line_str.lower() or \"fake\" in line_str.lower():"
+      },
+      {
+        "file": "scratch\\analyze_audit.py",
+        "line": 31,
+        "type": "FAKE_KEYWORD",
+        "content": "if \"simulate\" in line_str.lower() or \"mock\" in line_str.lower() or \"fake\" in line_str.lower():"
+      },
+      {
+        "file": "scratch\\analyze_audit.py",
+        "line": 36,
+        "type": "SIMULATION_KEYWORD",
+        "content": "if \"setActionNotice\" in line_str or \"simulate\" in line_str.lower() or \"dummy\" in line_str.lower() or \"placeholder\" in line_str.lower():"
+      },
+      {
+        "file": "scratch\\analyze_audit.py",
+        "line": 36,
+        "type": "DUMMY_KEYWORD",
+        "content": "if \"setActionNotice\" in line_str or \"simulate\" in line_str.lower() or \"dummy\" in line_str.lower() or \"placeholder\" in line_str.lower():"
+      },
+      {
+        "file": "scratch\\analyze_audit.py",
+        "line": 36,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "if \"setActionNotice\" in line_str or \"simulate\" in line_str.lower() or \"dummy\" in line_str.lower() or \"placeholder\" in line_str.lower():"
+      }
+    ],
+    "scratch\\audit_findings.json": [
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 9,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"Autonomous Disruption Simulation, and Fleet status.\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 15,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"@router.post(\\\"/recovery/simulate-flight-delay\\\")\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 21,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"@router.post(\\\"/recovery/simulate-driver-timeout\\\")\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 27,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"@router.post(\\\"/transit/simulate-radar-delay\\\", response_model=TransitRadarEvent)\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 33,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"@router.post(\\\"/webhooks/simulate\\\")\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 39,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"return {\\\"success\\\": True, \\\"twiml\\\": twiml, \\\"summary\\\": \\\"Voice IVR simulation complete.\\\"}\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 45,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"raise HTTPException(status_code=400, detail=f\\\"Unknown simulation type: {dto.simulation_type}\\\")\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 51,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"@router.post(\\\"/voice/simulate-call\\\")\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 57,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"@router.post(\\\"/vendors/{vendor_id}/subscription/simulate-dunning\\\")\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 65,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"tax_rate=Decimal(str(q_model.tax_rate or \\\"0.08875\\\")),\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 71,
+        "type": "MOCK_KEYWORD",
+        "content": "\"content\": \"3. Corporate Travel Accounts directory without fake dummy trips or mock bookings.\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 71,
+        "type": "FAKE_KEYWORD",
+        "content": "\"content\": \"3. Corporate Travel Accounts directory without fake dummy trips or mock bookings.\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 71,
+        "type": "DUMMY_KEYWORD",
+        "content": "\"content\": \"3. Corporate Travel Accounts directory without fake dummy trips or mock bookings.\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 77,
+        "type": "MOCK_KEYWORD",
+        "content": "\"content\": \"3. Corporate Travel Accounts directory without fake dummy trips or mock bookings.\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 77,
+        "type": "FAKE_KEYWORD",
+        "content": "\"content\": \"3. Corporate Travel Accounts directory without fake dummy trips or mock bookings.\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 77,
+        "type": "DUMMY_KEYWORD",
+        "content": "\"content\": \"3. Corporate Travel Accounts directory without fake dummy trips or mock bookings.\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 83,
+        "type": "MOCK_KEYWORD",
+        "content": "\"content\": \"3. Corporate Travel Accounts directory without fake dummy trips or mock bookings.\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 83,
+        "type": "FAKE_KEYWORD",
+        "content": "\"content\": \"3. Corporate Travel Accounts directory without fake dummy trips or mock bookings.\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 83,
+        "type": "DUMMY_KEYWORD",
+        "content": "\"content\": \"3. Corporate Travel Accounts directory without fake dummy trips or mock bookings.\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 89,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"vat_or_sales_tax_rate=Decimal(\\\"0.08875\\\"),\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 97,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"tax_rate = Column(Numeric(6, 4), default=Decimal(\\\"0.08875\\\"))\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 103,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"tax_rate = Column(Numeric(6, 4), default=Decimal(\\\"0.08875\\\"))\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 111,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"tax_rate: Decimal = Decimal(\\\"0.08875\\\")\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 117,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"vat_or_sales_tax_rate: Decimal                  # e.g. 0.08875, 0.20, 0.20, 0.10, 0.05\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 123,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"tax_rate: Decimal = Decimal(\\\"0.08875\\\")\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 129,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"tax_rate: Decimal = Decimal(\\\"0.08875\\\")\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 137,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"\\\"\\\"\\\"Real OpenAI-compatible chat API adapter. No simulated success fallback.\\\"\\\"\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 145,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"# Curated Seed Directory for popular uncontracted luxury corridors (Google Places / TLC simulation)\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 151,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"tax = (subtotal_fare * Decimal(\\\"0.08875\\\")).quantize(Decimal(\\\"0.01\\\"), rounding=ROUND_HALF_UP)\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 159,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"# Log simulated AWS SES delivery\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 167,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"logger.info(f\\\"Email delivery simulated / archived: To={to_email}, Booking={booking_id}\\\")\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 175,
+        "type": "MOCK_KEYWORD",
+        "content": "\"content\": \"Otherwise returns clean telemetry object without mock data.\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 183,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"\\\"\\\"\\\"Simulate incoming radar telemetry from FlightAware / ADS-B receiver.\\\"\\\"\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 191,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"vat_or_sales_tax_rate=Decimal(\\\"0.08875\\\"), airport_access_fee=Decimal(\\\"18.00\\\"), congestion_charge=Decimal(\\\"0.00\\\"), currency"
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 199,
+        "type": "MOCK_KEYWORD",
+        "content": "\"content\": \"Zero static/mock data.\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 207,
+        "type": "MOCK_KEYWORD",
+        "content": "\"content\": \"No hardcoded mock dictionaries.\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 213,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"logger.info(f\\\"Stripe API key not configured; generating simulated account: {sim_id}\\\")\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 219,
+        "type": "MOCK_KEYWORD",
+        "content": "\"content\": \"Never returns hardcoded or fabricated mock values.\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 227,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"return True  # Dev / Simulation mode\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 235,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"logger.info(f\\\"[VOICE CALL SIMULATION] To: {to_number} | Message: {message_to_speak}\\\")\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 241,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"return {\\\"success\\\": True, \\\"simulated\\\": True, \\\"to\\\": to_number}\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 249,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"# 2. S3 Mirroring (Real Boto3 if configured, or simulated metadata storage)\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 257,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"\\\"\\\"\\\"Simulate neural telemetry analysis over vendor historical bookings to dynamically optimize pricing curve.\\\"\\\"\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 265,
+        "type": "MOCK_KEYWORD",
+        "content": "\"content\": \"database tables and sovereign cell registry. Zero static mock lists.\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 273,
+        "type": "DUMMY_KEYWORD",
+        "content": "\"content\": \"# Synthesize dummy PCM binary header + duration\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 279,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"# Simulated audio frame ingestion\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 287,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 293,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 299,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 305,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 311,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 317,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 323,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 329,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 335,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 341,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 347,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 353,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 359,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 365,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 371,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 377,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 383,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 389,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 395,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 401,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 407,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 413,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 419,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 425,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 431,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 437,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 443,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 449,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 455,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 461,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 467,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 473,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 479,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 485,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 491,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 497,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 503,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 509,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 515,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 521,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 527,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 533,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 539,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 545,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 551,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 557,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 563,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 569,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 575,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 581,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 589,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 595,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 601,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 607,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 613,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 619,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 625,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 631,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 637,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 643,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 649,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 655,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 661,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 667,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 673,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 679,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 685,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 691,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 697,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 703,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 709,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 715,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 721,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 727,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 733,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 739,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 745,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 751,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 757,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 763,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 769,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 775,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 781,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 787,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 793,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 799,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 805,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 811,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 817,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 823,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 829,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 835,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 841,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 847,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 853,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 859,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 865,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 871,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 877,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 883,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"\\\"tax_rate\\\": \\\"0.08875\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 891,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"| **D. LangGraph Workflows** | `app/services/autonomous_recovery_service.py` | `/api/v1/recovery/simulate-flight-delay` | `tests"
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 921,
+        "type": "MOCK_KEYWORD",
+        "content": "\"content\": \"No mock operational data, hardcoded customer details, static dates, fake availability, invented provider responses, fake AI anal"
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 921,
+        "type": "FAKE_KEYWORD",
+        "content": "\"content\": \"No mock operational data, hardcoded customer details, static dates, fake availability, invented provider responses, fake AI anal"
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 927,
+        "type": "MOCK_KEYWORD",
+        "content": "\"content\": \"No mock operational data, hardcoded customer details, static dates, fake availability, invented provider responses, fake AI anal"
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 927,
+        "type": "FAKE_KEYWORD",
+        "content": "\"content\": \"No mock operational data, hardcoded customer details, static dates, fake availability, invented provider responses, fake AI anal"
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 933,
+        "type": "MOCK_KEYWORD",
+        "content": "\"content\": \"No mock operational data, hardcoded customer details, static dates, fake availability, invented provider responses, fake AI anal"
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 933,
+        "type": "FAKE_KEYWORD",
+        "content": "\"content\": \"No mock operational data, hardcoded customer details, static dates, fake availability, invented provider responses, fake AI anal"
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 967,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"const res = await fetch(`${BASE_URL}/api/v1/recovery/simulate-flight-delay`, {\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 973,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"if (!res.ok) throw new Error('Failed to simulate flight delay');\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 979,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"const res = await fetch(`${BASE_URL}/api/v1/recovery/simulate-driver-timeout`, {\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 985,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"if (!res.ok) throw new Error('Failed to simulate driver timeout');\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 991,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"const res = await fetch(`${BASE_URL}/api/v1/transit/simulate-radar-delay`, {\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 997,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"if (!res.ok) throw new Error('Failed to simulate radar delay');\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1003,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"const res = await fetch(`${BASE_URL}/api/v1/webhooks/simulate`, {\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1009,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"if (!res.ok) throw new Error('Failed to simulate webhook');\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1015,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"const res = await fetch(`${BASE_URL}/api/v1/vendors/${encodeURIComponent(vendorId)}/subscription/simulate-dunning`, {\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1021,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"throw new Error(extractErrorMessage(err, 'Failed to simulate dunning alert'));\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1029,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder?: string;\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1035,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder = \\\"Enter street address, international airport (e.g. JFK, LHR), hotel...\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1041,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder={placeholder}\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1049,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"alert('No active trip available to simulate flight delay');\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1055,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"alert(err.message || 'Simulation failed');\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1061,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"alert(err.message || 'Simulation failed');\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1067,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"{/* Simulation 1: Inbound Flight Delay */}\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1073,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"{/* Simulation 2: Driver Timeout */}\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1079,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"{/* Simulation Output Banner */}\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1087,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. 200 West St, NYC or London Heathrow Airport\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1093,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. JFK Airport Terminal 4 or The Savoy London\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1099,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. BA 178, DL 492, Acela 2150\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1105,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"Code (e.g. M&A-01)\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1111,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"Department Name\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1117,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"Budget ($)\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1125,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder={selectedRideType === 'AIRPORT' ? 'Enter airport (e.g. JFK, PHL, EWR) or address' : 'Enter pickup address or landmar"
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1131,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"Enter hotel, landmark, or street\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1137,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder={selectedRideType === 'AIRPORT' ? 'e.g. BA 177' : selectedRideType === 'HOURLY' ? 'e.g. Manhattan Financial District"
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1143,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"Enter airport, hotel, or street address\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1149,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"Enter destination hotel, landmark, or airport\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1155,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. BA 177\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1161,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. Eleanor Vance\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1167,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. +1 (555) 234-5678\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1173,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. Arthur Davies\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1179,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. billing@executive-corp.com\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1185,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"4242  4242  4242  4242\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1191,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"MM / YY\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1197,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"CVC\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1203,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"ZIP\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1209,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"{/* Live Real Google Map Route Container or Route Preview Placeholder */}\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1217,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. Jonathan Vance\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1223,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"+1 (267) 555-0199\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1229,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"jvance@vanceholdings.com\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1235,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. Vance Holdings Executive Travel\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1241,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. PO-8821\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1247,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. 30 S 17th St, Philadelphia, PA\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1253,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. Philadelphia International Airport (PHL) Terminal D\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1259,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. AA 1842\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1265,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"American Airlines\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1273,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"alert(err.message || 'Simulation failed');\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1279,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"{/* Left Column: Interactive Simulation Control */}\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1285,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"Simulate FlightAware ADS-B Delay Event\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1291,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. BA 178, DL 492, AA 100\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1297,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. 18:30 UTC\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1303,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. ATC Holding Pattern\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1311,
+        "type": "MOCK_KEYWORD",
+        "content": "\"content\": \"// Connected Cells with Dynamic Real-Time Backend Telemetry (Zero Static / Mock Data)\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1317,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"console.log('Simulation failed:', err);\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1323,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"Search sovereign cells, custom domains, AWS regions, and telemetry... (Ctrl + /)\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1329,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. vip.nyexecutive.com\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1335,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"Enter vendor YAML spec...\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1341,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"No active SLA countdown tickets. Use \\\"Simulate NYC Round-Robin Booking\\\" button to test.\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1347,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"Search enquiries by passenger, corridor, vendor, or ID...\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1353,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"{/* 4. Dunning Simulation */}\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1359,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"title=\\\"Simulate Delinquent Payment Warning\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1367,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"Search resources, trips, drivers, flights, policies (G+/)...\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1375,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"185.00\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1381,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"+1 (970) 555-0144\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1387,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. Klaus Vance (Lead Chauffeur)\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1393,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"2025 Cadillac Escalade ESV\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1401,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"alert(err.message || 'Simulation error');\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1407,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"title=\\\"Simulate vendor sending a free-text email reply (auto-parsed by LLM)\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1413,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"{/* 1-Click Simulate Vendor Quote Response */}\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1419,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"title=\\\"Simulate vendor clicking the 1-click quote link in email\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1425,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"Simulate Link Click\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1431,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. 195.00\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1437,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. Lead Dispatcher Klaus\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1443,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. Driver Mike\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1449,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. Flight BA 178 VIP Meet & Greet confirmed\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1455,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. Aspen, Vail, Jackson Hole, Scottsdale, Honolulu\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1463,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"Trip the circuit breaker to simulate total Global Cloud disconnection. The vendor cell will immediately switch to sovereign dete"
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1469,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. AA 1204 (Free 60-min airport delay protection)\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1475,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"Ask a question about your trip...\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1483,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"setSimulationNotification(res.summary || res.transition_note || `Simulated ${type} event successfully.`);\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1489,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"setSimulationNotification(`Simulation error: ${e.message}`);\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1495,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"Simulate customer calling the VIP dispatch line \\u2192 Instant binding quote spoken \\u2192 Verbal booking confirmation on call.\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1501,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"alert(`\\ud83d\\udcde [LIVE VOICE CALL SIMULATION]\\\\n\\\\nAI Spoken Response:\\\\n\\\"${data.voice_spoken_response}\\\"\\\\n\\\\nStripe Paymen"
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1507,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"alert('Phone simulation error: ' + e.message);\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1513,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"{/* Right Column: Selected Booking Detail & Simulated Radar Map */}\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1519,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"{/* Telemetry Simulation Map Box */}\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1525,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"<Plane size={14} color=\\\"#2563EB\\\" /> Simulate Flight Delay (+45m)\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1531,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"<Plane size={14} color=\\\"#059669\\\" /> Simulate Touchdown / Wheels-Down\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1539,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"smtp.mailgun.org\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1545,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"dispatch@vendor.com\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1551,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"+1 800 555 0199\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1557,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"+1 917 555 0199\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1565,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"Search bookings by Passenger, Trip ID, Route, Driver...\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1571,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. 1GYS4HK78R0198...\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1577,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. Obsidian Black Metallic\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1583,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. Jet Black Nappa Leather\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1589,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. The Undisputed American Executive Standard in Chauffeur Luxury\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1595,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"Add custom amenity (e.g. \\ud83c\\udfa7 Noise Cancelling Bang & Olufsen)...\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1601,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"Add custom amenity...\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1607,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"dispatch@yourlimo.com\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1613,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"ANB Executive Transportation Dispatch\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1619,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"support@yourlimo.com\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1625,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"smtp.mailgun.org\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1631,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"postmaster@yourlimo.com\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1637,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1643,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"AKIAIOSFODNN7EXAMPLE\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1649,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1655,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"SG.\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2"
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1661,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022-\\u2022\\u2022\\u2022\\u2022-\\u2022\\u2022\\u2022\\u2022-\\u2022\\u2022\\u2"
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1667,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"smtp.gmail.com\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1673,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"dispatch@yourdomain.com\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1679,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"xxxx xxxx xxxx xxxx\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1685,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"smtp.office365.com\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1691,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"dispatch@yourcompany.com\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1697,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1703,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"rfq@yourlimo.com\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1709,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"imap.mailgun.org or imap.gmail.com\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1715,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"rfq@yourlimo.com\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1721,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1727,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"INBOX\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1733,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"dispatch-test@limo-ops.com\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1739,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"Search personnel by name or email...\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1745,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g., Marcus Vance\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1751,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g., marcus@anblimo.com\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1757,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"+1 (215) 555-0199\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1763,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. ANB Limousine sovereign operations: VIP airport and corporate transfers priority.\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1769,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"Write in plain English what jobs your fleet accepts...\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1775,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"Write plain English rules for choosing affiliate partners in other cities...\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1781,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"{/* Simulation Result Output Card */}\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1787,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"Enter destination address, airport code, or international city (e.g. Heathrow Terminal 5, 50 Hudson Yards NY, CDG "
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1793,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"Search by Trip ID, Passenger, Route, Partner Company, or City...\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1799,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. Johnathan Doe\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1805,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"+1 (215) 555-0100\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1811,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. JFK Airport Terminal 4\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1817,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. The Plaza Hotel, 5th Ave\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1823,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"Simulate Carrier Inbound\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1829,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"onClick={() => setActionNotice('\\u25b6\\ufe0f Playing simulated Twilio Voice media recording for call_9821...')}\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1829,
+        "type": "SIMULATED_UI_ACTION",
+        "content": "\"content\": \"onClick={() => setActionNotice('\\u25b6\\ufe0f Playing simulated Twilio Voice media recording for call_9821...')}\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1835,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"onClick={() => setActionNotice('\\u25b6\\ufe0f Playing simulated Twilio Voice media recording for call_9821...')}\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1835,
+        "type": "SIMULATED_UI_ACTION",
+        "content": "\"content\": \"onClick={() => setActionNotice('\\u25b6\\ufe0f Playing simulated Twilio Voice media recording for call_9821...')}\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1841,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"onClick={() => setActionNotice('\\u25b6\\ufe0f Playing simulated Twilio Voice media recording for call_9822...')}\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1841,
+        "type": "SIMULATED_UI_ACTION",
+        "content": "\"content\": \"onClick={() => setActionNotice('\\u25b6\\ufe0f Playing simulated Twilio Voice media recording for call_9822...')}\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1847,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"onClick={() => setActionNotice('\\u25b6\\ufe0f Playing simulated Twilio Voice media recording for call_9822...')}\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1847,
+        "type": "SIMULATED_UI_ACTION",
+        "content": "\"content\": \"onClick={() => setActionNotice('\\u25b6\\ufe0f Playing simulated Twilio Voice media recording for call_9822...')}\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1853,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"Type reply to passenger (David Sterling)...\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1859,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1865,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022"
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1873,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. London Imperial Chauffeur Ltd\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1879,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. London Imperial Fleet Services Limited\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1885,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. 13-9821764 or GB12345678\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1891,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"USD, EUR, GBP, AED, JPY\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1897,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. New York, London, Paris, Miami\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1903,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. NY, CA, Greater London, \\u00cele-de-France\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1909,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"Enter physical depot address (e.g. 550 W 54th St, New York, NY)\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1915,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"dispatch@vendor.com\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1921,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"+1 212 555 0199\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1927,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. NYC-TLC-B02914 or CPUC-PSG-00124\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1933,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. CHUBB-COMM-9812450\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1941,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"Speak into microphone or type caller prompt...\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1947,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"Simulate Inbound Twilio Media Stream Call\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1953,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"Enter operational claim to verify against statutory graph...\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1961,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"Enter Booking Ref (e.g. #itin-bk-), Mobile Phone, or Booker Email...\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1969,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"Enter pickup address, FBO, airport, or hotel...\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1975,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"Dropoff address or destination hotel...\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1981,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. Lord Sterling\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1987,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. BA 178 / DL 492\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 1995,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"executive@citadel.com\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2001,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. Jordan Belfort\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2007,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"client@luxury.com\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2015,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"executive@citadel.com\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2021,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. Jordan Belfort\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2027,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"client@luxury.com\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2035,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. Eleanor Vance\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2041,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. e.vance@citadel.com\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2047,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"+1 (215) 555-0144\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2053,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"Provide trip dates, itinerary details, passenger counts, or specific vehicle preferences...\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2061,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. AA 1842 / DL 402\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2069,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"12-3456789\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2075,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. Jean-Pierre Laurent\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2081,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"+1 (310) 555-0991\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2087,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. Rolls-Royce Ghost\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2093,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"e.g. CA-ROYAL1\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2101,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"tax = fare * Decimal(\\\"0.08875\\\")\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2107,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"leg_total = (sub + (sub * Decimal(\\\"0.08875\\\")) + (sub * Decimal(\\\"0.20\\\"))).quantize(Decimal(\\\"0.01\\\"), rounding=ROUND_HALF_UP)"
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2115,
+        "type": "HARDCODED_TAX_RATE",
+        "content": "\"content\": \"tax = subtotal * Decimal(\\\"0.08875\\\")\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2123,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"# In-memory user database simulation: email -> user record\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2131,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"Configure vendor cancellation terms, preview dynamic customer confirmation emails, and simulate Stripe refunds.\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2137,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"<p style={{ fontSize: '13px' }}>Adjust the scenario controls on the left to simulate automated policy evaluation.</p>\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2145,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"{/* --- INTERACTIVE MAP SIMULATION HUD (LIGHT THEME) --- */}\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2153,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"+1 (215) 555-0188\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2159,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"424242\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2165,
+        "type": "PLACEHOLDER_KEYWORD",
+        "content": "\"content\": \"placeholder=\\\"dispatch@anblimo-philly.com\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2173,
+        "type": "FAKE_KEYWORD",
+        "content": "\"content\": \"(r\\\"setActionNotice\\\\([^)]*(?:simulat|dummy|fake|sample)\\\", \\\"SIMULATED_UI_ACTION\\\"),\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2173,
+        "type": "DUMMY_KEYWORD",
+        "content": "\"content\": \"(r\\\"setActionNotice\\\\([^)]*(?:simulat|dummy|fake|sample)\\\", \\\"SIMULATED_UI_ACTION\\\"),\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2179,
+        "type": "FAKE_KEYWORD",
+        "content": "\"content\": \"(r\\\"setActionNotice\\\\([^)]*(?:simulat|dummy|fake|sample)\\\", \\\"SIMULATED_UI_ACTION\\\"),\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2179,
+        "type": "DUMMY_KEYWORD",
+        "content": "\"content\": \"(r\\\"setActionNotice\\\\([^)]*(?:simulat|dummy|fake|sample)\\\", \\\"SIMULATED_UI_ACTION\\\"),\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2187,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"# Simulate a completed trip: $200 Subtotal + $40 Gratuity = $240 Total\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2195,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"# \\ud83e\\udd16 TRACK E: VOICE AI, GRAPHRAG & AUTONOMOUS DISRUPTION SIMULATION\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2201,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"test(\\\"E. AI & Voice Hub\\\", \\\"Voice AI Telephony Call Simulation\\\", \\\"POST\\\", f\\\"{BASE_PHILLY_URL}/api/v1/voice/simulate-call\\\","
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2207,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"test(\\\"E. AI & Voice Hub\\\", \\\"Simulator Webhook (Wheels-Down Touchdown)\\\", \\\"POST\\\", f\\\"{BASE_PHILLY_URL}/api/v1/webhooks/simula"
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2215,
+        "type": "MOCK_KEYWORD",
+        "content": "\"content\": \"from unittest.mock import patch, AsyncMock\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2223,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"# Simulate 45 minute flight delay\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2231,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"# Transfer succeeds with live/simulated connected account\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2237,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"# 1. API Escrow Simulation\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2243,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"\\\"/api/v1/payments/simulate-escrow-settlement\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2251,
+        "type": "MOCK_KEYWORD",
+        "content": "\"content\": \"# Verify no mock dummy bookings or trips remain hardcoded at initialization\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2251,
+        "type": "DUMMY_KEYWORD",
+        "content": "\"content\": \"# Verify no mock dummy bookings or trips remain hardcoded at initialization\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2257,
+        "type": "MOCK_KEYWORD",
+        "content": "\"content\": \"# Verify no mock dummy bookings or trips remain hardcoded at initialization\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2257,
+        "type": "DUMMY_KEYWORD",
+        "content": "\"content\": \"# Verify no mock dummy bookings or trips remain hardcoded at initialization\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2265,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"\\\"\\\"\\\"Validates the live REST API endpoint POST /api/v1/payments/simulate-escrow-settlement.\\\"\\\"\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2271,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"\\\"/api/v1/payments/simulate-escrow-settlement\\\",\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2277,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"print(f\\\"\\\\n[OK] REST API Split Simulated Successfully: Exchange ID={data['exchange_id']}\\\")\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2285,
+        "type": "MOCK_KEYWORD",
+        "content": "\"content\": \"from unittest.mock import patch\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2293,
+        "type": "MOCK_KEYWORD",
+        "content": "\"content\": \"Regression Guard Test Suite: Ensures zero mock, fake, demo, or hardcoded business runtime data\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2293,
+        "type": "FAKE_KEYWORD",
+        "content": "\"content\": \"Regression Guard Test Suite: Ensures zero mock, fake, demo, or hardcoded business runtime data\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2299,
+        "type": "MOCK_KEYWORD",
+        "content": "\"content\": \"Regression Guard Test Suite: Ensures zero mock, fake, demo, or hardcoded business runtime data\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2299,
+        "type": "FAKE_KEYWORD",
+        "content": "\"content\": \"Regression Guard Test Suite: Ensures zero mock, fake, demo, or hardcoded business runtime data\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2305,
+        "type": "FAKE_KEYWORD",
+        "content": "\"content\": \"\\\"\\\"\\\"Verifies that the runtime database instance does not contain fabricated sample invoices or fake seed trips.\\\"\\\"\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2311,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"\\\"\\\"\\\"Verifies TwilioNotificationService reports GATEWAY_UNCONFIGURED rather than simulated success.\\\"\\\"\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2317,
+        "type": "MOCK_KEYWORD",
+        "content": "\"content\": \"\\\"\\\"\\\"Scans all Python files under app/ for forbidden mock simulation tokens.\\\"\\\"\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2317,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"\\\"\\\"\\\"Scans all Python files under app/ for forbidden mock simulation tokens.\\\"\\\"\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2323,
+        "type": "MOCK_KEYWORD",
+        "content": "\"content\": \"\\\"\\\"\\\"Scans all Python files under app/ for forbidden mock simulation tokens.\\\"\\\"\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2323,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"\\\"\\\"\\\"Scans all Python files under app/ for forbidden mock simulation tokens.\\\"\\\"\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2329,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"r\\\"\\\\[SMS SIMULATION\\\\]\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2335,
+        "type": "MOCK_KEYWORD",
+        "content": "\"content\": \"assert not violations, f\\\"Found mock data violations in production code: {violations}\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2343,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"# Simulate an active trip at that time\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2351,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"5. Developer & Dispatcher Simulation API Endpoints\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2357,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"\\\"\\\"\\\"Verifies the developer & dispatcher /api/v1/webhooks/simulate endpoint.\\\"\\\"\\\"\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2363,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"res = client.post(\\\"/api/v1/webhooks/simulate\\\", json={\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2371,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"# Simulate Global Hub outage\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2379,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"# Trigger dunning simulation\""
+      },
+      {
+        "file": "scratch\\audit_findings.json",
+        "line": 2387,
+        "type": "SIMULATION_KEYWORD",
+        "content": "\"content\": \"response = client.post(\\\"/api/v1/voice/simulate-call\\\", json=payload)\""
       }
     ],
     "scratch\\audit_scan.py": [
@@ -2243,6 +4931,14 @@
         "content": "\"/api/v1/payments/simulate-escrow-settlement\","
       }
     ],
+    "tests\\test_fleet_availability_and_farmout.py": [
+      {
+        "file": "tests\\test_fleet_availability_and_farmout.py",
+        "line": 109,
+        "type": "SIMULATION_KEYWORD",
+        "content": "# Book up all active Escalades for ANB Philly to simulate 100% depot utilization"
+      }
+    ],
     "tests\\test_golden_template_and_dynamic_db.py": [
       {
         "file": "tests\\test_golden_template_and_dynamic_db.py",
@@ -2314,23 +5010,23 @@
         "file": "tests\\test_no_mock_runtime_guard.py",
         "line": 74,
         "type": "MOCK_KEYWORD",
-        "content": "\"\"\"Scans all Python files under app/ for forbidden mock simulation tokens.\"\"\""
+        "content": "\"\"\"Scans all Python files under app/ and packages/ for forbidden mock simulation tokens.\"\"\""
       },
       {
         "file": "tests\\test_no_mock_runtime_guard.py",
         "line": 74,
         "type": "SIMULATION_KEYWORD",
-        "content": "\"\"\"Scans all Python files under app/ for forbidden mock simulation tokens.\"\"\""
+        "content": "\"\"\"Scans all Python files under app/ and packages/ for forbidden mock simulation tokens.\"\"\""
       },
       {
         "file": "tests\\test_no_mock_runtime_guard.py",
         "line": 80,
         "type": "SIMULATION_KEYWORD",
-        "content": "r\"\\[SMS SIMULATION\\]\""
+        "content": "r\"\\[SMS SIMULATION\\]\","
       },
       {
         "file": "tests\\test_no_mock_runtime_guard.py",
-        "line": 90,
+        "line": 93,
         "type": "MOCK_KEYWORD",
         "content": "assert not violations, f\"Found mock data violations in production code: {violations}\""
       }
