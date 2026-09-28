@@ -11,11 +11,10 @@ services:
       - ../../.env
       - ./vendor.env
     environment:
-      - MYSQL_HOST=limo-mysql
+      - MYSQL_HOST=host.docker.internal
       - MYSQL_PORT=3306
       - GLOBAL_HUB_URL=http://limo-global-hub:8000
-    depends_on:
-      limo-mysql:
-        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - limo-net

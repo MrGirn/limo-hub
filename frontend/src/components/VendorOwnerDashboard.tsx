@@ -2276,10 +2276,10 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#F3F4F6', color: '#0F172A', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       
-      {/* 1. TOP MICROSOFT AZURE PORTAL COMMAND BAR */}
+      {/* 1. TOP EXECUTIVE FLEET COMMAND BAR — LUXURY DARK GLASSMORPHISM */}
       <header className="vendor-top-header">
         {/* Left: Hamburger & Local Vendor Identity */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button 
             onClick={() => {
               if (window.innerWidth <= 768) {
@@ -2288,33 +2288,60 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                 setIsSidebarCollapsed(!isSidebarCollapsed);
               }
             }}
-            style={{ background: 'transparent', border: 'none', color: '#FFFFFF', cursor: 'pointer', padding: '6px', borderRadius: '4px', display: 'flex', alignItems: 'center', minWidth: '32px', minHeight: '32px' }}
+            style={{ 
+              background: 'rgba(255, 255, 255, 0.06)', 
+              border: '1px solid rgba(255, 255, 255, 0.12)', 
+              color: '#FFFFFF', 
+              cursor: 'pointer', 
+              padding: '6px', 
+              borderRadius: '6px', 
+              display: 'flex', 
+              alignItems: 'center', 
+              minWidth: '32px', 
+              minHeight: '32px',
+              transition: 'all 0.2s ease'
+            }}
             title="Toggle Menu"
           >
-            <Grid size={18} />
+            <Grid size={16} />
           </button>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
-            <Shield size={16} color="#FFFFFF" style={{ flexShrink: 0 }} />
-            <span style={{ fontWeight: 800, fontSize: '13px', letterSpacing: '0.02em', color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+            <div style={{
+              width: '28px',
+              height: '28px',
+              borderRadius: '6px',
+              background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(16, 185, 129, 0.2))',
+              border: '1px solid rgba(245, 158, 11, 0.35)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              <Shield size={15} color="#FBBF24" />
+            </div>
+            <span style={{ fontWeight: 800, fontSize: '13.5px', letterSpacing: '-0.01em', color: '#F8FAFC', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>
               {config.vendor_name || 'Autonomous Operations'}
             </span>
-            <span className="vendor-header-desktop-only" style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px' }}>|</span>
-            <span className="vendor-header-desktop-only" style={{ fontWeight: 600, fontSize: '12px', color: 'rgba(255,255,255,0.9)' }}>
+            <span className="vendor-header-desktop-only" style={{ color: 'rgba(255,255,255,0.25)', fontSize: '12px' }}>|</span>
+            <span className="vendor-header-desktop-only" style={{ fontWeight: 600, fontSize: '12.5px', color: '#94A3B8' }}>
               Executive Fleet Console
             </span>
             <span style={{
-              fontSize: '9.5px',
+              fontSize: '9px',
               fontWeight: 800,
-              padding: '1px 5px',
-              borderRadius: '4px',
-              backgroundColor: 'rgba(255, 255, 255, 0.25)',
-              color: '#FFFFFF',
+              letterSpacing: '0.06em',
+              padding: '2px 7px',
+              borderRadius: '9999px',
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(5, 150, 105, 0.35))',
+              border: '1px solid rgba(16, 185, 129, 0.45)',
+              color: '#34D399',
               marginLeft: '2px',
               whiteSpace: 'nowrap',
-              flexShrink: 0
+              flexShrink: 0,
+              boxShadow: '0 0 8px rgba(16, 185, 129, 0.2)'
             }}>
-              SOVEREIGN
+              SOVEREIGN CELL
             </span>
           </div>
         </div>
@@ -2322,29 +2349,34 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
         {/* Center: Autonomy Controls (Desktop) */}
         <div className="vendor-header-desktop-only" style={{
           alignItems: 'center',
-          backgroundColor: 'rgba(0,0,0,0.2)',
-          padding: '3px 6px',
-          borderRadius: '6px',
-          gap: '4px'
+          backgroundColor: 'rgba(0, 0, 0, 0.55)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          padding: '3px 5px',
+          borderRadius: '9999px',
+          gap: '4px',
+          boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.5)'
         }}>
-          <span style={{ fontSize: '10px', fontWeight: 800, color: 'rgba(255,255,255,0.85)', padding: '0 4px' }}>
+          <span style={{ fontSize: '9.5px', fontWeight: 800, color: '#64748B', letterSpacing: '0.08em', padding: '0 6px' }}>
             AUTONOMY:
           </span>
 
           <button
             onClick={() => handleAutonomyChange('L5_FULL_AUTONOMY')}
             style={{
-              padding: '3px 8px',
-              borderRadius: '4px',
-              fontSize: '10px',
+              padding: '4px 10px',
+              borderRadius: '9999px',
+              fontSize: '10.5px',
               fontWeight: 800,
               cursor: 'pointer',
               border: 'none',
-              backgroundColor: autonomyLevel === 'L5_FULL_AUTONOMY' ? '#16A34A' : 'transparent',
-              color: autonomyLevel === 'L5_FULL_AUTONOMY' ? '#FFFFFF' : 'rgba(255,255,255,0.8)',
+              backgroundColor: autonomyLevel === 'L5_FULL_AUTONOMY' ? '#10B981' : 'transparent',
+              backgroundImage: autonomyLevel === 'L5_FULL_AUTONOMY' ? 'linear-gradient(135deg, #059669, #10B981)' : 'none',
+              color: autonomyLevel === 'L5_FULL_AUTONOMY' ? '#FFFFFF' : '#94A3B8',
               display: 'flex',
               alignItems: 'center',
-              gap: '3px'
+              gap: '4px',
+              boxShadow: autonomyLevel === 'L5_FULL_AUTONOMY' ? '0 0 12px rgba(16,185,129,0.45)' : 'none',
+              transition: 'all 0.2s ease'
             }}
           >
             <Play size={10} fill={autonomyLevel === 'L5_FULL_AUTONOMY' ? '#FFFFFF' : 'none'} />
@@ -2354,17 +2386,20 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
           <button
             onClick={() => handleAutonomyChange('L3_SHADOW_ASSIST')}
             style={{
-              padding: '3px 8px',
-              borderRadius: '4px',
-              fontSize: '10px',
+              padding: '4px 10px',
+              borderRadius: '9999px',
+              fontSize: '10.5px',
               fontWeight: 800,
               cursor: 'pointer',
               border: 'none',
-              backgroundColor: autonomyLevel === 'L3_SHADOW_ASSIST' ? '#D97706' : 'transparent',
-              color: autonomyLevel === 'L3_SHADOW_ASSIST' ? '#FFFFFF' : 'rgba(255,255,255,0.8)',
+              backgroundColor: autonomyLevel === 'L3_SHADOW_ASSIST' ? '#F59E0B' : 'transparent',
+              backgroundImage: autonomyLevel === 'L3_SHADOW_ASSIST' ? 'linear-gradient(135deg, #D97706, #F59E0B)' : 'none',
+              color: autonomyLevel === 'L3_SHADOW_ASSIST' ? '#FFFFFF' : '#94A3B8',
               display: 'flex',
               alignItems: 'center',
-              gap: '3px'
+              gap: '4px',
+              boxShadow: autonomyLevel === 'L3_SHADOW_ASSIST' ? '0 0 12px rgba(245,158,11,0.45)' : 'none',
+              transition: 'all 0.2s ease'
             }}
           >
             <Pause size={10} fill={autonomyLevel === 'L3_SHADOW_ASSIST' ? '#FFFFFF' : 'none'} />
@@ -2374,17 +2409,20 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
           <button
             onClick={() => handleAutonomyChange('L0_MANUAL_KILL_SWITCH')}
             style={{
-              padding: '3px 8px',
-              borderRadius: '4px',
-              fontSize: '10px',
+              padding: '4px 10px',
+              borderRadius: '9999px',
+              fontSize: '10.5px',
               fontWeight: 800,
               cursor: 'pointer',
               border: 'none',
-              backgroundColor: autonomyLevel === 'L0_MANUAL_KILL_SWITCH' ? '#DC2626' : 'transparent',
-              color: autonomyLevel === 'L0_MANUAL_KILL_SWITCH' ? '#FFFFFF' : 'rgba(255,255,255,0.8)',
+              backgroundColor: autonomyLevel === 'L0_MANUAL_KILL_SWITCH' ? '#EF4444' : 'transparent',
+              backgroundImage: autonomyLevel === 'L0_MANUAL_KILL_SWITCH' ? 'linear-gradient(135deg, #DC2626, #EF4444)' : 'none',
+              color: autonomyLevel === 'L0_MANUAL_KILL_SWITCH' ? '#FFFFFF' : '#94A3B8',
               display: 'flex',
               alignItems: 'center',
-              gap: '3px'
+              gap: '4px',
+              boxShadow: autonomyLevel === 'L0_MANUAL_KILL_SWITCH' ? '0 0 12px rgba(239,68,68,0.45)' : 'none',
+              transition: 'all 0.2s ease'
             }}
           >
             <Power size={10} />
@@ -2401,17 +2439,18 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
               else handleAutonomyChange('L5_FULL_AUTONOMY');
             }}
             style={{
-              padding: '3px 8px',
-              borderRadius: '12px',
-              fontSize: '10px',
+              padding: '4px 10px',
+              borderRadius: '9999px',
+              fontSize: '10.5px',
               fontWeight: 800,
               cursor: 'pointer',
-              border: '1px solid rgba(255,255,255,0.3)',
-              backgroundColor: autonomyLevel === 'L5_FULL_AUTONOMY' ? '#16A34A' : (autonomyLevel === 'L3_SHADOW_ASSIST' ? '#D97706' : '#DC2626'),
+              border: '1px solid rgba(255,255,255,0.2)',
+              backgroundColor: autonomyLevel === 'L5_FULL_AUTONOMY' ? '#10B981' : (autonomyLevel === 'L3_SHADOW_ASSIST' ? '#F59E0B' : '#EF4444'),
               color: '#FFFFFF',
               display: 'flex',
               alignItems: 'center',
-              gap: '3px'
+              gap: '4px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
             }}
             title="Tap to toggle autonomy mode"
           >
@@ -2420,43 +2459,46 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
         </div>
 
         {/* Right: Commercial Playbook & Storefront */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
             onClick={() => setShowCommercialGuideModal(true)}
             style={{
-              padding: '4px 10px',
-              backgroundColor: '#FFFFFF',
-              color: '#0F172A',
-              border: '1px solid #FFFFFF',
-              borderRadius: '4px',
-              fontSize: '11px',
+              padding: '5px 12px',
+              background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.25))',
+              color: '#FCD34D',
+              border: '1px solid rgba(245, 158, 11, 0.45)',
+              borderRadius: '6px',
+              fontSize: '11.5px',
               fontWeight: 800,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '4px',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
+              gap: '5px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+              transition: 'all 0.2s ease'
             }}
             title="Open comprehensive commercial operations, tariff & platform playbook"
           >
-            <BookOpen size={12} color="#0F172A" />
+            <BookOpen size={12} color="#FCD34D" />
             <span className="vendor-header-desktop-only">Playbook</span>
           </button>
 
           <button
             onClick={onNavigateToStorefront}
             style={{
-              padding: '4px 10px',
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              color: '#FFFFFF',
-              border: '1px solid rgba(255, 255, 255, 0.4)',
-              borderRadius: '4px',
-              fontSize: '11px',
+              padding: '5px 12px',
+              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+              color: '#F1F5F9',
+              border: '1px solid rgba(255, 255, 255, 0.16)',
+              borderRadius: '6px',
+              fontSize: '11.5px',
               fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '4px'
+              gap: '4px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+              transition: 'all 0.2s ease'
             }}
             title="Return to Customer Booking Storefront"
           >
@@ -2471,12 +2513,23 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
         onClick={() => setIsMobileNavOpen(false)}
       />
       <aside className={`vendor-drawer-panel ${isMobileNavOpen ? 'open' : ''}`}>
-        <div style={{ padding: '14px 16px', backgroundColor: '#0078D4', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Shield size={18} color="#FFFFFF" />
+        <div style={{ padding: '16px 18px', background: 'linear-gradient(135deg, #090D16 0%, #0F172A 50%, #1E293B 100%)', borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '6px',
+              background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(16, 185, 129, 0.2))',
+              border: '1px solid rgba(245, 158, 11, 0.35)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Shield size={16} color="#FBBF24" />
+            </div>
             <div>
-              <div style={{ fontWeight: 800, fontSize: '13px' }}>{config.vendor_name || 'Autonomous Operations'}</div>
-              <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.85)' }}>Executive Fleet Console</div>
+              <div style={{ fontWeight: 800, fontSize: '13.5px', color: '#F8FAFC' }}>{config.vendor_name || 'Autonomous Operations'}</div>
+              <div style={{ fontSize: '10.5px', color: '#94A3B8' }}>Executive Fleet Console</div>
             </div>
           </div>
           <button 

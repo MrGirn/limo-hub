@@ -265,79 +265,75 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
   const unit = sim?.unit_economics;
 
   return (
-    <div className="space-y-6 w-full text-slate-100">
+    <div className="ops-pricing-studio">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-blue-950/40 to-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-md">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="ops-banner">
+        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-semibold uppercase tracking-wider mb-2">
-              <Sparkles className="w-3.5 h-3.5" />
-              Operations Pricing Intelligence & Strategy Workbench
+            <div className="ops-badge">
+              <Sparkles size={13} color="#60A5FA" />
+              <span>Operations Pricing Intelligence & Strategy Workbench</span>
             </div>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
+            <h2 className="ops-banner-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               Real-Time Tariff Comparison & Live Research Studio
             </h2>
-            <p className="text-slate-400 text-sm mt-1">
+            <p className="ops-banner-desc">
               Compare your live fleet pricing side-by-side against market benchmark references, itemize surcharges, and adjust customer billing strategies in real time.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
             <button
               onClick={() => { fetchSimulation(); fetchCentralTollRegistry(); fetchTaxRules(); }}
               disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold border border-slate-700 shadow transition-all"
+              className="ops-btn ops-btn-recalc"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-              Recalculate
+              <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+              <span>Recalculate</span>
             </button>
 
             <button
               onClick={() => setShowTaxRulesModal(!showTaxRulesModal)}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 rounded-xl text-xs font-semibold border border-emerald-500/40 shadow transition-all"
+              className="ops-btn ops-btn-tax"
             >
-              <Landmark className="w-3.5 h-3.5" />
-              Regional Tax Rules ({regionalTaxRules.length})
+              <Landmark size={13} />
+              <span>Regional Tax Rules ({regionalTaxRules.length})</span>
             </button>
 
             <button
               onClick={() => setShowTollHubModal(!showTollHubModal)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 rounded-xl text-xs font-semibold border border-blue-500/40 shadow transition-all"
+              className="ops-btn ops-btn-toll"
             >
-              <Database className="w-3.5 h-3.5" />
-              Global Hub Toll Cache ({tollRegistry.length})
+              <Database size={13} />
+              <span>Global Hub Toll Cache ({tollRegistry.length})</span>
             </button>
 
             <button
               onClick={handleRunAiValidation}
               disabled={aiValidating}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-purple-500/20 transition-all"
+              className="ops-btn ops-btn-ai"
             >
-              <BrainCircuit className={`w-3.5 h-3.5 ${aiValidating ? 'animate-spin' : ''}`} />
-              {aiValidating ? 'Validating with Gemini...' : 'AI Price Validation'}
+              <BrainCircuit size={13} />
+              <span>{aiValidating ? 'Validating with Gemini...' : 'AI Price Validation'}</span>
             </button>
           </div>
         </div>
 
         {/* Preset Scenarios Selector */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-6 pt-5 border-t border-slate-800/80">
+        <div className="ops-presets-grid">
           {RESEARCH_PRESETS.map((preset) => {
             const isSelected = selectedScenarioId === preset.id;
             return (
               <button
                 key={preset.id}
                 onClick={() => applyPreset(preset)}
-                className={`text-left p-3.5 rounded-xl border transition-all ${
-                  isSelected
-                    ? 'bg-blue-900/30 border-blue-500 shadow-md shadow-blue-500/10 ring-1 ring-blue-500'
-                    : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900/60'
-                }`}
+                className={`ops-preset-card ${isSelected ? 'active' : ''}`}
               >
-                <div className="text-[11px] font-bold text-blue-400 uppercase tracking-wider mb-1">
-                  {preset.serviceType.replace('_', ' ')} {preset.isInterstate ? '• Interstate' : ''}
+                <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#60A5FA', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  {preset.serviceType.replace(/_/g, ' ')} {preset.isInterstate ? '• Interstate' : ''}
                 </div>
-                <div className="text-xs font-bold text-white line-clamp-1">{preset.name}</div>
-                <div className="text-[11px] text-slate-400 mt-1 line-clamp-2">{preset.description}</div>
+                <div style={{ fontSize: '12.5px', fontWeight: 800, color: '#FFFFFF' }}>{preset.name}</div>
+                <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px', lineHeight: '1.4' }}>{preset.description}</div>
               </button>
             );
           })}
@@ -346,122 +342,130 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
 
       {/* AI GEMINI PRICE VALIDATION RESULT BANNER */}
       {aiValidation && (
-        <div className="bg-gradient-to-r from-purple-950/70 via-slate-900 to-indigo-950/70 border border-purple-500/40 rounded-2xl p-5 shadow-2xl space-y-3">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-purple-500/20 pb-3">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-purple-400 animate-pulse" />
-              <h4 className="text-sm font-bold text-white">Google Gemini Market Pricing Intelligence & Benchmark Validation</h4>
-              <span className="px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 text-[10px] font-bold font-mono">
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(88, 28, 135, 0.4) 0%, rgba(15, 23, 42, 0.95) 50%, rgba(49, 46, 129, 0.4) 100%)',
+          border: '1px solid rgba(168, 85, 247, 0.4)',
+          borderRadius: '16px',
+          padding: '20px',
+          boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '14px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', borderBottom: '1px solid rgba(168, 85, 247, 0.2)', paddingBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Sparkles size={18} color="#C084FC" />
+              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#FFFFFF' }}>Google Gemini Market Pricing Intelligence & Benchmark Validation</h4>
+              <span style={{ padding: '2px 8px', borderRadius: '9999px', background: 'rgba(168, 85, 247, 0.2)', border: '1px solid rgba(168, 85, 247, 0.4)', color: '#D8B4FE', fontSize: '10px', fontWeight: 800, fontFamily: 'monospace' }}>
                 {aiValidation.ai_model_used || 'gemini-3.8-flash'}
               </span>
             </div>
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-slate-400">Confidence:</span>
-              <span className="font-bold text-emerald-400 font-mono">{((aiValidation.confidence_score || 0.95) * 100).toFixed(0)}%</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>
+              <span style={{ color: '#94A3B8' }}>Confidence:</span>
+              <span style={{ fontWeight: 800, color: '#34D399', fontFamily: 'monospace' }}>{((aiValidation.confidence_score || 0.95) * 100).toFixed(0)}%</span>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-            <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800">
-              <div className="text-[10px] text-slate-400">Your Proposed Price</div>
-              <div className="text-base font-extrabold text-white font-mono mt-0.5">${Number(aiValidation.proposed_price || 0).toFixed(2)}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
+            <div className="ops-metric-box">
+              <div style={{ fontSize: '10.5px', color: '#94A3B8' }}>Your Proposed Price</div>
+              <div style={{ fontSize: '18px', fontWeight: 800, color: '#FFFFFF', fontFamily: 'monospace', marginTop: '4px' }}>${Number(aiValidation.proposed_price || 0).toFixed(2)}</div>
             </div>
-            <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800">
-              <div className="text-[10px] text-purple-400">AI Recommended Price</div>
-              <div className="text-base font-extrabold text-purple-300 font-mono mt-0.5">${Number(aiValidation.ai_recommended_price || 0).toFixed(2)}</div>
+            <div className="ops-metric-box" style={{ borderColor: 'rgba(168, 85, 247, 0.4)' }}>
+              <div style={{ fontSize: '10.5px', color: '#C084FC' }}>AI Recommended Price</div>
+              <div style={{ fontSize: '18px', fontWeight: 800, color: '#D8B4FE', fontFamily: 'monospace', marginTop: '4px' }}>${Number(aiValidation.ai_recommended_price || 0).toFixed(2)}</div>
             </div>
-            <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800">
-              <div className="text-[10px] text-slate-400">Market Range (Low - High)</div>
-              <div className="text-sm font-bold text-slate-200 font-mono mt-0.5">
+            <div className="ops-metric-box">
+              <div style={{ fontSize: '10.5px', color: '#94A3B8' }}>Market Range (Low - High)</div>
+              <div style={{ fontSize: '15px', fontWeight: 700, color: '#E2E8F0', fontFamily: 'monospace', marginTop: '4px' }}>
                 ${Number(aiValidation.market_low || 0).toFixed(0)} - ${Number(aiValidation.market_high || 0).toFixed(0)}
               </div>
             </div>
-            <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800">
-              <div className="text-[10px] text-slate-400">Recommendation Status</div>
-              <div className="text-xs font-bold text-emerald-400 mt-1 uppercase tracking-wide">
+            <div className="ops-metric-box" style={{ borderColor: 'rgba(16, 185, 129, 0.4)' }}>
+              <div style={{ fontSize: '10.5px', color: '#94A3B8' }}>Recommendation Status</div>
+              <div style={{ fontSize: '12px', fontWeight: 800, color: '#34D399', marginTop: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 {aiValidation.recommendation_status?.replace(/_/g, ' ') || 'OPTIMAL COMPETITIVE'}
               </div>
             </div>
           </div>
 
-          <div className="text-xs text-slate-300 bg-slate-950/50 p-3 rounded-xl border border-purple-500/20 leading-relaxed">
-            <strong className="text-purple-300">Market Intelligence & Context: </strong>
+          <div style={{ fontSize: '12px', color: '#CBD5E1', background: 'rgba(11, 15, 25, 0.6)', padding: '12px 16px', borderRadius: '10px', border: '1px solid rgba(168, 85, 247, 0.25)', lineHeight: '1.5' }}>
+            <strong style={{ color: '#D8B4FE' }}>Market Intelligence & Context: </strong>
             {aiValidation.reasoning_and_market_context}
           </div>
         </div>
       )}
 
-
       {saveSuccess && (
-        <div className="bg-emerald-950/50 border border-emerald-500/40 text-emerald-300 p-4 rounded-xl flex items-center gap-3 text-sm font-semibold">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-          {saveSuccess}
+        <div style={{ background: 'rgba(6, 78, 59, 0.5)', border: '1px solid rgba(16, 185, 129, 0.45)', color: '#6EE7B7', padding: '14px 18px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', fontWeight: 700 }}>
+          <CheckCircle2 size={18} color="#34D399" />
+          <span>{saveSuccess}</span>
         </div>
       )}
 
       {error && (
-        <div className="bg-red-950/50 border border-red-500/40 text-red-300 p-4 rounded-xl flex items-center gap-3 text-sm font-semibold">
-          <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
-          {error}
+        <div style={{ background: 'rgba(127, 29, 29, 0.5)', border: '1px solid rgba(239, 68, 68, 0.45)', color: '#FCA5A5', padding: '14px 18px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', fontWeight: 700 }}>
+          <AlertCircle size={18} color="#EF4444" />
+          <span>{error}</span>
         </div>
       )}
 
       {/* 3-COLUMN SIDE-BY-SIDE TARIFF COMPARISON MATRIX */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="ops-comparison-grid">
         
-        {/* COLUMN 1: LIVE MARKET REFERENCE (THEIR MODEL) */}
-        <div className="bg-slate-900/90 border border-amber-500/30 rounded-2xl p-5 shadow-xl flex flex-col justify-between relative overflow-hidden">
-          <div className="absolute top-0 right-0 bg-amber-500/10 border-l border-b border-amber-500/30 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-amber-400 rounded-bl-xl">
+        {/* COLUMN 1: LIVE MARKET REFERENCE (BENCHMARK) */}
+        <div className="ops-card ops-card-benchmark">
+          <div className="ops-card-badge">
             Live Market Benchmark
           </div>
 
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <Award className="w-5 h-5 text-amber-400" />
-              <h3 className="text-base font-bold text-white">Live Reference Tariff</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <Award size={18} color="#FBBF24" />
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#FFFFFF' }}>Live Reference Tariff</h3>
             </div>
-            <p className="text-xs text-slate-400 mb-4">
-              Industry standard reference model ({vehicleClass.replace('_', ' ')} • 8 Hours Charter).
+            <p style={{ fontSize: '12px', color: '#94A3B8', margin: '0 0 16px 0' }}>
+              Industry standard reference model ({vehicleClass.replace(/_/g, ' ')} • {hourlyHours} Hours Charter).
             </p>
 
             {bench && (
-              <div className="space-y-2.5 text-xs">
-                <div className="flex justify-between py-1.5 border-b border-slate-800">
-                  <span className="text-slate-400">Base Rate (${bench.hourly_rate.toFixed(2)} × {hourlyHours}h):</span>
-                  <span className="font-mono font-bold text-white">${bench.base_fare.toFixed(2)}</span>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <div className="ops-line-item">
+                  <span style={{ color: '#94A3B8' }}>Base Rate (${bench.hourly_rate.toFixed(2)} × {hourlyHours}h):</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#FFFFFF' }}>${bench.base_fare.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800">
-                  <span className="text-slate-400">Fuel Surcharge (10.0%):</span>
-                  <span className="font-mono font-bold text-amber-300">+${bench.fuel_surcharge.toFixed(2)}</span>
+                <div className="ops-line-item">
+                  <span style={{ color: '#94A3B8' }}>Fuel Surcharge (10.0%):</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#FCD34D' }}>+${bench.fuel_surcharge.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800">
-                  <span className="text-slate-400">Operating Service Charge (7.0%):</span>
-                  <span className="font-mono font-bold text-amber-300">+${bench.service_charge.toFixed(2)}</span>
+                <div className="ops-line-item">
+                  <span style={{ color: '#94A3B8' }}>Operating Service Charge (7.0%):</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#FCD34D' }}>+${bench.service_charge.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800">
-                  <span className="text-slate-400">Bridge, Tunnel & Turnpike Tolls:</span>
-                  <span className="font-mono font-bold text-blue-300">+${bench.tolls.toFixed(2)}</span>
+                <div className="ops-line-item">
+                  <span style={{ color: '#94A3B8' }}>Bridge, Tunnel & Turnpike Tolls:</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#93C5FD' }}>+${bench.tolls.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800">
-                  <span className="text-slate-400">Credit Card Service Fee (~2.31%):</span>
-                  <span className="font-mono font-bold text-slate-300">+${bench.credit_card_fee.toFixed(2)}</span>
+                <div className="ops-line-item">
+                  <span style={{ color: '#94A3B8' }}>Credit Card Fee (~2.31%):</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#E2E8F0' }}>+${bench.credit_card_fee.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800">
-                  <span className="text-slate-400">Sales Tax (Interstate Exemption):</span>
-                  <span className="font-mono font-bold text-emerald-400">${bench.tax.toFixed(2)} (Exempt)</span>
+                <div className="ops-line-item">
+                  <span style={{ color: '#94A3B8' }}>Sales Tax (Interstate Exemption):</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#34D399' }}>${bench.tax.toFixed(2)} (Exempt)</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800">
-                  <span className="text-slate-400">Driver Gratuity:</span>
-                  <span className="font-mono text-slate-400">$0.00 (Customer Tip Pills)</span>
+                <div className="ops-line-item">
+                  <span style={{ color: '#94A3B8' }}>Driver Gratuity:</span>
+                  <span style={{ fontFamily: 'monospace', color: '#64748B' }}>$0.00 (Customer Tip Pills)</span>
                 </div>
               </div>
             )}
           </div>
 
-          <div className="mt-6 pt-4 border-t border-slate-800">
-            <div className="flex justify-between items-baseline">
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Benchmark Total:</span>
-              <span className="text-2xl font-extrabold text-amber-400 font-mono">
+          <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Benchmark Total:</span>
+              <span style={{ fontSize: '24px', fontWeight: 800, color: '#FBBF24', fontFamily: 'monospace' }}>
                 ${bench?.total_payable.toFixed(2) || '1,147.56'}
               </span>
             </div>
@@ -469,49 +473,53 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
         </div>
 
         {/* COLUMN 2: OWNER ACTIVE FLEET TARIFF (CURRENT IN DB) */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between relative overflow-hidden">
-          <div className="absolute top-0 right-0 bg-slate-800 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-300 rounded-bl-xl">
+        <div className="ops-card ops-card-active">
+          <div className="ops-card-badge">
             Active in Database
           </div>
 
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <Building2 className="w-5 h-5 text-blue-400" />
-              <h3 className="text-base font-bold text-white">Your Current Tariff</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <Building2 size={18} color="#60A5FA" />
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#FFFFFF' }}>Your Current Tariff</h3>
             </div>
-            <p className="text-xs text-slate-400 mb-4">
+            <p style={{ fontSize: '12px', color: '#94A3B8', margin: '0 0 16px 0' }}>
               Real-time calculation from your active database rules.
             </p>
 
             {active && (
-              <div className="space-y-2.5 text-xs">
-                <div className="flex justify-between py-1.5 border-b border-slate-800">
-                  <span className="text-slate-400">Base Hourly / Charter Fare:</span>
-                  <span className="font-mono font-bold text-white">${active.base_fare.toFixed(2)}</span>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <div className="ops-line-item">
+                  <span style={{ color: '#94A3B8' }}>Base Hourly / Charter Fare:</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#FFFFFF' }}>${active.base_fare.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800">
-                  <span className="text-slate-400">Fuel Surcharge:</span>
-                  <span className="font-mono font-bold text-slate-300">${active.fuel_surcharge.toFixed(2)}</span>
+                <div className="ops-line-item">
+                  <span style={{ color: '#94A3B8' }}>Fuel Surcharge:</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#CBD5E1' }}>+${active.fuel_surcharge.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800">
-                  <span className="text-slate-400">Operating Service Charge:</span>
-                  <span className="font-mono font-bold text-slate-300">${active.service_charge.toFixed(2)}</span>
+                <div className="ops-line-item">
+                  <span style={{ color: '#94A3B8' }}>Operating Service Charge:</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#CBD5E1' }}>+${active.service_charge.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800">
-                  <span className="text-slate-400">Detected Corridor Tolls:</span>
-                  <span className="font-mono font-bold text-blue-300">+${active.tolls.toFixed(2)}</span>
+                <div className="ops-line-item">
+                  <span style={{ color: '#94A3B8' }}>Detected Corridor Tolls:</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#93C5FD' }}>+${active.tolls.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800">
-                  <span className="text-slate-400">Credit Card Fee:</span>
-                  <span className="font-mono font-bold text-slate-300">${active.credit_card_fee.toFixed(2)}</span>
+                <div className="ops-line-item">
+                  <span style={{ color: '#94A3B8' }}>Credit Card Fee:</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#CBD5E1' }}>+${active.credit_card_fee.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800">
-                  <span className="text-slate-400">Jurisdiction Sales Tax:</span>
-                  <span className="font-mono font-bold text-slate-300">${active.tax.toFixed(2)}</span>
+                <div className="ops-line-item">
+                  <span style={{ color: '#94A3B8' }}>Jurisdiction Sales Tax:</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#CBD5E1' }}>+${active.tax.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800">
-                  <span className="text-slate-400">Variance vs. Benchmark:</span>
-                  <span className={`font-mono font-bold ${active.total_payable > (bench?.total_payable || 0) ? 'text-red-400' : 'text-emerald-400'}`}>
+                <div className="ops-line-item">
+                  <span style={{ color: '#94A3B8' }}>Variance vs. Benchmark:</span>
+                  <span style={{
+                    fontFamily: 'monospace',
+                    fontWeight: 800,
+                    color: active.total_payable > (bench?.total_payable || 0) ? '#F87171' : '#34D399'
+                  }}>
                     {active.total_payable > (bench?.total_payable || 0) ? '+' : ''}
                     ${(active.total_payable - (bench?.total_payable || 0)).toFixed(2)}
                   </span>
@@ -520,10 +528,10 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
             )}
           </div>
 
-          <div className="mt-6 pt-4 border-t border-slate-800">
-            <div className="flex justify-between items-baseline">
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Total:</span>
-              <span className="text-2xl font-extrabold text-white font-mono">
+          <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Active Total:</span>
+              <span style={{ fontSize: '24px', fontWeight: 800, color: '#FFFFFF', fontFamily: 'monospace' }}>
                 ${active?.total_payable.toFixed(2) || '0.00'}
               </span>
             </div>
@@ -531,57 +539,57 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
         </div>
 
         {/* COLUMN 3: OPERATIONS RECOMMENDED TARIFF */}
-        <div className="bg-gradient-to-br from-emerald-950/40 via-slate-900 to-blue-950/40 border border-emerald-500/40 rounded-2xl p-5 shadow-xl flex flex-col justify-between relative overflow-hidden">
-          <div className="absolute top-0 right-0 bg-emerald-500/20 border-l border-b border-emerald-500/40 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300 rounded-bl-xl">
+        <div className="ops-card ops-card-rec">
+          <div className="ops-card-badge">
             Optimized Recommendation
           </div>
 
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <Sparkles className="w-5 h-5 text-emerald-400" />
-              <h3 className="text-base font-bold text-white">Operations Recommendation</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <Sparkles size={18} color="#34D399" />
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#FFFFFF' }}>Operations Recommendation</h3>
             </div>
-            <p className="text-xs text-slate-400 mb-4">
+            <p style={{ fontSize: '12px', color: '#94A3B8', margin: '0 0 16px 0' }}>
               Algorithm-optimized profit margin with competitive win-rate.
             </p>
 
             {rec && (
-              <div className="space-y-2.5 text-xs">
-                <div className="flex justify-between py-1.5 border-b border-slate-800">
-                  <span className="text-slate-400">Base Rate (${rec.hourly_rate.toFixed(2)} × {hourlyHours}h):</span>
-                  <span className="font-mono font-bold text-white">${rec.base_fare.toFixed(2)}</span>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <div className="ops-line-item">
+                  <span style={{ color: '#94A3B8' }}>Base Rate (${rec.hourly_rate.toFixed(2)} × {hourlyHours}h):</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#FFFFFF' }}>${rec.base_fare.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800">
-                  <span className="text-slate-400">Fuel Surcharge (10.0%):</span>
-                  <span className="font-mono font-bold text-emerald-300">+${rec.fuel_surcharge.toFixed(2)}</span>
+                <div className="ops-line-item">
+                  <span style={{ color: '#94A3B8' }}>Fuel Surcharge (10.0%):</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#6EE7B7' }}>+${rec.fuel_surcharge.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800">
-                  <span className="text-slate-400">Operating Service Charge (7.0%):</span>
-                  <span className="font-mono font-bold text-emerald-300">+${rec.service_charge.toFixed(2)}</span>
+                <div className="ops-line-item">
+                  <span style={{ color: '#94A3B8' }}>Operating Service Charge (7.0%):</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#6EE7B7' }}>+${rec.service_charge.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800">
-                  <span className="text-slate-400">Tolls (Roundtrip Pass-Through):</span>
-                  <span className="font-mono font-bold text-blue-300">+${rec.tolls.toFixed(2)}</span>
+                <div className="ops-line-item">
+                  <span style={{ color: '#94A3B8' }}>Tolls (Roundtrip Pass-Through):</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#93C5FD' }}>+${rec.tolls.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800">
-                  <span className="text-slate-400">Credit Card Fee (2.31%):</span>
-                  <span className="font-mono font-bold text-slate-300">+${rec.credit_card_fee.toFixed(2)}</span>
+                <div className="ops-line-item">
+                  <span style={{ color: '#94A3B8' }}>Credit Card Fee (2.31%):</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#CBD5E1' }}>+${rec.credit_card_fee.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800">
-                  <span className="text-slate-400">Sales Tax (Interstate Livery):</span>
-                  <span className="font-mono font-bold text-emerald-400">$0.00 (Exempt)</span>
+                <div className="ops-line-item">
+                  <span style={{ color: '#94A3B8' }}>Sales Tax (Interstate Livery):</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#34D399' }}>$0.00 (Exempt)</span>
                 </div>
-                <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-[11px] text-emerald-300 mt-2">
+                <div style={{ padding: '10px 12px', background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '8px', fontSize: '11px', color: '#6EE7B7', marginTop: '10px', lineHeight: '1.4' }}>
                   {rec.strategy_note}
                 </div>
               </div>
             )}
           </div>
 
-          <div className="mt-6 pt-4 border-t border-slate-800">
-            <div className="flex justify-between items-baseline">
-              <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Recommended Total:</span>
-              <span className="text-2xl font-extrabold text-emerald-400 font-mono">
+          <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#34D399', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Recommended Total:</span>
+              <span style={{ fontSize: '24px', fontWeight: 800, color: '#34D399', fontFamily: 'monospace' }}>
                 ${rec?.total_payable.toFixed(2) || '1,195.45'}
               </span>
             </div>
@@ -591,45 +599,69 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
       </div>
 
       {/* INTERACTIVE STRATEGY ADJUSTER & UNIT ECONOMICS SIMULATOR */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+      <div className="ops-adjuster-panel">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '16px' }}>
           <div>
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <Sliders className="w-5 h-5 text-blue-400" />
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Sliders size={18} color="#60A5FA" />
               Interactive Strategy Adjuster & Decision Controls
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p style={{ margin: '4px 0 0 0', fontSize: '12.5px', color: '#94A3B8' }}>
               Customize how you charge customers, test different tariff levers, and see the live impact on gross revenue and owner net margin.
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-slate-400">Strategy:</span>
-            <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: '#94A3B8' }}>Strategy:</span>
+            <div style={{ display: 'flex', background: '#0B0F19', padding: '4px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)' }}>
               <button
                 type="button"
                 onClick={() => setChargingStrategy('CALCULATED_MATRIX')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  chargingStrategy === 'CALCULATED_MATRIX' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'
-                }`}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  fontSize: '11.5px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border: 'none',
+                  backgroundColor: chargingStrategy === 'CALCULATED_MATRIX' ? '#2563EB' : 'transparent',
+                  color: chargingStrategy === 'CALCULATED_MATRIX' ? '#FFFFFF' : '#94A3B8',
+                  transition: 'all 0.2s ease'
+                }}
               >
                 Calculated Matrix
               </button>
               <button
                 type="button"
                 onClick={() => setChargingStrategy('FLAT_HOURLY')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  chargingStrategy === 'FLAT_HOURLY' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'
-                }`}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  fontSize: '11.5px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border: 'none',
+                  backgroundColor: chargingStrategy === 'FLAT_HOURLY' ? '#2563EB' : 'transparent',
+                  color: chargingStrategy === 'FLAT_HOURLY' ? '#FFFFFF' : '#94A3B8',
+                  transition: 'all 0.2s ease'
+                }}
               >
                 Flat Hourly Charter
               </button>
               <button
                 type="button"
                 onClick={() => setChargingStrategy('FLAT_MILEAGE')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  chargingStrategy === 'FLAT_MILEAGE' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'
-                }`}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  fontSize: '11.5px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border: 'none',
+                  backgroundColor: chargingStrategy === 'FLAT_MILEAGE' ? '#2563EB' : 'transparent',
+                  color: chargingStrategy === 'FLAT_MILEAGE' ? '#FFFFFF' : '#94A3B8',
+                  transition: 'all 0.2s ease'
+                }}
               >
                 Flat Per-Mile
               </button>
@@ -638,13 +670,13 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
         </div>
 
         {/* CONTROLS GRID */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="ops-controls-grid">
           
           {/* Base Hourly Rate Slider */}
           <div>
-            <div className="flex justify-between items-center mb-1.5">
-              <label className="text-xs font-bold text-slate-300">Base Hourly Rate</label>
-              <span className="text-xs font-mono font-bold text-blue-400">${hourlyRate.toFixed(2)}/hr</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#E2E8F0' }}>Base Hourly Rate</label>
+              <span style={{ fontSize: '12.5px', fontFamily: 'monospace', fontWeight: 800, color: '#60A5FA' }}>${hourlyRate.toFixed(2)}/hr</span>
             </div>
             <input
               type="range"
@@ -653,9 +685,9 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
               step="5"
               value={hourlyRate}
               onChange={(e) => setHourlyRate(parseFloat(e.target.value))}
-              className="w-full h-2 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-blue-500"
+              className="ops-slider"
             />
-            <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#64748B', marginTop: '4px' }}>
               <span>$80</span>
               <span>$110 (Benchmark)</span>
               <span>$250</span>
@@ -664,9 +696,9 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
 
           {/* Fuel Surcharge Slider */}
           <div>
-            <div className="flex justify-between items-center mb-1.5">
-              <label className="text-xs font-bold text-slate-300">Fuel Surcharge %</label>
-              <span className="text-xs font-mono font-bold text-amber-400">{fuelSurchargePct.toFixed(1)}%</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#E2E8F0' }}>Fuel Surcharge %</label>
+              <span style={{ fontSize: '12.5px', fontFamily: 'monospace', fontWeight: 800, color: '#FBBF24' }}>{fuelSurchargePct.toFixed(1)}%</span>
             </div>
             <input
               type="range"
@@ -676,9 +708,9 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
               value={fuelSurchargePct}
               onChange={(e) => setFuelSurchargePct(parseFloat(e.target.value))}
               disabled={chargingStrategy !== 'CALCULATED_MATRIX'}
-              className="w-full h-2 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-amber-500 disabled:opacity-30"
+              className="ops-slider"
             />
-            <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#64748B', marginTop: '4px' }}>
               <span>0%</span>
               <span>10% (Live Ref)</span>
               <span>25%</span>
@@ -687,9 +719,9 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
 
           {/* Operating Service Charge Slider */}
           <div>
-            <div className="flex justify-between items-center mb-1.5">
-              <label className="text-xs font-bold text-slate-300">Service Charge %</label>
-              <span className="text-xs font-mono font-bold text-amber-400">{serviceChargePct.toFixed(1)}%</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#E2E8F0' }}>Service Charge %</label>
+              <span style={{ fontSize: '12.5px', fontFamily: 'monospace', fontWeight: 800, color: '#FBBF24' }}>{serviceChargePct.toFixed(1)}%</span>
             </div>
             <input
               type="range"
@@ -699,9 +731,9 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
               value={serviceChargePct}
               onChange={(e) => setServiceChargePct(parseFloat(e.target.value))}
               disabled={chargingStrategy !== 'CALCULATED_MATRIX'}
-              className="w-full h-2 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-amber-500 disabled:opacity-30"
+              className="ops-slider"
             />
-            <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#64748B', marginTop: '4px' }}>
               <span>0%</span>
               <span>7% (Live Ref)</span>
               <span>20%</span>
@@ -710,11 +742,11 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
 
           {/* Toll Pass-Through Mode */}
           <div>
-            <label className="text-xs font-bold text-slate-300 block mb-1.5">Intercity Toll Pass-Through</label>
+            <label style={{ fontSize: '12px', fontWeight: 700, color: '#E2E8F0', display: 'block', marginBottom: '6px' }}>Intercity Toll Pass-Through</label>
             <select
               value={tollMode}
               onChange={(e) => setTollMode(e.target.value as any)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+              className="ops-select"
             >
               <option value="ROUNDTRIP">Round-Trip Tolls ($92.00 - Full Pass)</option>
               <option value="ONE_WAY">One-Way Tolls ($38.00 - Passenger Leg)</option>
@@ -724,43 +756,63 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
 
           {/* Credit Card Processing Fee */}
           <div>
-            <label className="text-xs font-bold text-slate-300 block mb-1.5">Credit Card Surcharge</label>
+            <label style={{ fontSize: '12px', fontWeight: 700, color: '#E2E8F0', display: 'block', marginBottom: '6px' }}>Credit Card Surcharge</label>
             <button
               type="button"
               onClick={() => setCcFeePassthrough(!ccFeePassthrough)}
-              className={`w-full px-3 py-2 rounded-xl text-xs font-semibold border flex items-center justify-between transition-all ${
-                ccFeePassthrough
-                  ? 'bg-blue-600/20 border-blue-500 text-blue-300'
-                  : 'bg-slate-950 border-slate-800 text-slate-400'
-              }`}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: '10px',
+                fontSize: '11.5px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                border: ccFeePassthrough ? '1px solid #3B82F6' : '1px solid rgba(255,255,255,0.12)',
+                backgroundColor: ccFeePassthrough ? 'rgba(59, 130, 246, 0.18)' : '#0B0F19',
+                color: ccFeePassthrough ? '#60A5FA' : '#94A3B8',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                transition: 'all 0.2s ease'
+              }}
             >
               <span>{ccFeePassthrough ? 'Pass-Through +2.31%' : 'Absorb CC Merchant Fee (0%)'}</span>
-              {ccFeePassthrough && <Check className="w-4 h-4 text-blue-400" />}
+              {ccFeePassthrough && <Check size={14} color="#60A5FA" />}
             </button>
           </div>
 
           {/* Interstate Tax Exemption */}
           <div>
-            <label className="text-xs font-bold text-slate-300 block mb-1.5">Interstate Tax Regulation</label>
+            <label style={{ fontSize: '12px', fontWeight: 700, color: '#E2E8F0', display: 'block', marginBottom: '6px' }}>Interstate Tax Regulation</label>
             <button
               type="button"
               onClick={() => setInterstateTaxExempt(!interstateTaxExempt)}
-              className={`w-full px-3 py-2 rounded-xl text-xs font-semibold border flex items-center justify-between transition-all ${
-                interstateTaxExempt
-                  ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300'
-                  : 'bg-slate-950 border-slate-800 text-slate-400'
-              }`}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: '10px',
+                fontSize: '11.5px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                border: interstateTaxExempt ? '1px solid #10B981' : '1px solid rgba(255,255,255,0.12)',
+                backgroundColor: interstateTaxExempt ? 'rgba(16, 185, 129, 0.18)' : '#0B0F19',
+                color: interstateTaxExempt ? '#34D399' : '#94A3B8',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                transition: 'all 0.2s ease'
+              }}
             >
-              <span>{interstateTaxExempt ? 'Tax-Exempt (49 U.S.C. § 14505)' : 'Charge PA State Tax (6%)'}</span>
-              {interstateTaxExempt && <ShieldCheck className="w-4 h-4 text-emerald-400" />}
+              <span>{interstateTaxExempt ? 'Tax-Exempt (49 U.S.C. § 14505)' : 'Charge State Tax'}</span>
+              {interstateTaxExempt && <ShieldCheck size={14} color="#34D399" />}
             </button>
           </div>
 
           {/* Driver Payout Split */}
           <div>
-            <div className="flex justify-between items-center mb-1.5">
-              <label className="text-xs font-bold text-slate-300">Driver Payout Cut</label>
-              <span className="text-xs font-mono font-bold text-purple-400">{driverPayoutPct.toFixed(0)}% of Base</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#E2E8F0' }}>Driver Payout Cut</label>
+              <span style={{ fontSize: '12.5px', fontFamily: 'monospace', fontWeight: 800, color: '#C084FC' }}>{driverPayoutPct.toFixed(0)}% of Base</span>
             </div>
             <input
               type="range"
@@ -769,9 +821,9 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
               step="5"
               value={driverPayoutPct}
               onChange={(e) => setDriverPayoutPct(parseFloat(e.target.value))}
-              className="w-full h-2 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-purple-500"
+              className="ops-slider"
             />
-            <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#64748B', marginTop: '4px' }}>
               <span>40%</span>
               <span>60% (Standard)</span>
               <span>80%</span>
@@ -780,11 +832,11 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
 
           {/* Vehicle Class Selector */}
           <div>
-            <label className="text-xs font-bold text-slate-300 block mb-1.5">Vehicle Tier</label>
+            <label style={{ fontSize: '12px', fontWeight: 700, color: '#E2E8F0', display: 'block', marginBottom: '6px' }}>Vehicle Tier</label>
             <select
               value={vehicleClass}
               onChange={(e) => setVehicleClass(e.target.value as VehicleClass)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+              className="ops-select"
             >
               <option value="LUXURY_SUV">Luxury SUV (Cadillac Escalade)</option>
               <option value="FIRST_CLASS">First Class (Mercedes-Benz S-Class)</option>
@@ -798,51 +850,51 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
 
         {/* UNIT ECONOMICS & PROFIT MARGIN DASHBOARD */}
         {unit && (
-          <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-5">
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-emerald-400" />
-              Simulated Unit Economics & Margin Health
+          <div style={{ background: 'rgba(11, 15, 25, 0.8)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '18px', marginTop: '20px' }}>
+            <div style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#94A3B8', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <TrendingUp size={15} color="#34D399" />
+              <span>Simulated Unit Economics & Margin Health</span>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-center">
-              <div className="bg-slate-900 p-3 rounded-lg border border-slate-800">
-                <div className="text-[11px] text-slate-400">Customer Total</div>
-                <div className="text-base font-extrabold text-white font-mono mt-0.5">
+            <div className="ops-unit-metrics-grid">
+              <div className="ops-metric-box">
+                <div style={{ fontSize: '11px', color: '#94A3B8' }}>Customer Total</div>
+                <div style={{ fontSize: '17px', fontWeight: 800, color: '#FFFFFF', fontFamily: 'monospace', marginTop: '4px' }}>
                   ${unit.gross_revenue.toFixed(2)}
                 </div>
               </div>
 
-              <div className="bg-slate-900 p-3 rounded-lg border border-slate-800">
-                <div className="text-[11px] text-slate-400">Driver Payout</div>
-                <div className="text-base font-extrabold text-purple-400 font-mono mt-0.5">
+              <div className="ops-metric-box">
+                <div style={{ fontSize: '11px', color: '#94A3B8' }}>Driver Payout</div>
+                <div style={{ fontSize: '17px', fontWeight: 800, color: '#C084FC', fontFamily: 'monospace', marginTop: '4px' }}>
                   ${unit.driver_payout.toFixed(2)}
                 </div>
               </div>
 
-              <div className="bg-slate-900 p-3 rounded-lg border border-slate-800">
-                <div className="text-[11px] text-slate-400">Tolls & CC Fee Pass</div>
-                <div className="text-base font-extrabold text-blue-400 font-mono mt-0.5">
+              <div className="ops-metric-box">
+                <div style={{ fontSize: '11px', color: '#94A3B8' }}>Tolls & CC Fee Pass</div>
+                <div style={{ fontSize: '17px', fontWeight: 800, color: '#60A5FA', fontFamily: 'monospace', marginTop: '4px' }}>
                   ${unit.pass_through_costs.toFixed(2)}
                 </div>
               </div>
 
-              <div className="bg-slate-900 p-3 rounded-lg border border-slate-800">
-                <div className="text-[11px] text-slate-400">Fuel Allocation</div>
-                <div className="text-base font-extrabold text-amber-400 font-mono mt-0.5">
+              <div className="ops-metric-box">
+                <div style={{ fontSize: '11px', color: '#94A3B8' }}>Fuel Allocation</div>
+                <div style={{ fontSize: '17px', fontWeight: 800, color: '#FBBF24', fontFamily: 'monospace', marginTop: '4px' }}>
                   ${unit.fuel_cost_est.toFixed(2)}
                 </div>
               </div>
 
-              <div className="bg-slate-900 p-3 rounded-lg border border-slate-800">
-                <div className="text-[11px] text-slate-400">Owner Net Profit</div>
-                <div className="text-base font-extrabold text-emerald-400 font-mono mt-0.5">
+              <div className="ops-metric-box">
+                <div style={{ fontSize: '11px', color: '#94A3B8' }}>Owner Net Profit</div>
+                <div style={{ fontSize: '17px', fontWeight: 800, color: '#34D399', fontFamily: 'monospace', marginTop: '4px' }}>
                   ${unit.owner_net_profit.toFixed(2)}
                 </div>
               </div>
 
-              <div className="bg-slate-900 p-3 rounded-lg border border-emerald-500/30">
-                <div className="text-[11px] text-slate-400">Net Profit Margin</div>
-                <div className="text-base font-extrabold text-emerald-300 font-mono mt-0.5">
+              <div className="ops-metric-box" style={{ borderColor: 'rgba(16, 185, 129, 0.4)' }}>
+                <div style={{ fontSize: '11px', color: '#94A3B8' }}>Net Profit Margin</div>
+                <div style={{ fontSize: '17px', fontWeight: 800, color: '#6EE7B7', fontFamily: 'monospace', marginTop: '4px' }}>
                   {unit.net_margin_pct.toFixed(1)}%
                 </div>
               </div>
@@ -851,20 +903,35 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
         )}
 
         {/* ACTION BUTTON TO PERSIST TO LIVE DATABASE */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-800">
-          <div className="text-xs text-slate-400 flex items-center gap-1.5">
-            <Info className="w-4 h-4 text-blue-400" />
-            Applying this strategy will immediately update your live dispatch engine & customer booking quotes.
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', paddingTop: '18px', borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: '20px' }}>
+          <div style={{ fontSize: '12px', color: '#94A3B8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Info size={15} color="#60A5FA" />
+            <span>Applying this strategy will immediately update your live dispatch engine & customer booking quotes.</span>
           </div>
 
           <button
             type="button"
             onClick={handleApplyStrategyToDatabase}
             disabled={savingRule}
-            className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold shadow-lg shadow-emerald-500/20 transition-all disabled:opacity-50"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '12px 24px',
+              background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+              border: 'none',
+              borderRadius: '12px',
+              color: '#FFFFFF',
+              fontSize: '13.5px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              boxShadow: '0 4px 20px rgba(16, 185, 129, 0.35)',
+              transition: 'all 0.2s ease',
+              opacity: savingRule ? 0.6 : 1
+            }}
           >
-            <Save className={`w-4 h-4 ${savingRule ? 'animate-spin' : ''}`} />
-            {savingRule ? 'Persisting to Database...' : 'Apply Strategy to Live Fleet Matrix'}
+            <Save size={16} className={savingRule ? 'animate-spin' : ''} />
+            <span>{savingRule ? 'Persisting to Database...' : 'Apply Strategy to Live Fleet Matrix'}</span>
           </button>
         </div>
 
@@ -872,41 +939,50 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
 
       {/* CENTRALIZED GLOBAL HUB TOLL REGISTRY MODAL */}
       {showTollHubModal && (
-        <div className="bg-slate-900 border border-blue-500/40 rounded-2xl p-6 shadow-2xl space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div className="flex items-center gap-2">
-              <Database className="w-5 h-5 text-blue-400" />
-              <h4 className="text-base font-bold text-white">Centralized Global Hub Toll Rate Registry & Cache</h4>
+        <div style={{
+          background: 'linear-gradient(135deg, #0F172A 0%, #090D16 100%)',
+          border: '1px solid rgba(59, 130, 246, 0.4)',
+          borderRadius: '16px',
+          padding: '24px',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.6)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '14px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Database size={18} color="#60A5FA" />
+              <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#FFFFFF' }}>Centralized Global Hub Toll Rate Registry & Cache</h4>
             </div>
             <button
               onClick={() => setShowTollHubModal(false)}
-              className="text-xs text-slate-400 hover:text-white px-2 py-1 rounded-lg bg-slate-800"
+              style={{ fontSize: '12px', color: '#94A3B8', background: '#1E293B', border: '1px solid rgba(255,255,255,0.1)', padding: '4px 10px', borderRadius: '8px', cursor: 'pointer' }}
             >
               Close
             </button>
           </div>
 
-          <p className="text-xs text-slate-400">
+          <p style={{ fontSize: '12px', color: '#94A3B8', margin: 0, lineHeight: '1.5' }}>
             Toll rates are calculated once via TollGuru / Google Routes API and cached authoritatively in the Central Global Hub. All vendor cells and customer quotes query this shared registry with <strong>0ms network latency and zero duplicate API charges</strong>.
           </p>
 
-          <div className="max-h-64 overflow-y-auto space-y-2">
+          <div style={{ maxHeight: '260px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {tollRegistry.length === 0 ? (
-              <div className="text-center py-6 text-xs text-slate-500">
+              <div style={{ textAlign: 'center', padding: '24px', fontSize: '12px', color: '#64748B' }}>
                 No cached toll records yet. Toll rates are cached automatically upon first trip calculation.
               </div>
             ) : (
               tollRegistry.map((item, idx) => (
-                <div key={idx} className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+                <div key={idx} style={{ padding: '12px 14px', background: '#0B0F19', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px' }}>
                   <div>
-                    <div className="font-bold text-white">{item.origin} ➔ {item.destination}</div>
-                    <div className="text-[10px] text-slate-500 mt-0.5">
+                    <div style={{ fontWeight: 800, color: '#FFFFFF' }}>{item.origin} ➔ {item.destination}</div>
+                    <div style={{ fontSize: '10.5px', color: '#64748B', marginTop: '2px' }}>
                       Cached via {item.provider} • {item.hits} Central Hub hits
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="font-mono font-bold text-blue-400">${parseFloat(item.toll_usd).toFixed(2)} One-Way</div>
-                    <div className="font-mono text-[11px] text-emerald-400">${parseFloat(item.roundtrip_toll_usd).toFixed(2)} Round-Trip</div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontFamily: 'monospace', fontWeight: 800, color: '#60A5FA' }}>${parseFloat(item.toll_usd).toFixed(2)} One-Way</div>
+                    <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#34D399' }}>${parseFloat(item.roundtrip_toll_usd).toFixed(2)} Round-Trip</div>
                   </div>
                 </div>
               ))
@@ -917,49 +993,58 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
 
       {/* REGIONAL TAX RULES & EXEMPTION MODAL */}
       {showTaxRulesModal && (
-        <div className="bg-slate-900 border border-emerald-500/40 rounded-2xl p-6 shadow-2xl space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div className="flex items-center gap-2">
-              <Landmark className="w-5 h-5 text-emerald-400" />
-              <h4 className="text-base font-bold text-white">Authoritative State & Metro Regional Tax Rules</h4>
+        <div style={{
+          background: 'linear-gradient(135deg, #0F172A 0%, #090D16 100%)',
+          border: '1px solid rgba(16, 185, 129, 0.4)',
+          borderRadius: '16px',
+          padding: '24px',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.6)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '14px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Landmark size={18} color="#34D399" />
+              <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#FFFFFF' }}>Authoritative State & Metro Regional Tax Rules</h4>
             </div>
             <button
               onClick={() => setShowTaxRulesModal(false)}
-              className="text-xs text-slate-400 hover:text-white px-2 py-1 rounded-lg bg-slate-800"
+              style={{ fontSize: '12px', color: '#94A3B8', background: '#1E293B', border: '1px solid rgba(255,255,255,0.1)', padding: '4px 10px', borderRadius: '8px', cursor: 'pointer' }}
             >
               Close
             </button>
           </div>
 
-          <p className="text-xs text-slate-400">
+          <p style={{ fontSize: '12px', color: '#94A3B8', margin: 0, lineHeight: '1.5' }}>
             Loaded authoritatively from the Central Tax & Compliance Registry. Tax rates automatically apply depending on intrastate vs. interstate passenger routes.
           </p>
 
-          <div className="max-h-72 overflow-y-auto space-y-2">
+          <div style={{ maxHeight: '280px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {regionalTaxRules.length === 0 ? (
-              <div className="text-center py-6 text-xs text-slate-500">
+              <div style={{ textAlign: 'center', padding: '24px', fontSize: '12px', color: '#64748B' }}>
                 Loading authoritative regional tax rules...
               </div>
             ) : (
               regionalTaxRules.map((rule, idx) => (
-                <div key={idx} className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+                <div key={idx} style={{ padding: '12px 14px', background: '#0B0F19', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px' }}>
                   <div>
-                    <div className="font-bold text-white flex items-center gap-2">
+                    <div style={{ fontWeight: 800, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span>{rule.jurisdiction_name || rule.state_code || rule.region}</span>
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
+                      <span style={{ padding: '2px 7px', borderRadius: '9999px', background: 'rgba(16, 185, 129, 0.15)', color: '#34D399', border: '1px solid rgba(16, 185, 129, 0.35)', fontSize: '10px', fontFamily: 'monospace', fontWeight: 800 }}>
                         {rule.tax_type || 'SALES_TAX'}
                       </span>
                     </div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">
+                    <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>
                       {rule.description || 'Statutory chauffeured passenger transportation tax rule'}
                       {rule.interstate_exempt ? ' • Interstate Exempt' : ' • Applies to all routes'}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="font-mono font-bold text-emerald-400 text-sm">
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontFamily: 'monospace', fontWeight: 800, color: '#34D399', fontSize: '14px' }}>
                       {(Number(rule.rate_percentage || rule.tax_rate || 0) * 100).toFixed(2)}%
                     </div>
-                    <div className="text-[10px] text-slate-500 font-mono">
+                    <div style={{ fontSize: '10px', color: '#64748B', fontFamily: 'monospace' }}>
                       {rule.country_code || 'US'}
                     </div>
                   </div>
@@ -973,4 +1058,5 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
     </div>
   );
 };
+
 
