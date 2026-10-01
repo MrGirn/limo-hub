@@ -723,7 +723,10 @@ export interface VendorBrandingProfile {
   accent_color?: string;
   domain?: string;
   contact_phone?: string;
+  contact_text?: string;
+  contact_email?: string;
   office_address?: string;
+  google_maps_url?: string;
   logo_url?: string;
 }
 

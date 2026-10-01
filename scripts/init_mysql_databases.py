@@ -43,13 +43,13 @@ def init_and_seed_databases(db_url: str = None):
         print("\n1. Seeding Sovereign Vendor Tenants...")
         t1 = vendor_repo.create_or_update_tenant(
             vendor_id="vendor_anb_philly",
-            company_name="ANB Limo Executive Chauffeurs",
+            company_name="ANB Trans Inc",
             market_city="Philadelphia, PA",
-            custom_domain="book.anblimo-philly.com",
-            primary_color="#D97706",
+            custom_domain="book.anbtransinc.com",
+            primary_color="#1E3A8A",
             accent_color="#F59E0B",
-            support_phone="+1 (215) 555-0188",
-            support_email="dispatch@anblimo-philly.com"
+            support_phone="610-653-0033",
+            support_email="info@anbtransinc.com"
         )
         print(f"   -> Tenant: {t1.company_name} ({t1.custom_domain})")
 

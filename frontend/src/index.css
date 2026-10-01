@@ -1445,17 +1445,17 @@ textarea:focus {
    VENDOR OWNER DASHBOARD & PORTAL — MOBILE & TABLET RESPONSIVENESS
    ========================================================================== */
 
-/* Top Command Bar Responsive Header — Luxury Dark Glassmorphism */
+/* Top Command Bar Responsive Header — Crisp Modern Light Theme */
 .vendor-top-header {
-  min-height: 52px;
-  background: linear-gradient(135deg, #090D16 0%, #0F172A 45%, #1E293B 100%);
-  color: #FFFFFF;
+  min-height: 58px;
+  background: #FFFFFF;
+  color: #0F172A;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 8px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4), 0 0 1px 1px rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid #E2E8F0;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   z-index: 50;
@@ -2014,26 +2014,24 @@ textarea:focus {
 }
 
 /* ==========================================================================
-   OPERATIONS PRICING RESEARCH STUDIO & REAL-TIME TARIFF WORKBENCH
+   OPERATIONS PRICING RESEARCH STUDIO & REAL-TIME TARIFF WORKBENCH (LIGHT MODE)
    ========================================================================== */
 .ops-pricing-studio {
   display: flex;
   flex-direction: column;
   gap: 24px;
   width: 100%;
-  color: #F1F5F9;
+  color: #0F172A;
   font-family: inherit;
   box-sizing: border-box;
 }
 
 .ops-banner {
-  background: linear-gradient(135deg, #090D16 0%, #0F172A 50%, #151F33 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 50%, #F1F5F9 100%);
+  border: 1px solid #E2E8F0;
   border-radius: 16px;
   padding: 24px;
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), 0 0 1px 1px rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px rgba(15, 23, 42, 0.03);
 }
 
 .ops-badge {
@@ -2042,9 +2040,9 @@ textarea:focus {
   gap: 6px;
   padding: 4px 12px;
   border-radius: 9999px;
-  background: rgba(59, 130, 246, 0.15);
-  border: 1px solid rgba(59, 130, 246, 0.35);
-  color: #60A5FA;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  color: #1D4ED8;
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
@@ -2055,7 +2053,7 @@ textarea:focus {
 .ops-banner-title {
   font-size: 24px;
   font-weight: 800;
-  color: #FFFFFF;
+  color: #0F172A;
   letter-spacing: -0.02em;
   margin: 0;
   line-height: 1.25;
@@ -2063,7 +2061,7 @@ textarea:focus {
 
 .ops-banner-desc {
   font-size: 13px;
-  color: #94A3B8;
+  color: #64748B;
   margin: 6px 0 0 0;
   line-height: 1.5;
 }
@@ -2082,44 +2080,46 @@ textarea:focus {
 }
 
 .ops-btn-recalc {
-  background: rgba(30, 41, 59, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #FFFFFF;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  color: #334155;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 .ops-btn-recalc:hover {
-  background: rgba(51, 65, 85, 0.9);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: #F8FAFC;
+  border-color: #94A3B8;
+  color: #0F172A;
 }
 
 .ops-btn-tax {
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.35);
-  color: #34D399;
+  background: #ECFDF5;
+  border: 1px solid #A7F3D0;
+  color: #065F46;
 }
 .ops-btn-tax:hover {
-  background: rgba(16, 185, 129, 0.22);
-  box-shadow: 0 0 12px rgba(16, 185, 129, 0.25);
+  background: #D1FAE5;
+  border-color: #6EE7B7;
 }
 
 .ops-btn-toll {
-  background: rgba(59, 130, 246, 0.12);
-  border: 1px solid rgba(59, 130, 246, 0.35);
-  color: #60A5FA;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  color: #1E40AF;
 }
 .ops-btn-toll:hover {
-  background: rgba(59, 130, 246, 0.22);
-  box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
+  background: #DBEAFE;
+  border-color: #93C5FD;
 }
 
 .ops-btn-ai {
   background: linear-gradient(135deg, #7C3AED 0%, #4F46E5 100%);
   border: 1px solid rgba(167, 139, 250, 0.4);
   color: #FFFFFF;
-  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.35);
+  box-shadow: 0 3px 12px rgba(124, 58, 237, 0.25);
 }
 .ops-btn-ai:hover {
   background: linear-gradient(135deg, #6D28D9 0%, #4338CA 100%);
-  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.5);
+  box-shadow: 0 5px 16px rgba(124, 58, 237, 0.35);
   transform: translateY(-1px);
 }
 
@@ -2129,29 +2129,30 @@ textarea:focus {
   gap: 12px;
   margin-top: 20px;
   padding-top: 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid #E2E8F0;
 }
 
 .ops-preset-card {
   text-align: left;
   padding: 14px;
   border-radius: 12px;
-  background: rgba(11, 15, 25, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 .ops-preset-card:hover {
-  background: rgba(30, 41, 59, 0.6);
-  border-color: rgba(255, 255, 255, 0.16);
+  background: #F8FAFC;
+  border-color: #CBD5E1;
 }
 .ops-preset-card.active {
-  background: rgba(30, 58, 138, 0.35);
+  background: #EFF6FF;
   border-color: #3B82F6;
-  box-shadow: 0 0 16px rgba(59, 130, 246, 0.25), inset 0 0 0 1px #3B82F6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15), 0 2px 8px rgba(37, 99, 235, 0.08);
 }
 
 .ops-comparison-grid {
@@ -2167,41 +2168,41 @@ textarea:focus {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(11, 15, 25, 0.95));
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.06), 0 2px 6px rgba(15, 23, 42, 0.03);
+  background: #FFFFFF;
 }
 
 .ops-card-benchmark {
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: linear-gradient(180deg, #FFFDF5 0%, #FFFFFF 100%);
+  border: 1px solid #FDE68A;
 }
 .ops-card-benchmark .ops-card-badge {
-  background: rgba(245, 158, 11, 0.15);
-  border-left: 1px solid rgba(245, 158, 11, 0.35);
-  border-bottom: 1px solid rgba(245, 158, 11, 0.35);
-  color: #FBBF24;
+  background: #FEF3C7;
+  border-left: 1px solid #FDE68A;
+  border-bottom: 1px solid #FDE68A;
+  color: #B45309;
 }
 
 .ops-card-active {
-  border: 1px solid rgba(59, 130, 246, 0.35);
+  background: linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%);
+  border: 1px solid #BFDBFE;
 }
 .ops-card-active .ops-card-badge {
-  background: rgba(59, 130, 246, 0.15);
-  border-left: 1px solid rgba(59, 130, 246, 0.35);
-  border-bottom: 1px solid rgba(59, 130, 246, 0.35);
-  color: #60A5FA;
+  background: #EFF6FF;
+  border-left: 1px solid #BFDBFE;
+  border-bottom: 1px solid #BFDBFE;
+  color: #1D4ED8;
 }
 
 .ops-card-rec {
-  border: 1px solid rgba(16, 185, 129, 0.45);
-  background: linear-gradient(135deg, rgba(6, 78, 59, 0.25) 0%, rgba(15, 23, 42, 0.95) 100%);
+  border: 1px solid #86EFAC;
+  background: linear-gradient(180deg, #F0FDF4 0%, #FFFFFF 100%);
 }
 .ops-card-rec .ops-card-badge {
-  background: rgba(16, 185, 129, 0.2);
-  border-left: 1px solid rgba(16, 185, 129, 0.45);
-  border-bottom: 1px solid rgba(16, 185, 129, 0.45);
-  color: #34D399;
+  background: #DCFCE7;
+  border-left: 1px solid #86EFAC;
+  border-bottom: 1px solid #86EFAC;
+  color: #15803D;
 }
 
 .ops-card-badge {
@@ -2221,16 +2222,16 @@ textarea:focus {
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid #F1F5F9;
   font-size: 12.5px;
 }
 
 .ops-adjuster-panel {
-  background: linear-gradient(135deg, #0F172A 0%, #0B0F19 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
   border-radius: 16px;
   padding: 24px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
 }
 
 .ops-controls-grid {
@@ -2248,37 +2249,40 @@ textarea:focus {
 }
 
 .ops-metric-box {
-  background: rgba(11, 15, 25, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
   border-radius: 10px;
   padding: 12px;
   text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
 .ops-slider {
   width: 100%;
   height: 6px;
-  background: #0B0F19;
+  background: #E2E8F0;
   border-radius: 9999px;
   outline: none;
   cursor: pointer;
-  accent-color: #3B82F6;
+  accent-color: #2563EB;
   margin-top: 6px;
 }
 
 .ops-select {
   width: 100%;
-  background: #0B0F19;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #F8FAFC;
+  border: 1px solid #CBD5E1;
   border-radius: 10px;
   padding: 8px 12px;
   font-size: 12px;
-  color: #FFFFFF;
+  color: #0F172A;
   outline: none;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 .ops-select:focus {
-  border-color: #3B82F6;
+  border-color: #2563EB;
+  background: #FFFFFF;
 }
 
 @media (max-width: 1024px) {

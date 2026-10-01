@@ -35,7 +35,10 @@ class VendorBrandingProfile(BaseModel):
     accent_color: str = "#F59E0B"
     domain: str = "limo-ops.com"
     contact_phone: str = "+18005550199"
+    contact_text: Optional[str] = None
+    contact_email: Optional[str] = None
     office_address: str = "Executive Terminal Blvd"
+    google_maps_url: Optional[str] = None
     logo_url: str = "/assets/default_logo.png"
 
 
@@ -491,8 +494,11 @@ class VendorSpinupService:
                 primary_color=branding_data.get("primary_color", "#1E3A8A"),
                 accent_color=branding_data.get("accent_color", "#F59E0B"),
                 domain=branding_data.get("domain", "limo-ops.com"),
-                contact_phone=branding_data.get("contact_phone", comms_data.get("twilio_sms_number", "+18005550199")),
+                contact_phone=branding_data.get("contact_phone", comms_data.get("twilio_voice_number", comms_data.get("twilio_sms_number", "+18005550199"))),
+                contact_text=branding_data.get("contact_text", comms_data.get("twilio_sms_number")),
+                contact_email=branding_data.get("contact_email", comms_data.get("inbound_email")),
                 office_address=branding_data.get("office_address", depot_data.get("address", "Executive Airport Terminal")),
+                google_maps_url=branding_data.get("google_maps_url"),
                 logo_url=branding_data.get("logo_url", "/assets/default_logo.png")
             ),
             pricing_matrix=pricing_data,

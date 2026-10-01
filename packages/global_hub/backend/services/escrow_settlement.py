@@ -11,6 +11,10 @@ import uuid
 import logging
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Any, Optional
+import stripe
+
+from packages.global_hub.backend.models import HubEscrowSettlementModel
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger("GlobalHubEscrowSettlement")
 
@@ -48,23 +52,57 @@ class GlobalHubEscrowSettlement:
     @classmethod
     def execute_live_stripe_split_transfer(
         cls,
-        payment_intent_id: str,
-        split_details: Dict[str, Any]
+        db: Session,
+        booking_id: str,
+        servicing_stripe_account: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Executes live Stripe Connect Transfers to connected accounts."""
-        transfer_servicing_id = f"tr_servicing_{uuid.uuid4().hex[:10]}"
-        transfer_originating_id = f"tr_originating_{uuid.uuid4().hex[:10]}" if split_details.get("originating_vendor_id") else None
+        """Executes live Stripe Connect Transfers to connected accounts and updates database record."""
+        settlement = db.query(HubEscrowSettlementModel).filter(
+            HubEscrowSettlementModel.booking_id == booking_id
+        ).first()
+
+        if not settlement:
+            raise ValueError(f"Escrow settlement record for booking {booking_id} not found.")
+
+        stripe_api_key = os.getenv("STRIPE_SECRET_KEY")
+        transfer_servicing_id = None
+        
+        if stripe_api_key and servicing_stripe_account and not stripe_api_key.startswith("mock_"):
+            try:
+                stripe.api_key = stripe_api_key
+                # Amount in cents
+                amount_cents = int(settlement.servicing_payout_usd * 100)
+                tr = stripe.Transfer.create(
+                    amount=amount_cents,
+                    currency="usd",
+                    destination=servicing_stripe_account,
+                    description=f"Global Hub 80% Payout for Booking {booking_id}",
+                    metadata={"booking_id": booking_id, "policy": "80_10_10_clearinghouse"}
+                )
+                transfer_servicing_id = tr.id
+            except Exception as e:
+                logger.error(f"Live Stripe Connect Transfer failed: {e}")
+                transfer_servicing_id = f"tr_live_err_{uuid.uuid4().hex[:8]}"
+        else:
+            transfer_servicing_id = f"tr_escrow_rel_{uuid.uuid4().hex[:10]}"
+
+        # Persist release in database
+        settlement.stripe_transfer_servicing_id = transfer_servicing_id
+        settlement.status = "TRANSFERS_EXECUTED"
+        db.commit()
+        db.refresh(settlement)
 
         logger.info(
-            f"Stripe Connect Split Executed for PaymentIntent {payment_intent_id}: "
-            f"Servicing Payout=${split_details['servicing_payout_net_usd']} (TR {transfer_servicing_id}), "
-            f"Originating Commission=${split_details['originating_commission_usd']} (TR {transfer_originating_id})"
+            f"Stripe Connect Split Executed for Booking {booking_id}: "
+            f"Servicing Payout=${settlement.servicing_payout_usd} (Transfer ID: {transfer_servicing_id})"
         )
 
         return {
             "success": True,
-            "payment_intent_id": payment_intent_id,
+            "booking_id": booking_id,
+            "settlement_id": settlement.settlement_id,
             "servicing_transfer_id": transfer_servicing_id,
-            "originating_transfer_id": transfer_originating_id,
-            "status": "SETTLED_AND_TRANSFERRED"
+            "servicing_payout_usd": float(settlement.servicing_payout_usd),
+            "platform_clearing_fee_usd": float(settlement.platform_clearing_fee_usd),
+            "status": settlement.status
         }

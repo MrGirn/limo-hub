@@ -4,7 +4,7 @@ import {
   DollarSign, MapPin, Clock, CreditCard, RefreshCw, Award, Zap,
   TrendingUp, TrendingDown, Info, ShieldCheck, Check, Sliders, ChevronRight,
   Plane, Navigation, Shield, Database, Layers, CheckCircle, Percent,
-  ArrowUpRight, AlertCircle, Save, BrainCircuit, Landmark, HelpCircle, Loader2
+  ArrowUpRight, AlertCircle, Save, BrainCircuit, Landmark, HelpCircle, Loader2, Lock
 } from 'lucide-react';
 import { VehicleClass, ServiceType, PricingModelType, TaxGratuityDisplayMode } from '../../types';
 import { 
@@ -109,6 +109,18 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [savingRule, setSavingRule] = useState<boolean>(false);
 
+  // Audit Confirmation & Safety Safeguards
+  const [auditConfirmed, setAuditConfirmed] = useState<boolean>(false);
+  const [auditLogHistory, setAuditLogHistory] = useState<Array<{
+    timestamp: string;
+    vehicleClass: string;
+    strategy: string;
+    hourlyRate: number;
+    fuelPct: number;
+    servicePct: number;
+    summary: string;
+  }>>([]);
+
   // Central Toll Registry & Tax Rules
   const [tollRegistry, setTollRegistry] = useState<any[]>([]);
   const [showTollHubModal, setShowTollHubModal] = useState<boolean>(false);
@@ -127,6 +139,7 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
     setHourlyHours(preset.hours);
     setVehicleClass(preset.vehicleClass);
     setInterstateTaxExempt(preset.isInterstate);
+    setAuditConfirmed(false); // Reset audit confirmation upon preset switch
   };
 
   const fetchSimulation = async () => {
@@ -224,8 +237,14 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
 
 
   const handleApplyStrategyToDatabase = async () => {
+    if (!auditConfirmed) {
+      setError('Please review and check the audit confirmation checkbox before applying tariff updates to the live dispatch matrix.');
+      return;
+    }
+
     setSavingRule(true);
     setSaveSuccess(null);
+    setError(null);
     try {
       const pricingModelType: PricingModelType = 
         chargingStrategy === 'FLAT_HOURLY' ? 'FLAT_HOURLY_CHARTER' :
@@ -248,7 +267,24 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
       };
 
       await saveVendorPricingRule(vendorId, payload);
-      setSaveSuccess(`Successfully updated active ${vehicleClass.replace('_', ' ')} tariff rules in the database!`);
+      const auditTimestamp = new Date().toLocaleTimeString();
+      const auditSummaryText = `Base: $${hourlyRate.toFixed(2)}/hr • Fuel: ${fuelSurchargePct.toFixed(1)}% • Service: ${serviceChargePct.toFixed(1)}% • Toll: ${tollMode}`;
+      
+      setAuditLogHistory(prev => [
+        {
+          timestamp: auditTimestamp,
+          vehicleClass,
+          strategy: chargingStrategy,
+          hourlyRate,
+          fuelPct: fuelSurchargePct,
+          servicePct: serviceChargePct,
+          summary: auditSummaryText
+        },
+        ...prev
+      ]);
+
+      setSaveSuccess(`[Audit Verified @ ${auditTimestamp}] Successfully updated active ${vehicleClass.replace('_', ' ')} tariff rules in the database! Live dispatch and quote calculations are now synchronized.`);
+      setAuditConfirmed(false); // Reset checkbox after successful persistence
       if (onRuleApplied) onRuleApplied();
       fetchSimulation();
     } catch (err: any) {
@@ -271,7 +307,7 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
         <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <div className="ops-badge">
-              <Sparkles size={13} color="#60A5FA" />
+              <Sparkles size={13} color="#2563EB" />
               <span>Operations Pricing Intelligence & Strategy Workbench</span>
             </div>
             <h2 className="ops-banner-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -329,11 +365,11 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
                 onClick={() => applyPreset(preset)}
                 className={`ops-preset-card ${isSelected ? 'active' : ''}`}
               >
-                <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#60A5FA', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#2563EB', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                   {preset.serviceType.replace(/_/g, ' ')} {preset.isInterstate ? '• Interstate' : ''}
                 </div>
-                <div style={{ fontSize: '12.5px', fontWeight: 800, color: '#FFFFFF' }}>{preset.name}</div>
-                <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px', lineHeight: '1.4' }}>{preset.description}</div>
+                <div style={{ fontSize: '12.5px', fontWeight: 800, color: '#0F172A' }}>{preset.name}</div>
+                <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px', lineHeight: '1.4' }}>{preset.description}</div>
               </button>
             );
           })}
@@ -343,69 +379,69 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
       {/* AI GEMINI PRICE VALIDATION RESULT BANNER */}
       {aiValidation && (
         <div style={{
-          background: 'linear-gradient(135deg, rgba(88, 28, 135, 0.4) 0%, rgba(15, 23, 42, 0.95) 50%, rgba(49, 46, 129, 0.4) 100%)',
-          border: '1px solid rgba(168, 85, 247, 0.4)',
+          background: 'linear-gradient(135deg, #FAF5FF 0%, #FFFFFF 100%)',
+          border: '1px solid #D8B4FE',
           borderRadius: '16px',
           padding: '20px',
-          boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
+          boxShadow: '0 4px 20px rgba(124, 58, 237, 0.08)',
           display: 'flex',
           flexDirection: 'column',
           gap: '14px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', borderBottom: '1px solid rgba(168, 85, 247, 0.2)', paddingBottom: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', borderBottom: '1px solid #F3E8FF', paddingBottom: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Sparkles size={18} color="#C084FC" />
-              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#FFFFFF' }}>Google Gemini Market Pricing Intelligence & Benchmark Validation</h4>
-              <span style={{ padding: '2px 8px', borderRadius: '9999px', background: 'rgba(168, 85, 247, 0.2)', border: '1px solid rgba(168, 85, 247, 0.4)', color: '#D8B4FE', fontSize: '10px', fontWeight: 800, fontFamily: 'monospace' }}>
+              <Sparkles size={18} color="#7C3AED" />
+              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#581C87' }}>Google Gemini Market Pricing Intelligence & Benchmark Validation</h4>
+              <span style={{ padding: '2px 8px', borderRadius: '9999px', background: '#F3E8FF', border: '1px solid #D8B4FE', color: '#6B21A8', fontSize: '10px', fontWeight: 800, fontFamily: 'monospace' }}>
                 {aiValidation.ai_model_used || 'gemini-3.8-flash'}
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>
-              <span style={{ color: '#94A3B8' }}>Confidence:</span>
-              <span style={{ fontWeight: 800, color: '#34D399', fontFamily: 'monospace' }}>{((aiValidation.confidence_score || 0.95) * 100).toFixed(0)}%</span>
+              <span style={{ color: '#64748B' }}>Confidence:</span>
+              <span style={{ fontWeight: 800, color: '#059669', fontFamily: 'monospace' }}>{((aiValidation.confidence_score || 0.95) * 100).toFixed(0)}%</span>
             </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
             <div className="ops-metric-box">
-              <div style={{ fontSize: '10.5px', color: '#94A3B8' }}>Your Proposed Price</div>
-              <div style={{ fontSize: '18px', fontWeight: 800, color: '#FFFFFF', fontFamily: 'monospace', marginTop: '4px' }}>${Number(aiValidation.proposed_price || 0).toFixed(2)}</div>
+              <div style={{ fontSize: '10.5px', color: '#64748B' }}>Your Proposed Price</div>
+              <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', fontFamily: 'monospace', marginTop: '4px' }}>${Number(aiValidation.proposed_price || 0).toFixed(2)}</div>
             </div>
-            <div className="ops-metric-box" style={{ borderColor: 'rgba(168, 85, 247, 0.4)' }}>
-              <div style={{ fontSize: '10.5px', color: '#C084FC' }}>AI Recommended Price</div>
-              <div style={{ fontSize: '18px', fontWeight: 800, color: '#D8B4FE', fontFamily: 'monospace', marginTop: '4px' }}>${Number(aiValidation.ai_recommended_price || 0).toFixed(2)}</div>
+            <div className="ops-metric-box" style={{ borderColor: '#D8B4FE' }}>
+              <div style={{ fontSize: '10.5px', color: '#7C3AED' }}>AI Recommended Price</div>
+              <div style={{ fontSize: '18px', fontWeight: 800, color: '#6B21A8', fontFamily: 'monospace', marginTop: '4px' }}>${Number(aiValidation.ai_recommended_price || 0).toFixed(2)}</div>
             </div>
             <div className="ops-metric-box">
-              <div style={{ fontSize: '10.5px', color: '#94A3B8' }}>Market Range (Low - High)</div>
-              <div style={{ fontSize: '15px', fontWeight: 700, color: '#E2E8F0', fontFamily: 'monospace', marginTop: '4px' }}>
+              <div style={{ fontSize: '10.5px', color: '#64748B' }}>Market Range (Low - High)</div>
+              <div style={{ fontSize: '15px', fontWeight: 700, color: '#0F172A', fontFamily: 'monospace', marginTop: '4px' }}>
                 ${Number(aiValidation.market_low || 0).toFixed(0)} - ${Number(aiValidation.market_high || 0).toFixed(0)}
               </div>
             </div>
-            <div className="ops-metric-box" style={{ borderColor: 'rgba(16, 185, 129, 0.4)' }}>
-              <div style={{ fontSize: '10.5px', color: '#94A3B8' }}>Recommendation Status</div>
-              <div style={{ fontSize: '12px', fontWeight: 800, color: '#34D399', marginTop: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <div className="ops-metric-box" style={{ borderColor: '#86EFAC' }}>
+              <div style={{ fontSize: '10.5px', color: '#64748B' }}>Recommendation Status</div>
+              <div style={{ fontSize: '12px', fontWeight: 800, color: '#059669', marginTop: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 {aiValidation.recommendation_status?.replace(/_/g, ' ') || 'OPTIMAL COMPETITIVE'}
               </div>
             </div>
           </div>
 
-          <div style={{ fontSize: '12px', color: '#CBD5E1', background: 'rgba(11, 15, 25, 0.6)', padding: '12px 16px', borderRadius: '10px', border: '1px solid rgba(168, 85, 247, 0.25)', lineHeight: '1.5' }}>
-            <strong style={{ color: '#D8B4FE' }}>Market Intelligence & Context: </strong>
+          <div style={{ fontSize: '12px', color: '#334155', background: '#F8FAFC', padding: '12px 16px', borderRadius: '10px', border: '1px solid #E9D5FF', lineHeight: '1.5' }}>
+            <strong style={{ color: '#6B21A8' }}>Market Intelligence & Context: </strong>
             {aiValidation.reasoning_and_market_context}
           </div>
         </div>
       )}
 
       {saveSuccess && (
-        <div style={{ background: 'rgba(6, 78, 59, 0.5)', border: '1px solid rgba(16, 185, 129, 0.45)', color: '#6EE7B7', padding: '14px 18px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', fontWeight: 700 }}>
-          <CheckCircle2 size={18} color="#34D399" />
+        <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#065F46', padding: '14px 18px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', fontWeight: 700 }}>
+          <CheckCircle2 size={18} color="#059669" />
           <span>{saveSuccess}</span>
         </div>
       )}
 
       {error && (
-        <div style={{ background: 'rgba(127, 29, 29, 0.5)', border: '1px solid rgba(239, 68, 68, 0.45)', color: '#FCA5A5', padding: '14px 18px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', fontWeight: 700 }}>
-          <AlertCircle size={18} color="#EF4444" />
+        <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B', padding: '14px 18px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', fontWeight: 700 }}>
+          <AlertCircle size={18} color="#DC2626" />
           <span>{error}</span>
         </div>
       )}
@@ -421,51 +457,51 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
 
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <Award size={18} color="#FBBF24" />
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#FFFFFF' }}>Live Reference Tariff</h3>
+              <Award size={18} color="#D97706" />
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>Live Reference Tariff</h3>
             </div>
-            <p style={{ fontSize: '12px', color: '#94A3B8', margin: '0 0 16px 0' }}>
+            <p style={{ fontSize: '12px', color: '#64748B', margin: '0 0 16px 0' }}>
               Industry standard reference model ({vehicleClass.replace(/_/g, ' ')} • {hourlyHours} Hours Charter).
             </p>
 
             {bench && (
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <div className="ops-line-item">
-                  <span style={{ color: '#94A3B8' }}>Base Rate (${bench.hourly_rate.toFixed(2)} × {hourlyHours}h):</span>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#FFFFFF' }}>${bench.base_fare.toFixed(2)}</span>
+                  <span style={{ color: '#475569' }}>Base Rate (${bench.hourly_rate.toFixed(2)} × {hourlyHours}h):</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#0F172A' }}>${bench.base_fare.toFixed(2)}</span>
                 </div>
                 <div className="ops-line-item">
-                  <span style={{ color: '#94A3B8' }}>Fuel Surcharge (10.0%):</span>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#FCD34D' }}>+${bench.fuel_surcharge.toFixed(2)}</span>
+                  <span style={{ color: '#475569' }}>Fuel Surcharge (10.0%):</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#B45309' }}>+${bench.fuel_surcharge.toFixed(2)}</span>
                 </div>
                 <div className="ops-line-item">
-                  <span style={{ color: '#94A3B8' }}>Operating Service Charge (7.0%):</span>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#FCD34D' }}>+${bench.service_charge.toFixed(2)}</span>
+                  <span style={{ color: '#475569' }}>Operating Service Charge (7.0%):</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#B45309' }}>+${bench.service_charge.toFixed(2)}</span>
                 </div>
                 <div className="ops-line-item">
-                  <span style={{ color: '#94A3B8' }}>Bridge, Tunnel & Turnpike Tolls:</span>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#93C5FD' }}>+${bench.tolls.toFixed(2)}</span>
+                  <span style={{ color: '#475569' }}>Bridge, Tunnel & Turnpike Tolls:</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#1D4ED8' }}>+${bench.tolls.toFixed(2)}</span>
                 </div>
                 <div className="ops-line-item">
-                  <span style={{ color: '#94A3B8' }}>Credit Card Fee (~2.31%):</span>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#E2E8F0' }}>+${bench.credit_card_fee.toFixed(2)}</span>
+                  <span style={{ color: '#475569' }}>Credit Card Fee (~2.31%):</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#334155' }}>+${bench.credit_card_fee.toFixed(2)}</span>
                 </div>
                 <div className="ops-line-item">
-                  <span style={{ color: '#94A3B8' }}>Sales Tax (Interstate Exemption):</span>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#34D399' }}>${bench.tax.toFixed(2)} (Exempt)</span>
+                  <span style={{ color: '#475569' }}>Sales Tax (Interstate Exemption):</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#047857' }}>${bench.tax.toFixed(2)} (Exempt)</span>
                 </div>
                 <div className="ops-line-item">
-                  <span style={{ color: '#94A3B8' }}>Driver Gratuity:</span>
-                  <span style={{ fontFamily: 'monospace', color: '#64748B' }}>$0.00 (Customer Tip Pills)</span>
+                  <span style={{ color: '#475569' }}>Driver Gratuity:</span>
+                  <span style={{ fontFamily: 'monospace', color: '#94A3B8' }}>$0.00 (Customer Tip Pills)</span>
                 </div>
               </div>
             )}
           </div>
 
-          <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+          <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #E2E8F0' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Benchmark Total:</span>
-              <span style={{ fontSize: '24px', fontWeight: 800, color: '#FBBF24', fontFamily: 'monospace' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Benchmark Total:</span>
+              <span style={{ fontSize: '24px', fontWeight: 800, color: '#B45309', fontFamily: 'monospace' }}>
                 ${bench?.total_payable.toFixed(2) || '1,147.56'}
               </span>
             </div>
@@ -480,45 +516,45 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
 
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <Building2 size={18} color="#60A5FA" />
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#FFFFFF' }}>Your Current Tariff</h3>
+              <Building2 size={18} color="#2563EB" />
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>Your Current Tariff</h3>
             </div>
-            <p style={{ fontSize: '12px', color: '#94A3B8', margin: '0 0 16px 0' }}>
+            <p style={{ fontSize: '12px', color: '#64748B', margin: '0 0 16px 0' }}>
               Real-time calculation from your active database rules.
             </p>
 
             {active && (
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <div className="ops-line-item">
-                  <span style={{ color: '#94A3B8' }}>Base Hourly / Charter Fare:</span>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#FFFFFF' }}>${active.base_fare.toFixed(2)}</span>
+                  <span style={{ color: '#475569' }}>Base Hourly / Charter Fare:</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#0F172A' }}>${active.base_fare.toFixed(2)}</span>
                 </div>
                 <div className="ops-line-item">
-                  <span style={{ color: '#94A3B8' }}>Fuel Surcharge:</span>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#CBD5E1' }}>+${active.fuel_surcharge.toFixed(2)}</span>
+                  <span style={{ color: '#475569' }}>Fuel Surcharge:</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#334155' }}>+${active.fuel_surcharge.toFixed(2)}</span>
                 </div>
                 <div className="ops-line-item">
-                  <span style={{ color: '#94A3B8' }}>Operating Service Charge:</span>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#CBD5E1' }}>+${active.service_charge.toFixed(2)}</span>
+                  <span style={{ color: '#475569' }}>Operating Service Charge:</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#334155' }}>+${active.service_charge.toFixed(2)}</span>
                 </div>
                 <div className="ops-line-item">
-                  <span style={{ color: '#94A3B8' }}>Detected Corridor Tolls:</span>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#93C5FD' }}>+${active.tolls.toFixed(2)}</span>
+                  <span style={{ color: '#475569' }}>Detected Corridor Tolls:</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#1D4ED8' }}>+${active.tolls.toFixed(2)}</span>
                 </div>
                 <div className="ops-line-item">
-                  <span style={{ color: '#94A3B8' }}>Credit Card Fee:</span>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#CBD5E1' }}>+${active.credit_card_fee.toFixed(2)}</span>
+                  <span style={{ color: '#475569' }}>Credit Card Fee:</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#334155' }}>+${active.credit_card_fee.toFixed(2)}</span>
                 </div>
                 <div className="ops-line-item">
-                  <span style={{ color: '#94A3B8' }}>Jurisdiction Sales Tax:</span>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#CBD5E1' }}>+${active.tax.toFixed(2)}</span>
+                  <span style={{ color: '#475569' }}>Jurisdiction Sales Tax:</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#334155' }}>+${active.tax.toFixed(2)}</span>
                 </div>
                 <div className="ops-line-item">
-                  <span style={{ color: '#94A3B8' }}>Variance vs. Benchmark:</span>
+                  <span style={{ color: '#475569' }}>Variance vs. Benchmark:</span>
                   <span style={{
                     fontFamily: 'monospace',
                     fontWeight: 800,
-                    color: active.total_payable > (bench?.total_payable || 0) ? '#F87171' : '#34D399'
+                    color: active.total_payable > (bench?.total_payable || 0) ? '#DC2626' : '#059669'
                   }}>
                     {active.total_payable > (bench?.total_payable || 0) ? '+' : ''}
                     ${(active.total_payable - (bench?.total_payable || 0)).toFixed(2)}
@@ -528,10 +564,10 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
             )}
           </div>
 
-          <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+          <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #E2E8F0' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Active Total:</span>
-              <span style={{ fontSize: '24px', fontWeight: 800, color: '#FFFFFF', fontFamily: 'monospace' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Active Total:</span>
+              <span style={{ fontSize: '24px', fontWeight: 800, color: '#0F172A', fontFamily: 'monospace' }}>
                 ${active?.total_payable.toFixed(2) || '0.00'}
               </span>
             </div>
@@ -546,50 +582,50 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
 
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <Sparkles size={18} color="#34D399" />
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#FFFFFF' }}>Operations Recommendation</h3>
+              <Sparkles size={18} color="#059669" />
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>Operations Recommendation</h3>
             </div>
-            <p style={{ fontSize: '12px', color: '#94A3B8', margin: '0 0 16px 0' }}>
+            <p style={{ fontSize: '12px', color: '#64748B', margin: '0 0 16px 0' }}>
               Algorithm-optimized profit margin with competitive win-rate.
             </p>
 
             {rec && (
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <div className="ops-line-item">
-                  <span style={{ color: '#94A3B8' }}>Base Rate (${rec.hourly_rate.toFixed(2)} × {hourlyHours}h):</span>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#FFFFFF' }}>${rec.base_fare.toFixed(2)}</span>
+                  <span style={{ color: '#475569' }}>Base Rate (${rec.hourly_rate.toFixed(2)} × {hourlyHours}h):</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#0F172A' }}>${rec.base_fare.toFixed(2)}</span>
                 </div>
                 <div className="ops-line-item">
-                  <span style={{ color: '#94A3B8' }}>Fuel Surcharge (10.0%):</span>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#6EE7B7' }}>+${rec.fuel_surcharge.toFixed(2)}</span>
+                  <span style={{ color: '#475569' }}>Fuel Surcharge (10.0%):</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#047857' }}>+${rec.fuel_surcharge.toFixed(2)}</span>
                 </div>
                 <div className="ops-line-item">
-                  <span style={{ color: '#94A3B8' }}>Operating Service Charge (7.0%):</span>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#6EE7B7' }}>+${rec.service_charge.toFixed(2)}</span>
+                  <span style={{ color: '#475569' }}>Operating Service Charge (7.0%):</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#047857' }}>+${rec.service_charge.toFixed(2)}</span>
                 </div>
                 <div className="ops-line-item">
-                  <span style={{ color: '#94A3B8' }}>Tolls (Roundtrip Pass-Through):</span>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#93C5FD' }}>+${rec.tolls.toFixed(2)}</span>
+                  <span style={{ color: '#475569' }}>Tolls (Roundtrip Pass-Through):</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#1D4ED8' }}>+${rec.tolls.toFixed(2)}</span>
                 </div>
                 <div className="ops-line-item">
-                  <span style={{ color: '#94A3B8' }}>Credit Card Fee (2.31%):</span>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#CBD5E1' }}>+${rec.credit_card_fee.toFixed(2)}</span>
+                  <span style={{ color: '#475569' }}>Credit Card Fee (2.31%):</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#334155' }}>+${rec.credit_card_fee.toFixed(2)}</span>
                 </div>
                 <div className="ops-line-item">
-                  <span style={{ color: '#94A3B8' }}>Sales Tax (Interstate Livery):</span>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#34D399' }}>$0.00 (Exempt)</span>
+                  <span style={{ color: '#475569' }}>Sales Tax (Interstate Livery):</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#047857' }}>$0.00 (Exempt)</span>
                 </div>
-                <div style={{ padding: '10px 12px', background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '8px', fontSize: '11px', color: '#6EE7B7', marginTop: '10px', lineHeight: '1.4' }}>
+                <div style={{ padding: '10px 12px', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '8px', fontSize: '11px', color: '#166534', marginTop: '10px', lineHeight: '1.4' }}>
                   {rec.strategy_note}
                 </div>
               </div>
             )}
           </div>
 
-          <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+          <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #E2E8F0' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: '#34D399', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Recommended Total:</span>
-              <span style={{ fontSize: '24px', fontWeight: 800, color: '#34D399', fontFamily: 'monospace' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#047857', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Recommended Total:</span>
+              <span style={{ fontSize: '24px', fontWeight: 800, color: '#059669', fontFamily: 'monospace' }}>
                 ${rec?.total_payable.toFixed(2) || '1,195.45'}
               </span>
             </div>
@@ -600,20 +636,20 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
 
       {/* INTERACTIVE STRATEGY ADJUSTER & UNIT ECONOMICS SIMULATOR */}
       <div className="ops-adjuster-panel">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px', borderBottom: '1px solid #E2E8F0', paddingBottom: '16px' }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Sliders size={18} color="#60A5FA" />
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Sliders size={18} color="#2563EB" />
               Interactive Strategy Adjuster & Decision Controls
             </h3>
-            <p style={{ margin: '4px 0 0 0', fontSize: '12.5px', color: '#94A3B8' }}>
+            <p style={{ margin: '4px 0 0 0', fontSize: '12.5px', color: '#64748B' }}>
               Customize how you charge customers, test different tariff levers, and see the live impact on gross revenue and owner net margin.
             </p>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#94A3B8' }}>Strategy:</span>
-            <div style={{ display: 'flex', background: '#0B0F19', padding: '4px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748B' }}>Strategy:</span>
+            <div style={{ display: 'flex', background: '#F1F5F9', padding: '4px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
               <button
                 type="button"
                 onClick={() => setChargingStrategy('CALCULATED_MATRIX')}
@@ -625,7 +661,7 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
                   cursor: 'pointer',
                   border: 'none',
                   backgroundColor: chargingStrategy === 'CALCULATED_MATRIX' ? '#2563EB' : 'transparent',
-                  color: chargingStrategy === 'CALCULATED_MATRIX' ? '#FFFFFF' : '#94A3B8',
+                  color: chargingStrategy === 'CALCULATED_MATRIX' ? '#FFFFFF' : '#475569',
                   transition: 'all 0.2s ease'
                 }}
               >
@@ -642,7 +678,7 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
                   cursor: 'pointer',
                   border: 'none',
                   backgroundColor: chargingStrategy === 'FLAT_HOURLY' ? '#2563EB' : 'transparent',
-                  color: chargingStrategy === 'FLAT_HOURLY' ? '#FFFFFF' : '#94A3B8',
+                  color: chargingStrategy === 'FLAT_HOURLY' ? '#FFFFFF' : '#475569',
                   transition: 'all 0.2s ease'
                 }}
               >
@@ -659,7 +695,7 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
                   cursor: 'pointer',
                   border: 'none',
                   backgroundColor: chargingStrategy === 'FLAT_MILEAGE' ? '#2563EB' : 'transparent',
-                  color: chargingStrategy === 'FLAT_MILEAGE' ? '#FFFFFF' : '#94A3B8',
+                  color: chargingStrategy === 'FLAT_MILEAGE' ? '#FFFFFF' : '#475569',
                   transition: 'all 0.2s ease'
                 }}
               >
@@ -675,8 +711,8 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
           {/* Base Hourly Rate Slider */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#E2E8F0' }}>Base Hourly Rate</label>
-              <span style={{ fontSize: '12.5px', fontFamily: 'monospace', fontWeight: 800, color: '#60A5FA' }}>${hourlyRate.toFixed(2)}/hr</span>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#1E293B' }}>Base Hourly Rate</label>
+              <span style={{ fontSize: '12.5px', fontFamily: 'monospace', fontWeight: 800, color: '#2563EB' }}>${hourlyRate.toFixed(2)}/hr</span>
             </div>
             <input
               type="range"
@@ -697,8 +733,8 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
           {/* Fuel Surcharge Slider */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#E2E8F0' }}>Fuel Surcharge %</label>
-              <span style={{ fontSize: '12.5px', fontFamily: 'monospace', fontWeight: 800, color: '#FBBF24' }}>{fuelSurchargePct.toFixed(1)}%</span>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#1E293B' }}>Fuel Surcharge %</label>
+              <span style={{ fontSize: '12.5px', fontFamily: 'monospace', fontWeight: 800, color: '#B45309' }}>{fuelSurchargePct.toFixed(1)}%</span>
             </div>
             <input
               type="range"
@@ -720,8 +756,8 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
           {/* Operating Service Charge Slider */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#E2E8F0' }}>Service Charge %</label>
-              <span style={{ fontSize: '12.5px', fontFamily: 'monospace', fontWeight: 800, color: '#FBBF24' }}>{serviceChargePct.toFixed(1)}%</span>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#1E293B' }}>Service Charge %</label>
+              <span style={{ fontSize: '12.5px', fontFamily: 'monospace', fontWeight: 800, color: '#B45309' }}>{serviceChargePct.toFixed(1)}%</span>
             </div>
             <input
               type="range"
@@ -742,7 +778,7 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
 
           {/* Toll Pass-Through Mode */}
           <div>
-            <label style={{ fontSize: '12px', fontWeight: 700, color: '#E2E8F0', display: 'block', marginBottom: '6px' }}>Intercity Toll Pass-Through</label>
+            <label style={{ fontSize: '12px', fontWeight: 700, color: '#1E293B', display: 'block', marginBottom: '6px' }}>Intercity Toll Pass-Through</label>
             <select
               value={tollMode}
               onChange={(e) => setTollMode(e.target.value as any)}
@@ -756,7 +792,7 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
 
           {/* Credit Card Processing Fee */}
           <div>
-            <label style={{ fontSize: '12px', fontWeight: 700, color: '#E2E8F0', display: 'block', marginBottom: '6px' }}>Credit Card Surcharge</label>
+            <label style={{ fontSize: '12px', fontWeight: 700, color: '#1E293B', display: 'block', marginBottom: '6px' }}>Credit Card Surcharge</label>
             <button
               type="button"
               onClick={() => setCcFeePassthrough(!ccFeePassthrough)}
@@ -767,9 +803,9 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
                 fontSize: '11.5px',
                 fontWeight: 700,
                 cursor: 'pointer',
-                border: ccFeePassthrough ? '1px solid #3B82F6' : '1px solid rgba(255,255,255,0.12)',
-                backgroundColor: ccFeePassthrough ? 'rgba(59, 130, 246, 0.18)' : '#0B0F19',
-                color: ccFeePassthrough ? '#60A5FA' : '#94A3B8',
+                border: ccFeePassthrough ? '1px solid #3B82F6' : '1px solid #CBD5E1',
+                backgroundColor: ccFeePassthrough ? '#EFF6FF' : '#F8FAFC',
+                color: ccFeePassthrough ? '#1D4ED8' : '#475569',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -777,13 +813,13 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
               }}
             >
               <span>{ccFeePassthrough ? 'Pass-Through +2.31%' : 'Absorb CC Merchant Fee (0%)'}</span>
-              {ccFeePassthrough && <Check size={14} color="#60A5FA" />}
+              {ccFeePassthrough && <Check size={14} color="#1D4ED8" />}
             </button>
           </div>
 
           {/* Interstate Tax Exemption */}
           <div>
-            <label style={{ fontSize: '12px', fontWeight: 700, color: '#E2E8F0', display: 'block', marginBottom: '6px' }}>Interstate Tax Regulation</label>
+            <label style={{ fontSize: '12px', fontWeight: 700, color: '#1E293B', display: 'block', marginBottom: '6px' }}>Interstate Tax Regulation</label>
             <button
               type="button"
               onClick={() => setInterstateTaxExempt(!interstateTaxExempt)}
@@ -794,9 +830,9 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
                 fontSize: '11.5px',
                 fontWeight: 700,
                 cursor: 'pointer',
-                border: interstateTaxExempt ? '1px solid #10B981' : '1px solid rgba(255,255,255,0.12)',
-                backgroundColor: interstateTaxExempt ? 'rgba(16, 185, 129, 0.18)' : '#0B0F19',
-                color: interstateTaxExempt ? '#34D399' : '#94A3B8',
+                border: interstateTaxExempt ? '1px solid #10B981' : '1px solid #CBD5E1',
+                backgroundColor: interstateTaxExempt ? '#ECFDF5' : '#F8FAFC',
+                color: interstateTaxExempt ? '#047857' : '#475569',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -804,15 +840,15 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
               }}
             >
               <span>{interstateTaxExempt ? 'Tax-Exempt (49 U.S.C. § 14505)' : 'Charge State Tax'}</span>
-              {interstateTaxExempt && <ShieldCheck size={14} color="#34D399" />}
+              {interstateTaxExempt && <ShieldCheck size={14} color="#047857" />}
             </button>
           </div>
 
           {/* Driver Payout Split */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#E2E8F0' }}>Driver Payout Cut</label>
-              <span style={{ fontSize: '12.5px', fontFamily: 'monospace', fontWeight: 800, color: '#C084FC' }}>{driverPayoutPct.toFixed(0)}% of Base</span>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#1E293B' }}>Driver Payout Cut</label>
+              <span style={{ fontSize: '12.5px', fontFamily: 'monospace', fontWeight: 800, color: '#7C3AED' }}>{driverPayoutPct.toFixed(0)}% of Base</span>
             </div>
             <input
               type="range"
@@ -832,7 +868,7 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
 
           {/* Vehicle Class Selector */}
           <div>
-            <label style={{ fontSize: '12px', fontWeight: 700, color: '#E2E8F0', display: 'block', marginBottom: '6px' }}>Vehicle Tier</label>
+            <label style={{ fontSize: '12px', fontWeight: 700, color: '#1E293B', display: 'block', marginBottom: '6px' }}>Vehicle Tier</label>
             <select
               value={vehicleClass}
               onChange={(e) => setVehicleClass(e.target.value as VehicleClass)}
@@ -850,51 +886,51 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
 
         {/* UNIT ECONOMICS & PROFIT MARGIN DASHBOARD */}
         {unit && (
-          <div style={{ background: 'rgba(11, 15, 25, 0.8)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '18px', marginTop: '20px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#94A3B8', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <TrendingUp size={15} color="#34D399" />
+          <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '18px', marginTop: '20px' }}>
+            <div style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#334155', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <TrendingUp size={15} color="#059669" />
               <span>Simulated Unit Economics & Margin Health</span>
             </div>
 
             <div className="ops-unit-metrics-grid">
               <div className="ops-metric-box">
-                <div style={{ fontSize: '11px', color: '#94A3B8' }}>Customer Total</div>
-                <div style={{ fontSize: '17px', fontWeight: 800, color: '#FFFFFF', fontFamily: 'monospace', marginTop: '4px' }}>
+                <div style={{ fontSize: '11px', color: '#64748B' }}>Customer Total</div>
+                <div style={{ fontSize: '17px', fontWeight: 800, color: '#0F172A', fontFamily: 'monospace', marginTop: '4px' }}>
                   ${unit.gross_revenue.toFixed(2)}
                 </div>
               </div>
 
               <div className="ops-metric-box">
-                <div style={{ fontSize: '11px', color: '#94A3B8' }}>Driver Payout</div>
-                <div style={{ fontSize: '17px', fontWeight: 800, color: '#C084FC', fontFamily: 'monospace', marginTop: '4px' }}>
+                <div style={{ fontSize: '11px', color: '#64748B' }}>Driver Payout</div>
+                <div style={{ fontSize: '17px', fontWeight: 800, color: '#7C3AED', fontFamily: 'monospace', marginTop: '4px' }}>
                   ${unit.driver_payout.toFixed(2)}
                 </div>
               </div>
 
               <div className="ops-metric-box">
-                <div style={{ fontSize: '11px', color: '#94A3B8' }}>Tolls & CC Fee Pass</div>
-                <div style={{ fontSize: '17px', fontWeight: 800, color: '#60A5FA', fontFamily: 'monospace', marginTop: '4px' }}>
+                <div style={{ fontSize: '11px', color: '#64748B' }}>Tolls & CC Fee Pass</div>
+                <div style={{ fontSize: '17px', fontWeight: 800, color: '#2563EB', fontFamily: 'monospace', marginTop: '4px' }}>
                   ${unit.pass_through_costs.toFixed(2)}
                 </div>
               </div>
 
               <div className="ops-metric-box">
-                <div style={{ fontSize: '11px', color: '#94A3B8' }}>Fuel Allocation</div>
-                <div style={{ fontSize: '17px', fontWeight: 800, color: '#FBBF24', fontFamily: 'monospace', marginTop: '4px' }}>
+                <div style={{ fontSize: '11px', color: '#64748B' }}>Fuel Allocation</div>
+                <div style={{ fontSize: '17px', fontWeight: 800, color: '#B45309', fontFamily: 'monospace', marginTop: '4px' }}>
                   ${unit.fuel_cost_est.toFixed(2)}
                 </div>
               </div>
 
               <div className="ops-metric-box">
-                <div style={{ fontSize: '11px', color: '#94A3B8' }}>Owner Net Profit</div>
-                <div style={{ fontSize: '17px', fontWeight: 800, color: '#34D399', fontFamily: 'monospace', marginTop: '4px' }}>
+                <div style={{ fontSize: '11px', color: '#64748B' }}>Owner Net Profit</div>
+                <div style={{ fontSize: '17px', fontWeight: 800, color: '#059669', fontFamily: 'monospace', marginTop: '4px' }}>
                   ${unit.owner_net_profit.toFixed(2)}
                 </div>
               </div>
 
-              <div className="ops-metric-box" style={{ borderColor: 'rgba(16, 185, 129, 0.4)' }}>
-                <div style={{ fontSize: '11px', color: '#94A3B8' }}>Net Profit Margin</div>
-                <div style={{ fontSize: '17px', fontWeight: 800, color: '#6EE7B7', fontFamily: 'monospace', marginTop: '4px' }}>
+              <div className="ops-metric-box" style={{ borderColor: '#86EFAC' }}>
+                <div style={{ fontSize: '11px', color: '#64748B' }}>Net Profit Margin</div>
+                <div style={{ fontSize: '17px', fontWeight: 800, color: '#047857', fontFamily: 'monospace', marginTop: '4px' }}>
                   {unit.net_margin_pct.toFixed(1)}%
                 </div>
               </div>
@@ -902,37 +938,121 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
           </div>
         )}
 
-        {/* ACTION BUTTON TO PERSIST TO LIVE DATABASE */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', paddingTop: '18px', borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: '20px' }}>
-          <div style={{ fontSize: '12px', color: '#94A3B8', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Info size={15} color="#60A5FA" />
-            <span>Applying this strategy will immediately update your live dispatch engine & customer booking quotes.</span>
+        {/* AUDIT CONFIRMATION SAFEGUARD & LIVE DATABASE PERSISTENCE */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingTop: '18px', borderTop: '1px solid #E2E8F0', marginTop: '20px' }}>
+          
+          {/* Audit Verification Checkbox Card */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '14px',
+            background: auditConfirmed ? '#ECFDF5' : '#F8FAFC',
+            border: auditConfirmed ? '1.5px solid #10B981' : '1px solid #CBD5E1',
+            borderRadius: '12px',
+            padding: '14px 18px',
+            transition: 'all 0.2s ease',
+            boxShadow: auditConfirmed ? '0 2px 8px rgba(16, 185, 129, 0.12)' : 'none'
+          }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', userSelect: 'none', flex: 1, minWidth: '280px' }}>
+              <input
+                type="checkbox"
+                id="tariff-audit-confirmation"
+                checked={auditConfirmed}
+                onChange={(e) => setAuditConfirmed(e.target.checked)}
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  cursor: 'pointer',
+                  accentColor: '#059669',
+                  borderRadius: '4px'
+                }}
+              />
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 800, color: auditConfirmed ? '#065F46' : '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <ShieldCheck size={16} color={auditConfirmed ? '#059669' : '#64748B'} />
+                  <span>Audit & Operations Authorization Confirmation</span>
+                </div>
+                <div style={{ fontSize: '11.5px', color: auditConfirmed ? '#047857' : '#64748B', marginTop: '2px', lineHeight: '1.4' }}>
+                  I have audited the revised pricing levers (${hourlyRate.toFixed(2)}/hr • {fuelSurchargePct.toFixed(1)}% fuel • {serviceChargePct.toFixed(1)}% fee) for <strong>{vehicleClass.replace(/_/g, ' ')}</strong> and authorize immediately publishing them to the live dispatch engine.
+                </div>
+              </div>
+            </label>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{
+                fontSize: '11px',
+                fontWeight: 800,
+                padding: '4px 12px',
+                borderRadius: '9999px',
+                background: auditConfirmed ? '#D1FAE5' : '#F1F5F9',
+                color: auditConfirmed ? '#065F46' : '#64748B',
+                border: auditConfirmed ? '1px solid #A7F3D0' : '1px solid #CBD5E1',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}>
+                {auditConfirmed ? <Check size={13} color="#059669" /> : <Lock size={12} color="#64748B" />}
+                <span>{auditConfirmed ? 'AUDIT VERIFIED & AUTHORIZED' : 'CHECKBOX REQUIRED TO APPLY'}</span>
+              </span>
+            </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleApplyStrategyToDatabase}
-            disabled={savingRule}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '12px 24px',
-              background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
-              border: 'none',
-              borderRadius: '12px',
-              color: '#FFFFFF',
-              fontSize: '13.5px',
-              fontWeight: 800,
-              cursor: 'pointer',
-              boxShadow: '0 4px 20px rgba(16, 185, 129, 0.35)',
-              transition: 'all 0.2s ease',
-              opacity: savingRule ? 0.6 : 1
-            }}
-          >
-            <Save size={16} className={savingRule ? 'animate-spin' : ''} />
-            <span>{savingRule ? 'Persisting to Database...' : 'Apply Strategy to Live Fleet Matrix'}</span>
-          </button>
+          {/* Action Row */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+            <div style={{ fontSize: '12px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Info size={15} color="#2563EB" />
+              <span>Applying this strategy will immediately update your live dispatch engine & customer booking quotes.</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleApplyStrategyToDatabase}
+              disabled={!auditConfirmed || savingRule}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '12px 24px',
+                background: auditConfirmed 
+                  ? 'linear-gradient(135deg, #059669 0%, #10B981 100%)' 
+                  : '#CBD5E1',
+                border: 'none',
+                borderRadius: '12px',
+                color: auditConfirmed ? '#FFFFFF' : '#475569',
+                fontSize: '13.5px',
+                fontWeight: 800,
+                cursor: auditConfirmed ? 'pointer' : 'not-allowed',
+                boxShadow: auditConfirmed ? '0 4px 14px rgba(16, 185, 129, 0.35)' : 'none',
+                transition: 'all 0.2s ease',
+                opacity: savingRule ? 0.6 : 1
+              }}
+              title={!auditConfirmed ? 'Please check the audit confirmation box above to proceed' : 'Apply verified strategy to live fleet matrix'}
+            >
+              <Save size={16} className={savingRule ? 'animate-spin' : ''} />
+              <span>{savingRule ? 'Persisting to Database...' : 'Apply Strategy to Live Fleet Matrix'}</span>
+            </button>
+          </div>
+
+          {/* Session Audit History (if any) */}
+          {auditLogHistory.length > 0 && (
+            <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '10px 14px', marginTop: '6px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <CheckCircle2 size={13} color="#059669" />
+                <span>Session Pricing Audit Trail ({auditLogHistory.length} recorded updates)</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '100px', overflowY: 'auto' }}>
+                {auditLogHistory.map((item, idx) => (
+                  <div key={idx} style={{ fontSize: '11px', color: '#64748B', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span><strong>{item.timestamp}</strong> — {item.vehicleClass.replace(/_/g, ' ')} ({item.strategy})</span>
+                    <span style={{ fontFamily: 'monospace', color: '#0F172A' }}>{item.summary}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
         </div>
 
       </div>
@@ -940,29 +1060,29 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
       {/* CENTRALIZED GLOBAL HUB TOLL REGISTRY MODAL */}
       {showTollHubModal && (
         <div style={{
-          background: 'linear-gradient(135deg, #0F172A 0%, #090D16 100%)',
-          border: '1px solid rgba(59, 130, 246, 0.4)',
+          background: '#FFFFFF',
+          border: '1px solid #E2E8F0',
           borderRadius: '16px',
           padding: '24px',
-          boxShadow: '0 10px 40px rgba(0,0,0,0.6)',
+          boxShadow: '0 20px 50px rgba(15, 23, 42, 0.12)',
           display: 'flex',
           flexDirection: 'column',
           gap: '14px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #E2E8F0', paddingBottom: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Database size={18} color="#60A5FA" />
-              <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#FFFFFF' }}>Centralized Global Hub Toll Rate Registry & Cache</h4>
+              <Database size={18} color="#2563EB" />
+              <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0F172A' }}>Centralized Global Hub Toll Rate Registry & Cache</h4>
             </div>
             <button
               onClick={() => setShowTollHubModal(false)}
-              style={{ fontSize: '12px', color: '#94A3B8', background: '#1E293B', border: '1px solid rgba(255,255,255,0.1)', padding: '4px 10px', borderRadius: '8px', cursor: 'pointer' }}
+              style={{ fontSize: '12px', color: '#475569', background: '#F1F5F9', border: '1px solid #CBD5E1', padding: '4px 10px', borderRadius: '8px', cursor: 'pointer' }}
             >
               Close
             </button>
           </div>
 
-          <p style={{ fontSize: '12px', color: '#94A3B8', margin: 0, lineHeight: '1.5' }}>
+          <p style={{ fontSize: '12px', color: '#64748B', margin: 0, lineHeight: '1.5' }}>
             Toll rates are calculated once via TollGuru / Google Routes API and cached authoritatively in the Central Global Hub. All vendor cells and customer quotes query this shared registry with <strong>0ms network latency and zero duplicate API charges</strong>.
           </p>
 
@@ -973,16 +1093,16 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
               </div>
             ) : (
               tollRegistry.map((item, idx) => (
-                <div key={idx} style={{ padding: '12px 14px', background: '#0B0F19', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px' }}>
+                <div key={idx} style={{ padding: '12px 14px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px' }}>
                   <div>
-                    <div style={{ fontWeight: 800, color: '#FFFFFF' }}>{item.origin} ➔ {item.destination}</div>
+                    <div style={{ fontWeight: 800, color: '#0F172A' }}>{item.origin} ➔ {item.destination}</div>
                     <div style={{ fontSize: '10.5px', color: '#64748B', marginTop: '2px' }}>
                       Cached via {item.provider} • {item.hits} Central Hub hits
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontFamily: 'monospace', fontWeight: 800, color: '#60A5FA' }}>${parseFloat(item.toll_usd).toFixed(2)} One-Way</div>
-                    <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#34D399' }}>${parseFloat(item.roundtrip_toll_usd).toFixed(2)} Round-Trip</div>
+                    <div style={{ fontFamily: 'monospace', fontWeight: 800, color: '#1D4ED8' }}>${parseFloat(item.toll_usd).toFixed(2)} One-Way</div>
+                    <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#059669' }}>${parseFloat(item.roundtrip_toll_usd).toFixed(2)} Round-Trip</div>
                   </div>
                 </div>
               ))
@@ -994,29 +1114,29 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
       {/* REGIONAL TAX RULES & EXEMPTION MODAL */}
       {showTaxRulesModal && (
         <div style={{
-          background: 'linear-gradient(135deg, #0F172A 0%, #090D16 100%)',
-          border: '1px solid rgba(16, 185, 129, 0.4)',
+          background: '#FFFFFF',
+          border: '1px solid #E2E8F0',
           borderRadius: '16px',
           padding: '24px',
-          boxShadow: '0 10px 40px rgba(0,0,0,0.6)',
+          boxShadow: '0 20px 50px rgba(15, 23, 42, 0.12)',
           display: 'flex',
           flexDirection: 'column',
           gap: '14px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #E2E8F0', paddingBottom: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Landmark size={18} color="#34D399" />
-              <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#FFFFFF' }}>Authoritative State & Metro Regional Tax Rules</h4>
+              <Landmark size={18} color="#059669" />
+              <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0F172A' }}>Authoritative State & Metro Regional Tax Rules</h4>
             </div>
             <button
               onClick={() => setShowTaxRulesModal(false)}
-              style={{ fontSize: '12px', color: '#94A3B8', background: '#1E293B', border: '1px solid rgba(255,255,255,0.1)', padding: '4px 10px', borderRadius: '8px', cursor: 'pointer' }}
+              style={{ fontSize: '12px', color: '#475569', background: '#F1F5F9', border: '1px solid #CBD5E1', padding: '4px 10px', borderRadius: '8px', cursor: 'pointer' }}
             >
               Close
             </button>
           </div>
 
-          <p style={{ fontSize: '12px', color: '#94A3B8', margin: 0, lineHeight: '1.5' }}>
+          <p style={{ fontSize: '12px', color: '#64748B', margin: 0, lineHeight: '1.5' }}>
             Loaded authoritatively from the Central Tax & Compliance Registry. Tax rates automatically apply depending on intrastate vs. interstate passenger routes.
           </p>
 
@@ -1027,21 +1147,21 @@ export const OperationsPricingResearchStudio: React.FC<OperationsPricingResearch
               </div>
             ) : (
               regionalTaxRules.map((rule, idx) => (
-                <div key={idx} style={{ padding: '12px 14px', background: '#0B0F19', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px' }}>
+                <div key={idx} style={{ padding: '12px 14px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px' }}>
                   <div>
-                    <div style={{ fontWeight: 800, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span>{rule.jurisdiction_name || rule.state_code || rule.region}</span>
-                      <span style={{ padding: '2px 7px', borderRadius: '9999px', background: 'rgba(16, 185, 129, 0.15)', color: '#34D399', border: '1px solid rgba(16, 185, 129, 0.35)', fontSize: '10px', fontFamily: 'monospace', fontWeight: 800 }}>
+                      <span style={{ padding: '2px 7px', borderRadius: '9999px', background: '#ECFDF5', color: '#047857', border: '1px solid #A7F3D0', fontSize: '10px', fontFamily: 'monospace', fontWeight: 800 }}>
                         {rule.tax_type || 'SALES_TAX'}
                       </span>
                     </div>
-                    <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>
+                    <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
                       {rule.description || 'Statutory chauffeured passenger transportation tax rule'}
                       {rule.interstate_exempt ? ' • Interstate Exempt' : ' • Applies to all routes'}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontFamily: 'monospace', fontWeight: 800, color: '#34D399', fontSize: '14px' }}>
+                    <div style={{ fontFamily: 'monospace', fontWeight: 800, color: '#047857', fontSize: '14px' }}>
                       {(Number(rule.rate_percentage || rule.tax_rate || 0) * 100).toFixed(2)}%
                     </div>
                     <div style={{ fontSize: '10px', color: '#64748B', fontFamily: 'monospace' }}>

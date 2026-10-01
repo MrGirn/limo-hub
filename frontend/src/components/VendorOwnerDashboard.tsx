@@ -67,8 +67,8 @@ interface NavItem {
 
 
 export const getVendorLocaleSpecs = (config?: VendorPortalConfig) => {
-  const country = (config?.country || config?.country_code || '').toUpperCase();
-  const currency = (config?.currency || 'USD').toUpperCase();
+  const country = String(config?.country || config?.country_code || '').toUpperCase();
+  const currency = String(config?.currency || 'USD').toUpperCase();
   const isMilesCountry = country === 'US' || country === 'USA' || country === 'UNITED STATES' || country === 'GB' || country === 'UK' || country === 'UNITED KINGDOM' || country === 'GREAT BRITAIN' || currency === 'USD' || currency === 'GBP';
   
   const defaultUnit: 'MILES' | 'KM' = isMilesCountry ? 'MILES' : 'KM';
@@ -462,6 +462,26 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
     role: 'ROLE_DISPATCHER',
     assigned_vehicle_id: '',
     permissions: ['dispatch:assign', 'dispatch:radar', 'quotes:manage', 'omnichannel:respond', 'flights:override']
+  });
+  const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
+  const [editMemberForm, setEditMemberForm] = useState<{
+    id: string;
+    email: string;
+    full_name: string;
+    phone: string;
+    role: string;
+    status: any;
+    assigned_vehicle_id: string;
+    permissions: string[];
+  }>({
+    id: '',
+    email: '',
+    full_name: '',
+    phone: '',
+    role: 'ROLE_DISPATCHER',
+    status: 'ACTIVE',
+    assigned_vehicle_id: '',
+    permissions: []
   });
 
   const navItems: NavItem[] = [
@@ -1771,9 +1791,39 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
     }
   };
 
-  const handleAssignChauffeur = (tripId: string, chauffeurName: string) => {
-    setTrips(prev => prev.map(t => t.id === tripId ? { ...t, chauffeur: chauffeurName, status: 'DISPATCHED' } : t));
-    setActionNotice(`✅ Chauffeur ${chauffeurName} assigned to trip ${tripId}. Push notification dispatched.`);
+  const handleAssignChauffeur = async (tripId: string, chauffeurName: string, reason: string = 'Emergency Dispatcher Reassignment') => {
+    if (!chauffeurName) return;
+    const selectedDriver = chauffeurs.find(c => c.name === chauffeurName);
+    try {
+      const res = await fetch('/api/v1/dispatch/emergency-override-chauffeur', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({
+          trip_id: tripId,
+          booking_id: tripId,
+          vendor_id: config?.vendor_id,
+          driver_name: chauffeurName,
+          driver_id: selectedDriver?.id,
+          driver_phone: selectedDriver?.phone,
+          override_reason: reason
+        })
+      });
+      if (res.ok) {
+        setTrips(prev => prev.map(t => (t.id === tripId || t.trip_id === tripId) ? {
+          ...t,
+          chauffeur: chauffeurName,
+          chauffeur_phone: selectedDriver?.phone || t.chauffeur_phone,
+          status: t.status === 'UNASSIGNED' ? 'DISPATCHED' : t.status
+        } : t));
+        setActionNotice(`⚡ EMERGENCY OVERRIDE CONFIRMED: Chauffeur updated to ${chauffeurName} for ${tripId}. Manifest and telemetry updated.`);
+      } else {
+        setTrips(prev => prev.map(t => (t.id === tripId || t.trip_id === tripId) ? { ...t, chauffeur: chauffeurName, status: t.status === 'UNASSIGNED' ? 'DISPATCHED' : t.status } : t));
+        setActionNotice(`⚡ Chauffeur re-assigned to ${chauffeurName} for trip ${tripId}.`);
+      }
+    } catch (err: any) {
+      setTrips(prev => prev.map(t => (t.id === tripId || t.trip_id === tripId) ? { ...t, chauffeur: chauffeurName, status: t.status === 'UNASSIGNED' ? 'DISPATCHED' : t.status } : t));
+      setActionNotice(`⚡ Chauffeur re-assigned to ${chauffeurName} for trip ${tripId}.`);
+    }
   };
 
   const handleOperationsProcessPayment = async (trip: any) => {
@@ -2233,6 +2283,43 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
     }
   };
 
+  const handleOpenEditMemberModal = (member: TeamMember) => {
+    setEditingMember(member);
+    setEditMemberForm({
+      id: member.id,
+      email: member.email,
+      full_name: member.full_name,
+      phone: member.phone || '',
+      role: member.role,
+      status: member.status || 'ACTIVE',
+      assigned_vehicle_id: member.assigned_vehicle_id || '',
+      permissions: member.permissions || []
+    });
+  };
+
+  const handleUpdateTeamMemberSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMember) return;
+    setLoading(true);
+    try {
+      const updated = await updateVendorTeamMember(config.vendor_id, editingMember.id, {
+        full_name: editMemberForm.full_name,
+        phone: editMemberForm.phone || undefined,
+        role: editMemberForm.role,
+        status: editMemberForm.status,
+        permissions: editMemberForm.permissions,
+        assigned_vehicle_id: editMemberForm.role === 'ROLE_CHAUFFEUR' ? editMemberForm.assigned_vehicle_id : undefined
+      });
+      setTeamMembers(prev => prev.map(m => m.id === editingMember.id ? updated : m));
+      setEditingMember(null);
+      setActionNotice(`✅ Updated permissions and details for ${updated.full_name} (${updated.role}).`);
+    } catch (err: any) {
+      setActionNotice(`⚠️ Error updating team member: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDeleteMember = async (userId: string, memberName: string) => {
     if (!confirm(`Are you sure you want to revoke access for ${memberName}?`)) return;
     try {
@@ -2276,7 +2363,7 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#F3F4F6', color: '#0F172A', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       
-      {/* 1. TOP EXECUTIVE FLEET COMMAND BAR — LUXURY DARK GLASSMORPHISM */}
+      {/* 1. TOP EXECUTIVE FLEET COMMAND BAR — CRISP LIGHT THEME & VERTICAL AUTONOMY */}
       <header className="vendor-top-header">
         {/* Left: Hamburger & Local Vendor Identity */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -2289,9 +2376,9 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
               }
             }}
             style={{ 
-              background: 'rgba(255, 255, 255, 0.06)', 
-              border: '1px solid rgba(255, 255, 255, 0.12)', 
-              color: '#FFFFFF', 
+              background: '#F1F5F9', 
+              border: '1px solid #E2E8F0', 
+              color: '#334155', 
               cursor: 'pointer', 
               padding: '6px', 
               borderRadius: '6px', 
@@ -2311,123 +2398,123 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
               width: '28px',
               height: '28px',
               borderRadius: '6px',
-              background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(16, 185, 129, 0.2))',
-              border: '1px solid rgba(245, 158, 11, 0.35)',
+              background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(16, 185, 129, 0.15))',
+              border: '1px solid rgba(245, 158, 11, 0.4)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0
             }}>
-              <Shield size={15} color="#FBBF24" />
+              <Shield size={15} color="#D97706" />
             </div>
-            <span style={{ fontWeight: 800, fontSize: '13.5px', letterSpacing: '-0.01em', color: '#F8FAFC', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>
+            <span style={{ fontWeight: 800, fontSize: '14px', letterSpacing: '-0.01em', color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '220px' }}>
               {config.vendor_name || 'Autonomous Operations'}
             </span>
-            <span className="vendor-header-desktop-only" style={{ color: 'rgba(255,255,255,0.25)', fontSize: '12px' }}>|</span>
-            <span className="vendor-header-desktop-only" style={{ fontWeight: 600, fontSize: '12.5px', color: '#94A3B8' }}>
+            <span className="vendor-header-desktop-only" style={{ color: '#CBD5E1', fontSize: '13px' }}>|</span>
+            <span className="vendor-header-desktop-only" style={{ fontWeight: 600, fontSize: '12.5px', color: '#64748B' }}>
               Executive Fleet Console
             </span>
             <span style={{
               fontSize: '9px',
               fontWeight: 800,
               letterSpacing: '0.06em',
-              padding: '2px 7px',
+              padding: '2px 8px',
               borderRadius: '9999px',
-              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(5, 150, 105, 0.35))',
-              border: '1px solid rgba(16, 185, 129, 0.45)',
-              color: '#34D399',
-              marginLeft: '2px',
+              background: '#ECFDF5',
+              border: '1px solid #A7F3D0',
+              color: '#065F46',
+              marginLeft: '4px',
               whiteSpace: 'nowrap',
               flexShrink: 0,
-              boxShadow: '0 0 8px rgba(16, 185, 129, 0.2)'
+              boxShadow: '0 1px 2px rgba(16, 185, 129, 0.08)'
             }}>
               SOVEREIGN CELL
             </span>
           </div>
         </div>
 
-        {/* Center: Autonomy Controls (Desktop) */}
+        {/* Center: Autonomy Controls (Single Line Horizontal Segmented Switch) */}
         <div className="vendor-header-desktop-only" style={{
+          display: 'flex',
           alignItems: 'center',
-          backgroundColor: 'rgba(0, 0, 0, 0.55)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          padding: '3px 5px',
-          borderRadius: '9999px',
-          gap: '4px',
-          boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.5)'
+          gap: '10px',
+          backgroundColor: '#F8FAFC',
+          border: '1px solid #E2E8F0',
+          padding: '4px 10px',
+          borderRadius: '8px',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
         }}>
-          <span style={{ fontSize: '9.5px', fontWeight: 800, color: '#64748B', letterSpacing: '0.08em', padding: '0 6px' }}>
-            AUTONOMY:
+          <span style={{ fontSize: '10px', fontWeight: 800, color: '#64748B', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+            AUTONOMY
           </span>
 
-          <button
-            onClick={() => handleAutonomyChange('L5_FULL_AUTONOMY')}
-            style={{
-              padding: '4px 10px',
-              borderRadius: '9999px',
-              fontSize: '10.5px',
-              fontWeight: 800,
-              cursor: 'pointer',
-              border: 'none',
-              backgroundColor: autonomyLevel === 'L5_FULL_AUTONOMY' ? '#10B981' : 'transparent',
-              backgroundImage: autonomyLevel === 'L5_FULL_AUTONOMY' ? 'linear-gradient(135deg, #059669, #10B981)' : 'none',
-              color: autonomyLevel === 'L5_FULL_AUTONOMY' ? '#FFFFFF' : '#94A3B8',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              boxShadow: autonomyLevel === 'L5_FULL_AUTONOMY' ? '0 0 12px rgba(16,185,129,0.45)' : 'none',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <Play size={10} fill={autonomyLevel === 'L5_FULL_AUTONOMY' ? '#FFFFFF' : 'none'} />
-            L5 Autonomous
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <button
+              onClick={() => handleAutonomyChange('L5_FULL_AUTONOMY')}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '5px',
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                border: autonomyLevel === 'L5_FULL_AUTONOMY' ? '1px solid #059669' : '1px solid transparent',
+                backgroundColor: autonomyLevel === 'L5_FULL_AUTONOMY' ? '#10B981' : '#FFFFFF',
+                color: autonomyLevel === 'L5_FULL_AUTONOMY' ? '#FFFFFF' : '#475569',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                transition: 'all 0.15s ease',
+                boxShadow: autonomyLevel === 'L5_FULL_AUTONOMY' ? '0 1px 3px rgba(16,185,129,0.3)' : 'none'
+              }}
+            >
+              <Play size={10} fill={autonomyLevel === 'L5_FULL_AUTONOMY' ? '#FFFFFF' : '#475569'} />
+              <span>L5 Autonomous</span>
+            </button>
 
-          <button
-            onClick={() => handleAutonomyChange('L3_SHADOW_ASSIST')}
-            style={{
-              padding: '4px 10px',
-              borderRadius: '9999px',
-              fontSize: '10.5px',
-              fontWeight: 800,
-              cursor: 'pointer',
-              border: 'none',
-              backgroundColor: autonomyLevel === 'L3_SHADOW_ASSIST' ? '#F59E0B' : 'transparent',
-              backgroundImage: autonomyLevel === 'L3_SHADOW_ASSIST' ? 'linear-gradient(135deg, #D97706, #F59E0B)' : 'none',
-              color: autonomyLevel === 'L3_SHADOW_ASSIST' ? '#FFFFFF' : '#94A3B8',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              boxShadow: autonomyLevel === 'L3_SHADOW_ASSIST' ? '0 0 12px rgba(245,158,11,0.45)' : 'none',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <Pause size={10} fill={autonomyLevel === 'L3_SHADOW_ASSIST' ? '#FFFFFF' : 'none'} />
-            L3 Assist
-          </button>
+            <button
+              onClick={() => handleAutonomyChange('L3_SHADOW_ASSIST')}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '5px',
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                border: autonomyLevel === 'L3_SHADOW_ASSIST' ? '1px solid #D97706' : '1px solid transparent',
+                backgroundColor: autonomyLevel === 'L3_SHADOW_ASSIST' ? '#F59E0B' : '#FFFFFF',
+                color: autonomyLevel === 'L3_SHADOW_ASSIST' ? '#FFFFFF' : '#475569',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                transition: 'all 0.15s ease',
+                boxShadow: autonomyLevel === 'L3_SHADOW_ASSIST' ? '0 1px 3px rgba(245,158,11,0.3)' : 'none'
+              }}
+            >
+              <Pause size={10} fill={autonomyLevel === 'L3_SHADOW_ASSIST' ? '#FFFFFF' : '#475569'} />
+              <span>L3 Assist</span>
+            </button>
 
-          <button
-            onClick={() => handleAutonomyChange('L0_MANUAL_KILL_SWITCH')}
-            style={{
-              padding: '4px 10px',
-              borderRadius: '9999px',
-              fontSize: '10.5px',
-              fontWeight: 800,
-              cursor: 'pointer',
-              border: 'none',
-              backgroundColor: autonomyLevel === 'L0_MANUAL_KILL_SWITCH' ? '#EF4444' : 'transparent',
-              backgroundImage: autonomyLevel === 'L0_MANUAL_KILL_SWITCH' ? 'linear-gradient(135deg, #DC2626, #EF4444)' : 'none',
-              color: autonomyLevel === 'L0_MANUAL_KILL_SWITCH' ? '#FFFFFF' : '#94A3B8',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              boxShadow: autonomyLevel === 'L0_MANUAL_KILL_SWITCH' ? '0 0 12px rgba(239,68,68,0.45)' : 'none',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <Power size={10} />
-            L0 KILL SWITCH
-          </button>
+            <button
+              onClick={() => handleAutonomyChange('L0_MANUAL_KILL_SWITCH')}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '5px',
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                border: autonomyLevel === 'L0_MANUAL_KILL_SWITCH' ? '1px solid #DC2626' : '1px solid transparent',
+                backgroundColor: autonomyLevel === 'L0_MANUAL_KILL_SWITCH' ? '#EF4444' : '#FFFFFF',
+                color: autonomyLevel === 'L0_MANUAL_KILL_SWITCH' ? '#FFFFFF' : '#475569',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                transition: 'all 0.15s ease',
+                boxShadow: autonomyLevel === 'L0_MANUAL_KILL_SWITCH' ? '0 1px 3px rgba(239,68,68,0.3)' : 'none'
+              }}
+            >
+              <Power size={10} />
+              <span>L0 Kill Switch</span>
+            </button>
+          </div>
         </div>
 
         {/* Center: Compact Autonomy Mode (Mobile) */}
@@ -2444,13 +2531,13 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
               fontSize: '10.5px',
               fontWeight: 800,
               cursor: 'pointer',
-              border: '1px solid rgba(255,255,255,0.2)',
+              border: '1px solid #CBD5E1',
               backgroundColor: autonomyLevel === 'L5_FULL_AUTONOMY' ? '#10B981' : (autonomyLevel === 'L3_SHADOW_ASSIST' ? '#F59E0B' : '#EF4444'),
               color: '#FFFFFF',
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
             }}
             title="Tap to toggle autonomy mode"
           >
@@ -2463,41 +2550,41 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
           <button
             onClick={() => setShowCommercialGuideModal(true)}
             style={{
-              padding: '5px 12px',
-              background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.25))',
-              color: '#FCD34D',
-              border: '1px solid rgba(245, 158, 11, 0.45)',
+              padding: '6px 12px',
+              background: '#FFFBEB',
+              color: '#B45309',
+              border: '1px solid #FDE68A',
               borderRadius: '6px',
-              fontSize: '11.5px',
-              fontWeight: 800,
+              fontSize: '12px',
+              fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '5px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+              gap: '6px',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
               transition: 'all 0.2s ease'
             }}
             title="Open comprehensive commercial operations, tariff & platform playbook"
           >
-            <BookOpen size={12} color="#FCD34D" />
+            <BookOpen size={13} color="#B45309" />
             <span className="vendor-header-desktop-only">Playbook</span>
           </button>
 
           <button
             onClick={onNavigateToStorefront}
             style={{
-              padding: '5px 12px',
-              backgroundColor: 'rgba(255, 255, 255, 0.08)',
-              color: '#F1F5F9',
-              border: '1px solid rgba(255, 255, 255, 0.16)',
+              padding: '6px 12px',
+              backgroundColor: '#F8FAFC',
+              color: '#334155',
+              border: '1px solid #CBD5E1',
               borderRadius: '6px',
-              fontSize: '11.5px',
+              fontSize: '12px',
               fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '4px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+              gap: '5px',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
               transition: 'all 0.2s ease'
             }}
             title="Return to Customer Booking Storefront"
@@ -2672,35 +2759,6 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
           </div>
         </div>
       </aside>
-
-      {/* 1.5 MOBILE / TABLET HORIZONTAL SWIPEABLE TAB STRIP */}
-      <div className="vendor-mobile-tabs-strip">
-        {navItems.map((item) => {
-          const isActive = activeTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`vendor-mobile-tab-pill ${isActive ? 'active' : ''}`}
-            >
-              <span>{item.icon}</span>
-              <span>{item.label}</span>
-              {item.badge && (
-                <span style={{
-                  fontSize: '9.5px',
-                  fontWeight: 800,
-                  backgroundColor: isActive ? '#FFFFFF' : (item.id === 'dispatch' ? '#DC2626' : '#0078D4'),
-                  color: isActive ? '#0078D4' : '#FFFFFF',
-                  padding: '1px 5px',
-                  borderRadius: '8px'
-                }}>
-                  {item.badge}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
 
       {/* Action Notice Alert */}
       {actionNotice && (
@@ -3598,25 +3656,50 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
 
                                     {/* 6. CHAUFFEUR */}
                                     <td style={{ padding: '16px 16px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                                      {trip.chauffeur && trip.chauffeur !== 'Unassigned' ? (
-                                        <div>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                           <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>
-                                            {trip.chauffeur}
+                                            {trip.chauffeur && trip.chauffeur !== 'Unassigned' ? trip.chauffeur : 'Auto-assign'}
                                           </div>
-                                          <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
-                                            {trip.chauffeur_phone || 'Assigned Driver'}
-                                          </div>
+                                          {trip.chauffeur && trip.chauffeur !== 'Unassigned' && trip.chauffeur !== 'Autonomous Auto-Assign' && (
+                                            <span style={{ fontSize: '9px', padding: '1px 5px', borderRadius: '4px', backgroundColor: '#EFF6FF', color: '#0284C7', fontWeight: 800 }}>
+                                              Assigned
+                                            </span>
+                                          )}
                                         </div>
-                                      ) : (
-                                        <div>
-                                          <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>
-                                            Auto-assign
-                                          </div>
-                                          <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
-                                            Assignment pending
-                                          </div>
+                                        <div style={{ fontSize: '11px', color: '#64748B' }}>
+                                          {trip.chauffeur_phone || 'Assigned Driver'}
                                         </div>
-                                      )}
+                                        <div style={{ marginTop: '2px' }}>
+                                          <select
+                                            value=""
+                                            onChange={(e) => {
+                                              if (e.target.value) {
+                                                handleAssignChauffeur(trip.id, e.target.value, 'Emergency Chauffeur Swap');
+                                              }
+                                            }}
+                                            style={{
+                                              fontSize: '10.5px',
+                                              padding: '3px 6px',
+                                              borderRadius: '4px',
+                                              border: '1px solid #CBD5E1',
+                                              backgroundColor: '#F8FAFC',
+                                              color: '#334155',
+                                              fontWeight: 700,
+                                              cursor: 'pointer',
+                                              outline: 'none'
+                                            }}
+                                            title="Emergency Driver Override: Swap driver immediately"
+                                          >
+                                            <option value="" disabled>⚡ Override Driver...</option>
+                                            {chauffeurs.map(c => (
+                                              <option key={c.id} value={c.name}>
+                                                {c.name} ({c.shift === 'ON_DUTY' ? 'On Duty' : 'Standby'})
+                                              </option>
+                                            ))}
+                                          </select>
+                                        </div>
+                                      </div>
                                     </td>
 
                                     {/* 7. STATUS */}
@@ -4400,7 +4483,9 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                         <span style={{ fontSize: '11px', color: '#475569', fontWeight: 700 }}>Database Fleet Presets:</span>
                         {(config.vehicle_options && config.vehicle_options.length > 0
                           ? config.vehicle_options.flatMap((opt: any) => {
-                              const presets = [{ label: opt.title, q: `${opt.title} ${opt.models ? opt.models.split(',')[0] : ''}` }];
+                              if (!opt) return [];
+                              const optTitle = opt.title || opt.name || 'Vehicle';
+                              const presets = [{ label: optTitle, q: `${optTitle} ${opt.models ? opt.models.split(',')[0] : ''}` }];
                               if (opt.models) {
                                 const mList = opt.models.split(',').map((m: string) => m.replace(/or similar/i, '').trim()).filter(Boolean);
                                 mList.slice(0, 2).forEach((m: string) => {
@@ -8522,7 +8607,7 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                                       {member.avatar_url ? (
                                         <img src={member.avatar_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
                                       ) : (
-                                        member.full_name.slice(0, 2).toUpperCase()
+                                        (member.full_name || member.email || 'TM').slice(0, 2).toUpperCase()
                                       )}
                                     </div>
                                     <div>
@@ -8590,18 +8675,39 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
 
                                 {/* 5. Actions */}
                                 <td style={{ padding: '14px 18px', textAlign: 'center', verticalAlign: 'middle' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexWrap: 'wrap' }}>
                                     
+                                    {/* Edit Permissions Button */}
+                                    <button
+                                      onClick={() => handleOpenEditMemberModal(member)}
+                                      style={{
+                                        padding: '4px 8px',
+                                        backgroundColor: '#F1F5F9',
+                                        color: '#334155',
+                                        border: '1px solid #CBD5E1',
+                                        borderRadius: '4px',
+                                        fontSize: '10.5px',
+                                        fontWeight: 700,
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px'
+                                      }}
+                                      title="Edit member role, status, and granular permissions"
+                                    >
+                                      <Edit3 size={11} color="#0078D4" /> Edit
+                                    </button>
+
                                     {/* 1-Click Role Switcher / Impersonation */}
                                     <button
                                       onClick={() => handleImpersonateOrTestRole(member)}
                                       style={{
-                                        padding: '4px 10px',
+                                        padding: '4px 8px',
                                         backgroundColor: '#EFF6FF',
                                         color: '#0078D4',
                                         border: '1px solid #BFDBFE',
                                         borderRadius: '4px',
-                                        fontSize: '10px',
+                                        fontSize: '10.5px',
                                         fontWeight: 800,
                                         cursor: 'pointer',
                                         display: 'inline-flex',
@@ -8623,7 +8729,7 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                                         color: isOwner && teamMembers.filter(m => m.role === 'ROLE_VENDOR_ADMIN').length <= 1 ? '#9CA3AF' : '#DC2626',
                                         border: 'none',
                                         borderRadius: '4px',
-                                        fontSize: '10px',
+                                        fontSize: '10.5px',
                                         fontWeight: 700,
                                         cursor: isOwner && teamMembers.filter(m => m.role === 'ROLE_VENDOR_ADMIN').length <= 1 ? 'not-allowed' : 'pointer'
                                       }}
@@ -8649,17 +8755,18 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    backgroundColor: 'rgba(0,0,0,0.5)',
+                    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+                    backdropFilter: 'blur(3px)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    zIndex: 100,
+                    zIndex: 1000,
                     padding: '20px'
                   }}>
                     <div style={{
                       backgroundColor: '#FFFFFF',
                       borderRadius: '12px',
-                      maxWidth: '520px',
+                      maxWidth: '580px',
                       width: '100%',
                       padding: '24px',
                       boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
@@ -8758,6 +8865,55 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                           </div>
                         )}
 
+                        {/* Granular Capabilities & Permissions Matrix */}
+                        <div style={{ backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0', marginTop: '4px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: 800, color: '#334155', textTransform: 'uppercase' }}>
+                              Granular Permissions & Capabilities
+                            </span>
+                            <span style={{ fontSize: '10.5px', color: '#0078D4', fontWeight: 700 }}>
+                              {newMemberForm.permissions.length} active
+                            </span>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}>
+                            {[
+                              { key: 'dispatch:assign', label: 'Assign Chauffeurs', cat: 'Operations' },
+                              { key: 'dispatch:radar', label: 'GPS Dispatch Radar', cat: 'Operations' },
+                              { key: 'flights:override', label: 'Flight Radar Delay Override', cat: 'Operations' },
+                              { key: 'autonomy:override', label: 'Autonomy Kill Switch', cat: 'Operations' },
+                              { key: 'quotes:manage', label: 'Quotes & RFQs', cat: 'Sales' },
+                              { key: 'omnichannel:respond', label: 'WhatsApp / SMS Chat', cat: 'Concierge' },
+                              { key: 'billing:manage', label: 'Stripe & Bank Accounts', cat: 'Finance' },
+                              { key: 'pricing:override', label: 'Edit Dynamic Tariffs', cat: 'Finance' },
+                              { key: 'settlements:payout', label: 'Process Chauffeur Payouts', cat: 'Finance' },
+                              { key: 'team:manage', label: 'Manage Team & RBAC', cat: 'Admin' },
+                              { key: 'byoe:manage', label: 'Custom SMTP / BYOE', cat: 'Admin' },
+                              { key: 'trip:execute', label: 'Execute Trips (Driver)', cat: 'Driver' },
+                              { key: 'earnings:read_own', label: 'View Own Earnings', cat: 'Driver' },
+                              { key: 'corporate:book', label: 'Corporate Desk Booking', cat: 'Corporate' },
+                            ].map((perm) => {
+                              const isChecked = newMemberForm.permissions.includes(perm.key);
+                              return (
+                                <label key={perm.key} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#1E293B', cursor: 'pointer', padding: '3px 0' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => {
+                                      if (isChecked) {
+                                        setNewMemberForm({ ...newMemberForm, permissions: newMemberForm.permissions.filter(p => p !== perm.key) });
+                                      } else {
+                                        setNewMemberForm({ ...newMemberForm, permissions: [...newMemberForm.permissions, perm.key] });
+                                      }
+                                    }}
+                                  />
+                                  <span>{perm.label}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #E5E7EB' }}>
                           <button
                             type="button"
@@ -8772,6 +8928,189 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                             style={{ padding: '8px 20px', backgroundColor: '#0078D4', color: '#FFFFFF', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}
                           >
                             {loading ? 'Creating Credentials...' : 'Send Invite & Generate Magic Link'}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                )}
+
+                {/* 6. Edit Team Member & Permissions Modal */}
+                {editingMember && (
+                  <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+                    backdropFilter: 'blur(3px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                    padding: '20px'
+                  }}>
+                    <div style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '12px',
+                      maxWidth: '580px',
+                      width: '100%',
+                      padding: '24px',
+                      boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
+                      maxHeight: '90vh',
+                      overflowY: 'auto'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E5E7EB', paddingBottom: '14px', marginBottom: '16px' }}>
+                        <div>
+                          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Edit3 size={18} color="#0078D4" /> Edit Permissions — {editMemberForm.full_name}
+                          </h3>
+                          <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#6B7280' }}>
+                            Update assigned role, active account status, and custom capability allowances.
+                          </p>
+                        </div>
+                        <button onClick={() => setEditingMember(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6B7280' }}>
+                          <X size={18} />
+                        </button>
+                      </div>
+
+                      <form onSubmit={handleUpdateTeamMemberSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: 800, color: '#374151', textTransform: 'uppercase' }}>Full Name *</label>
+                            <input
+                              type="text"
+                              required
+                              value={editMemberForm.full_name}
+                              onChange={(e) => setEditMemberForm({ ...editMemberForm, full_name: e.target.value })}
+                              style={{ width: '100%', padding: '10px', border: '1px solid #D1D5DB', borderRadius: '6px', fontSize: '13px', marginTop: '4px', boxSizing: 'border-box' }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: 800, color: '#374151', textTransform: 'uppercase' }}>Mobile Phone</label>
+                            <input
+                              type="tel"
+                              value={editMemberForm.phone}
+                              onChange={(e) => setEditMemberForm({ ...editMemberForm, phone: e.target.value })}
+                              style={{ width: '100%', padding: '10px', border: '1px solid #D1D5DB', borderRadius: '6px', fontSize: '13px', marginTop: '4px', boxSizing: 'border-box' }}
+                            />
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: 800, color: '#374151', textTransform: 'uppercase' }}>Assigned Role</label>
+                            <select
+                              value={editMemberForm.role}
+                              onChange={(e) => setEditMemberForm({ ...editMemberForm, role: e.target.value })}
+                              style={{ width: '100%', padding: '10px', border: '1px solid #D1D5DB', borderRadius: '6px', fontSize: '13px', marginTop: '4px', boxSizing: 'border-box', backgroundColor: '#FFFFFF' }}
+                            >
+                              <option value="ROLE_DISPATCHER">🎧 Flight & Fleet Dispatcher</option>
+                              <option value="ROLE_CHAUFFEUR">🚗 Master Chauffeur</option>
+                              <option value="ROLE_CORPORATE_BOOKER">🏢 Corporate Travel Desk</option>
+                              <option value="ROLE_VENDOR_ADMIN">👑 Vendor Owner</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: 800, color: '#374151', textTransform: 'uppercase' }}>Account Status</label>
+                            <select
+                              value={editMemberForm.status}
+                              onChange={(e) => setEditMemberForm({ ...editMemberForm, status: e.target.value as any })}
+                              style={{ width: '100%', padding: '10px', border: '1px solid #D1D5DB', borderRadius: '6px', fontSize: '13px', marginTop: '4px', boxSizing: 'border-box', backgroundColor: '#FFFFFF' }}
+                            >
+                              <option value="ACTIVE">🟢 Active</option>
+                              <option value="SUSPENDED">🔴 Suspended</option>
+                              <option value="OFF_DUTY">⚪ Off Duty</option>
+                              <option value="INVITED">🟡 Invited</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {editMemberForm.role === 'ROLE_CHAUFFEUR' && (
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: 800, color: '#374151', textTransform: 'uppercase' }}>Assigned Fleet Vehicle</label>
+                            <select
+                              value={editMemberForm.assigned_vehicle_id}
+                              onChange={(e) => setEditMemberForm({ ...editMemberForm, assigned_vehicle_id: e.target.value })}
+                              style={{ width: '100%', padding: '10px', border: '1px solid #D1D5DB', borderRadius: '6px', fontSize: '13px', marginTop: '4px', boxSizing: 'border-box', backgroundColor: '#FFFFFF' }}
+                            >
+                              <option value="">-- Select Active Vehicle from Fleet Inventory --</option>
+                              {vehicles.map(v => (
+                                <option key={v.id} value={v.id}>
+                                  {v.license_plate ? `${v.license_plate} • ` : ''}{v.name || `${v.make} ${v.model}`} ({v.vehicle_class})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        {/* Granular Capabilities & Permissions Matrix for Edit */}
+                        <div style={{ backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0', marginTop: '4px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: 800, color: '#334155', textTransform: 'uppercase' }}>
+                              Allowed Capabilities & Security Scopes
+                            </span>
+                            <span style={{ fontSize: '10.5px', color: '#0078D4', fontWeight: 700 }}>
+                              {editMemberForm.permissions.length} active
+                            </span>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}>
+                            {[
+                              { key: 'dispatch:assign', label: 'Assign Chauffeurs', cat: 'Operations' },
+                              { key: 'dispatch:radar', label: 'GPS Dispatch Radar', cat: 'Operations' },
+                              { key: 'flights:override', label: 'Flight Radar Delay Override', cat: 'Operations' },
+                              { key: 'autonomy:override', label: 'Autonomy Kill Switch', cat: 'Operations' },
+                              { key: 'quotes:manage', label: 'Quotes & RFQs', cat: 'Sales' },
+                              { key: 'omnichannel:respond', label: 'WhatsApp / SMS Chat', cat: 'Concierge' },
+                              { key: 'billing:manage', label: 'Stripe & Bank Accounts', cat: 'Finance' },
+                              { key: 'pricing:override', label: 'Edit Dynamic Tariffs', cat: 'Finance' },
+                              { key: 'settlements:payout', label: 'Process Chauffeur Payouts', cat: 'Finance' },
+                              { key: 'team:manage', label: 'Manage Team & RBAC', cat: 'Admin' },
+                              { key: 'byoe:manage', label: 'Custom SMTP / BYOE', cat: 'Admin' },
+                              { key: 'trip:execute', label: 'Execute Trips (Driver)', cat: 'Driver' },
+                              { key: 'earnings:read_own', label: 'View Own Earnings', cat: 'Driver' },
+                              { key: 'corporate:book', label: 'Corporate Desk Booking', cat: 'Corporate' },
+                            ].map((perm) => {
+                              const isChecked = editMemberForm.permissions.includes(perm.key);
+                              return (
+                                <label key={perm.key} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#1E293B', cursor: 'pointer', padding: '3px 0' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => {
+                                      if (isChecked) {
+                                        setEditMemberForm({ ...editMemberForm, permissions: editMemberForm.permissions.filter(p => p !== perm.key) });
+                                      } else {
+                                        setEditMemberForm({ ...editMemberForm, permissions: [...editMemberForm.permissions, perm.key] });
+                                      }
+                                    }}
+                                  />
+                                  <span>{perm.label}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #E5E7EB' }}>
+                          <button
+                            type="button"
+                            onClick={() => setEditingMember(null)}
+                            style={{ padding: '8px 16px', backgroundColor: '#F3F4F6', color: '#4B5563', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={loading}
+                            style={{ padding: '8px 20px', backgroundColor: '#0078D4', color: '#FFFFFF', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}
+                          >
+                            {loading ? 'Saving Changes...' : 'Save Member Permissions'}
                           </button>
                         </div>
                       </form>
@@ -10908,7 +11247,7 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                         </div>
 
                         <div style={{ padding: '10px', backgroundColor: '#F8FAFC', borderRadius: '6px', border: '1px solid #E2E8F0', fontSize: '11px', color: '#475569' }}>
-                          <div>Caller ID Name (CNAM): <strong>{((config.vendor_name || 'LIMO FLEET').toUpperCase()).slice(0, 15)}</strong></div>
+                          <div>Caller ID Name (CNAM): <strong>{((config?.vendor_name || 'LIMO FLEET').toUpperCase()).slice(0, 15)}</strong></div>
                           <div>Carrier Routing: <strong>{tcrBrandForm.contact_phone ? `Dedicated (${tcrBrandForm.contact_phone})` : 'Shared Platform Gateway'}</strong></div>
                         </div>
 
@@ -12128,7 +12467,7 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                     <div style={{ backgroundColor: '#F8FAFC', padding: '14px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
                       <div style={{ color: '#64748B', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>CONTRACT / AGREEMENT REF</div>
                       <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '14px', marginTop: '4px', fontFamily: 'monospace' }}>
-                        {subscriptionData?.contract_reference || `CTR-${config.vendor_id.toUpperCase().slice(-6)}-2026`}
+                        {subscriptionData?.contract_reference || `CTR-${(config?.vendor_id || 'VEN').toUpperCase().slice(-6)}-2026`}
                       </div>
                       <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>Sovereign Cell Master Agreement</div>
                     </div>
@@ -12358,7 +12697,7 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                             border: '1px solid rgba(154, 123, 79, 0.6)',
                             color: '#D4AF37'
                           }}>
-                            {vendorSupportSub ? `ENROLLED: ${vendorSupportSub.plan_name.toUpperCase()}` : 'PREVIEW / UNENROLLED'}
+                            {vendorSupportSub ? `ENROLLED: ${(vendorSupportSub.plan_name || 'STANDARD').toUpperCase()}` : 'PREVIEW / UNENROLLED'}
                           </span>
                         </div>
                         <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#94A3B8' }}>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, Lock, Award, Phone, Mail, MapPin, Crown } from 'lucide-react';
+import { ShieldCheck, Lock, Award, Phone, Mail, MapPin, Crown, MessageSquare, ExternalLink } from 'lucide-react';
 import { VendorPortalConfig } from '../../types';
 import { PublicPageTab } from './PublicHeader';
 
@@ -11,6 +11,10 @@ interface PublicFooterProps {
 
 export const PublicFooter: React.FC<PublicFooterProps> = ({ config, onSelectTab, onOpenOperatorOnboarding }) => {
   const branding = config.branding || {};
+  const mapsUrl = branding.google_maps_url || 'https://maps.app.goo.gl/e6NvZr7Wjwz7ukR89';
+  const callPhone = branding.contact_phone || '610-653-0033';
+  const textPhone = branding.contact_text || '(215) 614-5900';
+  const emailAddr = branding.contact_email || (branding.domain ? `info@${branding.domain}` : 'info@anbtransinc.com');
 
   return (
     <footer style={{
@@ -146,12 +150,12 @@ export const PublicFooter: React.FC<PublicFooterProps> = ({ config, onSelectTab,
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
             {[
-              `${config.city || 'Regional'} International Airport`,
-              `${config.city || 'Metropolitan'} Executive FBO`,
-              `${config.city || 'Downtown'} Financial District`,
-              `${config.state || 'Metro'} Regional Corridors`,
-              'Private Jet & Tarmac Transfers',
-              'Diplomatic & Hotel Enclaves'
+              `${config.city || 'Philadelphia'} International Airport (PHL)`,
+              'Atlantic City (ACY) & Regional FBOs',
+              'Center City Philadelphia Financial District',
+              'Main Line, PA & Suburban Corridors',
+              'Wilmington, DE & King of Prussia Hub',
+              'New York & Washington D.C. Interstate Livery'
             ].map((area) => (
               <span
                 key={area}
@@ -179,15 +183,56 @@ export const PublicFooter: React.FC<PublicFooterProps> = ({ config, onSelectTab,
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '12px', color: '#586579' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
               <MapPin size={15} color="#967B42" style={{ flexShrink: 0, marginTop: '2px' }} />
-              <span style={{ lineHeight: '1.5' }}>{branding.office_address || 'Executive Operations Center'}</span>
+              <div>
+                <span style={{ fontSize: '11px', color: '#806734', fontWeight: 700, display: 'block', textTransform: 'uppercase', marginBottom: '2px' }}>
+                  Address
+                </span>
+                <a 
+                  href={mapsUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  style={{ color: '#0B1B2D', fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                >
+                  <span>{branding.office_address || 'Philadelphia, PA'}</span>
+                  <ExternalLink size={12} color="#967B42" />
+                </a>
+              </div>
             </div>
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <Phone size={15} color="#967B42" style={{ flexShrink: 0 }} />
-              <strong style={{ color: '#0B1B2D', fontSize: '13px' }}>{branding.contact_phone || '+1 (800) 555-0199'}</strong>
+              <div>
+                <span style={{ fontSize: '11px', color: '#806734', fontWeight: 700, display: 'block', textTransform: 'uppercase', marginBottom: '2px' }}>
+                  Call
+                </span>
+                <a href={`tel:${callPhone}`} style={{ color: '#0B1B2D', fontWeight: 700, fontSize: '13px', textDecoration: 'none' }}>
+                  {callPhone}
+                </a>
+              </div>
             </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <MessageSquare size={15} color="#059669" style={{ flexShrink: 0 }} />
+              <div>
+                <span style={{ fontSize: '11px', color: '#059669', fontWeight: 700, display: 'block', textTransform: 'uppercase', marginBottom: '2px' }}>
+                  Text
+                </span>
+                <a href={`sms:${textPhone}`} style={{ color: '#0B1B2D', fontWeight: 700, fontSize: '13px', textDecoration: 'none' }}>
+                  {textPhone}
+                </a>
+              </div>
+            </div>
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <Mail size={15} color="#967B42" style={{ flexShrink: 0 }} />
-              <span>{branding.domain ? `dispatch@${branding.domain}` : 'dispatch@limo-ops.com'}</span>
+              <div>
+                <span style={{ fontSize: '11px', color: '#806734', fontWeight: 700, display: 'block', textTransform: 'uppercase', marginBottom: '2px' }}>
+                  Email
+                </span>
+                <a href={`mailto:${emailAddr}`} style={{ color: '#0B1B2D', fontWeight: 700, textDecoration: 'none' }}>
+                  {emailAddr}
+                </a>
+              </div>
             </div>
           </div>
         </div>

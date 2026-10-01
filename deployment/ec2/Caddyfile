@@ -1,35 +1,29 @@
 # =============================================================
-# Caddyfile: Automated SSL & Domain Routing for Limo Platform
+# Caddyfile: Automated SSL & Routing for Global Hub & ANB Cell
 # =============================================================
 
-# 1. Catch-all / IP Address Direct Access (HTTP port 80)
+# Global configuration: automated HTTPS
+{
+    email support@limo.network
+}
+
+# 1. Direct HTTP Port 80 Access & Default Fallback
 :80 {
-    # Default landing to Primary Sovereign Cell (ANB Philly) or Hub
     reverse_proxy limo-cell-anb-philly:8000
 }
 
-# 2. Global Federation Hub (e.g. hub.staging.yourdomain.com or :8000)
-# Replace {$STAGING_HUB_DOMAIN:staging-hub.limo.network} with your real domain
-{$STAGING_HUB_DOMAIN:staging-hub.limo.network} {
+# 2. Central Global Federation Hub (e.g. hub.yourdomain.com)
+{$HUB_DOMAIN:hub.limo.network} {
     reverse_proxy limo-global-hub:8000
 }
 
-# 3. ANB Philly Sovereign Operator (e.g. philly.staging.yourdomain.com)
-{$STAGING_PHILLY_DOMAIN:staging-philly.limo.network} {
+# 3. ANB Trans Inc Sovereign Cell (e.g. anb.yourdomain.com, philly.yourdomain.com)
+{$ANB_DOMAIN:anb.limo.network}, {$PHILLY_DOMAIN:philly.limo.network} {
     reverse_proxy limo-cell-anb-philly:8000
 }
 
-# 4. NY Executive Sovereign Operator (e.g. ny.staging.yourdomain.com)
-{$STAGING_NY_DOMAIN:staging-ny.limo.network} {
-    reverse_proxy limo-cell-ny-executive:8000
+# 4. Wildcard Subdomain & Root Domain Fallback to ANB Cell
+{$ROOT_DOMAIN:limo.network}, *.{$PLATFORM_ROOT_DOMAIN:limo.network} {
+    reverse_proxy limo-cell-anb-philly:8000
 }
 
-# 5. Boston VIP Chauffeur (e.g. boston.staging.yourdomain.com)
-{$STAGING_BOSTON_DOMAIN:staging-boston.limo.network} {
-    reverse_proxy limo-cell-boston-vip:8000
-}
-
-# 6. Miami Prestige Limousine (e.g. miami.staging.yourdomain.com)
-{$STAGING_MIAMI_DOMAIN:staging-miami.limo.network} {
-    reverse_proxy limo-cell-miami-prestige:8000
-}

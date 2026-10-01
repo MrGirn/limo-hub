@@ -71,11 +71,11 @@ class VendorOmnichannelDeskService:
     def __init__(
         self,
         vendor_id: str,
-        company_name: str = "ANB Limo Company",
+        company_name: str = "ANB Trans Inc",
         city: str = "Philadelphia",
         state: str = "PA",
-        phone_number: str = "+12155550144",
-        domain: str = "anblimo-philly.com",
+        phone_number: str = "610-653-0033",
+        domain: str = "anbtransinc.com",
         telecom_config: Optional[Dict[str, Any]] = None
     ):
         self.vendor_id = vendor_id

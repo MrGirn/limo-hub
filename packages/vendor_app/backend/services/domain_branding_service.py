@@ -32,18 +32,46 @@ class VendorWhiteLabelConfig(BaseModel):
 
 # In-Memory & Database-backed Custom Domain Mapping Table
 REGISTERED_VENDOR_DOMAINS: Dict[str, VendorWhiteLabelConfig] = {
-    "book.anblimo-philly.com": VendorWhiteLabelConfig(
+    "book.anbtransinc.com": VendorWhiteLabelConfig(
         vendor_id="vendor_anb_philly",
-        company_name="ANB Limo Executive Chauffeurs",
+        company_name="ANB Trans Inc",
         market_city="Philadelphia, PA",
-        custom_domain="book.anblimo-philly.com",
-        primary_color="#D97706",
+        custom_domain="book.anbtransinc.com",
+        primary_color="#1E3A8A",
         accent_color="#F59E0B",
         logo_url="/assets/logos/anb_philly.svg",
-        tagline="Philadelphia's Elite Chauffeur & Airport Transfer Fleet",
-        hero_title="Reserve Your Philly Executive Transfer",
-        support_phone="+1 (215) 555-0188",
-        support_email="dispatch@anblimo-philly.com",
+        tagline="Premier Executive & Luxury Chauffeur Transportation of Philadelphia",
+        hero_title="Reserve Your ANB Trans Inc Executive Chauffeur",
+        support_phone="610-653-0033",
+        support_email="info@anbtransinc.com",
+        currency="USD"
+    ),
+    "anbtransinc.com": VendorWhiteLabelConfig(
+        vendor_id="vendor_anb_philly",
+        company_name="ANB Trans Inc",
+        market_city="Philadelphia, PA",
+        custom_domain="anbtransinc.com",
+        primary_color="#1E3A8A",
+        accent_color="#F59E0B",
+        logo_url="/assets/logos/anb_philly.svg",
+        tagline="Premier Executive & Luxury Chauffeur Transportation of Philadelphia",
+        hero_title="Reserve Your ANB Trans Inc Executive Chauffeur",
+        support_phone="610-653-0033",
+        support_email="info@anbtransinc.com",
+        currency="USD"
+    ),
+    "book.anblimo-philly.com": VendorWhiteLabelConfig(
+        vendor_id="vendor_anb_philly",
+        company_name="ANB Trans Inc",
+        market_city="Philadelphia, PA",
+        custom_domain="book.anblimo-philly.com",
+        primary_color="#1E3A8A",
+        accent_color="#F59E0B",
+        logo_url="/assets/logos/anb_philly.svg",
+        tagline="Premier Executive & Luxury Chauffeur Transportation of Philadelphia",
+        hero_title="Reserve Your ANB Trans Inc Executive Chauffeur",
+        support_phone="610-653-0033",
+        support_email="info@anbtransinc.com",
         currency="USD"
     ),
     "vip.manhattanprestige.com": VendorWhiteLabelConfig(

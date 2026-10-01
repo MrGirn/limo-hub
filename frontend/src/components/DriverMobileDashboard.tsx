@@ -746,7 +746,7 @@ export const DriverMobileDashboard: React.FC = () => {
               Shift & Active Duty Hours Tracker
             </h3>
             <p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#64748B' }}>
-              Logged into ANB Limo Company active payroll ledger for bi-weekly Gusto / ADP sync
+              Logged into ANB Trans Inc active payroll ledger for bi-weekly Gusto / ADP sync
             </p>
 
             <div style={{ padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '12px' }}>

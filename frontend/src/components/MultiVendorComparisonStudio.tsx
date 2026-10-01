@@ -125,7 +125,7 @@ export const MultiVendorComparisonStudio: React.FC = () => {
       const res = await bookQuote(candidate.quote_id, party, pickupTime);
       setConfirmedBooking({
         quoteId: candidate.quote_id,
-        bookingId: res.id || `#BKG-${candidate.quote_id.slice(0, 8).toUpperCase()}`
+        bookingId: res?.id || `#BKG-${(candidate?.quote_id || 'QTE').slice(0, 8).toUpperCase()}`
       });
     } catch (err: any) {
       setError(err.message || 'Failed to dispatch booking to sovereign vendor');

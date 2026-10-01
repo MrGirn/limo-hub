@@ -150,7 +150,7 @@ export const PublicAuthDropdown: React.FC<PublicAuthDropdownProps> = ({
     setSuccessStatus('Connecting to Enterprise Identity Provider (Okta/SAML)...');
     try {
       const corpEmail = emailInput.trim() || 'traveldesk@blackrock-vip.com';
-      const corpName = nameInput.trim() || (corpEmail.split('@')[0].replace('.', ' ').toUpperCase() + ' (Corporate Booker)');
+      const corpName = nameInput.trim() || ((corpEmail ? corpEmail.split('@')[0].replace('.', ' ') : 'Corporate').toUpperCase() + ' (Corporate Booker)');
       const res = await oauthLoginApi({
         provider: 'google',
         email: corpEmail,
@@ -186,7 +186,7 @@ export const PublicAuthDropdown: React.FC<PublicAuthDropdownProps> = ({
       const res = await oauthLoginApi({
         provider: 'google',
         email: emailInput,
-        full_name: nameInput || emailInput.split('@')[0].replace('.', ' ').toUpperCase(),
+        full_name: nameInput || (emailInput ? emailInput.split('@')[0].replace('.', ' ').toUpperCase() : 'VIP CUSTOMER'),
         role: selectedRole,
         vendor_id: vendorId
       });

@@ -196,7 +196,7 @@ export const PublicAuthModal: React.FC<PublicAuthModalProps> = ({
       const res = await oauthLoginApi({
         provider: 'google',
         email: emailInput,
-        full_name: nameInput || emailInput.split('@')[0].replace('.', ' ').toUpperCase(),
+        full_name: nameInput || (emailInput ? emailInput.split('@')[0].replace('.', ' ').toUpperCase() : 'VIP CUSTOMER'),
         role: selectedRole,
         vendor_id: vendorId
       });

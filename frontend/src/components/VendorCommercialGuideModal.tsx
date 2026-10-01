@@ -1487,20 +1487,20 @@ export const VendorCommercialGuideModal: React.FC<VendorCommercialGuideModalProp
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                       <span style={{ background: '#0F172A', color: '#FFFFFF', fontSize: '11px', fontWeight: 800, padding: '2px 8px', borderRadius: '4px' }}>
-                        {activeChapter.category}
+                        {activeChapter?.category || 'General'}
                       </span>
                       <span style={{ background: '#FFFFFF', color: '#0F172A', border: '1px solid #0F172A', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px' }}>
-                        {activeChapter.badge}
+                        {activeChapter?.badge || 'Guide'}
                       </span>
                     </div>
                     <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 900, color: '#0F172A' }}>
-                      {activeChapter.title}
+                      {activeChapter?.title || 'Commercial Guide'}
                     </h1>
                   </div>
                 </div>
 
                 {/* Chapter Body */}
-                {activeChapter.content}
+                {activeChapter?.content || null}
 
                 {/* Bottom Automatic Next / Prev Menu Item Navigation */}
                 <div

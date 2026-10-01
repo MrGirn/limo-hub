@@ -131,38 +131,39 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
           border: '1px solid #E2E8F0'
         }}
       >
-        {/* Header */}
+        {/* Header (Light Mode) */}
         <div
           style={{
             padding: '18px 24px',
-            backgroundColor: '#0F172A',
-            color: '#FFFFFF',
+            backgroundColor: '#FFFFFF',
+            borderBottom: '1px solid #E2E8F0',
+            color: '#0F172A',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div
               style={{
-                width: '36px',
-                height: '36px',
+                width: '38px',
+                height: '38px',
                 borderRadius: '8px',
-                backgroundColor: 'rgba(217, 119, 6, 0.2)',
-                border: '1px solid #D97706',
+                backgroundColor: '#FEF3C7',
+                border: '1px solid #FCD34D',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
               }}
             >
-              <Radio size={20} color="#F59E0B" className="pulse-live" />
+              <Radio size={20} color="#D97706" className="pulse-live" />
             </div>
             <div>
-              <div style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.01em' }}>
+              <div style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.01em' }}>
                 Live Chauffeur Radar &amp; Telemetry
               </div>
-              <div style={{ fontSize: '12px', color: '#94A3B8' }}>
-                Booking Ref: <span style={{ color: '#F59E0B', fontFamily: 'monospace', fontWeight: 700 }}>#{bookingId}</span> · Real-Time GPS Stream
+              <div style={{ fontSize: '12px', color: '#64748B' }}>
+                Booking Ref: <span style={{ color: '#D97706', fontFamily: 'monospace', fontWeight: 800, backgroundColor: '#FFFBEB', padding: '1px 6px', borderRadius: '4px', border: '1px solid #FEF3C7' }}>#{bookingId}</span> · Real-Time GPS Stream
               </div>
             </div>
           </div>
@@ -172,10 +173,13 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
             style={{
               background: 'none',
               border: 'none',
-              color: '#94A3B8',
+              color: '#64748B',
               cursor: 'pointer',
               padding: '6px',
-              borderRadius: '6px'
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
           >
             <X size={20} />
@@ -201,34 +205,35 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
 
           {trackingData && (
             <>
-              {/* ETA Radar & Status Hero Banner */}
+              {/* ETA Radar & Status Hero Banner (Light Mode) */}
               <div
                 style={{
-                  background: 'linear-gradient(135deg, #0A192F 0%, #1E3A8A 100%)',
+                  background: 'linear-gradient(135deg, #FFFFFF 0%, #EFF6FF 100%)',
                   borderRadius: '14px',
+                  border: '1px solid #BFDBFE',
                   padding: '18px 22px',
-                  color: '#FFFFFF',
+                  color: '#0F172A',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  boxShadow: '0 4px 14px rgba(10, 25, 47, 0.15)',
+                  boxShadow: '0 4px 14px rgba(0, 120, 212, 0.08)',
                   flexWrap: 'wrap',
                   gap: '12px'
                 }}
               >
                 <div>
-                  <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#93C5FD', fontWeight: 700 }}>
+                  <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#1D4ED8', fontWeight: 800 }}>
                     Estimated Time of Arrival
                   </div>
-                  <div style={{ fontSize: '28px', fontWeight: 900, color: '#FFFFFF', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ fontSize: '28px', fontWeight: 900, color: '#0F172A', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span>{trackingData.telemetry?.eta_minutes || 4} Mins</span>
-                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#BAE6FD' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#64748B' }}>
                       ({trackingData.telemetry?.dist_miles || 1.8} mi away)
                     </span>
                   </div>
-                  <div style={{ fontSize: '11.5px', color: '#E0F2FE', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Activity size={12} color="#4ADE80" />
-                    <span>Speed: {trackingData.telemetry?.speed_mph || 28} mph · Heading: {trackingData.telemetry?.heading || 135}° SE</span>
+                  <div style={{ fontSize: '11.5px', color: '#475569', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Activity size={13} color="#059669" />
+                    <span>Speed: <strong>{trackingData.telemetry?.speed_mph || 28} mph</strong> · Heading: <strong>{trackingData.telemetry?.heading || 135}° SE</strong></span>
                   </div>
                 </div>
 
@@ -236,9 +241,9 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
                   <span
                     style={{
                       display: 'inline-block',
-                      backgroundColor: 'rgba(74, 222, 128, 0.2)',
-                      border: '1px solid #4ADE80',
-                      color: '#4ADE80',
+                      backgroundColor: '#DCFCE7',
+                      border: '1px solid #86EFAC',
+                      color: '#166534',
                       padding: '4px 12px',
                       borderRadius: '20px',
                       fontSize: '12px',
@@ -248,28 +253,29 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
                   >
                     ● {trackingData.status || 'EN_ROUTE'}
                   </span>
-                  <div style={{ fontSize: '10.5px', color: '#94A3B8', marginTop: '6px' }}>
+                  <div style={{ fontSize: '10.5px', color: '#64748B', marginTop: '6px', fontWeight: 600 }}>
                     Synced {new Date(trackingData.telemetry?.updated_at || Date.now()).toLocaleTimeString()}
                   </div>
                 </div>
               </div>
 
-              {/* Interactive Vector Radar Map */}
+              {/* Interactive Vector Radar Map (Light Mode) */}
               <div
                 style={{
-                  backgroundColor: '#0F172A',
+                  backgroundColor: '#FFFFFF',
                   borderRadius: '12px',
-                  border: '1px solid #1E293B',
+                  border: '1px solid #CBD5E1',
                   padding: '20px',
                   position: 'relative',
                   overflow: 'hidden',
                   minHeight: '160px',
                   display: 'flex',
                   flexDirection: 'column',
-                  justifyContent: 'space-between'
+                  justifyContent: 'space-between',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
                 }}
               >
-                {/* Visual Grid Lines */}
+                {/* Visual Grid Dots */}
                 <div
                   style={{
                     position: 'absolute',
@@ -277,25 +283,25 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)',
+                    backgroundImage: 'radial-gradient(circle, rgba(15,23,42,0.08) 1px, transparent 1px)',
                     backgroundSize: '20px 20px',
                     pointerEvents: 'none'
                   }}
                 />
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#94A3B8', fontWeight: 700 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: '#0F172A', fontWeight: 800 }}>
                     <Compass size={14} color="#0078D4" />
                     <span>Live GPS Corridor Telemetry</span>
                   </div>
-                  <span style={{ fontSize: '10px', backgroundColor: 'rgba(0,120,212,0.2)', color: '#60A5FA', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>
+                  <span style={{ fontSize: '10px', backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #DBEAFE', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>
                     Lat: {Number(trackingData.telemetry?.lat || 39.9526).toFixed(4)}, Lng: {Number(trackingData.telemetry?.lng || -75.1652).toFixed(4)}
                   </span>
                 </div>
 
                 {/* Animated Route Line */}
                 <div style={{ position: 'relative', margin: '24px 12px', zIndex: 1 }}>
-                  <div style={{ height: '4px', backgroundColor: '#334155', borderRadius: '2px', width: '100%', position: 'relative' }}>
+                  <div style={{ height: '5px', backgroundColor: '#E2E8F0', borderRadius: '3px', width: '100%', position: 'relative' }}>
                     <div
                       style={{
                         position: 'absolute',
@@ -304,7 +310,7 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
                         bottom: 0,
                         width: `${Math.min(100, Math.max(15, (currentStep / 6) * 100))}%`,
                         backgroundColor: '#0078D4',
-                        borderRadius: '2px',
+                        borderRadius: '3px',
                         transition: 'width 0.5s ease'
                       }}
                     />
@@ -321,8 +327,8 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
                       height: '18px',
                       borderRadius: '50%',
                       backgroundColor: '#10B981',
-                      border: '3px solid #0F172A',
-                      boxShadow: '0 0 8px rgba(16, 185, 129, 0.8)'
+                      border: '3px solid #FFFFFF',
+                      boxShadow: '0 0 8px rgba(16, 185, 129, 0.6)'
                     }}
                     title="Pickup Location"
                   />
@@ -342,7 +348,7 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      boxShadow: '0 0 16px rgba(0, 120, 212, 0.9)',
+                      boxShadow: '0 2px 10px rgba(0, 120, 212, 0.45)',
                       transition: 'left 0.5s ease'
                     }}
                   >
@@ -360,21 +366,21 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
                       height: '18px',
                       borderRadius: '50%',
                       backgroundColor: '#F59E0B',
-                      border: '3px solid #0F172A',
-                      boxShadow: '0 0 8px rgba(245, 158, 11, 0.8)'
+                      border: '3px solid #FFFFFF',
+                      boxShadow: '0 0 8px rgba(245, 158, 11, 0.6)'
                     }}
                     title="Dropoff Destination"
                   />
                 </div>
 
                 {/* Corridor Endpoint Labels */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#CBD5E1', zIndex: 1 }}>
-                  <div style={{ maxWidth: '45%' }}>
-                    <span style={{ color: '#10B981', fontWeight: 700 }}>● Pickup: </span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#334155', zIndex: 1, gap: '12px' }}>
+                  <div style={{ maxWidth: '48%' }}>
+                    <span style={{ color: '#059669', fontWeight: 800 }}>● Pickup: </span>
                     <span>{trackingData.route?.pickup_address}</span>
                   </div>
-                  <div style={{ maxWidth: '45%', textAlign: 'right' }}>
-                    <span style={{ color: '#F59E0B', fontWeight: 700 }}>● Destination: </span>
+                  <div style={{ maxWidth: '48%', textAlign: 'right' }}>
+                    <span style={{ color: '#D97706', fontWeight: 800 }}>● Destination: </span>
                     <span>{trackingData.route?.dropoff_address || 'As Directed'}</span>
                   </div>
                 </div>
@@ -585,14 +591,16 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
           <button
             onClick={onClose}
             style={{
-              padding: '8px 18px',
-              backgroundColor: '#0F172A',
+              padding: '9px 20px',
+              backgroundColor: '#0078D4',
               color: '#FFFFFF',
               borderRadius: '8px',
               border: 'none',
               fontSize: '12px',
-              fontWeight: 700,
-              cursor: 'pointer'
+              fontWeight: 800,
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(0, 120, 212, 0.3)',
+              transition: 'all 0.15s ease'
             }}
           >
             Close Radar

@@ -1,12 +1,26 @@
 import React, { useState } from 'react';
-import { Globe, Layers, DollarSign, Bot, ShieldCheck, MapPin, Radio } from 'lucide-react';
+import { Globe, Layers, DollarSign, Bot, ShieldCheck, MapPin, Radio, Smartphone, Compass, Lock, ArrowLeft, Sliders } from 'lucide-react';
 import { GlobalGeoMeshPortal } from './components/GeoMesh/GlobalGeoMeshPortal';
 import { GlobalMarketplacePortal } from './components/GlobalMarketplace/GlobalMarketplacePortal';
+import { MarketplaceRulesPanel } from './components/GlobalMarketplace/MarketplaceRulesPanel';
+import { LimoPublicBookingApp } from './components/PublicBooking/LimoPublicBookingApp';
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'marketplace' | 'geomesh' | 'escrow'>('marketplace');
+  // Navigation mode: 'public' (Consumer View) vs 'operations' (Admin/Operator View)
+  const [viewMode, setViewMode] = useState<'public' | 'operations'>('public');
+  const [activeOpsTab, setActiveOpsTab] = useState<'marketplace' | 'geomesh' | 'rules'>('marketplace');
   const [activeRole, setActiveRole] = useState('ROLE_GLOBAL_SUPER_ADMIN');
 
+  if (viewMode === 'public') {
+    return (
+      <LimoPublicBookingApp
+        onOpenOperationsPortal={() => setViewMode('operations')}
+        isAuthenticatedAsAdmin={activeRole === 'ROLE_GLOBAL_SUPER_ADMIN'}
+      />
+    );
+  }
+
+  // --- INTERNAL OPERATIONS & CLEARINGHOUSE ADMIN PORTAL (ROLE PROTECTED) ---
   return (
     <div style={{ minHeight: '100vh', background: '#F8FAFC', color: '#0F172A' }}>
       {/* Top Global Clearinghouse Navigation (Light Mode) */}
@@ -24,32 +38,50 @@ export const App: React.FC = () => {
         boxShadow: '0 1px 4px rgba(0,0,0,0.03)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <button
+            onClick={() => setViewMode('public')}
+            style={{
+              background: '#F1F5F9',
+              border: '1px solid #CBD5E1',
+              borderRadius: '8px',
+              padding: '6px 12px',
+              fontSize: '12px',
+              fontWeight: '700',
+              color: '#0F172A',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <ArrowLeft size={14} /> Back to Public Web
+          </button>
+
           <div style={{ 
-            width: '38px', 
-            height: '38px', 
+            width: '36px', 
+            height: '36px', 
             borderRadius: '10px', 
             background: 'linear-gradient(135deg, #0078D4 0%, #0284C7 100%)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 2px 10px rgba(0,120,212,0.3)'
+            justifyContent: 'center'
           }}>
-            <Globe size={22} color="#FFFFFF" />
+            <Globe size={20} color="#FFFFFF" />
           </div>
           <div>
-            <div style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A', letterSpacing: '-0.02em' }}>
-              GLOBAL HUB CLEARINGHOUSE
+            <div style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', letterSpacing: '-0.02em' }}>
+              GLOBAL HUB OPERATIONS
             </div>
             <div style={{ fontSize: '11px', color: '#0078D4', fontWeight: '700' }}>
-              Multi-Region Active-Active Mesh (Port 8000 / 5173)
+              Internal Clearinghouse & Mesh Controller
             </div>
           </div>
         </div>
 
-        {/* Center Tabs */}
+        {/* Center Operations Tabs */}
         <div style={{ display: 'flex', gap: '8px', background: '#F1F5F9', padding: '4px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
           <button
-            onClick={() => setActiveTab('marketplace')}
+            onClick={() => setActiveOpsTab('marketplace')}
             style={{
               padding: '8px 16px',
               borderRadius: '8px',
@@ -57,16 +89,20 @@ export const App: React.FC = () => {
               fontWeight: '700',
               border: 'none',
               cursor: 'pointer',
-              background: activeTab === 'marketplace' ? '#0078D4' : 'transparent',
-              color: activeTab === 'marketplace' ? '#FFFFFF' : '#64748B',
-              boxShadow: activeTab === 'marketplace' ? '0 2px 8px rgba(0,120,212,0.25)' : 'none',
-              transition: 'all 0.15s ease'
+              background: activeOpsTab === 'marketplace' ? '#0078D4' : 'transparent',
+              color: activeOpsTab === 'marketplace' ? '#FFFFFF' : '#64748B',
+              boxShadow: activeOpsTab === 'marketplace' ? '0 2px 8px rgba(0,120,212,0.25)' : 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
             }}
           >
-            Global Itinerary Builder
+            <Compass size={15} />
+            Global Itinerary Sourcing
           </button>
+
           <button
-            onClick={() => setActiveTab('geomesh')}
+            onClick={() => setActiveOpsTab('rules')}
             style={{
               padding: '8px 16px',
               borderRadius: '8px',
@@ -74,20 +110,44 @@ export const App: React.FC = () => {
               fontWeight: '700',
               border: 'none',
               cursor: 'pointer',
-              background: activeTab === 'geomesh' ? '#0078D4' : 'transparent',
-              color: activeTab === 'geomesh' ? '#FFFFFF' : '#64748B',
-              boxShadow: activeTab === 'geomesh' ? '0 2px 8px rgba(0,120,212,0.25)' : 'none',
-              transition: 'all 0.15s ease'
+              background: activeOpsTab === 'rules' ? '#0078D4' : 'transparent',
+              color: activeOpsTab === 'rules' ? '#FFFFFF' : '#64748B',
+              boxShadow: activeOpsTab === 'rules' ? '0 2px 8px rgba(0,120,212,0.25)' : 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
             }}
           >
-            Worldwide Geo-Mesh (6 Nodes)
+            <Sliders size={15} />
+            Marketplace Rules & Surcharges
+          </button>
+
+          <button
+            onClick={() => setActiveOpsTab('geomesh')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              fontSize: '13px',
+              fontWeight: '700',
+              border: 'none',
+              cursor: 'pointer',
+              background: activeOpsTab === 'geomesh' ? '#0078D4' : 'transparent',
+              color: activeOpsTab === 'geomesh' ? '#FFFFFF' : '#64748B',
+              boxShadow: activeOpsTab === 'geomesh' ? '0 2px 8px rgba(0,120,212,0.25)' : 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <Radio size={15} />
+            Worldwide Geo-Mesh
           </button>
         </div>
 
         {/* Role & Node Indicator */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#F1F5F9', padding: '6px 12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-            <Radio size={14} color="#16A34A" className="pulse-live" />
+            <Radio size={14} color="#16A34A" />
             <span style={{ fontSize: '11px', color: '#64748B' }}>NODE: <strong style={{ color: '#0F172A' }}>hub-us-east-prod</strong></span>
           </div>
 
@@ -112,11 +172,13 @@ export const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Body */}
+      {/* Main Operations Body */}
       <main style={{ maxWidth: '1280px', margin: '0 auto', padding: '32px 24px' }}>
-        {activeTab === 'marketplace' && <GlobalMarketplacePortal />}
-        {activeTab === 'geomesh' && <GlobalGeoMeshPortal />}
+        {activeOpsTab === 'marketplace' && <GlobalMarketplacePortal />}
+        {activeOpsTab === 'rules' && <MarketplaceRulesPanel />}
+        {activeOpsTab === 'geomesh' && <GlobalGeoMeshPortal />}
       </main>
     </div>
   );
 };
+

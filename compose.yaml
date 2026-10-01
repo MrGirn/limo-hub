@@ -1,13 +1,7 @@
-include:
-  - vendors/vendor-anb-philly/compose.vendor.yaml
-  - vendors/vendor-ny-executive/compose.vendor.yaml
-  - vendors/vendor-boston-vip/compose.vendor.yaml
-  - vendors/vendor-miami-prestige/compose.vendor.yaml
-  - vendors/vendor-london-royal/compose.vendor.yaml
-  - vendors/vendor-tokyo-sovereign/compose.vendor.yaml
-
 services:
-  # 1. Central Global Federation Hub (Port 8000)
+  # ==========================================
+  # 1. CENTRAL GLOBAL HUB CLEARINGHOUSE (Port 8000)
+  # ==========================================
   limo-global-hub:
     build:
       context: .
@@ -16,18 +10,109 @@ services:
     restart: always
     ports:
       - "8000:8000"
-    env_file:
-      - .env
     environment:
+      - DATABASE_URL=sqlite:////app/limo_database.db
       - HUB_MODE=true
       - PROD_MODE=false
-      - MYSQL_HOST=host.docker.internal
-      - MYSQL_PORT=3306
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - PORT=8000
+    volumes:
+      - ./packages:/app/packages
+      - ./app:/app/app
+      - ./frontend:/app/frontend
+      - ./limo_database.db:/app/limo_database.db
+    command: ["python", "app/entrypoint.py"]
     networks:
       - limo-net
+
+  # ==========================================
+  # 2. SOVEREIGN VENDOR CELLS (LOCAL AFFILIATES)
+  # ==========================================
+  vendor-cell-philly:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vendor-cell-philly
+    restart: always
+    ports:
+      - "8001:8000"
+    environment:
+      - DATABASE_URL=sqlite:////app/limo_database.db
+      - SOVEREIGN_VENDOR_ID=vendor_anb_philly
+      - VENDOR_NAME=ANB Trans Inc
+      - VENDOR_CITY=Philadelphia
+      - GLOBAL_HUB_URL=http://limo-global-hub:8000
+      - HUB_MODE=false
+      - PROD_MODE=true
+      - PORT=8000
+    volumes:
+      - ./packages:/app/packages
+      - ./app:/app/app
+      - ./frontend:/app/frontend
+      - ./limo_database.db:/app/limo_database.db
+    command: ["python", "app/entrypoint.py"]
+    networks:
+      - limo-net
+    depends_on:
+      - limo-global-hub
+
+  vendor-cell-ny:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vendor-cell-ny
+    restart: always
+    ports:
+      - "8002:8000"
+    environment:
+      - DATABASE_URL=sqlite:////app/limo_database.db
+      - SOVEREIGN_VENDOR_ID=vendor_ny_executive
+      - VENDOR_NAME=New York Executive Chauffeurs
+      - VENDOR_CITY=New York
+      - GLOBAL_HUB_URL=http://limo-global-hub:8000
+      - HUB_MODE=false
+      - PROD_MODE=true
+      - PORT=8000
+    volumes:
+      - ./packages:/app/packages
+      - ./app:/app/app
+      - ./frontend:/app/frontend
+      - ./limo_database.db:/app/limo_database.db
+    command: ["python", "app/entrypoint.py"]
+    networks:
+      - limo-net
+    depends_on:
+      - limo-global-hub
+
+  vendor-cell-london:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vendor-cell-london
+    restart: always
+    ports:
+      - "8003:8000"
+    environment:
+      - DATABASE_URL=sqlite:////app/limo_database.db
+      - SOVEREIGN_VENDOR_ID=vendor_london_royal
+      - VENDOR_NAME=London Royal Chauffeurs UK
+      - VENDOR_CITY=London
+      - GLOBAL_HUB_URL=http://limo-global-hub:8000
+      - HUB_MODE=false
+      - PROD_MODE=true
+      - PORT=8000
+    volumes:
+      - ./packages:/app/packages
+      - ./app:/app/app
+      - ./frontend:/app/frontend
+      - ./limo_database.db:/app/limo_database.db
+    command: ["python", "app/entrypoint.py"]
+    networks:
+      - limo-net
+    depends_on:
+      - limo-global-hub
 
 networks:
   limo-net:
     driver: bridge
+
+

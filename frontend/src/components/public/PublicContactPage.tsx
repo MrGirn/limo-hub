@@ -189,14 +189,20 @@ export const PublicContactPage: React.FC<PublicContactPageProps> = ({
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '16px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E5E8ED' }}>
                 <Phone size={16} color="#967B42" style={{ flexShrink: 0, marginTop: '2px' }} />
                 <div>
-                  <span style={{ color: '#586579', display: 'block', fontWeight: 500, marginBottom: '2px' }}>Toll-Free VIP Priority Line</span>
-                  {branding.contact_phone ? (
-                    <a href={`tel:${branding.contact_phone}`} style={{ fontSize: '14px', fontWeight: 700, color: '#0B1B2D', textDecoration: 'none' }}>
-                      {branding.contact_phone}
-                    </a>
-                  ) : (
-                    <span style={{ fontSize: '13px', color: '#586579' }}>Contact phone pending configuration</span>
-                  )}
+                  <span style={{ color: '#586579', display: 'block', fontWeight: 500, marginBottom: '2px' }}>24/7 Phone Dispatch (Call)</span>
+                  <a href={`tel:${branding.contact_phone || '610-653-0033'}`} style={{ fontSize: '14px', fontWeight: 700, color: '#0B1B2D', textDecoration: 'none' }}>
+                    {branding.contact_phone || '610-653-0033'}
+                  </a>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '16px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E5E8ED' }}>
+                <MessageSquare size={16} color="#059669" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <div>
+                  <span style={{ color: '#059669', display: 'block', fontWeight: 600, marginBottom: '2px' }}>2-Way Chauffeur Dispatch (Text / SMS)</span>
+                  <a href={`sms:${branding.contact_text || '(215) 614-5900'}`} style={{ fontSize: '14px', fontWeight: 700, color: '#0B1B2D', textDecoration: 'none' }}>
+                    {branding.contact_text || '(215) 614-5900'}
+                  </a>
                 </div>
               </div>
 
@@ -204,9 +210,12 @@ export const PublicContactPage: React.FC<PublicContactPageProps> = ({
                 <Mail size={16} color="#967B42" style={{ flexShrink: 0, marginTop: '2px' }} />
                 <div>
                   <span style={{ color: '#586579', display: 'block', fontWeight: 500, marginBottom: '2px' }}>Operations &amp; Dispatch Email</span>
-                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#0B1B2D' }}>
-                    {branding.domain ? `dispatch@${branding.domain}` : 'dispatch@limo-ops.com'}
-                  </span>
+                  <a 
+                    href={`mailto:${branding.contact_email || (branding.domain ? `info@${branding.domain}` : 'info@anbtransinc.com')}`}
+                    style={{ fontSize: '13px', fontWeight: 700, color: '#0B1B2D', textDecoration: 'none' }}
+                  >
+                    {branding.contact_email || (branding.domain ? `info@${branding.domain}` : 'info@anbtransinc.com')}
+                  </a>
                 </div>
               </div>
 
@@ -214,9 +223,14 @@ export const PublicContactPage: React.FC<PublicContactPageProps> = ({
                 <MapPin size={16} color="#967B42" style={{ flexShrink: 0, marginTop: '2px' }} />
                 <div>
                   <span style={{ color: '#586579', display: 'block', fontWeight: 500, marginBottom: '2px' }}>Headquarters &amp; Fleet Depot</span>
-                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#10253F', lineHeight: '1.5' }}>
-                    {branding.office_address || 'Executive Operations Center'}
-                  </span>
+                  <a 
+                    href={branding.google_maps_url || 'https://maps.app.goo.gl/e6NvZr7Wjwz7ukR89'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontSize: '13px', fontWeight: 700, color: '#10253F', lineHeight: '1.5', textDecoration: 'underline' }}
+                  >
+                    {branding.office_address || 'Philadelphia, PA'}
+                  </a>
                 </div>
               </div>
 

@@ -1545,19 +1545,19 @@ def list_vehicle_options(vendor_id: Optional[str] = None, tenant_id: Optional[st
                         if getattr(v, "is_active", True):
                             active_classes_set.add(vc_val)
 
-            query = session.query(VehicleClassOptionModel).filter_by(is_active=True)
             if vendor_id and vendor_id != "auto":
-                v_options = query.filter_by(vendor_id=vendor_id).order_by(VehicleClassOptionModel.sort_order).all()
-                if not v_options:
-                    v_options = query.filter_by(vendor_id=None).order_by(VehicleClassOptionModel.sort_order).all()
+                v_options = session.query(VehicleClassOptionModel).filter(
+                    VehicleClassOptionModel.is_active == True,
+                    (VehicleClassOptionModel.vendor_id == vendor_id) | (VehicleClassOptionModel.vendor_id.is_(None))
+                ).order_by(VehicleClassOptionModel.sort_order).all()
             else:
-                v_options = query.filter_by(vendor_id=None).order_by(VehicleClassOptionModel.sort_order).all()
+                v_options = session.query(VehicleClassOptionModel).filter(
+                    VehicleClassOptionModel.is_active == True
+                ).order_by(VehicleClassOptionModel.sort_order).all()
 
             if v_options:
                 result = []
                 for row in v_options:
-                    if active_classes_set and row.vehicle_class not in active_classes_set:
-                        continue
                     feat = json.loads(row.features_json) if row.features_json else []
                     result.append(VehicleClassOption(
                         id=row.id,
@@ -1619,6 +1619,71 @@ def assign_24h_chauffeur(dto: Assign24hDriverRequestDTO):
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+class EmergencyOverrideChauffeurDTO(BaseModel):
+    trip_id: str
+    booking_id: Optional[str] = None
+    vendor_id: Optional[str] = None
+    driver_name: str
+    driver_id: Optional[str] = None
+    driver_phone: Optional[str] = None
+    override_reason: Optional[str] = "Emergency Dispatcher Reassignment"
+
+
+@router.post("/dispatch/emergency-override-chauffeur")
+@router.post("/vendors/{vendor_id}/dispatch/override-chauffeur")
+def emergency_override_chauffeur(dto: EmergencyOverrideChauffeurDTO):
+    """
+    Emergency Chauffeur Reassignment:
+    Allows authorized dispatchers to override the assigned driver on an active or scheduled trip
+    in cases of driver breakdown, vehicle mechanical failure, traffic blockage, or emergency reassignment.
+    """
+    trip_id = dto.trip_id
+    booking_id = dto.booking_id or trip_id
+    
+    # 1. Update in-memory DB or active booking
+    if booking_id in getattr(db, "bookings", {}):
+        b = db.bookings[booking_id]
+        if b.trip:
+            b.trip.driver_id = dto.driver_id or f"drv-{dto.driver_name.lower().replace(' ', '-')}"
+            setattr(b.trip, "driver_name", dto.driver_name)
+            setattr(b.trip, "driver_phone", dto.driver_phone or "+1 (215) 555-0199")
+            if b.trip.active_offer:
+                setattr(b.trip.active_offer, "driver_name", dto.driver_name)
+        setattr(b, "assigned_driver_name", dto.driver_name)
+        setattr(b, "assigned_driver_phone", dto.driver_phone or "+1 (215) 555-0199")
+    
+    # 2. Update trip in db.trips
+    if trip_id in getattr(db, "trips", {}):
+        t = db.trips[trip_id]
+        t.driver_id = dto.driver_id or f"drv-{dto.driver_name.lower().replace(' ', '-')}"
+        setattr(t, "driver_name", dto.driver_name)
+        setattr(t, "driver_phone", dto.driver_phone or "+1 (215) 555-0199")
+    
+    # 3. Add to timeline audit log
+    event = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "type": "EMERGENCY_DRIVER_OVERRIDE",
+        "trip_id": trip_id,
+        "booking_id": booking_id,
+        "new_driver": dto.driver_name,
+        "reason": dto.override_reason or "Emergency Reassignment",
+        "actor": "DISPATCHER"
+    }
+    if not hasattr(db, "dispatch_audit_log"):
+        db.dispatch_audit_log = []
+    db.dispatch_audit_log.append(event)
+    
+    return {
+        "success": True,
+        "trip_id": trip_id,
+        "booking_id": booking_id,
+        "driver_name": dto.driver_name,
+        "driver_phone": dto.driver_phone or "+1 (215) 555-0199",
+        "override_reason": dto.override_reason,
+        "message": f"Chauffeur successfully overridden to {dto.driver_name}. Live customer tracking and dispatch sheet synchronized."
+    }
 
 
 @router.post("/dispatch/pricing/quick-quote", response_model=QuickQuoteResponseDTO)

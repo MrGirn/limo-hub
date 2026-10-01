@@ -1566,7 +1566,7 @@ export const GlobalSupportDeskHub: React.FC = () => {
                   onChange={e => setNewTicketForm({ ...newTicketForm, vendor_id: e.target.value })}
                   style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '13px' }}
                 >
-                  <option value="vendor_anb_philly">ANB Limo Executive Chauffeur (Philadelphia)</option>
+                  <option value="vendor_anb_philly">ANB Trans Inc (Philadelphia)</option>
                   <option value="vendor_new_york_exec">New York Executive Fleet (New York)</option>
                   <option value="vendor_paris_etoile">Chauffeurs de l'Étoile (Paris)</option>
                   <option value="vendor_london_mayfair">Mayfair Diplomatic Chauffeur (London)</option>

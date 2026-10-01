@@ -22,7 +22,7 @@ export const DispatcherPhoneBookingModal: React.FC<DispatcherPhoneBookingModalPr
   isOpen,
   onClose,
   vendorId = 'vendor_anb_philly',
-  vendorName = 'ANB Limo Executive Chauffeurs',
+  vendorName = 'ANB Trans Inc',
   availableDrivers = [],
   availableVehicles = [],
   onBookingCreated

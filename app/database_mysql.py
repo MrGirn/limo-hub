@@ -809,7 +809,7 @@ class MySQLManager:
                 connection_url,
                 pool_pre_ping=True,
                 pool_recycle=3600,
-                connect_args={"connect_timeout": 2},
+                connect_args={"connect_timeout": 10},
                 echo=False
             )
             Base.metadata.create_all(bind=self.engine)

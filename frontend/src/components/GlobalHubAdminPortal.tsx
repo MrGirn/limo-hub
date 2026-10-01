@@ -340,7 +340,7 @@ export const GlobalHubAdminPortal: React.FC<GlobalHubAdminPortalProps> = ({
       monthly_price_usd: Number(sub.monthly_fee) || 0,
       per_ride_commission_pct: (Number(sub.pay_as_you_go_rate) || 0) * 100,
       billing_terms: sub.billing_terms || 'Net 30 (Monthly Auto-Debit)',
-      contract_reference: sub.contract_reference || `CTR-${sub.vendor_id.toUpperCase().slice(-6)}-2026`,
+      contract_reference: sub.contract_reference || `CTR-${(sub?.vendor_id || 'VEN').toUpperCase().slice(-6)}-2026`,
       status: sub.billing_status || 'ACTIVE'
     });
   };
@@ -428,7 +428,7 @@ export const GlobalHubAdminPortal: React.FC<GlobalHubAdminPortalProps> = ({
       });
       if (resp.ok) {
         const result = await resp.json();
-        setActionNotice(`⚡ Cell ${vendorId} status changed to ${result.current_status} via ${action.toUpperCase()} command.`);
+        setActionNotice(`⚡ Cell ${vendorId} status changed to ${result.current_status} via ${(action || 'update').toUpperCase()} command.`);
         loadData();
         if (drawerCell && drawerCell.id === vendorId) {
           setDrawerCell(result.cell);
@@ -3267,7 +3267,7 @@ export const GlobalHubAdminPortal: React.FC<GlobalHubAdminPortalProps> = ({
                                     {sub.tier_name || sub.tier}
                                   </div>
                                   <div style={{ fontSize: '10px', color: '#64748B', fontFamily: 'monospace', marginTop: '2px' }}>
-                                    {sub.contract_reference || `CTR-${sub.vendor_id.toUpperCase().slice(-6)}-2026`}
+                                    {sub.contract_reference || `CTR-${(sub?.vendor_id || 'VEN').toUpperCase().slice(-6)}-2026`}
                                   </div>
                                 </td>
 

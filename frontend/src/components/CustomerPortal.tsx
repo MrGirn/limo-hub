@@ -856,7 +856,19 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
     Number(activeQuoteObj.subtotal_net).toFixed(2) : 
     (resolvedTotalNumber > 0 ? Math.max(0, resolvedTotalNumber - gratuityVal - tollsVal - taxVal).toFixed(2) : '0.00');
 
-  const selectedVehicleObj = vehicleOptions.find(v => v.type === vehicleClass) || vehicleOptions[0];
+  const fallbackVehicle: VehicleOption = {
+    type: (vehicleClass || 'BUSINESS_SEDAN') as VehicleClass,
+    title: 'Executive Fleet Vehicle',
+    models: 'Mercedes-Benz S-Class, Cadillac Escalade or similar',
+    pax: 3,
+    luggage: 3,
+    features: ['Wi-Fi', 'Bottled Water', 'Leather Seating'],
+    photoUrl: '/vehicles/cadillac-escalade.png'
+  };
+
+  const selectedVehicleObj = (vehicleOptions && vehicleOptions.length > 0)
+    ? (vehicleOptions.find(v => v.type === vehicleClass) || vehicleOptions[0])
+    : fallbackVehicle;
 
   return (
     <div style={{ backgroundColor: '#FBF9F5', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
@@ -3171,7 +3183,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
                       {selectedVehicleObj?.photoUrl ? (
                         <img
                           src={selectedVehicleObj.photoUrl}
-                          alt={selectedVehicleObj.title}
+                          alt={selectedVehicleObj?.title || 'Vehicle'}
                           style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
                         />
                       ) : (
@@ -3180,10 +3192,10 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: '13px', fontWeight: 800, color: '#0A192F', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {selectedVehicleObj.title}
+                        {selectedVehicleObj?.title || 'Executive Fleet Vehicle'}
                       </div>
                       <div style={{ fontSize: '10.5px', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {selectedVehicleObj.models}
+                        {selectedVehicleObj?.models || ''}
                       </div>
                     </div>
                   </div>
@@ -3211,7 +3223,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
                             <span style={{ fontWeight: 800, color: '#0A192F' }}>${Number(activeQuoteObj?.legs?.[0]?.total_gross || activeQuoteObj?.legs?.[0]?.total_leg_amt || (Number(activeTotalFormatted) / 2)).toFixed(2)}</span>
                           </div>
                           <div style={{ fontSize: '9.5px', color: '#64748B' }}>
-                            {activeQuoteObj?.legs?.[0]?.assigned_vendor_name || 'ANB Limo Philadelphia (PA)'}
+                            {activeQuoteObj?.legs?.[0]?.assigned_vendor_name || 'ANB Trans Inc (Philadelphia, PA)'}
                           </div>
 
                           <div style={{ height: '1px', backgroundColor: '#F1F5F9', margin: '2px 0' }} />

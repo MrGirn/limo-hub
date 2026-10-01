@@ -55,7 +55,7 @@ export const GlobalMarketplaceBookingPage: React.FC<GlobalMarketplaceBookingPage
                 id: cfg.vendor_id,
                 name: `${cityName}${cfg.state ? `, ${cfg.state}` : ''}`,
                 country: cfg.country || 'United States',
-                airport_code: `${cityName.slice(0, 3).toUpperCase()}`,
+                airport_code: `${(cityName || 'MET').slice(0, 3).toUpperCase()}`,
                 default_pickup: `${cityName} International Airport - Executive Terminal`,
                 default_dropoff: `Downtown ${cityName} Luxury Suites`,
                 matched_vendor_id: cfg.vendor_id,
