@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { BookingState } from './types';
-import { Page05RideDetails } from './pages/Page05RideDetails';
-import { Page06PassengerDetails } from './pages/Page06PassengerDetails';
-import { Page07ReviewAndPay } from './pages/Page07ReviewAndPay';
-import { Page08BookingConfirmed } from './pages/Page08BookingConfirmed';
-import { Page09SignInFindBooking } from './pages/Page09SignInFindBooking';
-import { Page10MyBookings } from './pages/Page10MyBookings';
-import { Page11ManageTrackRide } from './pages/Page11ManageTrackRide';
-import { Page12HelpContact } from './pages/Page12HelpContact';
+import { RideSelectionPage } from './pages/RideSelectionPage';
+import { PassengerDetailsPage } from './pages/PassengerDetailsPage';
+import { ReviewAndCheckoutPage } from './pages/ReviewAndCheckoutPage';
+import { BookingConfirmationPage } from './pages/BookingConfirmationPage';
+import { FindBookingLookupPage } from './pages/FindBookingLookupPage';
+import { CustomerBookingsHubPage } from './pages/CustomerBookingsHubPage';
+import { LiveRideTelemetryPage } from './pages/LiveRideTelemetryPage';
+import { HelpAndConciergeSupportPage } from './pages/HelpAndConciergeSupportPage';
 import { BookingHomeView } from './views/BookingHomeView';
 import { SharedBookingHeader } from './pages/SharedBookingHeader';
 import { SharedBookingFooter } from './pages/SharedBookingFooter';
@@ -158,7 +158,7 @@ export const LimoPublicBookingApp: React.FC<LimoAppProps> = ({
       )}
 
       {currentPage === 'RIDE_DETAILS' && (
-        <Page05RideDetails
+        <RideSelectionPage
           state={bookingState}
           onChange={handleStateChange}
           onContinue={() => setCurrentPage('PASSENGER_DETAILS')}
@@ -169,7 +169,7 @@ export const LimoPublicBookingApp: React.FC<LimoAppProps> = ({
       )}
 
       {currentPage === 'PASSENGER_DETAILS' && (
-        <Page06PassengerDetails
+        <PassengerDetailsPage
           state={bookingState}
           onChange={handleStateChange}
           onContinueToPayment={() => setCurrentPage('REVIEW_PAY')}
@@ -180,7 +180,7 @@ export const LimoPublicBookingApp: React.FC<LimoAppProps> = ({
       )}
 
       {currentPage === 'REVIEW_PAY' && (
-        <Page07ReviewAndPay
+        <ReviewAndCheckoutPage
           state={bookingState}
           onChange={handleStateChange}
           onPaySuccess={() => setCurrentPage('BOOKING_CONFIRMED')}
@@ -192,7 +192,7 @@ export const LimoPublicBookingApp: React.FC<LimoAppProps> = ({
       )}
 
       {currentPage === 'BOOKING_CONFIRMED' && (
-        <Page08BookingConfirmed
+        <BookingConfirmationPage
           state={bookingState}
           onViewBooking={() => setCurrentPage('MY_BOOKINGS')}
           onNewBooking={() => setCurrentPage('HOME')}
@@ -201,7 +201,7 @@ export const LimoPublicBookingApp: React.FC<LimoAppProps> = ({
       )}
 
       {currentPage === 'SIGN_IN_FIND_BOOKING' && (
-        <Page09SignInFindBooking
+        <FindBookingLookupPage
           onFindBooking={(ref) => {
             setActiveTrackReference(ref);
             setCurrentPage('MANAGE_TRACK_RIDE');
@@ -213,7 +213,7 @@ export const LimoPublicBookingApp: React.FC<LimoAppProps> = ({
       )}
 
       {currentPage === 'MY_BOOKINGS' && (
-        <Page10MyBookings
+        <CustomerBookingsHubPage
           userEmail={bookingState.email}
           onNewBookingClick={() => setCurrentPage('HOME')}
           onTrackRideClick={(ref) => {
@@ -227,7 +227,7 @@ export const LimoPublicBookingApp: React.FC<LimoAppProps> = ({
       )}
 
       {currentPage === 'MANAGE_TRACK_RIDE' && (
-        <Page11ManageTrackRide
+        <LiveRideTelemetryPage
           bookingRef={activeTrackReference}
           onBackToMyBookings={() => setCurrentPage('MY_BOOKINGS')}
           onOpenHelp={() => setCurrentPage('HELP_CONTACT')}
@@ -237,7 +237,7 @@ export const LimoPublicBookingApp: React.FC<LimoAppProps> = ({
       )}
 
       {currentPage === 'HELP_CONTACT' && (
-        <Page12HelpContact
+        <HelpAndConciergeSupportPage
           onBackToMyBookings={() => setCurrentPage('MY_BOOKINGS')}
           onOpenSignIn={() => setCurrentPage('SIGN_IN_FIND_BOOKING')}
           onHomeClick={() => setCurrentPage('HOME')}

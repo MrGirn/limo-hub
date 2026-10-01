@@ -51,19 +51,35 @@ def health_check():
     }
 
 
-# Static Frontend Distribution Support (Docker & Production Build)
-frontend_dist = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))
-if os.path.exists(frontend_dist):
-    assets_dir = os.path.join(frontend_dist, "assets")
-    if os.path.exists(assets_dir):
-        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+@app.get("/api/v1/system/runtime-mode")
+def system_runtime_mode():
+    return {
+        "is_sovereign_cell": False,
+        "sovereign_vendor_id": None,
+        "is_prod_mode": False,
+        "hub_mode": True,
+        "node_hostname": os.getenv("HOSTNAME", "global-hub-node")
+    }
 
+from fastapi.responses import FileResponse
+
+# Static Frontend Distribution & Assets Support for Global Hub (Page 1-12 Public Booking App)
+frontend_dist = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))
+if not os.path.exists(frontend_dist):
+    frontend_dist = os.path.abspath("packages/global_hub/frontend/dist")
+
+assets_dir = os.path.join(frontend_dist, "assets")
+
+if os.path.exists(assets_dir):
+    app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+if os.path.exists(frontend_dist) and os.path.exists(os.path.join(frontend_dist, "index.html")):
     @app.get("/{full_path:path}")
     async def serve_spa_frontend(full_path: str):
-        if full_path.startswith("api") or full_path.startswith("health"):
+        if full_path.startswith("api") or full_path.startswith("health") or full_path.startswith("assets"):
             return None
         candidate = os.path.join(frontend_dist, full_path)
-        if os.path.exists(candidate) and os.path.isfile(candidate):
+        if candidate != frontend_dist and os.path.exists(candidate) and os.path.isfile(candidate):
             return FileResponse(candidate)
         return FileResponse(os.path.join(frontend_dist, "index.html"))
 

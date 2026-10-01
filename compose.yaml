@@ -5,22 +5,25 @@ services:
   limo-global-hub:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: packages/global_hub/Dockerfile
     container_name: limo-global-hub
     restart: always
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=sqlite:////app/limo_database.db
+      - DATABASE_URL=mysql+pymysql://root:%21891Mdsaaf@host.docker.internal:3306/limo_db
+      - MYSQL_URL=mysql+pymysql://root:%21891Mdsaaf@host.docker.internal:3306/limo_db
       - HUB_MODE=true
       - PROD_MODE=false
       - PORT=8000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./packages:/app/packages
       - ./app:/app/app
       - ./frontend:/app/frontend
+      - ./data:/app/data
       - ./limo_database.db:/app/limo_database.db
-    command: ["python", "app/entrypoint.py"]
     networks:
       - limo-net
 
@@ -30,13 +33,14 @@ services:
   vendor-cell-philly:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.vendor
     container_name: vendor-cell-philly
     restart: always
     ports:
       - "8001:8000"
     environment:
-      - DATABASE_URL=sqlite:////app/limo_database.db
+      - DATABASE_URL=mysql+pymysql://root:%21891Mdsaaf@host.docker.internal:3306/limo_db
+      - MYSQL_URL=mysql+pymysql://root:%21891Mdsaaf@host.docker.internal:3306/limo_db
       - SOVEREIGN_VENDOR_ID=vendor_anb_philly
       - VENDOR_NAME=ANB Trans Inc
       - VENDOR_CITY=Philadelphia
@@ -44,12 +48,13 @@ services:
       - HUB_MODE=false
       - PROD_MODE=true
       - PORT=8000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./packages:/app/packages
       - ./app:/app/app
       - ./frontend:/app/frontend
       - ./limo_database.db:/app/limo_database.db
-    command: ["python", "app/entrypoint.py"]
     networks:
       - limo-net
     depends_on:
@@ -58,13 +63,14 @@ services:
   vendor-cell-ny:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.vendor
     container_name: vendor-cell-ny
     restart: always
     ports:
       - "8002:8000"
     environment:
-      - DATABASE_URL=sqlite:////app/limo_database.db
+      - DATABASE_URL=mysql+pymysql://root:%21891Mdsaaf@host.docker.internal:3306/limo_db
+      - MYSQL_URL=mysql+pymysql://root:%21891Mdsaaf@host.docker.internal:3306/limo_db
       - SOVEREIGN_VENDOR_ID=vendor_ny_executive
       - VENDOR_NAME=New York Executive Chauffeurs
       - VENDOR_CITY=New York
@@ -72,12 +78,13 @@ services:
       - HUB_MODE=false
       - PROD_MODE=true
       - PORT=8000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./packages:/app/packages
       - ./app:/app/app
       - ./frontend:/app/frontend
       - ./limo_database.db:/app/limo_database.db
-    command: ["python", "app/entrypoint.py"]
     networks:
       - limo-net
     depends_on:
@@ -86,13 +93,14 @@ services:
   vendor-cell-london:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.vendor
     container_name: vendor-cell-london
     restart: always
     ports:
       - "8003:8000"
     environment:
-      - DATABASE_URL=sqlite:////app/limo_database.db
+      - DATABASE_URL=mysql+pymysql://root:%21891Mdsaaf@host.docker.internal:3306/limo_db
+      - MYSQL_URL=mysql+pymysql://root:%21891Mdsaaf@host.docker.internal:3306/limo_db
       - SOVEREIGN_VENDOR_ID=vendor_london_royal
       - VENDOR_NAME=London Royal Chauffeurs UK
       - VENDOR_CITY=London
@@ -100,12 +108,43 @@ services:
       - HUB_MODE=false
       - PROD_MODE=true
       - PORT=8000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./packages:/app/packages
       - ./app:/app/app
       - ./frontend:/app/frontend
       - ./limo_database.db:/app/limo_database.db
-    command: ["python", "app/entrypoint.py"]
+    networks:
+      - limo-net
+    depends_on:
+      - limo-global-hub
+
+  vendor-cell-dubai:
+    build:
+      context: .
+      dockerfile: Dockerfile.vendor
+    container_name: vendor-cell-dubai
+    restart: always
+    ports:
+      - "8004:8000"
+    environment:
+      - DATABASE_URL=mysql+pymysql://root:%21891Mdsaaf@host.docker.internal:3306/limo_db
+      - MYSQL_URL=mysql+pymysql://root:%21891Mdsaaf@host.docker.internal:3306/limo_db
+      - SOVEREIGN_VENDOR_ID=vendor_dubai_emirates
+      - VENDOR_NAME=Emirates Royal VIP Chauffeurs Dubai
+      - VENDOR_CITY=Dubai
+      - GLOBAL_HUB_URL=http://limo-global-hub:8000
+      - HUB_MODE=false
+      - PROD_MODE=true
+      - PORT=8000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./packages:/app/packages
+      - ./app:/app/app
+      - ./frontend:/app/frontend
+      - ./limo_database.db:/app/limo_database.db
     networks:
       - limo-net
     depends_on:
@@ -114,5 +153,6 @@ services:
 networks:
   limo-net:
     driver: bridge
+
 
 

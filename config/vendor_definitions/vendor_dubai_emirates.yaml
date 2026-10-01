@@ -1,0 +1,108 @@
+vendor:
+  id: "vendor_dubai_emirates"
+  name: "Emirates Royal VIP Chauffeurs Dubai"
+  tier: "AUTONOMOUS_T1"
+  region: "Dubai & Abu Dhabi Emirates (UAE)"
+  country: "United Arab Emirates"
+  country_code: "AE"
+  state: "Dubai"
+  city: "Dubai"
+  currency: "AED"
+  currency_symbol: "د.إ"
+  time_zone: "Asia/Dubai"
+
+branding:
+  company_tagline: "Ultra-Luxury Royal Chauffeur, Airport VIP Protocol & Diplomatic Transport Dubai"
+  primary_color: "#0F172A"
+  accent_color: "#D4AF37"
+  domain: "emiratesroyalchauffeurs.ae"
+  contact_phone: "+97143889900"
+  contact_text: "+971501234567"
+  contact_email: "vip@emiratesroyalchauffeurs.ae"
+  office_address: "Downtown Dubai, Sheikh Zayed Road, Level 42, Burj Gate Tower, Dubai, UAE"
+  google_maps_url: "https://maps.app.goo.gl/dubai_vip_terminal"
+  logo_url: "/assets/dubai_royal_logo.png"
+
+communications:
+  inbound_email: "vip@emiratesroyalchauffeurs.ae"
+  outbound_sender: "Emirates Royal Chauffeurs <vip@emiratesroyalchauffeurs.ae>"
+  smtp_host: "smtp.sendgrid.net"
+  twilio_sms_number: "+971501234567"
+  twilio_voice_number: "+97143889900"
+
+pricing_matrix:
+  base_rate_usd: 85.00
+  per_km_usd: 3.50
+  deadhead_rate_per_mile_usd: 1.80
+  deadhead_rate_per_km_usd: 1.12
+  deadhead_buffer_miles_outbound: 0.00
+  deadhead_buffer_miles_return: 0.00
+  tax_rate_pct: 5.00
+  fuel_surcharge_pct: 5.00
+  service_charge_pct: 10.00
+  credit_card_fee_pct: 2.50
+  airport_meet_and_greet_usd: 50.00
+  tolls_bridge_tunnel_usd: 4.00
+
+database:
+  db_type: "mysql_partition"
+  partition_id: "db_partition_dubai_emirates_01"
+
+fleet_drivers:
+  - id: "driver_dxb_01"
+    name: "Tariq Al-Mansoor"
+    phone: "+971501234501"
+    vehicle: "Cadillac Escalade Platinum ESV"
+    license_plate: "DXB-VIP-01"
+  - id: "driver_dxb_02"
+    name: "Rashid Hamdan"
+    phone: "+971501234502"
+    vehicle: "GMC Yukon Denali XL"
+    license_plate: "DXB-VIP-02"
+  - id: "driver_dxb_03"
+    name: "Zayn Al-Fassi"
+    phone: "+971501234503"
+    vehicle: "Mercedes-Maybach S680"
+    license_plate: "DXB-VIP-03"
+  - id: "driver_dxb_04"
+    name: "Faris Al-Nuaimi"
+    phone: "+971501234504"
+    vehicle: "BMW 7 Series 760Li"
+    license_plate: "DXB-VIP-04"
+  - id: "driver_dxb_05"
+    name: "Khalid Bin Zayed"
+    phone: "+971501234505"
+    vehicle: "Rolls-Royce Ghost"
+    license_plate: "DXB-VIP-05"
+  - id: "driver_dxb_06"
+    name: "Omar Al-Khatib"
+    phone: "+971501234506"
+    vehicle: "Mercedes-Benz E-Class"
+    license_plate: "DXB-SED-01"
+  - id: "driver_dxb_07"
+    name: "Sultan Al-Ghurair"
+    phone: "+971501234507"
+    vehicle: "Mercedes-Benz Sprinter VIP Royal"
+    license_plate: "DXB-VAN-01"
+
+affiliate_policy:
+  enable_federation: true
+  auto_accept_affiliate_rides: true
+  clearing_split_pct: 85.0
+
+telecom_compliance:
+  legal_business_name: "Emirates Royal VIP Limousine LLC"
+  ein_tax_id: "TRN 100349281000003"
+  business_type: "LLC"
+  vertical: "TRANSPORTATION_AND_LOGISTICS"
+  physical_address: "Level 42, Burj Gate Tower, Downtown Dubai, UAE"
+  website_url: "https://emiratesroyalchauffeurs.ae"
+  contact_email: "vip@emiratesroyalchauffeurs.ae"
+  contact_phone: "+97143889900"
+
+insurance_compliance:
+  has_valid_insurance: true
+  policy_amount: "AED 20M"
+  show_policy_amount: true
+  carrier_name: "Oman Insurance Company (Sukoon)"
+  policy_number: "SUKOON-DXB-981240"

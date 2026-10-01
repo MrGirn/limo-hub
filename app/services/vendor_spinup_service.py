@@ -632,6 +632,86 @@ class VendorSpinupService:
             finally:
                 session.close()
 
+        # Fallback to SQLite vendor_fleet_vehicles table or declarative cell fleet
+        if not vehicle_options:
+            import sqlite3
+            import os
+            db_path = "limo_database.db"
+            if os.path.exists(db_path):
+                try:
+                    conn = sqlite3.connect(db_path)
+                    cur = conn.cursor()
+                    cur.execute("""
+                        SELECT vehicle_id, make_model, vehicle_class, passenger_capacity, luggage_capacity, license_plate, current_status
+                        FROM vendor_fleet_vehicles 
+                        WHERE (vendor_id = ? OR vendor_id = ? OR vendor_id = ?) AND is_active = 1
+                    """, (vendor_id, norm_id, alias_id))
+                    fleet_rows = cur.fetchall()
+                    for idx, fr in enumerate(fleet_rows):
+                        v_id, mm, v_class, pax, lug, plate, status = fr
+                        vehicle_options.append({
+                            "id": v_id,
+                            "tenant_id": vendor_id,
+                            "vendor_id": vendor_id,
+                            "type": v_class,
+                            "categoryName": v_class.replace("_", " "),
+                            "title": mm,
+                            "subtitle": f"{mm} Executive Chauffeur Fleet",
+                            "models": mm,
+                            "makeModel": mm,
+                            "year": "2025 Fleet Model",
+                            "tagline": f"Chauffeur-Driven {mm}",
+                            "pax": pax,
+                            "luggage": lug,
+                            "multiplier": 1.0,
+                            "features": ["Complimentary High-Speed Wi-Fi", "Chilled Bottled Water", "Phone Chargers", "Flight Tracking"],
+                            "badge": status or "AVAILABLE",
+                            "badgeColor": "#10253F",
+                            "desc": f"Luxury executive {mm} with professional chauffeur and full flight tracking.",
+                            "specs": {"pax": pax, "bags": lug, "class": v_class, "plate": plate},
+                            "amenities": ["Wi-Fi", "Bottled Water", "Climate Control", "Child Seat Available"],
+                            "photoUrl": f"/assets/fleet/{v_id}.jpg",
+                            "photos": [f"/assets/fleet/{v_id}.jpg"],
+                            "fallbackIcon": v_class,
+                            "sort_order": idx + 1,
+                            "is_active": True
+                        })
+                    conn.close()
+                except Exception:
+                    pass
+
+        # Final fallback: map declarative fleet_drivers from cell config if any
+        if not vehicle_options and cell and hasattr(cell.config, "fleet_drivers") and cell.config.fleet_drivers:
+            for idx, fd in enumerate(cell.config.fleet_drivers):
+                v_name = fd.get("vehicle", "Executive Luxury Vehicle")
+                vehicle_options.append({
+                    "id": fd.get("id", f"veh_{vendor_id}_{idx+1}"),
+                    "tenant_id": vendor_id,
+                    "vendor_id": vendor_id,
+                    "type": "LUXURY_SUV" if "SUV" in v_name or "Escalade" in v_name or "Navigator" in v_name or "Suburban" in v_name or "Yukon" in v_name or "Rover" in v_name else ("FIRST_CLASS" if "Maybach" in v_name or "S-Class" in v_name or "S580" in v_name or "7 Series" in v_name or "Ghost" in v_name else "BUSINESS_SEDAN"),
+                    "categoryName": "EXECUTIVE",
+                    "title": v_name,
+                    "subtitle": f"{v_name} Dedicated Chauffeur Service",
+                    "models": v_name,
+                    "makeModel": v_name,
+                    "year": "2025 Fleet Model",
+                    "tagline": f"Chauffeur-Driven {v_name}",
+                    "pax": 6 if "SUV" in v_name or "Escalade" in v_name else 3,
+                    "luggage": 6 if "SUV" in v_name or "Escalade" in v_name else 3,
+                    "multiplier": 1.0,
+                    "features": ["Complimentary High-Speed Wi-Fi", "Chilled Bottled Water", "Phone Chargers"],
+                    "badge": "AVAILABLE",
+                    "badgeColor": "#10253F",
+                    "desc": f"Professional chauffeur service with {v_name}.",
+                    "specs": {"pax": 6 if "SUV" in v_name else 3, "bags": 6 if "SUV" in v_name else 3},
+                    "amenities": ["Wi-Fi", "Water", "Climate Control"],
+                    "photoUrl": f"/assets/fleet/{fd.get('id')}.jpg",
+                    "photos": [f"/assets/fleet/{fd.get('id')}.jpg"],
+                    "fallbackIcon": "SEDAN",
+                    "sort_order": idx + 1,
+                    "is_active": True
+                })
+
         result = {
             "vendor_id": vendor_id,
             "vendor_name": cell.config.vendor_name if cell else vendor_id,

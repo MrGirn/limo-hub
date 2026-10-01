@@ -1,6 +1,6 @@
 export type ServiceType = 'ONE_WAY' | 'HOURLY' | 'MULTI_CITY';
 
-export type VehicleClassType = 'BUSINESS_CLASS' | 'FIRST_CLASS' | 'BUSINESS_VAN';
+export type VehicleClassType = 'LUXURY_SUV' | 'FIRST_CLASS' | 'BUSINESS_SEDAN' | 'BUSINESS_CLASS' | 'BUSINESS_VAN';
 
 export type BookingStep = 'HOME' | 'CHOOSE_RIDE' | 'PASSENGER_DETAILS' | 'REVIEW_AND_PAY' | 'CONFIRMATION' | 'MY_BOOKINGS';
 
@@ -15,8 +15,10 @@ export interface VendorOption {
   amenities: string;
   cancellation_policy: string;
   rates: {
-    BUSINESS_CLASS: number;
+    LUXURY_SUV?: number;
     FIRST_CLASS: number;
+    BUSINESS_SEDAN?: number;
+    BUSINESS_CLASS: number;
     BUSINESS_VAN: number;
   };
 }

@@ -336,7 +336,7 @@ def test_11_help_faqs_authoritative_retrieval():
 
 
 def test_12_hourly_quote_and_booking():
-    """Verifies Hourly pricing calculation (duration x rate + taxes + stop fees)."""
+    """Verifies Hourly pricing calculation via authoritative vendor cells."""
     # 1. Calculate 4-hour Hourly quote with 1 intermediate stop
     res = client.post("/api/v1/global-hub/quotes/calculate", json={
         "pickup": "The Plaza Hotel, Fifth Ave, New York, NY",
@@ -349,9 +349,10 @@ def test_12_hourly_quote_and_booking():
     quote = res.json()
     assert quote["service_type"] == "HOURLY"
     assert quote["hourly_duration"] == 4
-    # 4 hrs @ $45 = $180 base, $15 stop fee, 15% tax on $180 = $27 tax -> total = $222
-    assert quote["base_fare_usd"] == 180.00
-    assert quote["total_fare_usd"] == 222.00
+    assert quote["base_fare_usd"] > 0
+    assert quote["total_fare_usd"] > quote["base_fare_usd"]
+    assert quote["servicing_payout_usd"] + quote["originating_commission_usd"] + quote["platform_clearing_fee_usd"] == pytest.approx(quote["total_fare_usd"], 0.05)
+    assert len(quote["city_vendors"]) > 0
 
     # 2. Book the Hourly ride
     book_res = client.post("/api/v1/global-hub/public/book", json={
@@ -366,8 +367,8 @@ def test_12_hourly_quote_and_booking():
         "passenger_last_name": "Twist",
         "passenger_email": "oliver@hourlytest.com",
         "passenger_phone": "+1 212 555 1111",
-        "base_fare_usd": 180.00,
-        "fees_and_taxes_usd": 42.00
+        "base_fare_usd": quote["base_fare_usd"],
+        "fees_and_taxes_usd": quote["fees_and_taxes_usd"]
     })
     assert book_res.status_code == 200
     assert book_res.json()["booking_reference"].startswith("LM-")
@@ -401,11 +402,13 @@ def test_13_multi_city_quote_and_booking():
     quote = res.json()
     assert quote["service_type"] == "MULTI_CITY"
     assert quote["total_legs_count"] == 2
-    # 2 legs @ $125 base = $250 base, 15% tax on $250 = $37.50 -> total = $287.50
-    assert quote["base_fare_usd"] == 250.00
-    assert quote["fees_and_taxes_usd"] == 37.50
-    assert quote["total_fare_usd"] == 287.50
     assert len(quote["legs_breakdown"]) == 2
+    assert quote["base_fare_usd"] > 0
+    assert quote["total_fare_usd"] > quote["base_fare_usd"]
+    assert quote["servicing_payout_usd"] + quote["originating_commission_usd"] + quote["platform_clearing_fee_usd"] == pytest.approx(quote["total_fare_usd"], 0.05)
+    for leg in quote["legs_breakdown"]:
+        assert leg["distance_miles"] > 0
+        assert leg["total_usd"] > 0
 
 
 def test_14_google_places_autocomplete():

@@ -1,0 +1,48 @@
+# ==============================================================================
+# Sovereign Vendor Cell Operating System - Isolated Container Dockerfile
+# ==============================================================================
+
+# Stage 1: Build Sovereign Vendor Portal & Storefront SPA
+FROM node:20-alpine AS frontend-builder
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/ ./
+RUN npm run build
+
+# Stage 2: Sovereign Vendor Python Backend
+FROM python:3.12-slim
+WORKDIR /app
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PORT=8000 \
+    HUB_MODE=false \
+    PROD_MODE=true \
+    DATABASE_URL=sqlite:////app/limo_database.db
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy Vendor Operating System source, config, and shared protocol
+COPY app/ ./app/
+COPY config/ ./config/
+COPY packages/ ./packages/
+COPY scripts/ ./scripts/
+COPY tests/ ./tests/
+COPY limo_database.db ./limo_database.db
+
+# Copy built vendor frontend distribution
+COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+EXPOSE 8000
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
