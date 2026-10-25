@@ -5,6 +5,8 @@ import {
   fetchPersonas,
   switchPersonaApi,
   loginApi,
+  LoginApiResponse,
+  verify2FAApi,
   setAuthToken
 } from '../api';
 
@@ -17,7 +19,8 @@ interface AuthContextType {
   isLoading: boolean;
   setSession: (user: UserSession, token: string) => void;
   switchPersona: (personaKey: string) => Promise<void>;
-  login: (email: string, password?: string, role?: string) => Promise<void>;
+  login: (email: string, password?: string, role?: string) => Promise<LoginApiResponse>;
+  verify2FA: (challengeId: string, code: string) => Promise<{ user: UserSession; token: string }>;
   logout: () => void;
   hasRole: (roles: UserRole[]) => boolean;
   hasPermission: (permission: string) => boolean;
@@ -95,15 +98,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const login = async (email: string, password?: string, role?: string) => {
+  const login = async (email: string, password?: string, role?: string): Promise<LoginApiResponse> => {
     try {
       setIsLoading(true);
       const res = await loginApi(email, password, role);
+      if (!res.requires_2fa && res.token && res.user) {
+        setUser(res.user);
+        setToken(res.token);
+        setAuthToken(res.token, res.user.role);
+      }
+      return res;
+    } catch (err) {
+      console.error('Login error:', err);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const verify2FA = async (challengeId: string, code: string) => {
+    try {
+      setIsLoading(true);
+      const res = await verify2FAApi(challengeId, code);
       setUser(res.user);
       setToken(res.token);
       setAuthToken(res.token, res.user.role);
+      return res;
     } catch (err) {
-      console.error('Login error:', err);
+      console.error('2FA error:', err);
       throw err;
     } finally {
       setIsLoading(false);
@@ -150,6 +172,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession,
         switchPersona,
         login,
+        verify2FA,
         logout,
         hasRole,
         hasPermission

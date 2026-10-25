@@ -2941,6 +2941,22 @@ class StandardLoginRequest(BaseModel):
     vendor_id: Optional[str] = None
 
 
+class Verify2FARequest(BaseModel):
+    challenge_id: str
+    code: str
+
+
+class CustomerSendOTPRequest(BaseModel):
+    phone: str
+    vendor_id: Optional[str] = None
+
+
+class CustomerVerifyOTPRequest(BaseModel):
+    phone: str
+    code: str
+    vendor_id: Optional[str] = None
+
+
 class StandardRegisterRequest(BaseModel):
     email: str
     password: Optional[str] = None
@@ -2962,8 +2978,10 @@ def get_oauth_config():
 
 
 @router.post("/auth/oauth-login")
-def oauth_login(req: OAuthLoginRequest):
+def oauth_login(req: OAuthLoginRequest, request: Request, response: Response):
     """Processes verified Apple Sign-In, Google 1-Tap, Corporate SSO, and Email assertions."""
+    from app.security.auth_manager import AuthManager
+
     provider_clean = req.provider.lower().strip()
     valid_providers = ["apple", "google", "email", "magic-link", "corporate", "passkey", "password", "direct"]
     if provider_clean not in valid_providers:
@@ -2974,6 +2992,11 @@ def oauth_login(req: OAuthLoginRequest):
 
     email = req.email.strip()
     full_name = req.full_name
+
+    # Check lockout
+    is_locked, remaining = AuthManager.check_lockout(email)
+    if is_locked:
+        raise HTTPException(status_code=423, detail=f"Account is temporarily locked due to excessive failed attempts. Please retry in {remaining} seconds.")
 
     # If real Google ID Token is provided, verify it directly with Google Tokeninfo
     if provider_clean == "google" and req.id_token and not req.id_token.startswith("jwt_"):
@@ -2998,40 +3021,283 @@ def oauth_login(req: OAuthLoginRequest):
         vendor_id=req.vendor_id,
         provider=provider_clean
     )
-    token = create_access_token(matched_persona)
+
+    tokens = AuthManager.create_dual_tokens(matched_persona)
+    response.set_cookie(
+        key="limo_refresh_token",
+        value=tokens["refresh_token"],
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=86400 * 7
+    )
     return {
         "success": True,
         "provider": provider_clean,
         "user": matched_persona,
-        "token": token,
+        "token": tokens["access_token"],
+        "expires_in": tokens["expires_in"],
         "authenticated_via": f"Auth Gateway ({provider_clean.title()})"
     }
 
 
 @router.post("/auth/login")
-def standard_login(req: StandardLoginRequest):
-    """Standard credential-based or email-based user login."""
+def standard_login(req: StandardLoginRequest, request: Request, response: Response):
+    """
+    Gold-Standard Credential Login:
+    Enforces brute-force lockout, PBKDF2 password verification, and Twilio SMS 2FA for Admin/Dispatcher roles.
+    """
+    from app.security.auth_manager import AuthManager
+    from app.database_mysql import mysql_db, UserModel
+
+    client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "")
+
+    # 1. Brute-Force Check
+    is_locked, remaining = AuthManager.check_lockout(req.email)
+    if is_locked:
+        raise HTTPException(
+            status_code=423,
+            detail=f"Account is temporarily locked due to excessive failed attempts. Please retry in {remaining} seconds."
+        )
+
+    # 2. Resolve persona
     matched_persona = resolve_authoritative_session(
         email=req.email,
         requested_role=req.role,
         vendor_id=req.vendor_id,
         provider="credentials"
     )
-    token = create_access_token(matched_persona)
+
+    # 3. For Administrative & Dispatcher Roles: Enforce Authoritative Password Verification
+    is_admin_or_dispatch = matched_persona.role in [
+        UserRole.ROLE_VENDOR_ADMIN,
+        UserRole.ROLE_DISPATCHER,
+        UserRole.ROLE_SUPER_ADMIN
+    ]
+
+    if is_admin_or_dispatch:
+        stored_hash = None
+        user_phone = None
+        session = mysql_db.get_session()
+        if session:
+            try:
+                db_u = session.query(UserModel).filter(UserModel.email == req.email.strip().lower()).first()
+                if db_u:
+                    stored_hash = db_u.password_hash
+                    user_phone = db_u.phone or db_u.mfa_phone
+            finally:
+                session.close()
+
+        # If not found in DB but is known primary admin email, use env seed hash
+        if not stored_hash and req.email.strip().lower() in [
+            os.getenv("ADMIN_EMAIL", "dasingh@skilledclass.com").strip().lower(),
+            "info@anbtransinc.com", "owner@anbtransinc.com"
+        ]:
+            default_pw = os.getenv("ADMIN_INITIAL_PASSWORD", "ExecutiveAdmin2026!#")
+            stored_hash = AuthManager.hash_password(default_pw)
+            user_phone = os.getenv("ADMIN_PHONE", "+14844324476")
+
+        # Verify password if user has a stored credential
+        if stored_hash:
+            if not req.password or not AuthManager.verify_password(req.password, stored_hash):
+                AuthManager.record_attempt(req.email, success=False, ip_address=client_ip, user_agent=user_agent)
+                raise HTTPException(status_code=401, detail="Invalid email or password.")
+
+        # Password verified successfully
+        AuthManager.record_attempt(req.email, success=True, ip_address=client_ip, user_agent=user_agent)
+
+        # 4. Mandatory 2FA OTP Challenge for Administrative Logins
+        target_phone = user_phone or os.getenv("ADMIN_PHONE", "+14844324476")
+        challenge = AuthManager.create_2fa_challenge(matched_persona, target_phone)
+        return {
+            "success": True,
+            "requires_2fa": True,
+            "challenge_id": challenge["challenge_id"],
+            "masked_phone": challenge["masked_phone"],
+            "message": challenge["message"]
+        }
+
+    # For standard customer / guest logins: issue tokens directly
+    AuthManager.record_attempt(req.email, success=True, ip_address=client_ip, user_agent=user_agent)
+    tokens = AuthManager.create_dual_tokens(matched_persona)
+    response.set_cookie(
+        key="limo_refresh_token",
+        value=tokens["refresh_token"],
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=86400 * 7
+    )
     return {
         "success": True,
+        "requires_2fa": False,
         "user": matched_persona,
-        "token": token,
+        "token": tokens["access_token"],
+        "expires_in": tokens["expires_in"],
         "message": f"Welcome back, {matched_persona.full_name}"
+    }
+
+
+@router.post("/auth/verify-2fa")
+def verify_2fa(req: Verify2FARequest, response: Response):
+    """Verifies one-time 2FA SMS code and issues elevated access tokens + HttpOnly refresh cookie."""
+    from app.security.auth_manager import AuthManager
+
+    is_valid, user, err = AuthManager.verify_2fa_challenge(req.challenge_id, req.code)
+    if not is_valid or not user:
+        raise HTTPException(status_code=400, detail=err or "Invalid verification code.")
+
+    tokens = AuthManager.create_dual_tokens(user)
+    response.set_cookie(
+        key="limo_refresh_token",
+        value=tokens["refresh_token"],
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=86400 * 7
+    )
+    return {
+        "success": True,
+        "user": user,
+        "token": tokens["access_token"],
+        "expires_in": tokens["expires_in"],
+        "message": "Two-factor verification successful. Authorized session active."
+    }
+
+
+@router.post("/auth/refresh")
+def refresh_session_token(request: Request, response: Response):
+    """Rotates refresh token and issues a fresh 30-minute access token."""
+    from app.security.auth_manager import AuthManager
+
+    refresh_token = request.cookies.get("limo_refresh_token") or request.headers.get("x-refresh-token")
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="Refresh token missing.")
+
+    user = AuthManager.verify_refresh_token(refresh_token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Refresh token invalid, revoked, or expired. Please sign in again.")
+
+    # Revoke used refresh token and issue new pair
+    AuthManager.revoke_token(refresh_token)
+    tokens = AuthManager.create_dual_tokens(user)
+    response.set_cookie(
+        key="limo_refresh_token",
+        value=tokens["refresh_token"],
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=86400 * 7
+    )
+    return {
+        "success": True,
+        "user": user,
+        "token": tokens["access_token"],
+        "expires_in": tokens["expires_in"]
+    }
+
+
+@router.post("/auth/customer/send-otp")
+def customer_send_otp(req: CustomerSendOTPRequest):
+    """Sends a 6-digit one-time SMS login code to passenger phone for passwordless entry."""
+    from app.security.auth_manager import AuthManager
+
+    clean_phone = req.phone.strip()
+    digits = "".join(c for c in clean_phone if c.isdigit())
+    if len(digits) < 10:
+        raise HTTPException(status_code=400, detail="Invalid mobile phone number.")
+
+    temp_user = UserSession(
+        user_id=f"usr-cust-{digits[-6:]}",
+        email=f"client-{digits[-4:]}@sms.guest",
+        full_name="VIP Passenger",
+        role=UserRole.ROLE_CUSTOMER,
+        tenant_id="tenant-us-east",
+        vendor_id=req.vendor_id or "vendor_anb_philly",
+        permissions=["booking:create", "booking:read", "quote:create", "profile:update"]
+    )
+    challenge = AuthManager.create_2fa_challenge(temp_user, clean_phone)
+    return {
+        "success": True,
+        "challenge_id": challenge["challenge_id"],
+        "masked_phone": challenge["masked_phone"],
+        "message": f"Verification code sent to {challenge['masked_phone']}"
+    }
+
+
+@router.post("/auth/customer/verify-otp")
+def customer_verify_otp(req: CustomerVerifyOTPRequest, response: Response):
+    """Verifies passenger SMS code and logs in without requiring a password."""
+    from app.security.auth_manager import AuthManager
+
+    is_valid, user, err = AuthManager.verify_2fa_challenge(req.phone, req.code)
+    # If phone was passed as challenge_id or lookup by challenge
+    if not is_valid:
+        # Search challenge by code and phone
+        from app.security.auth_manager import _ACTIVE_2FA_CHALLENGES
+        for c_id, c_data in list(_ACTIVE_2FA_CHALLENGES.items()):
+            clean_input = req.code.strip()
+            if c_data.get("code") == clean_input and "".join(c for c in c_data.get("phone", "") if c.isdigit())[-10:] == "".join(c for c in req.phone if c.isdigit())[-10:]:
+                is_valid, user, err = AuthManager.verify_2fa_challenge(c_id, clean_input)
+                break
+
+    if not is_valid or not user:
+        raise HTTPException(status_code=400, detail=err or "Invalid or expired SMS code.")
+
+    tokens = AuthManager.create_dual_tokens(user)
+    response.set_cookie(
+        key="limo_refresh_token",
+        value=tokens["refresh_token"],
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=86400 * 7
+    )
+    return {
+        "success": True,
+        "user": user,
+        "token": tokens["access_token"],
+        "expires_in": tokens["expires_in"],
+        "message": "Passenger authenticated successfully."
     }
 
 
 @router.post("/auth/register")
 def standard_register(req: StandardRegisterRequest):
     """Registers a new customer, corporate booker, or vendor partner user profile."""
+    from app.security.auth_manager import AuthManager
+    from app.database_mysql import mysql_db, UserModel
+
     email_clean = req.email.strip().lower()
+    pw_hash = AuthManager.hash_password(req.password) if req.password else None
+
+    # Persist in MySQL UserModel
+    session = mysql_db.get_session()
+    user_id = f"usr-{uuid.uuid4().hex[:8]}"
+    if session:
+        try:
+            new_u = UserModel(
+                id=user_id,
+                tenant_id="tenant-us-east",
+                vendor_id=req.vendor_id,
+                email=email_clean,
+                password_hash=pw_hash,
+                full_name=req.full_name.strip(),
+                phone=req.phone,
+                role=req.role.value if hasattr(req.role, "value") else (req.role or "ROLE_CUSTOMER"),
+                is_active=True
+            )
+            session.add(new_u)
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            logger.warning(f"Registration user insert note: {e}")
+        finally:
+            session.close()
+
     new_user = UserSession(
-        user_id=f"usr-{uuid.uuid4().hex[:8]}",
+        user_id=user_id,
         email=email_clean,
         full_name=req.full_name.strip(),
         role=req.role or UserRole.ROLE_CUSTOMER,
@@ -3049,8 +3315,15 @@ def standard_register(req: StandardRegisterRequest):
 
 
 @router.post("/auth/logout")
-def standard_logout(user: UserSession = Depends(get_current_user)):
-    """Logs out current user session and invalidates client session state."""
+def standard_logout(request: Request, response: Response, user: UserSession = Depends(get_current_user)):
+    """Logs out current user session, revokes refresh token, and clears HttpOnly cookies."""
+    from app.security.auth_manager import AuthManager
+
+    refresh_token = request.cookies.get("limo_refresh_token")
+    if refresh_token:
+        AuthManager.revoke_token(refresh_token)
+    response.delete_cookie("limo_refresh_token")
+
     return {
         "success": True,
         "message": f"User {user.email} successfully logged out",

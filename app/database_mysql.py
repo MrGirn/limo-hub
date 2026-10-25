@@ -99,7 +99,52 @@ class VendorModel(Base):
 
 
 # ==============================================================================
-# 2. CUSTOMER CRM & 5-STAR VIP SERVICE PREFERENCES
+# 2. AUTHORITATIVE USER IDENTITY, RBAC CREDENTIALS & AUDIT LOGS
+# ==============================================================================
+
+class UserModel(Base):
+    """
+    Authoritative Platform User, Staff, Operator & Customer Identity Record.
+    Enforces PBKDF2-SHA256 password hashing, MFA, lockout tracking, and tenant isolation.
+    """
+    __tablename__ = "users"
+
+    id = Column(String(64), primary_key=True)
+    tenant_id = Column(String(64), ForeignKey("tenants.id"), nullable=False, default="tenant-us-east")
+    vendor_id = Column(String(64), ForeignKey("vendors.id"), nullable=True)
+    email = Column(String(255), nullable=False, unique=True, index=True)
+    password_hash = Column(String(255), nullable=True)
+    full_name = Column(String(255), nullable=False)
+    phone = Column(String(64), nullable=True)
+    role = Column(String(64), nullable=False, default="ROLE_CUSTOMER")
+    is_active = Column(Boolean, default=True)
+    mfa_enabled = Column(Boolean, default=False)
+    mfa_phone = Column(String(64), nullable=True)
+    failed_login_attempts = Column(Integer, default=0)
+    lockout_until = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+
+class AuthAuditLogModel(Base):
+    """
+    Authoritative Audit Log for Login, OTP & Security Events.
+    Tracks IP, user agent, event type, and outcome for OWASP compliance.
+    """
+    __tablename__ = "auth_audit_logs"
+
+    id = Column(String(64), primary_key=True)
+    user_id = Column(String(64), nullable=True, index=True)
+    email = Column(String(255), nullable=False, index=True)
+    event_type = Column(String(64), nullable=False)  # LOGIN_SUCCESS, FAILED_PASSWORD, ACCOUNT_LOCKED, OTP_SENT, OTP_VERIFIED
+    ip_address = Column(String(64), nullable=True)
+    user_agent = Column(String(512), nullable=True)
+    details = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+# ==============================================================================
+# 3. CUSTOMER CRM & 5-STAR VIP SERVICE PREFERENCES
 # ==============================================================================
 
 class CustomerModel(Base):
@@ -944,6 +989,41 @@ class MySQLManager:
                                 attachments_json TEXT NULL,
                                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                                 INDEX idx_tkt_msg_ticket (ticket_id)
+                            )
+                        """))
+                        conn.execute(text("""
+                            CREATE TABLE IF NOT EXISTS users (
+                                id VARCHAR(64) PRIMARY KEY,
+                                tenant_id VARCHAR(64) NOT NULL DEFAULT 'tenant-us-east',
+                                vendor_id VARCHAR(64) NULL,
+                                email VARCHAR(255) NOT NULL UNIQUE,
+                                password_hash VARCHAR(255) NULL,
+                                full_name VARCHAR(255) NOT NULL,
+                                phone VARCHAR(64) NULL,
+                                role VARCHAR(64) NOT NULL DEFAULT 'ROLE_CUSTOMER',
+                                is_active TINYINT(1) DEFAULT 1,
+                                mfa_enabled TINYINT(1) DEFAULT 0,
+                                mfa_phone VARCHAR(64) NULL,
+                                failed_login_attempts INT DEFAULT 0,
+                                lockout_until DATETIME NULL,
+                                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                INDEX idx_user_email (email),
+                                INDEX idx_user_vendor (vendor_id)
+                            )
+                        """))
+                        conn.execute(text("""
+                            CREATE TABLE IF NOT EXISTS auth_audit_logs (
+                                id VARCHAR(64) PRIMARY KEY,
+                                user_id VARCHAR(64) NULL,
+                                email VARCHAR(255) NOT NULL,
+                                event_type VARCHAR(64) NOT NULL,
+                                ip_address VARCHAR(64) NULL,
+                                user_agent VARCHAR(512) NULL,
+                                details TEXT NULL,
+                                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                INDEX idx_auth_log_email (email),
+                                INDEX idx_auth_log_event (event_type)
                             )
                         """))
                         conn.commit()

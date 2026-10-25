@@ -14,6 +14,7 @@ import secrets
 import logging
 from enum import Enum
 from typing import List, Optional, Dict, Any, Set
+from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel, Field
 from fastapi import HTTPException, Security, Depends, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -178,6 +179,47 @@ def resolve_authoritative_session(
     # Normalize requested_role string or enum
     req_role_str = str(requested_role.value if hasattr(requested_role, "value") else (requested_role or "")).upper()
 
+    # 0. Check Authoritative Database Record in MySQL UserModel
+    try:
+        from app.database_mysql import mysql_db, UserModel
+        session = mysql_db.get_session()
+        if session:
+            db_user = session.query(UserModel).filter(UserModel.email == email_clean).first()
+            if db_user:
+                auth_role = None
+                for r in UserRole:
+                    if r.value == db_user.role:
+                        auth_role = r
+                        break
+                auth_role = auth_role or UserRole.ROLE_CUSTOMER
+                perms = (
+                    ["*"] if auth_role == UserRole.ROLE_SUPER_ADMIN
+                    else [
+                        "team:manage", "billing:manage", "byoe:manage", "pricing:override",
+                        "autonomy:override", "dispatch:assign", "quotes:manage", "omnichannel:respond",
+                        "fleet:manage", "settlements:read", "settlements:payout", "flights:override"
+                    ] if auth_role == UserRole.ROLE_VENDOR_ADMIN
+                    else [
+                        "dispatch:assign", "dispatch:radar", "quotes:manage",
+                        "omnichannel:respond", "flights:override", "fleet:view",
+                        "trips:reassign", "timeline:read"
+                    ] if auth_role == UserRole.ROLE_DISPATCHER
+                    else ["booking:create", "booking:read", "quote:create", "profile:update"]
+                )
+                session.close()
+                return UserSession(
+                    user_id=db_user.id,
+                    email=db_user.email,
+                    full_name=db_user.full_name or full_name or "Authorized User",
+                    role=auth_role,
+                    tenant_id=db_user.tenant_id or "tenant-us-east",
+                    vendor_id=db_user.vendor_id or sovereign_vendor,
+                    permissions=perms
+                )
+            session.close()
+    except Exception as e:
+        logger.debug(f"MySQL user auth lookup note: {e}")
+
     # 1. Match against Known Sovereign Vendor Owner / Principal Admin emails
     known_owner_emails = {
         admin_email,
@@ -188,11 +230,8 @@ def resolve_authoritative_session(
         "ops@limo-autonomous.global"
     }
 
-    if (
-        email_clean in known_owner_emails
-        or req_role_str in ["ROLE_VENDOR_ADMIN", "VENDOR_ADMIN", "OWNER", "ROLE_VENDOR"]
-        or (req_role_str in ["ROLE_SUPER_ADMIN", "SUPER_ADMIN"] and email_clean in (admin_email, "ops@limo-autonomous.global"))
-    ):
+    # Gold-Standard RBAC: Strictly require verified owner email for ROLE_VENDOR_ADMIN
+    if email_clean in known_owner_emails:
         if (email_clean in (admin_email, "ops@limo-autonomous.global") and "SUPER_ADMIN" in req_role_str) or email_clean == "ops@limo-autonomous.global":
             return UserSession(
                 user_id=f"usr-adm-{uuid.uuid4().hex[:8]}",
@@ -349,11 +388,17 @@ def _b64url_decode(s: str) -> bytes:
     return base64.urlsafe_b64decode(s + padding)
 
 
-def create_access_token(session: UserSession) -> str:
-    """Generates a secure tamper-proof HMAC-SHA256 JWT string."""
+def create_access_token(session: UserSession, expires_delta: Optional[timedelta] = None) -> str:
+    """Generates a secure tamper-proof HMAC-SHA256 JWT string with customizable TTL."""
     header = {"alg": "HS256", "typ": "JWT"}
     payload = session.model_dump()
     payload["role"] = session.role.value
+    now_epoch = int(time.time())
+    expiry = now_epoch + int(expires_delta.total_seconds()) if expires_delta else (now_epoch + TOKEN_EXPIRY_SECONDS)
+    payload["created_at_epoch"] = now_epoch
+    payload["expires_at_epoch"] = expiry
+    payload["iat"] = now_epoch
+    payload["exp"] = expiry
     
     header_b64 = _b64url_encode(json.dumps(header).encode('utf-8'))
     payload_b64 = _b64url_encode(json.dumps(payload).encode('utf-8'))

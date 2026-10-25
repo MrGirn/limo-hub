@@ -102,7 +102,18 @@ export async function switchPersonaApi(personaKey: string): Promise<{ user: User
   return data;
 }
 
-export async function loginApi(email: string, password?: string, role?: string, vendor_id?: string): Promise<{ user: UserSession; token: string }> {
+export interface LoginApiResponse {
+  success: boolean;
+  requires_2fa?: boolean;
+  challenge_id?: string;
+  masked_phone?: string;
+  message?: string;
+  user?: UserSession;
+  token?: string;
+  expires_in?: number;
+}
+
+export async function loginApi(email: string, password?: string, role?: string, vendor_id?: string): Promise<LoginApiResponse> {
   const res = await fetch(`${BASE_URL}/api/v1/auth/login`, {
     method: 'POST',
     headers: getAuthHeaders(),
@@ -116,6 +127,51 @@ export async function loginApi(email: string, password?: string, role?: string, 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(extractErrorMessage(err, 'Login failed'));
+  }
+  const data: LoginApiResponse = await res.json();
+  if (!data.requires_2fa && data.token && data.user) {
+    setAuthToken(data.token, data.user.role);
+  }
+  return data;
+}
+
+export async function verify2FAApi(challengeId: string, code: string): Promise<{ user: UserSession; token: string }> {
+  const res = await fetch(`${BASE_URL}/api/v1/auth/verify-2fa`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ challenge_id: challengeId, code })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, '2FA verification failed'));
+  }
+  const data = await res.json();
+  setAuthToken(data.token, data.user.role);
+  return data;
+}
+
+export async function customerSendOTPApi(phone: string, vendorId?: string): Promise<{ challenge_id: string; masked_phone: string; message: string }> {
+  const res = await fetch(`${BASE_URL}/api/v1/auth/customer/send-otp`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ phone, vendor_id: vendorId })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to send SMS code'));
+  }
+  return res.json();
+}
+
+export async function customerVerifyOTPApi(phone: string, code: string, vendorId?: string): Promise<{ user: UserSession; token: string }> {
+  const res = await fetch(`${BASE_URL}/api/v1/auth/customer/verify-otp`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ phone, code, vendor_id: vendorId })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'SMS code verification failed'));
   }
   const data = await res.json();
   setAuthToken(data.token, data.user.role);
