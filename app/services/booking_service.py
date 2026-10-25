@@ -329,6 +329,39 @@ class BookingService:
                         customer_rec.chauffeur_etiquette_notes = booking.party.special_instructions
                     customer_rec.updated_at = datetime.now(timezone.utc)
 
+                # Ensure QuoteModel is persisted to satisfy MySQL foreign key
+                q_row = session.query(QuoteModel).filter(QuoteModel.id == quote.id).first()
+                if not q_row:
+                    q_row = QuoteModel(
+                        id=quote.id,
+                        tenant_id=quote.tenant_id,
+                        vendor_id=quote.vendor_id,
+                        service_type=quote.service_type.value,
+                        vehicle_class=quote.vehicle_class.value,
+                        pickup_address=quote.pickup_address,
+                        dropoff_address=quote.dropoff_address,
+                        distance_miles=quote.distance_miles,
+                        estimated_duration_min=quote.estimated_duration_min or 30,
+                        hourly_hours=getattr(quote, "hourly_hours", None),
+                        wait_minutes=quote.wait_minutes or 0,
+                        currency=quote.currency or "USD",
+                        base_net=quote.base_net,
+                        distance_net=getattr(quote, "passenger_distance_net", Decimal("0.00")),
+                        subtotal_net=quote.subtotal_net,
+                        tax_label=getattr(quote, "tax_label", "State & Municipal Sales Taxes"),
+                        tax_rate=quote.tax_rate,
+                        tax_amount=quote.tax_amount,
+                        gratuity_rate=getattr(quote, "gratuity_rate", Decimal("0.00")),
+                        gratuity_amount=getattr(quote, "gratuity_amount", Decimal("0.00")),
+                        total_gross=quote.total_gross,
+                        final_payable_amount=quote.final_payable_amount,
+                        is_binding=quote.is_binding,
+                        expires_at=quote.expires_at,
+                        created_at=quote.created_at
+                    )
+                    session.merge(q_row)
+                    session.flush()
+
                 # 2. Persist Booking & Trip Models
                 b_model = BookingModel(
                     id=booking.id,
