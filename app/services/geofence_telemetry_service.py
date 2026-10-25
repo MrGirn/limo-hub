@@ -82,6 +82,22 @@ class GeofenceTelemetryService:
         dropoff_lat = getattr(trip, "dropoff_lat", None)
         dropoff_lng = getattr(trip, "dropoff_lng", None)
 
+        if not pickup_lat and getattr(trip, "pickup_address", None):
+            addr = trip.pickup_address.upper()
+            if "JFK" in addr or "KENNEDY" in addr:
+                pickup_lat, pickup_lng = 40.6413, -73.7781
+            elif "EWR" in addr or "NEWARK" in addr:
+                pickup_lat, pickup_lng = 40.6895, -74.1745
+            elif "PHL" in addr or "PHILADELPHIA" in addr:
+                pickup_lat, pickup_lng = 39.8744, -75.2424
+
+        if not dropoff_lat and getattr(trip, "dropoff_address", None):
+            addr = trip.dropoff_address.upper()
+            if "PLAZA" in addr:
+                dropoff_lat, dropoff_lng = 40.7645, -73.9744
+            elif "JFK" in addr or "KENNEDY" in addr:
+                dropoff_lat, dropoff_lng = 40.6413, -73.7781
+
         dist_to_pickup = haversine_distance_miles(lat, lng, pickup_lat, pickup_lng) if (pickup_lat and pickup_lng) else None
         dist_to_dropoff = haversine_distance_miles(lat, lng, dropoff_lat, dropoff_lng) if (dropoff_lat and dropoff_lng) else None
 

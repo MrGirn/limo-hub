@@ -145,7 +145,6 @@ class FlightTrackerWebhookService:
                     # Live Twilio SMS Dispatch to Assigned Chauffeur
                     if getattr(trip, "driver_id", None) and delay_minutes > 0:
                         try:
-                            from app.database import db
                             from app.services.twilio_notification_service import TwilioNotificationService
                             driver = db.drivers.get(trip.driver_id)
                             if driver and getattr(driver, "phone", None):
