@@ -4,17 +4,21 @@ Provides JWT authentication, actor role verification, tenant scoping, and author
 """
 
 import os
+import uuid
 import time
 import hmac
 import hashlib
 import json
 import base64
 import secrets
+import logging
 from enum import Enum
 from typing import List, Optional, Dict, Any, Set
 from pydantic import BaseModel, Field
 from fastapi import HTTPException, Security, Depends, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+logger = logging.getLogger("RBAC")
 
 JWT_SECRET = os.getenv("JWT_SECRET", "limo_super_secret_jwt_hmac_signing_key_2026_global")
 ALGORITHM = "HS256"
@@ -154,6 +158,186 @@ ACTOR_PERSONAS: Dict[str, UserSession] = {
         permissions=["*"]
     )
 }
+
+
+def resolve_authoritative_session(
+    email: str,
+    full_name: Optional[str] = None,
+    requested_role: Optional[Any] = None,
+    vendor_id: Optional[str] = None,
+    provider: str = "email"
+) -> UserSession:
+    """
+    Authoritatively resolves a UserSession based on real operational database records,
+    sovereign vendor configuration, and live driver rosters.
+    """
+    email_clean = (email or "").strip().lower()
+    sovereign_vendor = vendor_id or os.getenv("SOVEREIGN_VENDOR_ID", "vendor_anb_philly")
+    admin_email = os.getenv("ADMIN_EMAIL", "dasingh@skilledclass.com").strip().lower()
+
+    # Normalize requested_role string or enum
+    req_role_str = str(requested_role.value if hasattr(requested_role, "value") else (requested_role or "")).upper()
+
+    # 1. Match against Known Sovereign Vendor Owner / Principal Admin emails
+    known_owner_emails = {
+        admin_email,
+        "info@anbtransinc.com",
+        "owner@anbtransinc.com",
+        "owner@anblimo-philly.com",
+        "owner@ny-executive.com",
+        "ops@limo-autonomous.global"
+    }
+
+    if (
+        email_clean in known_owner_emails
+        or req_role_str in ["ROLE_VENDOR_ADMIN", "VENDOR_ADMIN", "OWNER", "ROLE_VENDOR"]
+        or (req_role_str in ["ROLE_SUPER_ADMIN", "SUPER_ADMIN"] and email_clean in (admin_email, "ops@limo-autonomous.global"))
+    ):
+        if (email_clean in (admin_email, "ops@limo-autonomous.global") and "SUPER_ADMIN" in req_role_str) or email_clean == "ops@limo-autonomous.global":
+            return UserSession(
+                user_id=f"usr-adm-{uuid.uuid4().hex[:8]}",
+                email=email_clean,
+                full_name=full_name or "Global Platform Controller",
+                role=UserRole.ROLE_SUPER_ADMIN,
+                tenant_id="*",
+                permissions=["*"]
+            )
+        display_name = full_name or ("ANB Trans Inc Executive (Owner)" if "philly" in sovereign_vendor else "Vendor Executive (Owner)")
+        return UserSession(
+            user_id=f"usr-vnd-{uuid.uuid4().hex[:8]}",
+            email=email_clean,
+            full_name=display_name,
+            role=UserRole.ROLE_VENDOR_ADMIN,
+            tenant_id="tenant-us-east",
+            vendor_id=sovereign_vendor,
+            permissions=[
+                "team:manage", "billing:manage", "byoe:manage", "pricing:override",
+                "autonomy:override", "dispatch:assign", "quotes:manage", "omnichannel:respond",
+                "fleet:manage", "settlements:read", "settlements:payout", "flights:override"
+            ]
+        )
+
+    # 2. Match against Dispatchers
+    known_dispatch_emails = {
+        "dispatch@anbtransinc.com",
+        "dispatch@anblimo-philly.com",
+        "dispatch@ny-executive.com"
+    }
+    if email_clean in known_dispatch_emails or email_clean.startswith("dispatch@") or req_role_str in ["ROLE_DISPATCHER", "DISPATCHER"]:
+        display_name = full_name or ("Samantha Taylor (PHL Hub Dispatcher)" if "philly" in sovereign_vendor else "Senior Dispatcher")
+        return UserSession(
+            user_id=f"usr-dsp-{uuid.uuid4().hex[:8]}",
+            email=email_clean,
+            full_name=display_name,
+            role=UserRole.ROLE_DISPATCHER,
+            tenant_id="tenant-us-east",
+            vendor_id=sovereign_vendor,
+            permissions=[
+                "dispatch:assign", "dispatch:radar", "quotes:manage",
+                "omnichannel:respond", "flights:override", "fleet:view",
+                "trips:reassign", "timeline:read"
+            ]
+        )
+
+    # 3. Match against Authoritative Chauffeurs / Drivers from Database
+    try:
+        from app.database import db
+        if hasattr(db, "drivers") and db.drivers:
+            for d_id, drv in db.drivers.items():
+                drv_email = getattr(drv, "email", "").strip().lower()
+                drv_phone = getattr(drv, "phone", "").strip()
+                match = False
+                if drv_email and drv_email == email_clean:
+                    match = True
+                elif ("@" not in email_clean or email_clean.replace("@", "").isdigit()):
+                    clean_digits = "".join(c for c in email_clean if c.isdigit())
+                    p_digits = "".join(c for c in drv_phone if c.isdigit())
+                    if len(clean_digits) >= 10 and len(p_digits) >= 10 and clean_digits[-10:] == p_digits[-10:]:
+                        match = True
+
+                if match:
+                    drv_first = getattr(drv, "first_name", "Chauffeur")
+                    drv_last = getattr(drv, "last_name", "")
+                    drv_name = f"{drv_first} {drv_last}".strip()
+                    return UserSession(
+                        user_id=f"usr-drv-{drv.id}",
+                        email=drv_email or email_clean,
+                        full_name=drv_name,
+                        role=UserRole.ROLE_CHAUFFEUR,
+                        tenant_id=getattr(drv, "tenant_id", "tenant-us-east") or "tenant-us-east",
+                        vendor_id=getattr(drv, "vendor_id", sovereign_vendor) or sovereign_vendor,
+                        driver_id=drv.id,
+                        permissions=[
+                            "trip:execute", "trip:accept", "trip:location_update",
+                            "earnings:read_own", "payouts:request_own", "shift:clock"
+                        ]
+                    )
+
+        from app.database_mysql import mysql_db, DriverModel
+        if mysql_db:
+            session = mysql_db.get_session()
+            if session:
+                try:
+                    drv = session.query(DriverModel).filter(DriverModel.email == email_clean).first()
+                    if not drv:
+                        clean_digits = "".join(c for c in email_clean if c.isdigit())
+                        if len(clean_digits) >= 10:
+                            drv = session.query(DriverModel).filter(DriverModel.phone.like(f"%{clean_digits[-10:]}%")).first()
+
+                    if drv:
+                        drv_name = f"{drv.first_name} {drv.last_name}".strip()
+                        return UserSession(
+                            user_id=f"usr-drv-{drv.id}",
+                            email=drv.email or email_clean,
+                            full_name=drv_name,
+                            role=UserRole.ROLE_CHAUFFEUR,
+                            tenant_id=drv.tenant_id or "tenant-us-east",
+                            vendor_id=drv.vendor_id or sovereign_vendor,
+                            driver_id=drv.id,
+                            permissions=[
+                                "trip:execute", "trip:accept", "trip:location_update",
+                                "earnings:read_own", "payouts:request_own", "shift:clock"
+                            ]
+                        )
+                finally:
+                    session.close()
+    except Exception as ex:
+        logger.warning(f"Authoritative driver lookup note: {ex}")
+
+    # 4. Check pre-configured driver personas
+    for p_key in ["philly_driver", "driver"]:
+        if p_key in ACTOR_PERSONAS and ACTOR_PERSONAS[p_key].email.lower() == email_clean:
+            return ACTOR_PERSONAS[p_key]
+
+    # 5. Check Corporate Booker
+    if req_role_str in ["ROLE_CORPORATE_BOOKER", "CORPORATE", "CORPORATE_BOOKER"] or email_clean.endswith("@blackrock.com") or email_clean.endswith("@blackrock-vip.com") or "corporate" in email_clean:
+        display_name = full_name or (email_clean.split("@")[0].replace(".", " ").title() + " (Corporate Booker)")
+        return UserSession(
+            user_id=f"usr-corp-{uuid.uuid4().hex[:8]}",
+            email=email_clean,
+            full_name=display_name,
+            role=UserRole.ROLE_CORPORATE_BOOKER,
+            tenant_id="tenant-us-east",
+            vendor_id=sovereign_vendor,
+            permissions=["corporate:book", "corporate:cost_centers", "corporate:invoices", "booking:create", "booking:read"]
+        )
+
+    # 6. Check existing ACTOR_PERSONAS
+    for p in ACTOR_PERSONAS.values():
+        if p.email.lower() == email_clean:
+            return p
+
+    # 7. Default to VIP Customer / Passenger
+    display_name = full_name or email_clean.split("@")[0].replace(".", " ").title()
+    return UserSession(
+        user_id=f"usr-{provider}-{uuid.uuid4().hex[:8]}",
+        email=email_clean,
+        full_name=display_name or "VIP Customer",
+        role=UserRole.ROLE_CUSTOMER,
+        tenant_id="tenant-us-east",
+        vendor_id=sovereign_vendor,
+        permissions=["booking:create", "booking:read", "booking:cancel", "quote:create", "quote:read", "transit:read", "profile:update"]
+    )
 
 
 def _b64url_encode(data: bytes) -> str:

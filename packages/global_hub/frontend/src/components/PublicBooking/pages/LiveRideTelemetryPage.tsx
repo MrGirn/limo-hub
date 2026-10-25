@@ -11,7 +11,12 @@ import {
   ChevronDown, 
   Plus, 
   Minus,
-  Check
+  Check,
+  X,
+  Send,
+  Loader2,
+  Calendar,
+  Printer
 } from 'lucide-react';
 import { SharedBookingHeader } from './SharedBookingHeader';
 
@@ -41,94 +46,114 @@ export const LiveRideTelemetryPage: React.FC<Props> = ({
     status: 'EN_ROUTE_PICKUP'
   });
   const [booking, setBooking] = useState<any>({
-    pickup: 'Origin',
-    dropoff: 'Destination',
-    datetime: 'Scheduled Date',
+    pickup: 'Philadelphia International Airport (PHL)',
+    dropoff: 'John F. Kennedy International Airport (JFK)',
+    datetime: 'Oct 18, 2026 at 8:30 AM',
     vehicleClass: 'Business Class',
     passengers: 2,
-    total: 0,
-    baseFare: 0,
-    feesAndTaxes: 0,
-    passengerName: '',
-    passengerEmail: '',
-    vendorName: '',
-    invoiceNumber: ''
+    total: 145.0,
+    baseFare: 125.0,
+    feesAndTaxes: 20.0,
+    passengerName: 'David Singh',
+    passengerEmail: 'david.singh@phltest.com',
+    vendorName: 'ANB Trans Inc (Philadelphia)',
+    invoiceNumber: 'INV-GH-2026-9041'
   });
 
-  useEffect(() => {
-    const fetchRideData = async () => {
-      try {
-        const [telRes, bkgRes] = await Promise.all([
-          fetch(`/api/v1/global-hub/telemetry/${bookingRef}`),
-          fetch(`/api/v1/global-hub/public/booking/${bookingRef}`)
-        ]);
-
-        if (telRes.ok) {
-          const telData = await telRes.json();
-          setTelemetry((prev: any) => ({
-            ...prev,
-            driver_name: telData.chauffeur?.name || telData.driver_name || prev.driver_name,
-            driver_phone: telData.chauffeur?.phone || telData.driver_phone || prev.driver_phone,
-            driver_rating: telData.chauffeur?.rating || telData.driver_rating || prev.driver_rating,
-            vehicle_model: telData.vehicle?.name || telData.vehicle_model || prev.vehicle_model,
-            vehicle_plate: telData.vehicle?.plate || telData.vehicle_plate || prev.vehicle_plate,
-            eta_minutes: telData.live_location?.eta_minutes ?? telData.eta_minutes ?? prev.eta_minutes,
-            status: telData.status || prev.status
-          }));
-        }
-
-        if (bkgRes.ok) {
-          const bkgData = await bkgRes.json();
-          setBooking({
-            pickup: bkgData.pickup_address?.split(',')[0] || 'Origin',
-            dropoff: bkgData.dropoff_address?.split(',')[0] || 'Destination',
-            datetime: bkgData.pickup_datetime_str || 'Scheduled Date',
-            vehicleClass: bkgData.vehicle_class === 'FIRST_CLASS' ? 'First Class' : bkgData.vehicle_class === 'BUSINESS_VAN' ? 'Business Van' : 'Business Class',
-            passengers: bkgData.passengers_count || 2,
-            total: bkgData.total_amount_usd || (bkgData.invoice ? bkgData.invoice.total_charged_usd : 0),
-            baseFare: bkgData.base_fare_usd || (bkgData.invoice ? bkgData.invoice.subtotal_usd : 0),
-            feesAndTaxes: bkgData.fees_and_taxes_usd || (bkgData.invoice ? bkgData.invoice.taxes_usd : 0),
-            passengerName: bkgData.passenger_name || (bkgData.passenger_first_name ? `${bkgData.passenger_first_name} ${bkgData.passenger_last_name}` : ''),
-            passengerEmail: bkgData.passenger_email || '',
-            vendorName: bkgData.assigned_vendor?.vendor_name || bkgData.assigned_vendor_name || '',
-            invoiceNumber: bkgData.invoice?.invoice_number || 'INV-GH-2026-9041'
-          });
-        }
-      } catch (err) {
-        console.warn('Telemetry polling notice:', err);
-      }
-    };
-
-    fetchRideData();
-    const interval = setInterval(fetchRideData, 10000);
-    return () => clearInterval(interval);
-  }, [bookingRef]);
-
-
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showChatModal, setShowChatModal] = useState(false);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
+
+  const [cancelReason, setCancelReason] = useState('Travel plans changed');
+  const [customCancelNote, setCustomCancelNote] = useState('');
+  const [isCancelling, setIsCancelling] = useState(false);
+
   const [editDateTime, setEditDateTime] = useState('');
   const [editFlight, setEditFlight] = useState('');
   const [editNotes, setEditNotes] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const handleCancelRide = async () => {
-    if (!window.confirm('Are you sure you want to cancel this booking? Free cancellation applies.')) return;
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isSendingMsg, setIsSendingMsg] = useState(false);
+
+  const fetchRideData = async () => {
     try {
-      const res = await fetch(`/api/v1/global-hub/public/booking/${bookingRef}/cancel`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cancellation_reason: 'Passenger requested cancellation' })
-      });
-      if (res.ok) {
-        setTelemetry((prev: any) => ({ ...prev, status: 'CANCELLED' }));
-        alert('Booking successfully cancelled. Escrow pre-auth hold released.');
+      const [telRes, bkgRes] = await Promise.all([
+        fetch(`/api/v1/global-hub/telemetry/${bookingRef}`),
+        fetch(`/api/v1/global-hub/public/booking/${bookingRef}`)
+      ]);
+
+      if (telRes.ok) {
+        const telData = await telRes.json();
+        setTelemetry((prev: any) => ({
+          ...prev,
+          driver_name: telData.chauffeur?.name || telData.driver_name || prev.driver_name,
+          driver_phone: telData.chauffeur?.phone || telData.driver_phone || prev.driver_phone,
+          driver_rating: telData.chauffeur?.rating || telData.driver_rating || prev.driver_rating,
+          vehicle_model: telData.vehicle?.name || telData.vehicle_model || prev.vehicle_model,
+          vehicle_plate: telData.vehicle?.plate || telData.vehicle_plate || prev.vehicle_plate,
+          eta_minutes: telData.live_location?.eta_minutes ?? telData.eta_minutes ?? prev.eta_minutes,
+          status: telData.status || prev.status
+        }));
       }
-    } catch (e) {
-      console.error(e);
+
+      if (bkgRes.ok) {
+        const bkgData = await bkgRes.json();
+        setBooking({
+          pickup: bkgData.pickup_address?.split(',')[0] || 'Origin',
+          dropoff: bkgData.dropoff_address?.split(',')[0] || 'Destination',
+          datetime: bkgData.pickup_datetime_str || 'Scheduled Date',
+          vehicleClass: bkgData.vehicle_class === 'FIRST_CLASS' ? 'First Class' : bkgData.vehicle_class === 'BUSINESS_VAN' ? 'Business Van' : 'Business Class',
+          passengers: bkgData.passengers_count || 2,
+          total: bkgData.total_amount_usd || (bkgData.invoice ? bkgData.invoice.total_charged_usd : 0),
+          baseFare: bkgData.base_fare_usd || (bkgData.invoice ? bkgData.invoice.subtotal_usd : 0),
+          feesAndTaxes: bkgData.fees_and_taxes_usd || (bkgData.invoice ? bkgData.invoice.taxes_usd : 0),
+          passengerName: bkgData.passenger_name || (bkgData.passenger_first_name ? `${bkgData.passenger_first_name} ${bkgData.passenger_last_name}` : ''),
+          passengerEmail: bkgData.passenger_email || '',
+          vendorName: bkgData.assigned_vendor?.vendor_name || bkgData.assigned_vendor_name || '',
+          invoiceNumber: bkgData.invoice?.invoice_number || 'INV-GH-2026-9041'
+        });
+      }
+    } catch (err) {
+      console.warn('Telemetry polling notice:', err);
     }
   };
 
+  useEffect(() => {
+    fetchRideData();
+    const interval = setInterval(fetchRideData, 8000);
+    return () => clearInterval(interval);
+  }, [bookingRef]);
+
+  // Handle Cancel Booking
+  const handleConfirmCancel = async () => {
+    setIsCancelling(true);
+    try {
+      const fullReason = customCancelNote.trim() ? `${cancelReason}: ${customCancelNote.trim()}` : cancelReason;
+      const res = await fetch(`/api/v1/global-hub/public/booking/${bookingRef}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cancellation_reason: fullReason })
+      });
+      if (res.ok) {
+        setTelemetry((prev: any) => ({ ...prev, status: 'CANCELLED' }));
+        setShowCancelModal(false);
+        alert(`Booking ${bookingRef} has been cancelled and pre-auth escrow hold released.`);
+      } else {
+        const err = await res.json();
+        alert(`Cancellation failed: ${err.detail || 'Error'}`);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Network error while cancelling booking.');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  // Handle Save Edit
   const handleSaveEdit = async () => {
     setIsUpdating(true);
     try {
@@ -148,12 +173,53 @@ export const LiveRideTelemetryPage: React.FC<Props> = ({
           datetime: data.pickup_datetime_str || prev.datetime
         }));
         setShowEditModal(false);
-        alert('Booking details successfully updated.');
+        alert('Booking details updated successfully.');
+      } else {
+        alert('Failed to update booking.');
       }
     } catch (e) {
       console.error(e);
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  // Handle Chat
+  const openChatModal = async () => {
+    setShowChatModal(true);
+    try {
+      const res = await fetch(`/api/v1/global-hub/chat/${bookingRef}/messages`);
+      if (res.ok) {
+        const data = await res.json();
+        setChatMessages(data.messages || []);
+      }
+    } catch (err) {
+      console.warn('Chat fetch error:', err);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!chatInput.trim()) return;
+    setIsSendingMsg(true);
+    try {
+      const res = await fetch(`/api/v1/global-hub/chat/${bookingRef}/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sender_role: 'PASSENGER',
+          sender_name: booking.passengerName || 'Passenger',
+          message_text: chatInput.trim()
+        })
+      });
+      if (res.ok) {
+        const newMsg = await res.json();
+        setChatMessages((prev) => [...prev, newMsg]);
+        setChatInput('');
+      }
+    } catch (err) {
+      console.error('Chat send error:', err);
+    } finally {
+      setIsSendingMsg(false);
     }
   };
 
@@ -211,10 +277,10 @@ export const LiveRideTelemetryPage: React.FC<Props> = ({
             }}>
               <div style={{ fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: telemetry.status === 'CANCELLED' ? '#DC2626' : '#16A34A' }} />
-                {telemetry.status === 'CANCELLED' ? 'Booking Cancelled' : `Chauffeur assigned (${telemetry.status})`}
+                {telemetry.status === 'CANCELLED' ? 'Booking Cancelled' : `Chauffeur Assigned (${telemetry.status})`}
               </div>
               <div style={{ color: telemetry.status === 'CANCELLED' ? '#991B1B' : '#166534', marginTop: '2px' }}>
-                {telemetry.status === 'CANCELLED' ? 'This ride has been cancelled. Escrow funds refunded.' : `Your chauffeur ${telemetry.driver_name} is on the way (ETA: ${telemetry.eta_minutes} min).`}
+                {telemetry.status === 'CANCELLED' ? 'This reservation has been cancelled. Escrow pre-auth hold refunded.' : `Your chauffeur ${telemetry.driver_name} is on the way (ETA: ${telemetry.eta_minutes} min).`}
               </div>
             </div>
 
@@ -264,7 +330,7 @@ export const LiveRideTelemetryPage: React.FC<Props> = ({
             {/* Driver Contact Buttons */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <button
-                onClick={() => alert(`Live messaging channel opened with Chauffeur ${telemetry.driver_name}.`)}
+                onClick={openChatModal}
                 style={{
                   padding: '10px',
                   borderRadius: '8px',
@@ -280,11 +346,11 @@ export const LiveRideTelemetryPage: React.FC<Props> = ({
                   gap: '6px'
                 }}
               >
-                <MessageSquare size={14} /> Message
+                <MessageSquare size={14} /> Message Chauffeur
               </button>
 
-              <button
-                onClick={() => alert(`Direct dispatch phone connected: ${telemetry.driver_phone}`)}
+              <a
+                href={`tel:${telemetry.driver_phone}`}
                 style={{
                   padding: '10px',
                   borderRadius: '8px',
@@ -297,23 +363,27 @@ export const LiveRideTelemetryPage: React.FC<Props> = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '6px'
+                  gap: '6px',
+                  textDecoration: 'none'
                 }}
               >
-                <Phone size={14} /> Call
-              </button>
+                <Phone size={14} /> Call Driver
+              </a>
             </div>
 
             {/* Total Price & Options */}
             <div style={{ paddingTop: '10px', borderTop: '1px solid #F3F4F6' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                 <span style={{ fontSize: '13px', color: '#6B7280' }}>Total price</span>
-                <span style={{ fontSize: '20px', fontWeight: '800', color: '#000000' }}>${booking.total}</span>
+                <span style={{ fontSize: '20px', fontWeight: '800', color: '#000000' }}>${typeof booking.total === 'number' ? booking.total.toFixed(2) : booking.total}</span>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
                 <button
-                  onClick={() => setShowEditModal(true)}
+                  onClick={() => {
+                    setEditDateTime(booking.datetime);
+                    setShowEditModal(true);
+                  }}
                   style={{
                     padding: '8px',
                     borderRadius: '6px',
@@ -332,7 +402,7 @@ export const LiveRideTelemetryPage: React.FC<Props> = ({
                 </button>
 
                 <button
-                  onClick={handleCancelRide}
+                  onClick={() => setShowCancelModal(true)}
                   style={{
                     padding: '8px',
                     borderRadius: '6px',
@@ -352,7 +422,9 @@ export const LiveRideTelemetryPage: React.FC<Props> = ({
                 </button>
 
                 <button
-                  onClick={() => setShowReceiptModal(true)}
+                  onClick={() => {
+                    window.open(`/api/v1/global-hub/public/booking/${bookingRef}/invoice-pdf`, '_blank');
+                  }}
                   style={{
                     padding: '8px',
                     borderRadius: '6px',
@@ -367,12 +439,11 @@ export const LiveRideTelemetryPage: React.FC<Props> = ({
                     gap: '4px'
                   }}
                 >
-                  <FileText size={12} /> Receipt
+                  <FileText size={12} /> PDF Receipt
                 </button>
               </div>
             </div>
           </div>
-
 
           {/* Right Column: Live Radar / Map View */}
           <div style={{
@@ -451,10 +522,10 @@ export const LiveRideTelemetryPage: React.FC<Props> = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '16px',
-                  boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                  border: '2px solid #FFFFFF'
                 }}>
-                  🚘
+                  🚗
                 </div>
               </div>
 
@@ -462,158 +533,211 @@ export const LiveRideTelemetryPage: React.FC<Props> = ({
               <div style={{
                 position: 'absolute',
                 bottom: '80px',
-                right: '120px',
+                right: '80px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                background: '#1D68FE',
-                color: '#FFFFFF',
-                padding: '5px 12px',
+                background: '#FFFFFF',
+                color: '#000000',
+                border: '1px solid #CBD5E1',
+                padding: '4px 10px',
                 borderRadius: '6px',
                 fontSize: '11px',
                 fontWeight: '800'
               }}>
-                <Plane size={12} /> Pickup: {booking.pickup || 'Origin'}
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#1D68FE' }} />
+                {booking.pickup || 'Pickup Location'}
               </div>
 
-              {/* Map Zoom Controls */}
-              <div style={{
-                position: 'absolute',
-                bottom: '24px',
-                right: '24px',
-                display: 'flex',
-                flexDirection: 'column',
-                background: '#FFFFFF',
-                borderRadius: '8px',
-                border: '1px solid #CBD5E1',
-                overflow: 'hidden',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
-              }}>
-                <button
-                  onClick={() => setZoomLevel(z => z + 0.1)}
-                  style={{ width: '32px', height: '32px', border: 'none', background: '#FFFFFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <Plus size={14} />
-                </button>
-                <div style={{ height: '1px', background: '#E5E7EB' }} />
-                <button
-                  onClick={() => setZoomLevel(z => Math.max(0.8, z - 0.1))}
-                  style={{ width: '32px', height: '32px', border: 'none', background: '#FFFFFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <Minus size={14} />
-                </button>
+              {/* Zoom controls */}
+              <div style={{ position: 'absolute', right: '16px', bottom: '16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <button onClick={() => setZoomLevel((z) => Math.min(z + 0.2, 2))} style={{ width: '32px', height: '32px', background: '#FFFFFF', border: '1px solid #D1D5DB', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Plus size={14} /></button>
+                <button onClick={() => setZoomLevel((z) => Math.max(z - 0.2, 0.6))} style={{ width: '32px', height: '32px', background: '#FFFFFF', border: '1px solid #D1D5DB', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Minus size={14} /></button>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Change / Edit Ride Modal */}
-      {showEditModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '20px' }}>
-          <div style={{ width: '100%', maxWidth: '440px', background: '#FFFFFF', padding: '28px', borderRadius: '16px', position: 'relative' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '800', margin: 0 }}>Change ride details</h3>
-              <button onClick={() => setShowEditModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px' }}>✕</button>
+      {/* Cancel Booking Modal */}
+      {showCancelModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '20px' }}>
+          <div style={{ width: '100%', maxWidth: '460px', background: '#FFFFFF', padding: '28px', borderRadius: '16px', position: 'relative', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+            <button onClick={() => setShowCancelModal(false)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', cursor: 'pointer' }}><X size={18} /></button>
+            
+            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '14px' }}>
+              <XCircle size={22} color="#DC2626" />
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+            <h3 style={{ fontSize: '18px', fontWeight: '800', margin: '0 0 6px 0', color: '#111827' }}>
+              Cancel Ride {bookingRef}?
+            </h3>
+            <p style={{ fontSize: '13px', color: '#6B7280', margin: '0 0 16px 0', lineHeight: '1.4' }}>
+              Free cancellation applies. Your pre-authorized escrow hold will be released immediately.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Reschedule Pickup Time</label>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>Reason</label>
+                <select
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '13px', boxSizing: 'border-box' }}
+                >
+                  <option value="Travel plans changed">Travel plans changed</option>
+                  <option value="Flight rescheduled or cancelled">Flight rescheduled or cancelled</option>
+                  <option value="Booked alternative transport">Booked alternative transport</option>
+                  <option value="Other">Other reason</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>Optional note</label>
                 <input
                   type="text"
-                  placeholder={booking.datetime}
-                  value={editDateTime}
-                  onChange={(e) => setEditDateTime(e.target.value)}
+                  placeholder="Additional note..."
+                  value={customCancelNote}
+                  onChange={(e) => setCustomCancelNote(e.target.value)}
                   style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '13px', boxSizing: 'border-box' }}
                 />
               </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Flight Number (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. AA123"
-                  value={editFlight}
-                  onChange={(e) => setEditFlight(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '13px', boxSizing: 'border-box' }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Special Instructions / Placard</label>
-                <textarea
-                  rows={2}
-                  placeholder="Notes for chauffeur..."
-                  value={editNotes}
-                  onChange={(e) => setEditNotes(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '13px', boxSizing: 'border-box' }}
-                />
-              </div>
-              <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                <button
-                  onClick={() => setShowEditModal(false)}
-                  style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #D1D5DB', background: '#FFFFFF', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  disabled={isUpdating}
-                  onClick={handleSaveEdit}
-                  style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: '#1D68FE', color: '#FFFFFF', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}
-                >
-                  {isUpdating ? 'Saving...' : 'Save changes'}
-                </button>
-              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => setShowCancelModal(false)}
+                disabled={isCancelling}
+                style={{ flex: 1, padding: '11px', borderRadius: '8px', border: '1px solid #D1D5DB', background: '#FFFFFF', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}
+              >
+                Keep Booking
+              </button>
+              <button
+                onClick={handleConfirmCancel}
+                disabled={isCancelling}
+                style={{ flex: 1, padding: '11px', borderRadius: '8px', border: 'none', background: '#DC2626', color: '#FFFFFF', fontWeight: '700', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              >
+                {isCancelling ? <Loader2 size={14} className="animate-spin" /> : null}
+                Confirm Cancel
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Single Invoice Receipt Modal */}
-      {showReceiptModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '20px' }}>
-          <div style={{ width: '100%', maxWidth: '500px', background: '#FFFFFF', padding: '32px', borderRadius: '16px', position: 'relative' }}>
-            <button onClick={() => setShowReceiptModal(false)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px' }}>✕</button>
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #000000', paddingBottom: '12px', marginBottom: '16px' }}>
+      {/* Edit Details Modal */}
+      {showEditModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '20px' }}>
+          <div style={{ width: '100%', maxWidth: '440px', background: '#FFFFFF', padding: '28px', borderRadius: '16px', position: 'relative' }}>
+            <button onClick={() => setShowEditModal(false)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', cursor: 'pointer' }}><X size={18} /></button>
+            <h3 style={{ fontSize: '18px', fontWeight: '800', margin: '0 0 6px 0' }}>Change Ride Details</h3>
+            <p style={{ fontSize: '12px', color: '#6B7280', margin: '0 0 16px 0' }}>Update date, flight info, or special instructions.</p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
               <div>
-                <div style={{ fontSize: '20px', fontWeight: '900' }}>LIMO</div>
-                <div style={{ fontSize: '11px', color: '#6B7280' }}>Merchant of Record • Global Hub Clearinghouse</div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>Pickup Date & Time</label>
+                <input
+                  type="text"
+                  value={editDateTime}
+                  onChange={(e) => setEditDateTime(e.target.value)}
+                  placeholder="e.g. Oct 18, 2026 at 2:30 PM"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '13px', boxSizing: 'border-box' }}
+                />
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '13px', fontWeight: '700', color: '#1D68FE' }}>{booking.invoiceNumber || 'INV-GH-2026-9041'}</div>
-                <div style={{ fontSize: '11px', color: '#6B7280' }}>Ref: {bookingRef}</div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>Flight Number (Optional)</label>
+                <input
+                  type="text"
+                  value={editFlight}
+                  onChange={(e) => setEditFlight(e.target.value)}
+                  placeholder="e.g. BA178"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '13px', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>Special Chauffeur Instructions</label>
+                <input
+                  type="text"
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  placeholder="e.g. Child booster seat, VIP placard"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '13px', boxSizing: 'border-box' }}
+                />
               </div>
             </div>
 
-            {booking.passengerName && (
-              <div style={{ fontSize: '13px', marginBottom: '8px' }}>
-                <strong>Billed To:</strong> {booking.passengerName} {booking.passengerEmail ? `(${booking.passengerEmail})` : ''}
-              </div>
-            )}
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={() => setShowEditModal(false)} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #D1D5DB', background: '#FFFFFF', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>
+                Cancel
+              </button>
+              <button onClick={handleSaveEdit} disabled={isUpdating} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: '#1D68FE', color: '#FFFFFF', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>
+                {isUpdating ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-            {booking.vendorName && (
-              <div style={{ fontSize: '12px', color: '#4B5563', marginBottom: '14px', background: '#F9FAFB', padding: '6px 10px', borderRadius: '6px' }}>
-                <strong>Servicing Affiliate:</strong> {booking.vendorName}
+      {/* In-App Chauffeur Chat Modal */}
+      {showChatModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '20px' }}>
+          <div style={{ width: '100%', maxWidth: '480px', background: '#FFFFFF', borderRadius: '16px', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '520px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+            <div style={{ background: '#0F172A', color: '#FFFFFF', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: '15px', fontWeight: '800' }}>Chauffeur {telemetry.driver_name}</div>
+                <div style={{ fontSize: '11px', color: '#94A3B8' }}>Proxy Masked Relay • {bookingRef}</div>
               </div>
-            )}
+              <button onClick={() => setShowChatModal(false)} style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer' }}><X size={18} /></button>
+            </div>
 
-            <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse', marginBottom: '16px' }}>
-              <tbody>
-                <tr style={{ borderBottom: '1px solid #F3F4F6' }}>
-                  <td style={{ padding: '8px 0' }}>Chauffeured Transfer ({booking.pickup} ➔ {booking.dropoff})</td>
-                  <td style={{ textAlign: 'right', fontWeight: '600' }}>${(booking.baseFare || (booking.total ? booking.total * 0.85 : 0)).toFixed(2)}</td>
-                </tr>
-                <tr style={{ borderBottom: '1px solid #F3F4F6' }}>
-                  <td style={{ padding: '8px 0' }}>Taxes & Airport Surcharges</td>
-                  <td style={{ textAlign: 'right', fontWeight: '600' }}>${(booking.feesAndTaxes || (booking.total ? booking.total * 0.15 : 0)).toFixed(2)}</td>
-                </tr>
-                <tr style={{ borderTop: '2px solid #000000' }}>
-                  <td style={{ padding: '10px 0', fontWeight: '800' }}>Total Paid (USD)</td>
-                  <td style={{ textAlign: 'right', fontWeight: '800', fontSize: '16px', color: '#1D68FE' }}>${(booking.total || 0).toFixed(2)}</td>
-                </tr>
-              </tbody>
-            </table>
-            <button onClick={() => setShowReceiptModal(false)} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: 'none', background: '#1D68FE', color: '#FFFFFF', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>
-              Close
-            </button>
+            <div style={{ flex: 1, padding: '16px', overflowY: 'auto', background: '#F8FAFC', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {chatMessages.length === 0 ? (
+                <div style={{ textAlign: 'center', color: '#94A3B8', fontSize: '13px', margin: 'auto' }}>
+                  No messages yet. Send a direct instruction to Chauffeur {telemetry.driver_name}.
+                </div>
+              ) : (
+                chatMessages.map((msg, i) => {
+                  const isMe = msg.sender_role === 'PASSENGER';
+                  return (
+                    <div key={i} style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '80%' }}>
+                      <div style={{
+                        background: isMe ? '#1D68FE' : '#FFFFFF',
+                        color: isMe ? '#FFFFFF' : '#1E293B',
+                        padding: '10px 14px',
+                        borderRadius: isMe ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
+                        fontSize: '13px',
+                        border: isMe ? 'none' : '1px solid #E2E8F0',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                      }}>
+                        {msg.message_text}
+                      </div>
+                      <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '2px', textAlign: isMe ? 'right' : 'left' }}>
+                        {msg.sender_name}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div style={{ padding: '12px 16px', background: '#FFFFFF', borderTop: '1px solid #E2E8F0', display: 'flex', gap: '8px' }}>
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                placeholder="Message your chauffeur..."
+                style={{ flex: 1, padding: '10px 12px', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '13px', outline: 'none' }}
+              />
+              <button
+                onClick={handleSendMessage}
+                disabled={isSendingMsg || !chatInput.trim()}
+                style={{ background: '#1D68FE', color: '#FFFFFF', border: 'none', borderRadius: '8px', padding: '0 16px', cursor: 'pointer' }}
+              >
+                <Send size={16} />
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -631,14 +755,19 @@ export const LiveRideTelemetryPage: React.FC<Props> = ({
         color: '#6B7280',
         marginTop: 'auto'
       }}>
+        <div style={{ fontSize: '16px', fontWeight: '900', color: '#000000', letterSpacing: '-0.04em' }}>
+          LIMO
+        </div>
+
+        <div style={{ color: '#9CA3AF', fontSize: '11px' }}>
+          Live Ride Radar • Global Hub Fleet Clearinghouse
+        </div>
+
         <div style={{ display: 'flex', gap: '20px' }}>
           <a href="#help" onClick={onOpenHelp} style={{ color: '#6B7280', textDecoration: 'none' }}>Help</a>
           <a href="#contact" onClick={onOpenHelp} style={{ color: '#6B7280', textDecoration: 'none' }}>Contact</a>
           <a href="#terms" style={{ color: '#6B7280', textDecoration: 'none' }}>Terms</a>
           <a href="#privacy" style={{ color: '#6B7280', textDecoration: 'none' }}>Privacy</a>
-        </div>
-        <div style={{ fontSize: '11px', fontWeight: '800', letterSpacing: '0.08em', color: '#111827' }}>
-          RIDE FURTHER
         </div>
       </footer>
     </div>

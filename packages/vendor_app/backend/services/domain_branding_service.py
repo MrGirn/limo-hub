@@ -114,17 +114,46 @@ class DomainBrandingService:
         """
         clean_host = (host_header or "").split(":")[0].strip().lower()
 
-        # 1. Match by custom domain hostname
+        # 1. Match by custom domain hostname in memory map
         if clean_host in REGISTERED_VENDOR_DOMAINS:
             return REGISTERED_VENDOR_DOMAINS[clean_host]
 
-        # 2. Match by vendor_id parameter
+        # 2. Database lookup from MySQL persistence (VendorModel)
+        try:
+            from app.database_mysql import mysql_db, VendorModel
+            session = mysql_db.get_session()
+            if session:
+                try:
+                    v = session.query(VendorModel).filter(
+                        (VendorModel.canonical_url.like(f"%{clean_host}%")) |
+                        (VendorModel.id == clean_host.replace(".", "_"))
+                    ).first()
+                    if v:
+                        cfg = VendorWhiteLabelConfig(
+                            vendor_id=v.id,
+                            company_name=v.name,
+                            market_city=v.office_city or "Philadelphia",
+                            custom_domain=clean_host,
+                            logo_url=v.logo_image_url or "/assets/logos/default_limo_logo.svg",
+                            primary_color=v.brand_primary_color or "#1E3A8A",
+                            support_phone=v.contact_phone,
+                            support_email=v.contact_email,
+                            currency=v.currency or "USD"
+                        )
+                        REGISTERED_VENDOR_DOMAINS[clean_host] = cfg
+                        return cfg
+                finally:
+                    session.close()
+        except Exception:
+            pass
+
+        # 3. Match by vendor_id parameter
         if vendor_id_hint:
             for cfg in REGISTERED_VENDOR_DOMAINS.values():
                 if cfg.vendor_id == vendor_id_hint:
                     return cfg
 
-        # 3. Fallback to instance environment variables
+        # 4. Fallback to instance environment variables
         env_vendor_id = os.getenv("VENDOR_ID", "vendor_anb_philly")
         env_name = os.getenv("VENDOR_NAME", "Sovereign Executive Chauffeur")
         env_city = os.getenv("VENDOR_MARKET_CITY", "Philadelphia")

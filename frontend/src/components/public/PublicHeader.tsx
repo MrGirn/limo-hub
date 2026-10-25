@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Menu, X, Calendar } from 'lucide-react';
+import { Menu, X, Calendar, LogOut } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import { VendorPortalConfig, UserSession } from '../../types';
 import { PublicAuthDropdown } from './PublicAuthDropdown';
 import { CustomerBookingsLookupModal } from './CustomerBookingsLookupModal';
@@ -31,11 +32,24 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
   onOpenDriverApp,
   isSovereignMode
 }) => {
+  const { user, token, logout } = useAuth();
   const [isAuthDropdownOpen, setIsAuthDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLookupModalOpen, setIsLookupModalOpen] = useState(false);
   const menuToggleRef = useRef<HTMLButtonElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+
+  const isOwnerOrDispatcher = Boolean(
+    token && user && (
+      user.role === 'ROLE_VENDOR_ADMIN' ||
+      user.role === 'ROLE_DISPATCHER' ||
+      user.role === 'ROLE_SUPER_ADMIN'
+    )
+  );
+
+  const isChauffeur = Boolean(
+    token && user && user.role === 'ROLE_CHAUFFEUR'
+  );
 
   // Close mobile menu on Escape key and restore focus
   useEffect(() => {
@@ -130,29 +144,98 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
           {/* Actions: Sign In + Book a Ride + Mobile Menu Toggle */}
           <div className="public-header__actions">
             
-            {/* Sign In Dropdown Wrapper */}
-            <div className="public-header__signin-wrapper" style={{ position: 'relative' }}>
-              <button
-                className="public-header__signin"
-                onClick={() => setIsAuthDropdownOpen((prev) => !prev)}
-                aria-expanded={isAuthDropdownOpen}
-                aria-haspopup="true"
-              >
-                Sign In
-              </button>
+            {/* User Session Profile & Sign Out or Sign In Trigger */}
+            {token && user ? (
+              <div className="public-header__user-session" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 10px',
+                  backgroundColor: '#F8FAFC',
+                  borderRadius: '20px',
+                  border: '1px solid #E2E8F0',
+                  fontSize: '12px',
+                  color: '#0F172A',
+                  fontWeight: 600
+                }}>
+                  <span style={{
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    backgroundColor: '#0A192F',
+                    color: '#D4AF37',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '11px',
+                    fontWeight: 800
+                  }}>
+                    {(user.full_name || user.email || 'U').charAt(0).toUpperCase()}
+                  </span>
+                  <span style={{ maxWidth: '110px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {user.full_name || user.email.split('@')[0]}
+                  </span>
+                  <span style={{
+                    fontSize: '9px',
+                    fontWeight: 800,
+                    padding: '2px 5px',
+                    borderRadius: '4px',
+                    letterSpacing: '0.3px',
+                    backgroundColor: user.role === 'ROLE_VENDOR_ADMIN' ? '#FEF3C7' : user.role === 'ROLE_DISPATCHER' ? '#DBEAFE' : user.role === 'ROLE_CHAUFFEUR' ? '#DCFCE7' : user.role === 'ROLE_CORPORATE_BOOKER' ? '#F3E8FF' : '#F1F5F9',
+                    color: user.role === 'ROLE_VENDOR_ADMIN' ? '#92400E' : user.role === 'ROLE_DISPATCHER' ? '#1E40AF' : user.role === 'ROLE_CHAUFFEUR' ? '#166534' : user.role === 'ROLE_CORPORATE_BOOKER' ? '#6B21A8' : '#475569'
+                  }}>
+                    {user.role === 'ROLE_VENDOR_ADMIN' ? 'ADMIN' : user.role === 'ROLE_DISPATCHER' ? 'DISPATCH' : user.role === 'ROLE_CHAUFFEUR' ? 'CHAUFFEUR' : user.role === 'ROLE_CORPORATE_BOOKER' ? 'CORP' : 'GUEST'}
+                  </span>
+                </div>
 
-              {/* Auth Dropdown (Google / Apple / Password) */}
-              <PublicAuthDropdown
-                isOpen={isAuthDropdownOpen}
-                onClose={() => setIsAuthDropdownOpen(false)}
-                onAuthSuccess={(user, token) => {
-                  setIsAuthDropdownOpen(false);
-                  if (onAuthSuccess) onAuthSuccess(user, token);
-                }}
-                vendorName={config.vendor_name || 'Executive Chauffeur'}
-                vendorId={config.vendor_id}
-              />
-            </div>
+                <button
+                  type="button"
+                  onClick={logout}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '6px 10px',
+                    backgroundColor: '#FEF2F2',
+                    color: '#DC2626',
+                    border: '1px solid #FECACA',
+                    borderRadius: '6px',
+                    fontSize: '11.5px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                  title="Sign out of your session"
+                >
+                  <LogOut size={13} />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            ) : (
+              <div className="public-header__signin-wrapper" style={{ position: 'relative' }}>
+                <button
+                  className="public-header__signin"
+                  onClick={() => setIsAuthDropdownOpen((prev) => !prev)}
+                  aria-expanded={isAuthDropdownOpen}
+                  aria-haspopup="true"
+                >
+                  Sign In
+                </button>
+
+                {/* Auth Dropdown (Google / Apple / Password) */}
+                <PublicAuthDropdown
+                  isOpen={isAuthDropdownOpen}
+                  onClose={() => setIsAuthDropdownOpen(false)}
+                  onAuthSuccess={(u, t) => {
+                    setIsAuthDropdownOpen(false);
+                    if (onAuthSuccess) onAuthSuccess(u, t);
+                  }}
+                  vendorName={config.vendor_name || 'Executive Chauffeur'}
+                  vendorId={config.vendor_id}
+                />
+              </div>
+            )}
 
             {/* Book a Ride Button (Compact on Mobile or in Drawer) */}
             <button
@@ -162,8 +245,8 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
               Book a Ride
             </button>
 
-            {/* Owner Operations Portal Shortcut */}
-            {onOpenOwnerPortal && (
+            {/* Owner Operations Portal Shortcut (Authorized Role Only) */}
+            {isOwnerOrDispatcher && onOpenOwnerPortal && (
               <button
                 type="button"
                 className="public-header-desktop-only"
@@ -184,6 +267,31 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
                 title="Return to Sovereign Vendor Operations & Dispatch Console"
               >
                 <span>🏢 Owner Console</span>
+              </button>
+            )}
+
+            {/* Chauffeur Mobile Portal Shortcut (Authorized Chauffeur Only) */}
+            {isChauffeur && onOpenDriverApp && (
+              <button
+                type="button"
+                className="public-header-desktop-only"
+                onClick={onOpenDriverApp}
+                style={{
+                  background: '#064E3B',
+                  color: '#FFFFFF',
+                  border: '1px solid #059669',
+                  borderRadius: '6px',
+                  padding: '7px 12px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}
+                title="Open Chauffeur Mobile Manifest"
+              >
+                <span>🚗 Driver App</span>
               </button>
             )}
 
@@ -252,16 +360,72 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
           >
             Contact
           </button>
-          <button
-            onClick={() => {
-              setIsMobileMenuOpen(false);
-              setIsAuthDropdownOpen(true);
-            }}
-            style={{ borderTop: '1px solid var(--border)', marginTop: '4px', paddingTop: '12px' }}
-          >
-            Sign In / Accounts
-          </button>
-          {onOpenOwnerPortal && (
+
+          {/* Mobile Auth Section */}
+          {token && user ? (
+            <div style={{ borderTop: '1px solid var(--border)', marginTop: '8px', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', background: '#F8FAFC', borderRadius: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '50%',
+                    backgroundColor: '#0A192F',
+                    color: '#D4AF37',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '11px',
+                    fontWeight: 800
+                  }}>
+                    {(user.full_name || user.email || 'U').charAt(0).toUpperCase()}
+                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B' }}>{user.full_name || user.email.split('@')[0]}</span>
+                    <span style={{ fontSize: '11px', color: '#64748B' }}>{user.email}</span>
+                  </div>
+                </div>
+                <span style={{ fontSize: '9px', fontWeight: 800, padding: '2px 5px', borderRadius: '4px', backgroundColor: '#E2E8F0', color: '#334155' }}>
+                  {user.role === 'ROLE_VENDOR_ADMIN' ? 'ADMIN' : user.role === 'ROLE_DISPATCHER' ? 'DISPATCH' : user.role === 'ROLE_CHAUFFEUR' ? 'DRIVER' : user.role === 'ROLE_CORPORATE_BOOKER' ? 'CORP' : 'GUEST'}
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  logout();
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  color: '#DC2626',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  padding: '8px 10px',
+                  backgroundColor: '#FEF2F2',
+                  border: '1px solid #FECACA',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                <LogOut size={16} />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                setIsAuthDropdownOpen(true);
+              }}
+              style={{ borderTop: '1px solid var(--border)', marginTop: '4px', paddingTop: '12px' }}
+            >
+              Sign In / Accounts
+            </button>
+          )}
+
+          {/* Operations & Driver Shortcuts (Authorized Roles Only) */}
+          {isOwnerOrDispatcher && onOpenOwnerPortal && (
             <button
               onClick={() => {
                 setIsMobileMenuOpen(false);
@@ -270,6 +434,18 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
               style={{ color: '#0078D4', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}
             >
               <span>🏢 Owner Console</span>
+            </button>
+          )}
+
+          {isChauffeur && onOpenDriverApp && (
+            <button
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                onOpenDriverApp();
+              }}
+              style={{ color: '#059669', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <span>🚗 Driver App</span>
             </button>
           )}
         </div>

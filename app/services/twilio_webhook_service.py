@@ -169,3 +169,89 @@ class TwilioWebhookService:
     </Connect>
 </Response>"""
 
+    @classmethod
+    def process_sms_webhook(cls, form_data: Dict[str, Any]) -> str:
+        """
+        Ingests Twilio SMS Inbound Webhook (passenger or driver text reply).
+        Evaluates TCPA keywords (STOP/HELP/START), driver ACCEPT commands, and general customer inquiries.
+        Returns valid TwiML XML response.
+        """
+        sender = form_data.get("From") or ""
+        body = (form_data.get("Body") or "").strip()
+        to_number = form_data.get("To") or ""
+        vendor_id = form_data.get("vendor_id") or "vendor_anb_philly"
+
+        # 1. Driver ACCEPT offer command
+        if body.upper() == "ACCEPT":
+            matching_offer = None
+            clean_sender = sender.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+            for off in db.driver_offers.values():
+                off_phone = (off.driver_phone or "").replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+                if off.status.value == "PENDING" and off_phone and (clean_sender in off_phone or off_phone in clean_sender):
+                    matching_offer = off
+                    break
+
+            if matching_offer:
+                from app.services.dispatch_service import DispatchService
+                trip = DispatchService.accept_driver_offer(matching_offer.id)
+                return f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Message>Mission confirmed! You are assigned to trip #{trip.id}. Passenger pickup: {trip.pickup_address}. Please proceed to vehicle.</Message>
+</Response>"""
+            else:
+                return f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Message>No active pending ride offer was found for your mobile number or offer has expired.</Message>
+</Response>"""
+
+        # 2. TCPA Compliance Keywords (STOP, START, HELP)
+        clean_upper = body.upper()
+        if clean_upper in ("STOP", "CANCEL", "UNSUBSCRIBE", "QUIT", "END"):
+            from app.services.vendor_telecom_compliance_service import VendorTelecomComplianceService
+            svc = VendorTelecomComplianceService(vendor_id=vendor_id)
+            comp_res = svc.process_inbound_sms_compliance(sender, "STOP")
+            return f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Message>{comp_res.get("reply_message")}</Message>
+</Response>"""
+
+        if clean_upper in ("START", "UNSTOP"):
+            from app.services.vendor_telecom_compliance_service import VendorTelecomComplianceService
+            svc = VendorTelecomComplianceService(vendor_id=vendor_id)
+            comp_res = svc.process_inbound_sms_compliance(sender, "START")
+            return f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Message>{comp_res.get("reply_message")}</Message>
+</Response>"""
+
+        if clean_upper in ("HELP", "INFO"):
+            return f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Message>Limo Executive Dispatch Support: For live dispatch assistance, call our 24/7 concierge at +14844324476. Msg &amp; data rates may apply.</Message>
+</Response>"""
+
+        # 3. General Inbound Customer / Passenger Message -> Pipe to Omnichannel Desk
+        try:
+            from app.business_api import _get_omnichannel_desk
+            from app.services.vendor_omnichannel_desk_service import OmnichannelChatMessage
+            desk = _get_omnichannel_desk(vendor_id)
+            inbound_msg = OmnichannelChatMessage(
+                vendor_id=vendor_id,
+                channel="SMS",
+                direction="INBOUND",
+                sender_phone=sender,
+                recipient_phone=to_number,
+                sender_name="Passenger Mobile",
+                body=body,
+                status="RECEIVED"
+            )
+            desk.chat_history.append(inbound_msg)
+        except Exception as e:
+            logger.warning(f"Could not pipe inbound SMS to omnichannel desk: {e}")
+
+        return f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Message>Thank you for reaching out. An executive dispatch specialist has received your message and will respond shortly.</Message>
+</Response>"""
+
+

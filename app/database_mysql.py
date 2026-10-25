@@ -79,6 +79,18 @@ class VendorModel(Base):
     invoice_prefix = Column(String(32), default="INV", nullable=True)
     receipt_prefix = Column(String(32), default="REC", nullable=True)
     invoice_custom_footer = Column(Text, nullable=True)
+    pricing_matrix_json = Column(Text, nullable=True)
+    tax_label = Column(String(128), default="State & Municipal Sales Taxes", nullable=True)
+    tax_rate_pct = Column(Numeric(6, 4), nullable=True)
+
+    # Google SEO & Analytics Suite (Multi-Vendor Isolated Tracking)
+    google_analytics_id = Column(String(64), nullable=True)      # e.g. "G-ANBPHILLY1"
+    google_tag_manager_id = Column(String(64), nullable=True)    # e.g. "GTM-ANB01"
+    seo_title = Column(String(255), nullable=True)
+    seo_description = Column(Text, nullable=True)
+    seo_keywords = Column(Text, nullable=True)
+    canonical_url = Column(String(255), nullable=True)
+    og_image_url = Column(String(512), nullable=True)
 
     tenant = relationship("TenantModel", back_populates="vendors")
     vehicles = relationship("VehicleModel", back_populates="vendor")
@@ -167,6 +179,9 @@ class VehicleModel(Base):
     passenger_capacity = Column(Integer, default=3)
     luggage_capacity = Column(Integer, default=3)
     exterior_color = Column(String(64), default="Black")
+    photo_url = Column(String(512), nullable=True)
+    tagline = Column(String(255), nullable=True)
+    amenities_json = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True)
     current_lat = Column(Float, nullable=True)
     current_lng = Column(Float, nullable=True)
@@ -269,6 +284,7 @@ class QuoteModel(Base):
     subtotal_net = Column(Numeric(10, 2), default=Decimal("0.00"))
     pricing_model_type = Column(String(64), default="DYNAMIC_MATRIX")
     tax_gratuity_display_mode = Column(String(64), default="ITEMIZED_SEPARATE")
+    tax_label = Column(String(128), default="State & Municipal Sales Taxes", nullable=True)
     tax_rate = Column(Numeric(6, 4), default=Decimal("0.08875"))
     tax_amount = Column(Numeric(10, 2), default=Decimal("0.00"))
     gratuity_rate = Column(Numeric(4, 2), default=Decimal("0.20"))
@@ -472,6 +488,7 @@ class VendorPricingRuleModel(Base):
     min_fare = Column(Numeric(10, 2), default=Decimal("85.00"))
     deadhead_rate_per_mile = Column(Numeric(10, 2), default=Decimal("1.75"))
     tax_rate = Column(Numeric(6, 4), default=Decimal("0.08875"))
+    tax_label = Column(String(128), default="State & Municipal Sales Taxes", nullable=True)
     gratuity_rate = Column(Numeric(4, 2), default=Decimal("0.20"))
     enable_out_of_town_stay = Column(Boolean, default=False)
     out_of_town_stay_rate_net = Column(Numeric(10, 2), default=Decimal("300.00"))
@@ -580,6 +597,30 @@ class ProofOfDeliveryModel(Base):
     status = Column(String(32), default="COMPLETED_PENDING_AUDIT")  # COMPLETED_PENDING_AUDIT, AUDITED_CLEARED, DISPUTED
     settlement_hold_until = Column(DateTime, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class VendorExternalPartnerModel(Base):
+    """Trusted non-network partner directory for sovereign vendor out-of-market sourcing."""
+    __tablename__ = "vendor_external_partners"
+
+    id = Column(String(64), primary_key=True)
+    vendor_id = Column(String(64), ForeignKey("vendors.id"), nullable=False, index=True)
+    company_name = Column(String(255), nullable=False)
+    contact_name = Column(String(255), nullable=True)
+    email = Column(String(255), nullable=False, index=True)
+    phone = Column(String(64), nullable=True)
+    operating_city = Column(String(128), nullable=False, index=True)
+    service_airports = Column(String(512), nullable=True)  # JSON e.g. ["MIA", "FLL", "OPF"]
+    fleet_classes = Column(String(512), nullable=True)     # JSON e.g. ["LUXURY_SUV", "FIRST_CLASS"]
+    preferred_payout_rate = Column(Numeric(10, 2), nullable=True)
+    stripe_connect_account_id = Column(String(128), nullable=True)
+    notes = Column(Text, nullable=True)
+    is_active = Column(Boolean, default=True)
+    invitation_email_sent = Column(Boolean, default=False)
+    invitation_sent_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
 
 
 # ==============================================================================
@@ -740,6 +781,7 @@ class RegionalTaxRuleModel(Base):
     jurisdiction_code = Column(String(64), primary_key=True)
     country = Column(String(64), nullable=False)
     city_or_region = Column(String(128), nullable=False)
+    tax_name = Column(String(128), default=None, nullable=True)
     vat_or_sales_tax_rate = Column(Numeric(6, 4), nullable=False)
     airport_access_fee = Column(Numeric(10, 2), default=Decimal("0.00"))
     congestion_charge = Column(Numeric(10, 2), default=Decimal("0.00"))
@@ -882,6 +924,12 @@ class MySQLManager:
                             conn.commit()
                         except Exception:
                             pass
+
+                    try:
+                        conn.execute(text("ALTER TABLE vendors ADD COLUMN pricing_matrix_json TEXT;"))
+                        conn.commit()
+                    except Exception:
+                        pass
 
                     try:
                         conn.execute(text("""
@@ -1170,6 +1218,17 @@ class MySQLManager:
 
     def get_vendor_connection_url(self, db_name: str, host: Optional[str] = None, port: Optional[int] = None) -> str:
         """Constructs MySQL URL for a specific sovereign vendor database."""
+        if not host:
+            conn_url = os.getenv("MYSQL_URL") or os.getenv("DATABASE_URL")
+            if conn_url:
+                try:
+                    parsed = urllib.parse.urlparse(conn_url)
+                    if parsed.hostname:
+                        host = parsed.hostname
+                    if parsed.port and not port:
+                        port = parsed.port
+                except Exception:
+                    pass
         raw_h = host or os.getenv("MYSQL_HOST", "127.0.0.1")
         raw_p = str(port or os.getenv("MYSQL_PORT", "3306"))
         h, p = _resolve_host_and_port(raw_h, raw_p)

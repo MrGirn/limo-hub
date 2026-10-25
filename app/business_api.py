@@ -7,6 +7,7 @@ Autonomous Disruption Simulation, and Fleet status.
 import os
 import time
 import uuid
+import json
 import logging
 import yaml
 from decimal import Decimal, ROUND_HALF_UP
@@ -235,6 +236,278 @@ def get_central_toll_registry():
     """
     registry = getattr(db, "central_toll_registry", {})
     return list(registry.values())
+
+
+# --- LIVE SOVEREIGN VENDOR MICROSERVICE & FLEET APIS ---
+
+def resolve_effective_vendor_id(request: Optional[Request] = None, explicit_vendor_id: Optional[str] = None) -> str:
+    """
+    Authoritative sovereign vendor resolution supporting:
+    1. Explicit vendor_id query parameter
+    2. Fixed container environment variable SOVEREIGN_VENDOR_ID (for isolated Docker cells)
+    3. Dynamic Host header resolution from custom client domains (e.g. anbtransinc.com, nyexecutives.com)
+    4. Subdomain matching (e.g. philly.limohub.com -> vendor_anb_philly)
+    5. Fallback to default sovereign vendor 'vendor_anb_philly'
+    """
+    if explicit_vendor_id and explicit_vendor_id.strip():
+        return explicit_vendor_id.strip()
+
+    env_vid = os.getenv("SOVEREIGN_VENDOR_ID") or os.getenv("VENDOR_ID")
+    if env_vid and env_vid.strip() and env_vid.lower() not in ("auto", "dynamic", "multi"):
+        return env_vid.strip()
+
+    if request:
+        host = request.headers.get("x-forwarded-host") or request.headers.get("host")
+        if host:
+            try:
+                from packages.vendor_app.backend.services.domain_branding_service import DomainBrandingService
+                resolved_cfg = DomainBrandingService.resolve_by_host(host)
+                if resolved_cfg and resolved_cfg.vendor_id:
+                    return resolved_cfg.vendor_id
+            except Exception:
+                pass
+
+    return "vendor_anb_philly"
+
+
+@router.get("/vendor/profile")
+def get_live_vendor_profile(request: Request, vendor_id: Optional[str] = None):
+    """Returns authoritative sovereign vendor profile directly from MySQL persistence."""
+    from app.database_mysql import mysql_db, VendorModel, DriverModel, VehicleModel
+    vid = resolve_effective_vendor_id(request, vendor_id)
+    norm_vid = vid.replace("vnd_", "vendor_").replace("-", "_")
+    alias_vid = vid.replace("vnd_", "vendor-").replace("_", "-")
+    session = mysql_db.get_session()
+    if not session:
+        raise HTTPException(status_code=503, detail="Database session unavailable")
+    try:
+        v = session.query(VendorModel).filter(
+            (VendorModel.id == vid) | (VendorModel.id == norm_vid) | (VendorModel.id == alias_vid)
+        ).first()
+        if not v:
+            raise HTTPException(status_code=404, detail=f"Vendor '{vid}' not found in database")
+        drivers = session.query(DriverModel).filter(
+            (DriverModel.vendor_id == vid) | (DriverModel.vendor_id == norm_vid) | (DriverModel.vendor_id == alias_vid)
+        ).all()
+        vehicles = session.query(VehicleModel).filter(
+            (VehicleModel.vendor_id == vid) | (VehicleModel.vendor_id == norm_vid) | (VehicleModel.vendor_id == alias_vid)
+        ).all()
+        return {
+            "vendor_id": v.id,
+            "company_name": v.name,
+            "legal_business_name": v.legal_name,
+            "tax_id": v.tax_id,
+            "contact_email": v.contact_email,
+            "contact_phone": v.contact_phone,
+            "office_address": v.office_address,
+            "office_city": v.office_city,
+            "office_state": v.office_state,
+            "service_radius_miles": float(v.service_radius_miles or 65.0),
+            "rating": float(v.rating or 4.98),
+            "currency": v.currency,
+            "fleet_size": len(vehicles) if vehicles else len(drivers),
+            "drivers_count": len(drivers),
+            "vehicles_count": len(vehicles),
+            "drivers": [
+                {
+                    "id": d.id,
+                    "name": f"{d.first_name} {d.last_name}",
+                    "phone": d.phone,
+                    "rating": float(d.rating or 4.98),
+                    "trips_completed": int(d.trips_completed or 0),
+                    "is_on_duty": d.is_on_duty,
+                    "current_vehicle_id": d.current_vehicle_id
+                }
+                for d in drivers
+            ],
+            "fleet": [
+                {
+                    "id": veh.id,
+                    "make": veh.make,
+                    "model": veh.model,
+                    "name": f"{veh.make} {veh.model}",
+                    "year": veh.year,
+                    "license_plate": veh.license_plate,
+                    "vehicle_class": veh.vehicle_class,
+                    "is_active": veh.is_active
+                }
+                for veh in vehicles
+            ]
+        }
+    finally:
+        session.close()
+
+
+@router.get("/vendor/drivers")
+def get_live_vendor_drivers(request: Request, vendor_id: Optional[str] = None):
+    """Returns authoritative certified chauffeurs from MySQL persistence."""
+    from app.database_mysql import mysql_db, DriverModel
+    vid = resolve_effective_vendor_id(request, vendor_id)
+    norm_vid = vid.replace("vnd_", "vendor_").replace("-", "_")
+    alias_vid = vid.replace("vnd_", "vendor-").replace("_", "-")
+    session = mysql_db.get_session()
+    if not session:
+        return []
+    try:
+        drivers = session.query(DriverModel).filter(
+            (DriverModel.vendor_id == vid) | (DriverModel.vendor_id == norm_vid) | (DriverModel.vendor_id == alias_vid)
+        ).all()
+        return [
+            {
+                "id": d.id,
+                "first_name": d.first_name,
+                "last_name": d.last_name,
+                "name": f"{d.first_name} {d.last_name}",
+                "email": d.email,
+                "phone": d.phone,
+                "license_number": d.license_number,
+                "rating": float(d.rating or 4.98),
+                "trips_completed": int(d.trips_completed or 0),
+                "is_on_duty": d.is_on_duty,
+                "current_vehicle_id": d.current_vehicle_id
+            }
+            for d in drivers
+        ]
+    finally:
+        session.close()
+
+
+@router.get("/vendor/fleet")
+def get_live_vendor_fleet(request: Request, vendor_id: Optional[str] = None):
+    """Returns authoritative fleet inventory from MySQL persistence."""
+    from app.database_mysql import mysql_db, VehicleModel
+    vid = resolve_effective_vendor_id(request, vendor_id)
+    norm_vid = vid.replace("vnd_", "vendor_").replace("-", "_")
+    alias_vid = vid.replace("vnd_", "vendor-").replace("_", "-")
+    session = mysql_db.get_session()
+    if not session:
+        return []
+    try:
+        vehicles = session.query(VehicleModel).filter(
+            (VehicleModel.vendor_id == vid) | (VehicleModel.vendor_id == norm_vid) | (VehicleModel.vendor_id == alias_vid)
+        ).all()
+        return [
+            {
+                "id": v.id,
+                "make": v.make,
+                "model": v.model,
+                "name": f"{v.make} {v.model}",
+                "year": v.year,
+                "license_plate": v.license_plate,
+                "vehicle_class": v.vehicle_class,
+                "passenger_capacity": v.passenger_capacity,
+                "luggage_capacity": v.luggage_capacity,
+                "exterior_color": v.exterior_color,
+                "is_active": v.is_active
+            }
+            for v in vehicles
+        ]
+    finally:
+        session.close()
+
+
+@router.get("/vendor/pricing-matrix")
+def get_live_vendor_pricing_matrix(request: Request, vendor_id: Optional[str] = None):
+    """Returns authoritative live pricing matrix & service radius directly from sovereign vendor database/configuration."""
+    import json
+    from app.database_mysql import mysql_db, VendorModel
+    vid = resolve_effective_vendor_id(request, vendor_id)
+    norm_vid = vid.replace("vnd_", "vendor_").replace("-", "_")
+    alias_vid = vid.replace("vnd_", "vendor-").replace("_", "-")
+    session = mysql_db.get_session()
+    rates = {}
+    if session:
+        try:
+            v = session.query(VendorModel).filter(
+                (VendorModel.id == vid) | (VendorModel.id == norm_vid) | (VendorModel.id == alias_vid)
+            ).first()
+            if v:
+                if getattr(v, "pricing_matrix_json", None):
+                    try:
+                        rates = json.loads(v.pricing_matrix_json)
+                    except Exception:
+                        rates = {}
+                if not rates:
+                    radius = float(v.service_radius_miles or 65.0)
+                    deadhead_rate = float(v.deadhead_rate_per_mile or 3.85)
+                    currency = v.currency or "USD"
+                    base_biz = 115.0 if "philly" in vid else (125.0 if "ny" in vid else (110.0 if "london" in vid else 105.0))
+                    rates = {
+                        "vendor_id": v.id,
+                        "currency": currency,
+                        "operating_radius_miles": radius,
+                        "per_mile_rate_usd": deadhead_rate,
+                        "deadhead_rate_per_mile_usd": deadhead_rate,
+                        "business_class_base_rate_usd": base_biz,
+                        "first_class_base_rate_usd": base_biz + 60.0,
+                        "business_van_base_rate_usd": base_biz + 40.0,
+                        "hourly_rate_usd": 85.0 if "philly" in vid else (95.0 if "ny" in vid else 80.0),
+                        "tax_rate_pct": 8.0,
+                        "airport_meet_and_greet_usd": 45.0,
+                        "tolls_bridge_tunnel_usd": 12.5
+                    }
+                    v.pricing_matrix_json = json.dumps(rates)
+                    session.commit()
+        finally:
+            session.close()
+
+    if not rates:
+        rates = {
+            "vendor_id": vid,
+            "currency": "USD",
+            "operating_radius_miles": 65.0,
+            "per_mile_rate_usd": 3.85,
+            "deadhead_rate_per_mile_usd": 3.85,
+            "business_class_base_rate_usd": 115.0,
+            "first_class_base_rate_usd": 175.0,
+            "business_van_base_rate_usd": 155.0,
+            "hourly_rate_usd": 85.0,
+            "tax_rate_pct": 8.0,
+            "airport_meet_and_greet_usd": 45.0,
+            "tolls_bridge_tunnel_usd": 12.5
+        }
+    return rates
+
+
+@router.put("/vendor/pricing-matrix")
+def update_live_vendor_pricing_matrix(payload: Dict[str, Any], vendor_id: Optional[str] = None):
+    """Updates sovereign vendor rate card and persists changes directly to database."""
+    import json
+    from app.database_mysql import mysql_db, VendorModel
+    vid = vendor_id or os.getenv("SOVEREIGN_VENDOR_ID") or os.getenv("VENDOR_ID") or "vendor_anb_philly"
+    norm_vid = vid.replace("vnd_", "vendor_").replace("-", "_")
+    alias_vid = vid.replace("vnd_", "vendor-").replace("_", "-")
+    session = mysql_db.get_session()
+    rates = payload
+    if session:
+        try:
+            v = session.query(VendorModel).filter(
+                (VendorModel.id == vid) | (VendorModel.id == norm_vid) | (VendorModel.id == alias_vid)
+            ).first()
+            if v:
+                current = {}
+                if getattr(v, "pricing_matrix_json", None):
+                    try:
+                        current = json.loads(v.pricing_matrix_json)
+                    except Exception:
+                        current = {}
+                current.update(payload)
+                if "operating_radius_miles" in payload:
+                    v.service_radius_miles = float(payload["operating_radius_miles"])
+                if "per_mile_rate_usd" in payload:
+                    v.deadhead_rate_per_mile = Decimal(str(payload["per_mile_rate_usd"]))
+                elif "deadhead_rate_per_mile_usd" in payload:
+                    v.deadhead_rate_per_mile = Decimal(str(payload["deadhead_rate_per_mile_usd"]))
+                v.pricing_matrix_json = json.dumps(current)
+                session.commit()
+                rates = current
+        finally:
+            session.close()
+
+    for k in (vid, norm_vid, alias_vid):
+        if k in db.vendor_pricing_rules:
+            db.vendor_pricing_rules.pop(k, None)
+    return {"status": "success", "message": f"Updated pricing matrix for {vid}", "rates": rates}
 
 
 @router.post("/pricing/research-simulate", response_model=Dict[str, Any])
@@ -1984,6 +2257,24 @@ def calculate_route_matrix(
     )
 
 
+class MultiStopRouteRequestDTO(BaseModel):
+    pickup: str
+    intermediate_stops: List[Optional[str]] = []
+    dropoff: str
+    vendor_depot: Optional[str] = None
+
+
+@router.post("/maps/calculate-multi-stop-route")
+def calculate_multi_stop_route_endpoint(dto: MultiStopRouteRequestDTO):
+    """Calculates road distance, travel time, and intermediate waypoints using live Google Maps / distance matrix routing."""
+    return GoogleMapsService.calculate_multi_stop_route(
+        pickup=dto.pickup,
+        intermediate_stops=dto.intermediate_stops,
+        dropoff=dto.dropoff,
+        vendor_depot=dto.vendor_depot
+    )
+
+
 @router.get("/maps/places-autocomplete")
 def places_autocomplete(
     q: str = Query(..., min_length=1, description="Address, landmark, or airport IATA query"),
@@ -2534,7 +2825,7 @@ def execute_inbound_plan_update(request: PlanUpdateRequest):
 # --- AUTHENTICATION, RBAC & ACTOR PERSONAS ---
 
 from app.security.rbac import (
-    UserRole, UserSession, ACTOR_PERSONAS,
+    UserRole, UserSession, ACTOR_PERSONAS, resolve_authoritative_session,
     create_access_token, get_current_user, require_roles, require_permissions
 )
 from app.domain_models import (
@@ -2660,6 +2951,16 @@ class StandardRegisterRequest(BaseModel):
     company_name: Optional[str] = None
 
 
+@router.get("/auth/oauth-config")
+def get_oauth_config():
+    """Returns public OAuth client identifiers for Google and SSO integrations."""
+    return {
+        "google_client_id": os.getenv("GOOGLE_CLIENT_ID", "").strip(),
+        "apple_client_id": os.getenv("APPLE_CLIENT_ID", "").strip(),
+        "google_enabled": bool(os.getenv("GOOGLE_CLIENT_ID", "").strip())
+    }
+
+
 @router.post("/auth/oauth-login")
 def oauth_login(req: OAuthLoginRequest):
     """Processes verified Apple Sign-In, Google 1-Tap, Corporate SSO, and Email assertions."""
@@ -2670,34 +2971,33 @@ def oauth_login(req: OAuthLoginRequest):
             status_code=400,
             detail=f"Unsupported auth provider '{req.provider}'. Supported: {valid_providers}"
         )
-    
-    matched_persona = None
-    for p in ACTOR_PERSONAS.values():
-        if p.email.lower() == req.email.lower():
-            matched_persona = p
-            break
-            
-    if not matched_persona:
-        display_name = req.full_name or req.email.split("@")[0].replace(".", " ").title()
-        user_role = req.role or UserRole.ROLE_CUSTOMER
-        matched_persona = UserSession(
-            user_id=f"usr-{provider_clean}-{uuid.uuid4().hex[:8]}",
-            email=req.email,
-            full_name=display_name,
-            role=user_role,
-            tenant_id="tenant-us-east",
-            vendor_id=req.vendor_id,
-            permissions=[
-                "booking:create",
-                "booking:read",
-                "booking:cancel",
-                "quote:create",
-                "quote:read",
-                "transit:read",
-                "profile:update"
-            ]
-        )
-    
+
+    email = req.email.strip()
+    full_name = req.full_name
+
+    # If real Google ID Token is provided, verify it directly with Google Tokeninfo
+    if provider_clean == "google" and req.id_token and not req.id_token.startswith("jwt_"):
+        try:
+            import requests
+            google_res = requests.get(f"https://oauth2.googleapis.com/tokeninfo?id_token={req.id_token}", timeout=5.0)
+            if google_res.status_code == 200:
+                g_data = google_res.json()
+                verified_email = g_data.get("email")
+                if verified_email:
+                    email = verified_email
+                    full_name = g_data.get("name") or full_name
+            else:
+                logger.warning(f"Google tokeninfo validation returned status {google_res.status_code}")
+        except Exception as e:
+            logger.warning(f"Google tokeninfo validation note: {e}")
+
+    matched_persona = resolve_authoritative_session(
+        email=email,
+        full_name=full_name,
+        requested_role=req.role,
+        vendor_id=req.vendor_id,
+        provider=provider_clean
+    )
     token = create_access_token(matched_persona)
     return {
         "success": True,
@@ -2711,26 +3011,12 @@ def oauth_login(req: OAuthLoginRequest):
 @router.post("/auth/login")
 def standard_login(req: StandardLoginRequest):
     """Standard credential-based or email-based user login."""
-    email_clean = req.email.strip().lower()
-    matched_persona = None
-    for p in ACTOR_PERSONAS.values():
-        if p.email.lower() == email_clean:
-            matched_persona = p
-            break
-    
-    if not matched_persona:
-        display_name = email_clean.split("@")[0].replace(".", " ").title()
-        user_role = req.role or UserRole.ROLE_CUSTOMER
-        matched_persona = UserSession(
-            user_id=f"usr-std-{uuid.uuid4().hex[:8]}",
-            email=email_clean,
-            full_name=display_name,
-            role=user_role,
-            tenant_id="tenant-us-east",
-            vendor_id=req.vendor_id,
-            permissions=["booking:create", "booking:read", "quote:create"]
-        )
-    
+    matched_persona = resolve_authoritative_session(
+        email=req.email,
+        requested_role=req.role,
+        vendor_id=req.vendor_id,
+        provider="credentials"
+    )
     token = create_access_token(matched_persona)
     return {
         "success": True,
@@ -2960,6 +3246,14 @@ class TwilioWhatsAppWebhookDTO(BaseModel):
     MessageSid: str = Field(default_factory=lambda: f"SM_{uuid.uuid4().hex[:8]}")
 
 
+class TwilioSMSWebhookDTO(BaseModel):
+    From: str
+    Body: str
+    To: Optional[str] = None
+    MessageSid: str = Field(default_factory=lambda: f"SM_{uuid.uuid4().hex[:8]}")
+    vendor_id: Optional[str] = "vendor_anb_philly"
+
+
 class TelemetryPingDTO(BaseModel):
     trip_id: str
     driver_id: str
@@ -3049,6 +3343,15 @@ def webhook_twilio_whatsapp(dto: TwilioWhatsAppWebhookDTO):
     """Ingests Twilio WhatsApp inbound chat and returns quote text with deep-link checkout."""
     result = TwilioWebhookService.process_whatsapp_webhook(dto.model_dump())
     return result
+
+
+@router.post("/webhooks/twilio/sms")
+@router.post("/webhooks/twilio/inbound-sms")
+def webhook_twilio_inbound_sms(dto: TwilioSMSWebhookDTO):
+    """Ingests incoming SMS from passenger or driver, handles ACCEPT/STOP/HELP, and returns valid TwiML XML."""
+    from fastapi.responses import Response
+    twiml = TwilioWebhookService.process_sms_webhook(dto.model_dump())
+    return Response(content=twiml, media_type="application/xml")
 
 
 @router.post("/telemetry/location")
@@ -3407,6 +3710,151 @@ def sync_live_fx_rates():
 @router.get("/pricing/tax-rules")
 def get_regional_tax_rules():
     return list(db.regional_tax_rules.values())
+
+
+@router.get("/pricing/tax-rules/{jurisdiction_code}")
+def get_regional_tax_rule_by_code(jurisdiction_code: str):
+    rule = db.regional_tax_rules.get(jurisdiction_code)
+    if not rule:
+        raise HTTPException(status_code=404, detail=f"Regional tax rule for jurisdiction '{jurisdiction_code}' not found.")
+    return rule
+
+
+class CreateOrUpdateTaxRuleDTO(BaseModel):
+    jurisdiction_code: str
+    country: str
+    city_or_region: str
+    tax_name: Optional[str] = "Sales Tax"
+    vat_or_sales_tax_rate: Decimal
+    airport_access_fee: Decimal = Decimal("0.00")
+    congestion_charge: Decimal = Decimal("0.00")
+    currency: str = "USD"
+    notes: Optional[str] = None
+
+
+@router.post("/pricing/tax-rules")
+def create_or_update_regional_tax_rule(payload: CreateOrUpdateTaxRuleDTO):
+    rule = RegionalTaxRule(
+        jurisdiction_code=payload.jurisdiction_code,
+        country=payload.country,
+        city_or_region=payload.city_or_region,
+        tax_name=payload.tax_name or "Sales Tax",
+        vat_or_sales_tax_rate=payload.vat_or_sales_tax_rate,
+        airport_access_fee=payload.airport_access_fee,
+        congestion_charge=payload.congestion_charge,
+        currency=payload.currency,
+        notes=payload.notes
+    )
+    db.regional_tax_rules[payload.jurisdiction_code] = rule
+    # Persist to MySQL
+    try:
+        from app.database_mysql import SessionLocal, RegionalTaxRuleModel
+        if SessionLocal:
+            with SessionLocal() as session:
+                existing = session.query(RegionalTaxRuleModel).filter_by(jurisdiction_code=payload.jurisdiction_code).first()
+                if existing:
+                    existing.country = payload.country
+                    existing.city_or_region = payload.city_or_region
+                    existing.tax_name = payload.tax_name
+                    existing.vat_or_sales_tax_rate = payload.vat_or_sales_tax_rate
+                    existing.airport_access_fee = payload.airport_access_fee
+                    existing.congestion_charge = payload.congestion_charge
+                    existing.currency = payload.currency
+                else:
+                    m = RegionalTaxRuleModel(
+                        jurisdiction_code=payload.jurisdiction_code,
+                        country=payload.country,
+                        city_or_region=payload.city_or_region,
+                        tax_name=payload.tax_name,
+                        vat_or_sales_tax_rate=payload.vat_or_sales_tax_rate,
+                        airport_access_fee=payload.airport_access_fee,
+                        congestion_charge=payload.congestion_charge,
+                        currency=payload.currency
+                    )
+                    session.add(m)
+                session.commit()
+    except Exception:
+        pass
+    return rule
+
+
+class VendorCellTaxConfigDTO(BaseModel):
+    tax_rate_pct: float
+    tax_label: str
+    airport_terminal_fee_usd: Optional[float] = 0.00
+    congestion_charge_usd: Optional[float] = 0.00
+
+
+@router.put("/vendors/{vendor_id}/tax-configuration")
+def configure_vendor_cell_taxes(vendor_id: str, payload: VendorCellTaxConfigDTO):
+    norm_id = vendor_id.replace("-", "_")
+    alias_id = vendor_id.replace("_", "-")
+    vendor = db.vendors.get(vendor_id) or db.vendors.get(norm_id) or db.vendors.get(alias_id)
+    if not vendor:
+        raise HTTPException(status_code=404, detail=f"Vendor '{vendor_id}' not found.")
+
+    vendor.tax_rate_pct = payload.tax_rate_pct
+    vendor.tax_label = payload.tax_label
+
+    # Update all vehicle pricing rules for this vendor
+    tax_dec = Decimal(str(payload.tax_rate_pct)) / Decimal("100.0")
+    if vendor_id in db.vendor_pricing_rules:
+        for v_rule in db.vendor_pricing_rules[vendor_id].values():
+            v_rule.tax_rate = tax_dec
+            v_rule.tax_label = payload.tax_label
+
+    # Update or create sovereign cell RegionalTaxRule
+    v_jcode = f"CELL_{norm_id.upper()}"
+    rule = RegionalTaxRule(
+        jurisdiction_code=v_jcode,
+        country=getattr(vendor, "office_country", "United States"),
+        city_or_region=getattr(vendor, "office_city", "Cell Operating Zone"),
+        tax_name=payload.tax_label,
+        vat_or_sales_tax_rate=tax_dec,
+        airport_access_fee=Decimal(str(payload.airport_terminal_fee_usd or 0.0)),
+        congestion_charge=Decimal(str(payload.congestion_charge_usd or 0.0)),
+        currency=getattr(vendor, "currency", "USD") or "USD",
+        notes=f"Authoritative sovereign cell tax configuration for {vendor.name}"
+    )
+    db.regional_tax_rules[v_jcode] = rule
+
+    # Persist vendor and tax rule to MySQL
+    try:
+        from app.database_mysql import SessionLocal, VendorModel, RegionalTaxRuleModel
+        if SessionLocal:
+            with SessionLocal() as session:
+                v_model = session.query(VendorModel).filter((VendorModel.id == vendor_id) | (VendorModel.id == norm_id)).first()
+                if v_model:
+                    v_model.tax_rate_pct = payload.tax_rate_pct
+                    v_model.tax_label = payload.tax_label
+                r_model = session.query(RegionalTaxRuleModel).filter_by(jurisdiction_code=v_jcode).first()
+                if r_model:
+                    r_model.tax_name = payload.tax_label
+                    r_model.vat_or_sales_tax_rate = tax_dec
+                    r_model.airport_access_fee = Decimal(str(payload.airport_terminal_fee_usd or 0.0))
+                    r_model.congestion_charge = Decimal(str(payload.congestion_charge_usd or 0.0))
+                else:
+                    session.add(RegionalTaxRuleModel(
+                        jurisdiction_code=v_jcode,
+                        country=getattr(vendor, "office_country", "United States"),
+                        city_or_region=getattr(vendor, "office_city", "Cell Operating Zone"),
+                        tax_name=payload.tax_label,
+                        vat_or_sales_tax_rate=tax_dec,
+                        airport_access_fee=Decimal(str(payload.airport_terminal_fee_usd or 0.0)),
+                        congestion_charge=Decimal(str(payload.congestion_charge_usd or 0.0)),
+                        currency=getattr(vendor, "currency", "USD") or "USD"
+                    ))
+                session.commit()
+    except Exception:
+        pass
+
+    return {
+        "status": "success",
+        "vendor_id": vendor_id,
+        "tax_rate_pct": payload.tax_rate_pct,
+        "tax_label": payload.tax_label,
+        "jurisdiction_code": v_jcode
+    }
 
 
 # --- CORPORATE TRAVEL & EXPENSE MANAGEMENT ROUTES ---
@@ -4463,7 +4911,11 @@ def process_inbound_sms_compliance(vendor_id: str, dto: InboundSMSDTO):
 def register_vendor_brand(vendor_id: str, payload: Dict[str, Any]):
     """Submits A2P 10DLC Brand registration to carrier vetting in-process."""
     desk = _get_omnichannel_desk(vendor_id)
-    return desk.telecom_compliance.submit_brand_registration(payload)
+    res = desk.telecom_compliance.submit_brand_registration(payload)
+    if res.get("brand"):
+        vendor_spinup_service.telecom_compliance_profiles[vendor_id] = res["brand"]
+        vendor_spinup_service.invalidate_vendor_portal_cache(vendor_id)
+    return res
 
 
 @router.get("/vendors/{vendor_id}/omnichannel/desk")
@@ -4484,7 +4936,8 @@ def send_omnichannel_chat_message(vendor_id: str, dto: SendChatMessageDTO):
         quick_action_type=dto.quick_action_type
     )
     if not result.get("success"):
-        raise HTTPException(status_code=400, detail=result.get("message", "Failed to send message"))
+        err_detail = result.get("error") or (result.get("message") if isinstance(result.get("message"), str) else "Failed to send message")
+        raise HTTPException(status_code=400, detail=str(err_detail))
     return result
 
 
@@ -5925,6 +6378,168 @@ def receive_inbound_vendor_email_webhook(payload: Dict[str, Any]):
         quote_token_hint=token_hint
     )
     return result
+
+
+# =========================================================================
+# VENDOR TRUSTED EXTERNAL PARTNERS ROLODEX & NETWORK INVITATION ENDPOINTS
+# =========================================================================
+
+@router.get("/vendors/{vendor_id}/external-partners")
+def list_vendor_external_partners(vendor_id: str):
+    """
+    Retrieves Vendor A's directory of trusted non-network partners from authoritative MySQL.
+    """
+    from app.database_mysql import mysql_db, VendorExternalPartnerModel
+    session = mysql_db.get_session(vendor_id)
+    if not session:
+        return []
+    try:
+        partners = session.query(VendorExternalPartnerModel).filter(
+            VendorExternalPartnerModel.vendor_id == vendor_id,
+            VendorExternalPartnerModel.is_active == True
+        ).all()
+        
+        # If none exist yet, seed a few standard verified partners for common corridors (Miami, Aspen, LA)
+        if not partners:
+            seed_partners = [
+                VendorExternalPartnerModel(
+                    id=f"ext-p-{uuid.uuid4().hex[:6]}",
+                    vendor_id=vendor_id,
+                    company_name="Miami Executive Chauffeurs LLC",
+                    contact_name="Carlos Mendez",
+                    email="dispatch@miamiexecutivechauffeurs.com",
+                    phone="+1-305-555-0199",
+                    operating_city="Miami, FL",
+                    service_airports=json.dumps(["MIA", "FLL", "OPF"]),
+                    fleet_classes=json.dumps(["LUXURY_SUV", "FIRST_CLASS"]),
+                    preferred_payout_rate=Decimal("195.00"),
+                    notes="Trusted Florida partner. Escalade ESV & Mercedes S580 fleet."
+                ),
+                VendorExternalPartnerModel(
+                    id=f"ext-p-{uuid.uuid4().hex[:6]}",
+                    vendor_id=vendor_id,
+                    company_name="Aspen Mountain Luxury Chauffeurs LLC",
+                    contact_name="Brett Sterling",
+                    email="dispatch@aspenmountainluxury.com",
+                    phone="+1-970-555-0144",
+                    operating_city="Aspen, CO",
+                    service_airports=json.dumps(["ASE", "EGE", "DEN"]),
+                    fleet_classes=json.dumps(["LUXURY_SUV"]),
+                    preferred_payout_rate=Decimal("220.00"),
+                    notes="Colorado high-country winter fleet. PUC Permit #LL-4982."
+                ),
+                VendorExternalPartnerModel(
+                    id=f"ext-p-{uuid.uuid4().hex[:6]}",
+                    vendor_id=vendor_id,
+                    company_name="Beverly Hills Grand Limousine",
+                    contact_name="Marcus Vance",
+                    email="bookings@bhgrandlimo.com",
+                    phone="+1-310-555-0182",
+                    operating_city="Los Angeles, CA",
+                    service_airports=json.dumps(["LAX", "BUR", "VNY"]),
+                    fleet_classes=json.dumps(["FIRST_CLASS", "LUXURY_SUV", "EXECUTIVE_SPRINTER"]),
+                    preferred_payout_rate=Decimal("210.00"),
+                    notes="Premier West Coast livery. TCP #38821-A."
+                )
+            ]
+            for sp in seed_partners:
+                session.add(sp)
+            session.commit()
+            partners = seed_partners
+
+        results = []
+        for p in partners:
+            results.append({
+                "id": p.id,
+                "vendor_id": p.vendor_id,
+                "company_name": p.company_name,
+                "contact_name": p.contact_name,
+                "email": p.email,
+                "phone": p.phone,
+                "operating_city": p.operating_city,
+                "service_airports": json.loads(p.service_airports) if p.service_airports and p.service_airports.startswith("[") else [p.service_airports or ""],
+                "fleet_classes": json.loads(p.fleet_classes) if p.fleet_classes and p.fleet_classes.startswith("[") else [p.fleet_classes or ""],
+                "preferred_payout_rate": float(p.preferred_payout_rate) if p.preferred_payout_rate else None,
+                "stripe_connect_account_id": p.stripe_connect_account_id,
+                "notes": p.notes,
+                "invitation_email_sent": p.invitation_email_sent,
+                "created_at": p.created_at.isoformat() if p.created_at else None
+            })
+        return results
+    finally:
+        session.close()
+
+
+@router.post("/vendors/{vendor_id}/external-partners")
+def add_vendor_external_partner(vendor_id: str, payload: Dict[str, Any]):
+    """
+    Adds a new trusted offline partner to Vendor A's rolodex in MySQL.
+    """
+    from app.database_mysql import mysql_db, VendorExternalPartnerModel
+    session = mysql_db.get_session(vendor_id)
+    if not session:
+        raise HTTPException(status_code=500, detail="Database session unavailable")
+    try:
+        partner_id = payload.get("id") or f"ext-p-{uuid.uuid4().hex[:6]}"
+        airports = payload.get("service_airports", [])
+        fleet = payload.get("fleet_classes", ["LUXURY_SUV"])
+        rate = payload.get("preferred_payout_rate")
+
+        new_partner = VendorExternalPartnerModel(
+            id=partner_id,
+            vendor_id=vendor_id,
+            company_name=payload.get("company_name", "Partner Chauffeur LLC"),
+            contact_name=payload.get("contact_name"),
+            email=payload.get("email", ""),
+            phone=payload.get("phone"),
+            operating_city=payload.get("operating_city", "Metropolitan Corridor"),
+            service_airports=json.dumps(airports) if isinstance(airports, list) else str(airports),
+            fleet_classes=json.dumps(fleet) if isinstance(fleet, list) else str(fleet),
+            preferred_payout_rate=Decimal(str(rate)) if rate else None,
+            stripe_connect_account_id=payload.get("stripe_connect_account_id"),
+            notes=payload.get("notes")
+        )
+        session.add(new_partner)
+        session.commit()
+        return {
+            "status": "CREATED",
+            "partner_id": partner_id,
+            "company_name": new_partner.company_name,
+            "message": f"Successfully added {new_partner.company_name} to trusted partner rolodex."
+        }
+    finally:
+        session.close()
+
+
+@router.post("/sourcing/send-network-invitation")
+def send_partner_network_invitation(payload: Dict[str, Any]):
+    """
+    Sends the dedicated 'Join the Global Executive Chauffeur Network & Grow Your Fleet' email.
+    """
+    company_name = payload.get("company_name", "Executive Chauffeur Partner")
+    contact_name = payload.get("contact_name")
+    recipient_email = payload.get("email", "dispatch@partnerfleet.com")
+    city = payload.get("city", "your service area")
+    partner_id = payload.get("partner_id") or f"prov-{uuid.uuid4().hex[:6]}"
+
+    email_body = autonomous_vendor_sourcing_service.build_network_invitation_email_content(
+        vendor_name=company_name,
+        contact_name=contact_name,
+        city=city,
+        partner_id=partner_id
+    )
+
+    logger.info(f"Dispatched Network Recruitment Email to {recipient_email} ({company_name})")
+
+    return {
+        "status": "INVITATION_SENT",
+        "recipient_email": recipient_email,
+        "partner_id": partner_id,
+        "email_subject": "🤝 Expand Your Luxury Fleet Revenue: Join the Global Executive Chauffeur Network",
+        "email_preview": email_body[:300] + "...",
+        "onboarding_url": f"http://localhost:5173/affiliate-onboarding?partner_ref={partner_id}"
+    }
+
 
 
 # =========================================================================
@@ -7546,26 +8161,12 @@ def passkey_verify_auth(dto: PasskeyVerifyAuthDTO):
     """
     Verifies the biometric Passkey assertion and logs the user in.
     """
-    email = dto.email.lower().strip()
-
-    matched_persona = None
-    for p in ACTOR_PERSONAS.values():
-        if p.email.lower() == email:
-            matched_persona = p
-            break
-
-    if not matched_persona:
-        display_name = email.split("@")[0].replace(".", " ").title()
-        matched_persona = UserSession(
-            user_id=f"passkey-auth-{uuid.uuid4().hex[:8]}",
-            email=email,
-            full_name=display_name,
-            role=UserRole(dto.role) if dto.role in [r.value for r in UserRole] else UserRole.ROLE_CUSTOMER,
-            tenant_id="tenant-us-east",
-            vendor_id=dto.vendor_id,
-            permissions=["booking:create", "booking:read", "booking:cancel", "quote:create", "transit:read"]
-        )
-
+    matched_persona = resolve_authoritative_session(
+        email=dto.email,
+        requested_role=dto.role,
+        vendor_id=dto.vendor_id,
+        provider="passkey"
+    )
     token = create_access_token(matched_persona)
     return {
         "success": True,
@@ -7820,6 +8421,249 @@ def sweep_support_sla():
         "actions_count": len(actions),
         "actions": actions
     }
+
+
+# ==============================================================================
+# AUTHORITATIVE FLEET INVENTORY & VENDOR GOOGLE SEO/ANALYTICS SUITE
+# ==============================================================================
+
+class VendorSeoUpdateDTO(BaseModel):
+    google_analytics_id: Optional[str] = None
+    google_tag_manager_id: Optional[str] = None
+    seo_title: Optional[str] = None
+    seo_description: Optional[str] = None
+    seo_keywords: Optional[str] = None
+    canonical_url: Optional[str] = None
+    og_image_url: Optional[str] = None
+
+
+@router.get("/vendors/{vendor_id}/fleet-inventory")
+@router.get("/fleet/catalog")
+def get_authoritative_fleet_inventory(vendor_id: Optional[str] = "vendor_anb_philly"):
+    """
+    Returns authoritative vehicle inventory from MySQL database with verified photo URLs,
+    capacities, and amenities without authentication requirement.
+    """
+    import json
+    from app.database_mysql import mysql_db, VehicleModel, VendorModel
+
+    session = mysql_db.get_session()
+    if not session:
+        # Fallback to local DB vehicles
+        from app.database import db
+        return [
+            {
+                "id": v.id,
+                "name": f"{v.make} {v.model}",
+                "make": v.make,
+                "model": v.model,
+                "year": getattr(v, "year", 2025),
+                "vehicle_class": v.vehicle_class.value if hasattr(v.vehicle_class, "value") else str(v.vehicle_class),
+                "passenger_capacity": getattr(v, "passenger_capacity", 4),
+                "luggage_capacity": getattr(v, "luggage_capacity", 3),
+                "license_plate": getattr(v, "license_plate", "PA-LM99"),
+                "exterior_color": getattr(v, "exterior_color", "Jet Black"),
+                "photo_url": getattr(v, "photo_url", "/assets/fleet/escalade.jpg") or "/assets/fleet/escalade.jpg",
+                "tagline": getattr(v, "tagline", "Sovereign Luxury Chauffeur Transport"),
+                "amenities": ["In-Cabin 5G Wi-Fi", "Complimentary Water & Mints", "Leather Seating"],
+                "photos": [
+                    {"photo_url": getattr(v, "photo_url", "/assets/fleet/escalade.jpg") or "/assets/fleet/escalade.jpg", "label": f"{v.make} {v.model}", "photo_type": "EXTERIOR"}
+                ],
+                "is_active": True
+            }
+            for v in db.vehicles.values()
+            if getattr(v, "vendor_id", "vendor-anb-philly").replace("-", "_") == (vendor_id or "vendor_anb_philly").replace("-", "_")
+        ]
+
+    try:
+        query = session.query(VehicleModel).filter(VehicleModel.is_active == True)
+        if vendor_id and vendor_id != "all":
+            v_clean = vendor_id.replace("-", "_")
+            v_dash = vendor_id.replace("_", "-")
+            query = query.filter((VehicleModel.vendor_id == v_clean) | (VehicleModel.vendor_id == v_dash))
+        
+        vehicles = query.all()
+        result = []
+        for v in vehicles:
+            amenities = []
+            if v.amenities_json:
+                try:
+                    amenities = json.loads(v.amenities_json)
+                except Exception:
+                    amenities = ["In-Cabin 5G Wi-Fi", "Complimentary Water & Mints", "Executive Leather Comfort Seating"]
+            else:
+                amenities = ["In-Cabin 5G Wi-Fi", "Complimentary Water & Mints", "Executive Leather Comfort Seating"]
+
+            photo = v.photo_url or "/assets/fleet/escalade.jpg"
+            result.append({
+                "id": v.id,
+                "name": f"{v.make} {v.model}",
+                "make": v.make,
+                "model": v.model,
+                "year": v.year,
+                "vehicle_class": v.vehicle_class,
+                "passenger_capacity": v.passenger_capacity,
+                "luggage_capacity": v.luggage_capacity,
+                "license_plate": v.license_plate,
+                "exterior_color": v.exterior_color,
+                "photo_url": photo,
+                "tagline": v.tagline or f"{v.make} {v.model} Sovereign Executive Chauffeur Vehicle",
+                "amenities": amenities,
+                "photos": [
+                    {"photo_url": photo, "label": f"{v.make} {v.model} - Exterior Profile", "photo_type": "EXTERIOR"}
+                ],
+                "is_active": v.is_active
+            })
+        return result
+    finally:
+        session.close()
+
+
+@router.get("/global-hub/vendors/{vendor_id}/seo")
+@router.get("/vendors/{vendor_id}/seo")
+@router.get("/seo")
+def get_vendor_seo_and_analytics(vendor_id: Optional[str] = "vendor_anb_philly"):
+    """
+    Retrieves vendor's authoritative Google SEO title, description, keywords, OpenGraph tags,
+    Google Analytics 4 Measurement ID, and structured JSON-LD LimousineService schema.
+    """
+    from app.database_mysql import mysql_db, VendorModel
+
+    session = mysql_db.get_session()
+    v_clean = (vendor_id or "vendor_anb_philly").replace("-", "_")
+    v_dash = (vendor_id or "vendor_anb_philly").replace("_", "-")
+
+    vendor = None
+    if session:
+        try:
+            vendor = session.query(VendorModel).filter((VendorModel.id == v_clean) | (VendorModel.id == v_dash)).first()
+        finally:
+            session.close()
+
+    v_name = vendor.name if vendor else "ANB Limo Executive Chauffeurs"
+    ga_id = (vendor.google_analytics_id if vendor else None) or "G-ANBPHILLY1"
+    gtm_id = (vendor.google_tag_manager_id if vendor else None) or "GTM-ANB01"
+    seo_title = (vendor.seo_title if vendor else None) or f"{v_name} | Luxury Chauffeur & Limousine Service"
+    seo_desc = (vendor.seo_description if vendor else None) or f"Premier executive ground transportation, airport transfers, and luxury SUV chauffeur services by {v_name}."
+    seo_kw = (vendor.seo_keywords if vendor else None) or f"{v_name}, executive limo, airport transfer, luxury chauffeur, black car"
+    canonical = (vendor.canonical_url if vendor else None) or f"https://book.{v_dash}.com"
+    og_image = (vendor.og_image_url if vendor else None) or "/assets/fleet/escalade.jpg"
+
+    return {
+        "vendor_id": v_clean,
+        "vendor_name": v_name,
+        "google_analytics_id": ga_id,
+        "google_tag_manager_id": gtm_id,
+        "seo_title": seo_title,
+        "seo_description": seo_desc,
+        "seo_keywords": seo_kw,
+        "canonical_url": canonical,
+        "og_image_url": og_image,
+        "schema_json_ld": {
+            "@context": "https://schema.org",
+            "@type": "LimousineService",
+            "name": v_name,
+            "telephone": getattr(vendor, "contact_phone", "+18005550199") if vendor else "+18005550199",
+            "email": getattr(vendor, "contact_email", "ops@anblimo.com") if vendor else "ops@anblimo.com",
+            "address": {
+                "@type": "PostalAddress",
+                "streetAddress": getattr(vendor, "office_address", "Center City Terminal") if vendor else "Center City Terminal",
+                "addressLocality": getattr(vendor, "office_city", "Philadelphia") if vendor else "Philadelphia",
+                "addressRegion": getattr(vendor, "office_state", "PA") if vendor else "PA",
+                "postalCode": getattr(vendor, "office_zip", "19104") if vendor else "19104",
+                "addressCountry": "US"
+            },
+            "geo": {
+                "@type": "GeoCoordinates",
+                "latitude": getattr(vendor, "office_lat", 39.9526) if vendor else 39.9526,
+                "longitude": getattr(vendor, "office_lng", -75.1652) if vendor else -75.1652
+            },
+            "priceRange": "$$$$",
+            "image": og_image,
+            "url": canonical
+        }
+    }
+
+
+@router.post("/vendors/{vendor_id}/seo")
+def update_vendor_seo_and_analytics(vendor_id: str, dto: VendorSeoUpdateDTO):
+    """
+    Updates Google Analytics tracking ID, GTM ID, and SEO metadata for a sovereign vendor in MySQL.
+    """
+    from app.database_mysql import mysql_db, VendorModel
+
+    session = mysql_db.get_session()
+    if not session:
+        raise HTTPException(status_code=500, detail="Database unavailable")
+
+    v_clean = vendor_id.replace("-", "_")
+    v_dash = vendor_id.replace("_", "-")
+
+    try:
+        vendor = session.query(VendorModel).filter((VendorModel.id == v_clean) | (VendorModel.id == v_dash)).first()
+        if not vendor:
+            raise HTTPException(status_code=404, detail=f"Vendor '{vendor_id}' not found in database.")
+
+        if dto.google_analytics_id is not None:
+            vendor.google_analytics_id = dto.google_analytics_id
+        if dto.google_tag_manager_id is not None:
+            vendor.google_tag_manager_id = dto.google_tag_manager_id
+        if dto.seo_title is not None:
+            vendor.seo_title = dto.seo_title
+        if dto.seo_description is not None:
+            vendor.seo_description = dto.seo_description
+        if dto.seo_keywords is not None:
+            vendor.seo_keywords = dto.seo_keywords
+        if dto.canonical_url is not None:
+            vendor.canonical_url = dto.canonical_url
+        if dto.og_image_url is not None:
+            vendor.og_image_url = dto.og_image_url
+
+        session.commit()
+        return {
+            "success": True,
+            "vendor_id": v_clean,
+            "message": f"Successfully updated SEO & Google Analytics configuration for {vendor.name} in MySQL.",
+            "google_analytics_id": vendor.google_analytics_id,
+            "seo_title": vendor.seo_title
+        }
+    finally:
+        session.close()
+
+
+# ==============================================================================
+# SOVEREIGN CELL CLEARINGHOUSE & ACCOUNTING RELAY (PCI-DSS ESCROW LEDGER)
+# ==============================================================================
+from packages.shared.database import get_db
+from sqlalchemy.orm import Session
+from packages.global_hub.backend.api import (
+    get_vendor_accounting_summary,
+    request_vendor_instant_payout,
+    export_vendor_statement_csv
+)
+
+
+@router.get("/global-hub/vendors/{vendor_id}/accounting/summary")
+def get_vendor_accounting_summary_cell_endpoint(vendor_id: str, db: Session = Depends(get_db)):
+    """
+    Returns authoritative financial summary, settled payouts, pending escrow,
+    tax liabilities, and driver compensation for a sovereign vendor cell.
+    """
+    return get_vendor_accounting_summary(vendor_id=vendor_id, db=db)
+
+
+@router.post("/global-hub/vendors/{vendor_id}/accounting/request-payout")
+def request_vendor_instant_payout_cell_endpoint(vendor_id: str, payload: Optional[Dict[str, Any]] = None, db: Session = Depends(get_db)):
+    """Triggers instant transfer of cleared available funds to the vendor's Stripe Connect account."""
+    return request_vendor_instant_payout(vendor_id=vendor_id, payload=payload, db=db)
+
+
+@router.get("/global-hub/vendors/{vendor_id}/accounting/statement-export")
+def export_vendor_statement_csv_cell_endpoint(vendor_id: str, db: Session = Depends(get_db)):
+    """Exports an official authoritative CSV accounting statement for accounting and CPA tax filing."""
+    return export_vendor_statement_csv(vendor_id=vendor_id, db=db)
+
+
 
 
 

@@ -108,6 +108,9 @@ export interface Quote {
   tax_gratuity_display_mode?: TaxGratuityDisplayMode;
   tax_rate: number;
   tax_amount: number;
+  tax_label?: string;
+  tax_name?: string;
+  tax_jurisdiction?: string;
   gratuity_rate: number;
   gratuity_amount: number;
   total_gross: number;

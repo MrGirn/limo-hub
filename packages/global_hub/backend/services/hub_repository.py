@@ -31,6 +31,13 @@ class HubRepository:
     def ensure_default_vetted_vendors(self):
         """Dynamically synchronizes registered affiliate vendor profiles from authoritative database & fleet registry."""
         from sqlalchemy import text
+        # Ensure schema has necessary columns
+        try:
+            self.db.execute(text("ALTER TABLE hub_vendor_profiles MODIFY COLUMN vehicle_makes TEXT;"))
+            self.db.commit()
+        except Exception:
+            self.db.rollback()
+
         for col_name, col_type in [
             ("health_status", "VARCHAR(32) DEFAULT 'ONLINE_HEALTHY'"),
             ("api_endpoint_url", "VARCHAR(255) DEFAULT 'http://localhost:8001'"),
@@ -48,100 +55,254 @@ class HubRepository:
             except Exception:
                 self.db.rollback()
 
-        # Synchronize from authoritative db.vendors & db.vehicles
+        # Synchronize from authoritative declarative YAML definitions in config/vendor_definitions/
         try:
-            from app.database import db as auth_db
-            has_changes = False
+            import os, glob, yaml
+            candidate_dirs = [
+                "config/vendor_definitions",
+                "/app/config/vendor_definitions",
+                os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../config/vendor_definitions")),
+                os.path.abspath("config/vendor_definitions")
+            ]
+            target_dir = None
+            for d in candidate_dirs:
+                if os.path.exists(d) and os.path.isdir(d):
+                    target_dir = d
+                    break
 
-            vendor_endpoint_map = {
-                "vendor_anb_philly": "http://localhost:8001",
-                "vendor_ny_executive": "http://localhost:8002",
-                "vendor_london_royal": "http://localhost:8003",
-                "vendor_dubai_emirates": "http://localhost:8004",
-                "vendor_boston_vip": "http://localhost:8005",
-                "vendor_miami_prestige_test": "http://localhost:8001",
-                "vendor_tokyo_sovereign": "http://localhost:8001",
-            }
+            if target_dir:
+                yaml_files = glob.glob(os.path.join(target_dir, "*.yaml")) + glob.glob(os.path.join(target_dir, "*.yml"))
+                vendor_endpoint_map = {
+                    "vendor_anb_philly": "http://localhost:8001",
+                    "vendor_ny_executive": "http://localhost:8002",
+                    "vendor_london_royal": "http://localhost:8003",
+                    "vendor_dubai_emirates": "http://localhost:8004",
+                    "vendor_boston_vip": "http://localhost:8005",
+                    "vendor_miami_prestige_test": "http://localhost:8001",
+                    "vendor_tokyo_sovereign": "http://localhost:8001",
+                }
 
-            for v_key, v in auth_db.vendors.items():
-                if "-" in v_key:
-                    continue  # skip hyphen aliases during profile loop
+                coords_map = {
+                    "Philadelphia": (39.9526, -75.1652),
+                    "New York": (40.7128, -74.0060),
+                    "London": (51.5074, -0.1278),
+                    "Dubai": (25.2048, 55.2708),
+                    "Boston": (42.3601, -71.0589),
+                    "Miami": (25.7617, -80.1918),
+                    "Tokyo": (35.6762, 139.6503),
+                }
 
-                # Normalize vendor ID to standard vnd_ format for global hub
-                hub_vid = "vnd_" + v_key[7:] if v_key.startswith("vendor_") else v_key
+                valid_vendor_ids = set()
 
-                # Discover real fleet vehicles registered to this vendor
-                veh_list = [
-                    veh for veh in getattr(auth_db, "vehicles", {}).values()
-                    if getattr(veh, "vendor_id", "") in (v_key, hub_vid, v.id) or veh.id.startswith(f"veh_{v_key}") or veh.id.startswith(f"veh_{hub_vid}")
-                ]
-                fleet_models = list(dict.fromkeys(
-                    f"{getattr(veh, 'make', '')} {getattr(veh, 'model', '')}".strip()
-                    for veh in veh_list if getattr(veh, "make", None)
-                ))
-                vehicle_makes_str = ", ".join(fleet_models[:3]) if fleet_models else (v.name or "Executive Fleet")
-                
-                # Sourced primary vehicle & plate from actual vehicles
-                primary_veh = veh_list[0] if veh_list else None
-                primary_veh_name = f"{primary_veh.make} {primary_veh.model}" if primary_veh and getattr(primary_veh, "make", None) else vehicle_makes_str
-                primary_plate = getattr(primary_veh, "license_plate", "PA 8492-LM") if primary_veh else "PA 8492-LM"
-                primary_driver = getattr(primary_veh, "assigned_driver_name", None) or getattr(v, "legal_name", "Marcus Vance")
+                for yf in yaml_files:
+                    if "vendor_golden_template" in os.path.basename(yf):
+                        continue
+                    try:
+                        with open(yf, "r", encoding="utf-8") as f:
+                            data = yaml.safe_load(f)
+                        if not data or not isinstance(data, dict):
+                            continue
 
-                city_name = v.office_city or "Philadelphia"
-                lat = float(v.office_lat or (39.8744 if "philly" in v_key else 40.7580))
-                lng = float(v.office_lng or (-75.2424 if "philly" in v_key else -73.9855))
-                radius = float(v.service_radius_miles or 150.0)
-                endpoint = vendor_endpoint_map.get(v_key, "http://localhost:8001")
+                        v_data = data.get("vendor", {})
+                        raw_id = v_data.get("id", "")
+                        if not raw_id:
+                            continue
 
-                existing = self.db.query(HubVendorProfileModel).filter(
-                    (HubVendorProfileModel.vendor_id == hub_vid) |
-                    (HubVendorProfileModel.vendor_id == v_key)
-                ).first()
+                        hub_vid = "vnd_" + raw_id[7:] if raw_id.startswith("vendor_") else raw_id
+                        valid_vendor_ids.add(hub_vid)
+                        valid_vendor_ids.add(raw_id)
 
-                if not existing:
-                    new_profile = HubVendorProfileModel(
-                        vendor_id=hub_vid,
-                        company_name=v.name or v.legal_name,
-                        market_city=city_name,
-                        airport_corridors_json=json.dumps(["PHL", "JFK", "EWR", "LGA", city_name]),
-                        rating_score=Decimal(str(v.rating or 4.95)),
-                        total_reviews_count=max(800, len(veh_list) * 60),
-                        fleet_size=max(1, len(veh_list)),
-                        vehicle_makes=vehicle_makes_str,
-                        amenities_json=json.dumps(["Free Wi-Fi", "Bottled Fiji Water", "Flight Radar Tracking", "Center City Express"]),
-                        cancellation_policy="Free cancellation up to 24 hours before pickup",
-                        business_class_base_rate_usd=Decimal("115.00"),
-                        first_class_base_rate_usd=Decimal("175.00"),
-                        business_van_base_rate_usd=Decimal("155.00"),
-                        round_robin_weight=100,
-                        health_status="ONLINE_HEALTHY",
-                        api_endpoint_url=endpoint,
-                        base_latitude=lat,
-                        base_longitude=lng,
-                        operating_radius_miles=radius,
-                        primary_chauffeur_name=primary_driver,
-                        primary_chauffeur_phone=v.contact_phone or "+1 (215) 555-0144",
-                        primary_vehicle_plate=primary_plate,
-                        primary_vehicle_name=primary_veh_name
-                    )
-                    self.db.add(new_profile)
-                    has_changes = True
-                else:
-                    existing.company_name = v.name or v.legal_name
-                    existing.market_city = city_name
-                    existing.fleet_size = max(1, len(veh_list))
-                    existing.vehicle_makes = vehicle_makes_str
-                    existing.base_latitude = lat
-                    existing.base_longitude = lng
-                    existing.operating_radius_miles = radius
-                    existing.api_endpoint_url = endpoint
-                    existing.health_status = "ONLINE_HEALTHY"
-                    has_changes = True
+                        company_name = v_data.get("name", "Executive Chauffeur Affiliate")
+                        city_name = v_data.get("city", "Philadelphia")
+                        
+                        branding = data.get("branding", {})
+                        pricing = data.get("pricing_matrix", {})
+                        compliance = data.get("telecom_compliance", {})
+                        stripe_cfg = data.get("stripe_connect", {})
 
-            if has_changes:
-                self.db.commit()
+                        legal_name = compliance.get("legal_business_name") or company_name
+                        ein = compliance.get("ein_tax_id")
+                        phone = branding.get("contact_phone") or "+1 (215) 555-0144"
+                        email = branding.get("contact_email") or f"info@{raw_id}.com"
+                        address = branding.get("office_address") or f"{city_name} Center"
+                        stripe_id = stripe_cfg.get("account_id") or f"acct_conn_{hub_vid}"
+
+                        # Live Fleet & Chauffeurs directly from Vendor Database & Microservice APIs
+                        from app.database_mysql import mysql_db, DriverModel, VehicleModel, VendorModel
+                        session = mysql_db.get_session()
+                        db_drivers = []
+                        db_vehicles = []
+                        v_db = None
+                        live_pricing = {}
+
+                        if session:
+                            try:
+                                norm_vid = raw_id.replace("vnd_", "vendor_").replace("-", "_")
+                                alias_vid = raw_id.replace("vnd_", "vendor-").replace("_", "-")
+                                db_drivers = session.query(DriverModel).filter(
+                                    (DriverModel.vendor_id == raw_id) | (DriverModel.vendor_id == hub_vid) |
+                                    (DriverModel.vendor_id == norm_vid) | (DriverModel.vendor_id == alias_vid)
+                                ).all()
+                                db_vehicles = session.query(VehicleModel).filter(
+                                    (VehicleModel.vendor_id == raw_id) | (VehicleModel.vendor_id == hub_vid) |
+                                    (VehicleModel.vendor_id == norm_vid) | (VehicleModel.vendor_id == alias_vid)
+                                ).all()
+                                v_db = session.query(VendorModel).filter(
+                                    (VendorModel.id == raw_id) | (VendorModel.id == hub_vid) |
+                                    (VendorModel.id == norm_vid) | (VendorModel.id == alias_vid)
+                                ).first()
+
+                                if v_db and getattr(v_db, "pricing_matrix_json", None):
+                                    try:
+                                        live_pricing = json.loads(v_db.pricing_matrix_json)
+                                    except Exception:
+                                        live_pricing = {}
+
+                                if not live_pricing:
+                                    # Seed initial pricing matrix to vendor DB on first boot
+                                    live_pricing = {
+                                        "vendor_id": raw_id,
+                                        "currency": v_db.currency if v_db else "USD",
+                                        "operating_radius_miles": float(pricing.get("operating_radius_miles", 65.0)),
+                                        "per_mile_rate_usd": float(pricing.get("per_mile_rate_usd") or pricing.get("deadhead_rate_per_mile_usd", 3.85)),
+                                        "deadhead_rate_per_mile_usd": float(pricing.get("deadhead_rate_per_mile_usd") or pricing.get("per_mile_rate_usd", 3.85)),
+                                        "business_class_base_rate_usd": float(pricing.get("business_class_base_rate_usd") or pricing.get("base_rate_usd", 115.00)),
+                                        "first_class_base_rate_usd": float(pricing.get("first_class_base_rate_usd") or (float(pricing.get("business_class_base_rate_usd", 115.00)) + 60.00)),
+                                        "business_van_base_rate_usd": float(pricing.get("business_van_base_rate_usd") or (float(pricing.get("business_class_base_rate_usd", 115.00)) + 40.00)),
+                                        "hourly_rate_usd": float(pricing.get("hourly_rate_usd", 85.00)),
+                                        "tax_rate_pct": float(pricing.get("tax_rate_pct", 8.0)),
+                                        "airport_meet_and_greet_usd": float(pricing.get("airport_meet_and_greet_usd", 45.0)),
+                                        "tolls_bridge_tunnel_usd": float(pricing.get("tolls_bridge_tunnel_usd", 12.5))
+                                    }
+                                    if v_db:
+                                        v_db.pricing_matrix_json = json.dumps(live_pricing)
+                                        session.commit()
+                            finally:
+                                session.close()
+
+                        fleet_count = len(db_vehicles) if db_vehicles else (len(db_drivers) if db_drivers else 1)
+                        makes_list = []
+                        for veh in db_vehicles:
+                            v_clean = f"{veh.make} {veh.model}".split("(")[0].strip()
+                            if v_clean and v_clean not in makes_list:
+                                makes_list.append(v_clean)
+
+                        primary_driver_name = "Marcus Vance"
+                        primary_driver_phone = phone
+                        primary_plate = "PA 8492-LM"
+                        primary_veh = "Lincoln Navigator L"
+
+                        if db_drivers:
+                            first_d = db_drivers[0]
+                            primary_driver_name = f"{first_d.first_name} {first_d.last_name}"
+                            primary_driver_phone = first_d.phone or phone
+                            if db_vehicles:
+                                matched_veh = db_vehicles[0]
+                                if first_d.current_vehicle_id:
+                                    matched_veh = next((v for v in db_vehicles if v.id == first_d.current_vehicle_id), db_vehicles[0])
+                                primary_plate = matched_veh.license_plate
+                                primary_veh = f"{matched_veh.make} {matched_veh.model}".split("(")[0].strip()
+
+                        vehicle_makes_str = ", ".join(makes_list[:4]) if makes_list else primary_veh
+
+                        rate_business = Decimal(str(live_pricing.get("business_class_base_rate_usd", 115.00)))
+                        rate_first = Decimal(str(live_pricing.get("first_class_base_rate_usd", 175.00)))
+                        rate_van = Decimal(str(live_pricing.get("business_van_base_rate_usd", 155.00)))
+                        hourly_rate = Decimal(str(live_pricing.get("hourly_rate_usd") or live_pricing.get("hourly_rate_business_usd", 85.00)))
+                        per_mile = Decimal(str(live_pricing.get("per_mile_rate_usd") or live_pricing.get("deadhead_rate_per_mile_usd", 3.85)))
+                        radius = float(live_pricing.get("operating_radius_miles", 65.0))
+                        lat, lng = coords_map.get(city_name, (39.9526, -75.1652))
+                        endpoint = vendor_endpoint_map.get(raw_id, "http://localhost:8001")
+
+                        # Live Stats from driver/trips database
+                        live_rating, live_rides = self.resolve_driver_live_stats(hub_vid, primary_driver_name)
+
+                        existing = self.db.query(HubVendorProfileModel).filter(
+                            (HubVendorProfileModel.vendor_id == hub_vid) |
+                            (HubVendorProfileModel.vendor_id == raw_id)
+                        ).first()
+
+                        if not existing:
+                            new_profile = HubVendorProfileModel(
+                                vendor_id=hub_vid,
+                                company_name=company_name,
+                                legal_business_name=legal_name,
+                                market_city=city_name,
+                                tax_id_ein=ein,
+                                primary_contact_phone=phone,
+                                primary_contact_email=email,
+                                headquarters_address=address,
+                                airport_corridors_json=json.dumps([city_name, "JFK", "PHL", "LHR", "DXB"]),
+                                rating_score=live_rating,
+                                total_reviews_count=live_rides,
+                                fleet_size=fleet_count,
+                                vehicle_makes=vehicle_makes_str,
+                                amenities_json=json.dumps(["Free Wi-Fi", "Bottled Fiji Water", "Flight Radar Tracking"]),
+                                cancellation_policy="Free cancellation up to 24 hours before pickup",
+                                business_class_base_rate_usd=rate_business,
+                                first_class_base_rate_usd=rate_first,
+                                business_van_base_rate_usd=rate_van,
+                                per_mile_rate_usd=per_mile,
+                                hourly_rate_business_usd=hourly_rate,
+                                round_robin_weight=100,
+                                account_status="ACTIVE",
+                                health_status="ONLINE_HEALTHY",
+                                api_endpoint_url=endpoint,
+                                stripe_connect_account_id=stripe_id,
+                                base_latitude=lat,
+                                base_longitude=lng,
+                                operating_radius_miles=radius,
+                                primary_chauffeur_name=primary_driver_name,
+                                primary_chauffeur_phone=primary_driver_phone,
+                                primary_vehicle_plate=primary_plate,
+                                primary_vehicle_name=primary_veh
+                            )
+                            self.db.add(new_profile)
+                        else:
+                            existing.company_name = company_name
+                            existing.legal_business_name = legal_name
+                            existing.market_city = city_name
+                            existing.tax_id_ein = ein
+                            existing.primary_contact_phone = phone
+                            existing.primary_contact_email = email
+                            existing.headquarters_address = address
+                            existing.fleet_size = fleet_count
+                            existing.vehicle_makes = vehicle_makes_str
+                            existing.base_latitude = lat
+                            existing.base_longitude = lng
+                            existing.api_endpoint_url = endpoint
+                            existing.stripe_connect_account_id = stripe_id
+                            existing.is_active = True
+                            existing.is_vetted_partner = True
+                            existing.account_status = "ACTIVE"
+                            existing.health_status = "ONLINE_HEALTHY"
+                            existing.operating_radius_miles = radius
+                            existing.business_class_base_rate_usd = rate_business
+                            existing.first_class_base_rate_usd = rate_first
+                            existing.business_van_base_rate_usd = rate_van
+                            existing.per_mile_rate_usd = per_mile
+                            existing.hourly_rate_business_usd = hourly_rate
+                            existing.rating_score = live_rating
+                            existing.total_reviews_count = live_rides
+                            existing.primary_chauffeur_name = primary_driver_name
+                            existing.primary_chauffeur_phone = primary_driver_phone
+                            existing.primary_vehicle_plate = primary_plate
+                            existing.primary_vehicle_name = primary_veh
+
+                        self.db.commit()
+                    except Exception as e:
+                        logger.warning(f"Error parsing vendor YAML {yf}: {e}")
+                        self.db.rollback()
+
+                # Clean up legacy synthetic / unverified vendor rows
+                if valid_vendor_ids:
+                    all_hub_vendors = self.db.query(HubVendorProfileModel).all()
+                    for sv in all_hub_vendors:
+                        if sv.vendor_id not in valid_vendor_ids:
+                            self.db.delete(sv)
+                    self.db.commit()
         except Exception as e:
-            logger.warning(f"Authoritative vendor synchronization notice: {e}")
+            logger.warning(f"Authoritative vendor YAML synchronization notice: {e}")
             self.db.rollback()
 
     def list_vetted_vendors(self, city: Optional[str] = None) -> List[HubVendorProfileModel]:
@@ -187,7 +348,7 @@ class HubRepository:
 
         # 2. Calculate true Haversine distance from pickup location to each vendor's operating base
         from app.services.google_maps_service import GoogleMapsService
-        scored_vendors: List[Tuple[HubVendorProfileModel, float]] = []
+        scored_vendors: List[Tuple[HubVendorProfileModel, float, bool]] = []
 
         resolved_city = self.resolve_market_city(pickup_address, dropoff_address)
 
@@ -196,25 +357,20 @@ class HubRepository:
             v_lng = v.base_longitude or -75.1652
             dist_miles = GoogleMapsService.haversine_distance_miles(pickup_lat, pickup_lng, v_lat, v_lng)
             
-            # City / Corridor Match Bonus for high fidelity local grouping
             p_lower = (pickup_address or "").lower()
-            if v.market_city.lower() in p_lower or resolved_city.lower() == v.market_city.lower():
-                # Primary local market match
-                scored_vendors.append((v, dist_miles))
-            else:
-                scored_vendors.append((v, dist_miles))
+            is_match = (v.market_city.lower() in p_lower) or (resolved_city.lower() == v.market_city.lower()) or (city_match := v.market_city.lower() in resolved_city.lower())
+            scored_vendors.append((v, dist_miles, is_match))
 
-        # 3. Sort by proximity distance in miles (nearest first)
-        scored_vendors.sort(key=lambda item: item[1])
+        # 3. Sort: exact market match first, then by distance
+        scored_vendors.sort(key=lambda item: (0 if item[2] else 1, item[1]))
 
-        # Filter to vendors within operating radius or matching market cluster
         nearest_cluster = [
-            item for item in scored_vendors
-            if item[1] <= (item[0].operating_radius_miles or 150.0) or item[0].market_city.lower() == resolved_city.lower()
+            (item[0], item[1]) for item in scored_vendors
+            if item[2] or item[1] <= (item[0].operating_radius_miles or 150.0)
         ]
 
         if not nearest_cluster:
-            nearest_cluster = scored_vendors[:3]
+            nearest_cluster = [(item[0], item[1]) for item in scored_vendors[:3]]
 
         return nearest_cluster
 
@@ -264,7 +420,8 @@ class HubRepository:
         vehicle_class: str = "LUXURY_SUV",
         hourly_duration: int = 3,
         stops_count: int = 0,
-        multi_city_legs: Optional[List[Dict[str, Any]]] = None
+        multi_city_legs: Optional[List[Dict[str, Any]]] = None,
+        intermediate_stops: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """Calculates authoritative dynamic pricing from registered vendor rate cards + marketplace rules across One-way, Hourly & Multi-City."""
         self.ensure_default_vetted_vendors()
@@ -274,8 +431,10 @@ class HubRepository:
         from app.domain_models import ServiceType as DomainServiceType, VehicleClass as DomainVehicleClass
         from app.services.google_maps_service import GoogleMapsService
 
+        clean_stops = [s.strip() for s in (intermediate_stops or []) if s and s.strip()]
+        effective_stops_count = max(stops_count, len(clean_stops))
         stop_rate = cfg.intermediate_stop_fee_usd or Decimal("15.00")
-        stop_fee = Decimal(str(stops_count)) * stop_rate
+        stop_fee = Decimal(str(effective_stops_count)) * stop_rate
         free_cancellation_hrs = cfg.free_cancellation_hours or 24
 
         servicing_pct = (cfg.servicing_affiliate_payout_pct or Decimal("80.00")) / Decimal("100.00")
@@ -373,11 +532,11 @@ class HubRepository:
                 q_van = v_matrix.get("BUSINESS_VAN") or list(v_matrix.values())[0]
 
                 v_rates = {
-                    "LUXURY_SUV": {"base_fare_usd": float(q_suv.subtotal_net), "fees_and_taxes_usd": float(q_suv.tax_amount + stop_fee), "total_fare_usd": float(q_suv.final_payable_amount + stop_fee)},
-                    "FIRST_CLASS": {"base_fare_usd": float(q_first.subtotal_net), "fees_and_taxes_usd": float(q_first.tax_amount + stop_fee), "total_fare_usd": float(q_first.final_payable_amount + stop_fee)},
-                    "BUSINESS_SEDAN": {"base_fare_usd": float(q_sedan.subtotal_net), "fees_and_taxes_usd": float(q_sedan.tax_amount + stop_fee), "total_fare_usd": float(q_sedan.final_payable_amount + stop_fee)},
-                    "BUSINESS_CLASS": {"base_fare_usd": float(q_sedan.subtotal_net), "fees_and_taxes_usd": float(q_sedan.tax_amount + stop_fee), "total_fare_usd": float(q_sedan.final_payable_amount + stop_fee)},
-                    "BUSINESS_VAN": {"base_fare_usd": float(q_van.subtotal_net), "fees_and_taxes_usd": float(q_van.tax_amount + stop_fee), "total_fare_usd": float(q_van.final_payable_amount + stop_fee)}
+                    "LUXURY_SUV": {"base_fare_usd": float(q_suv.subtotal_net), "fees_and_taxes_usd": float(q_suv.tax_amount + q_suv.gratuity_amount + stop_fee), "total_fare_usd": float(q_suv.final_payable_amount + stop_fee)},
+                    "FIRST_CLASS": {"base_fare_usd": float(q_first.subtotal_net), "fees_and_taxes_usd": float(q_first.tax_amount + q_first.gratuity_amount + stop_fee), "total_fare_usd": float(q_first.final_payable_amount + stop_fee)},
+                    "BUSINESS_SEDAN": {"base_fare_usd": float(q_sedan.subtotal_net), "fees_and_taxes_usd": float(q_sedan.tax_amount + q_sedan.gratuity_amount + stop_fee), "total_fare_usd": float(q_sedan.final_payable_amount + stop_fee)},
+                    "BUSINESS_CLASS": {"base_fare_usd": float(q_sedan.subtotal_net), "fees_and_taxes_usd": float(q_sedan.tax_amount + q_sedan.gratuity_amount + stop_fee), "total_fare_usd": float(q_sedan.final_payable_amount + stop_fee)},
+                    "BUSINESS_VAN": {"base_fare_usd": float(q_van.subtotal_net), "fees_and_taxes_usd": float(q_van.tax_amount + q_van.gratuity_amount + stop_fee), "total_fare_usd": float(q_van.final_payable_amount + stop_fee)}
                 }
                 v_amenities = json.loads(v.amenities_json) if isinstance(v.amenities_json, str) else (v.amenities_json or ["Free Wi-Fi", "Bottled Water"])
                 city_vendors.append({
@@ -465,6 +624,7 @@ class HubRepository:
                 "service_type": "MULTI_CITY",
                 "total_legs_count": len(multi_city_legs),
                 "legs_breakdown": legs_summary,
+                "legs_summary": legs_summary,
                 "vehicle_class": vehicle_class,
                 "servicing_vendor_id": vendor_id,
                 "servicing_vendor_name": vendor_name,
@@ -482,19 +642,38 @@ class HubRepository:
 
         else:
             # ONE_WAY Calculation
+            dropoff_addr = dropoff or "John F. Kennedy International Airport (JFK)"
+            
+            # Check for Multi-Stop Intermediate Waypoints
+            multi_route = None
+            custom_distance_miles = None
+            if clean_stops:
+                multi_route = GoogleMapsService.calculate_multi_stop_route(
+                    pickup=pickup,
+                    intermediate_stops=clean_stops,
+                    dropoff=dropoff_addr
+                )
+                custom_distance_miles = Decimal(str(multi_route["passenger_distance_miles"]))
+                duration_minutes = multi_route["passenger_duration_minutes"]
+                distance_miles = float(custom_distance_miles)
+            else:
+                maps_route = GoogleMapsService.calculate_road_distance_and_duration(pickup, dropoff_addr)
+                distance_miles = float(maps_route.get("distance_miles", Decimal("15.00")))
+                duration_minutes = int(maps_route.get("duration_minutes") or (173 if distance_miles > 100 else int(distance_miles * 1.5)))
+
             primary_matrix = PricingService.calculate_quote_matrix(
                 tenant_id="tenant-us-east",
                 vendor_id=active_vendor_key,
                 service_type=DomainServiceType.POINT_TO_POINT,
                 pickup_address=pickup,
-                dropoff_address=dropoff or "John F. Kennedy International Airport (JFK)"
+                dropoff_address=dropoff_addr,
+                distance_miles=custom_distance_miles
             )
             
             primary_quote = primary_matrix.get(target_vc_key) or list(primary_matrix.values())[0]
 
-            distance_miles = float(primary_quote.distance_miles)
-            maps_route = GoogleMapsService.calculate_road_distance_and_duration(pickup, dropoff or "John F. Kennedy International Airport (JFK)")
-            duration_minutes = int(maps_route.get("duration_minutes") or (173 if distance_miles > 100 else int(distance_miles * 1.5)))
+            if not clean_stops:
+                distance_miles = float(primary_quote.distance_miles)
             base_rate = primary_quote.subtotal_net
             fees_and_taxes = primary_quote.tax_amount + primary_quote.gratuity_amount + stop_fee
             total = primary_quote.final_payable_amount + stop_fee
@@ -513,7 +692,8 @@ class HubRepository:
                     vendor_id=v_key,
                     service_type=DomainServiceType.POINT_TO_POINT,
                     pickup_address=pickup,
-                    dropoff_address=dropoff or "John F. Kennedy International Airport (JFK)"
+                    dropoff_address=dropoff_addr,
+                    distance_miles=custom_distance_miles
                 )
                 
                 q_suv = v_matrix.get("LUXURY_SUV") or v_matrix.get("SUV") or list(v_matrix.values())[0]
@@ -577,10 +757,13 @@ class HubRepository:
                 "service_type": "ONE_WAY",
                 "pickup": pickup,
                 "dropoff": dropoff or "Manhattan, New York, NY",
+                "intermediate_stops": clean_stops,
                 "vehicle_class": vehicle_class,
                 "distance_miles": round(distance_miles, 1),
                 "duration_minutes": duration_minutes,
-                "stops_count": stops_count,
+                "stops_count": effective_stops_count,
+                "intermediate_stop_fee_usd": float(stop_fee),
+                "route_segments": multi_route["segments"] if multi_route else None,
                 "tolls_usd": float(detected_tolls),
                 "servicing_vendor_id": vendor_id,
                 "servicing_vendor_name": vendor_name,
@@ -712,7 +895,10 @@ class HubRepository:
         sourcing_mode: str = "AUTO_ROUTED",
         selected_vendor_id: Optional[str] = None,
         base_fare: Decimal = Decimal("125.00"),
-        fees_and_taxes: Decimal = Decimal("20.00")
+        fees_and_taxes: Decimal = Decimal("20.00"),
+        payment_method: str = "CARD",
+        stripe_payment_intent_id: Optional[str] = None,
+        intermediate_stops: Optional[List[str]] = None
     ) -> HubMasterBookingModel:
         self.ensure_default_vetted_vendors()
         
@@ -751,7 +937,26 @@ class HubRepository:
         vehicle_model = assigned_vendor.primary_vehicle_name if (assigned_vendor and getattr(assigned_vendor, "primary_vehicle_name", None)) else "Lincoln Navigator L / Mercedes-Benz S-Class"
 
         # Resolve live chauffeur rating and completed lifetime trips
-        driver_rating, driver_rides = self.resolve_driver_live_stats(v_id, chauffeur_name)
+        # Capture Immutable Rate Card & Terms Snapshot (Section 5)
+        rate_snapshot = {
+            "vendor_id": v_id,
+            "vendor_name": v_name,
+            "business_class_base_rate_usd": float(assigned_vendor.business_class_base_rate_usd) if assigned_vendor and assigned_vendor.business_class_base_rate_usd else 125.0,
+            "first_class_base_rate_usd": float(assigned_vendor.first_class_base_rate_usd) if assigned_vendor and assigned_vendor.first_class_base_rate_usd else 185.0,
+            "business_van_base_rate_usd": float(assigned_vendor.business_van_base_rate_usd) if assigned_vendor and assigned_vendor.business_van_base_rate_usd else 165.0,
+            "hourly_rate_business_usd": float(assigned_vendor.hourly_rate_business_usd) if assigned_vendor and assigned_vendor.hourly_rate_business_usd else 85.0,
+            "per_mile_rate_usd": float(assigned_vendor.per_mile_rate_usd) if assigned_vendor and assigned_vendor.per_mile_rate_usd else 4.25,
+            "waiting_time_rate_per_min_usd": float(assigned_vendor.waiting_time_rate_per_min_usd) if assigned_vendor and assigned_vendor.waiting_time_rate_per_min_usd else 1.25,
+            "operating_radius_miles": float(assigned_vendor.operating_radius_miles) if assigned_vendor and assigned_vendor.operating_radius_miles else 150.0,
+            "snapshot_timestamp_utc": datetime.now(timezone.utc).isoformat()
+        }
+        terms_snapshot = {
+            "cancellation_policy": assigned_vendor.cancellation_policy if assigned_vendor and assigned_vendor.cancellation_policy else "Free cancellation up to 24 hours before pickup",
+            "base_fare_usd": float(base_fare),
+            "fees_and_taxes_usd": float(fees_and_taxes),
+            "total_amount_usd": float(total_fare),
+            "currency": "USD"
+        }
 
         booking = HubMasterBookingModel(
             booking_reference=booking_ref,
@@ -775,6 +980,10 @@ class HubRepository:
             base_fare_usd=base_fare,
             fees_and_taxes_usd=fees_and_taxes,
             total_amount_usd=total_fare,
+            payment_method=payment_method,
+            stripe_payment_intent_id=stripe_payment_intent_id,
+            rate_card_snapshot_json=json.dumps(rate_snapshot),
+            commercial_terms_snapshot_json=json.dumps(terms_snapshot),
             sourcing_mode=sourcing_mode,
             assigned_vendor_id=v_id,
             assigned_vendor_name=v_name,
@@ -784,6 +993,55 @@ class HubRepository:
         )
         self.db.add(booking)
         self.db.flush()
+
+        # Multi-Stop Routing: Persist Authoritative Master Itinerary and HubLegModel records for each route segment
+        if intermediate_stops:
+            clean_stops = [s.strip() for s in intermediate_stops if s and s.strip()]
+            if clean_stops:
+                all_stops = [pickup_address] + clean_stops + [dropoff_address]
+                itin = HubItineraryModel(
+                    title=f"Multi-Stop Route: {pickup_address.split(',')[0]} to {dropoff_address.split(',')[0]}",
+                    total_legs_count=len(all_stops) - 1,
+                    customer_name=f"{passenger_first_name} {passenger_last_name}",
+                    customer_email=passenger_email.strip().lower(),
+                    customer_phone=passenger_phone,
+                    subtotal_net_usd=base_fare,
+                    all_inclusive_total_usd=total_fare,
+                    status="CONFIRMED"
+                )
+                self.db.add(itin)
+                self.db.flush()
+
+                try:
+                    from app.services.google_maps_service import GoogleMapsService
+                    ms_route = GoogleMapsService.calculate_multi_stop_route(
+                        pickup=pickup_address,
+                        intermediate_stops=clean_stops,
+                        dropoff=dropoff_address
+                    )
+                    segments = ms_route.get("route_segments", [])
+                except Exception:
+                    segments = []
+
+                for i in range(len(all_stops) - 1):
+                    p1 = all_stops[i]
+                    p2 = all_stops[i + 1]
+                    seg_dist = Decimal(str(segments[i]["distance_miles"])) if i < len(segments) and "distance_miles" in segments[i] else Decimal("10.00")
+                    leg = HubLegModel(
+                        itinerary_id=itin.itinerary_id,
+                        booking_id=booking.booking_id,
+                        leg_index=i + 1,
+                        title=f"Leg {i + 1}: {p1.split(',')[0]} to {p2.split(',')[0]}",
+                        origin_city=market_city,
+                        origin_address=p1,
+                        destination_city=market_city,
+                        destination_address=p2,
+                        distance_miles=seg_dist,
+                        vehicle_class=vehicle_class,
+                        servicing_vendor_id=v_id
+                    )
+                    self.db.add(leg)
+                self.db.flush()
 
         # Generate Collision-Free Single Unified Invoice (INV-GH-2026-XXXX)
         inv_number = f"INV-GH-2026-{random.randint(10000, 99999)}"
@@ -812,6 +1070,9 @@ class HubRepository:
                 start_lng = float(geo_start["lng"])
         except Exception:
             pass
+
+        # Resolve live chauffeur rating and completed lifetime trips
+        driver_rating, driver_rides = self.resolve_driver_live_stats(v_id, chauffeur_name)
 
         # Initialize Real GPS Telemetry record for Live Tracking (Page 11)
         telemetry = HubDriverTelemetryModel(
@@ -845,6 +1106,7 @@ class HubRepository:
             platform_clearing_fee_usd=(total_fare * platform_pct).quantize(Decimal("0.01")),
             servicing_vendor_id=booking.assigned_vendor_id,
             originating_vendor_id="global_hub_public_web",
+            stripe_payment_intent_id=stripe_payment_intent_id,
             status="PREAUTH_HELD"
         )
         self.db.add(settlement)
@@ -854,6 +1116,13 @@ class HubRepository:
 
         # Dispatch & Farm Out Booking to the Performing Sovereign Vendor Cell
         self.farm_out_to_vendor_cell(assigned_vendor, booking)
+
+        # Dispatch Transactional Email & SMS Notifications (Sprint 2)
+        try:
+            from packages.global_hub.backend.services.notification_service import GlobalHubNotificationService
+            GlobalHubNotificationService.dispatch_booking_notifications(booking, invoice)
+        except Exception as e:
+            logger.warning(f"Notification dispatch notice: {e}")
 
         return booking
 
@@ -962,9 +1231,23 @@ class HubRepository:
             self.db.commit()
             self.db.refresh(telemetry)
 
+        flight_data = None
+        if booking.flight_number:
+            flight_data = {
+                "flight_number": booking.flight_number,
+                "status": getattr(booking, "flight_status", None) or "ON_SCHEDULE",
+                "delay_minutes": getattr(booking, "flight_delay_minutes", 0) or 0,
+                "terminal": getattr(booking, "flight_terminal", None) or "Main Terminal",
+                "gate": getattr(booking, "flight_gate", None) or "Gate Arrival",
+                "baggage_carousel": getattr(booking, "flight_baggage_claim", None) or "Baggage Claim",
+                "grace_period_minutes": getattr(booking, "flight_grace_period_minutes", 60) or 60,
+                "estimated_arrival_utc": booking.flight_estimated_arrival_utc.isoformat() if getattr(booking, "flight_estimated_arrival_utc", None) else None
+            }
+
         return {
             "booking_reference": booking.booking_reference,
             "status": booking.status,
+            "status_text": telemetry.status_text,
             "pickup": booking.pickup_address,
             "dropoff": booking.dropoff_address,
             "dateTime": booking.pickup_datetime_str,
@@ -989,7 +1272,8 @@ class HubRepository:
                 "speed_mph": telemetry.speed_mph,
                 "eta_minutes": telemetry.eta_minutes,
                 "status_text": telemetry.status_text
-            }
+            },
+            "flight_status": flight_data
         }
 
     # --- CLEARINGHOUSE SPLIT CONFIGURATION ---
@@ -1010,7 +1294,7 @@ class HubRepository:
             self.db.refresh(cfg)
         return cfg
 
-    # --- BOOKING LIFECYCLE: CANCELLATIONS & AMENDMENTS ---
+    # --- BOOKING LIFECYCLE: CANCELLATIONS, COMPLETION & SETTLEMENTS ---
     def cancel_booking(self, reference: str, cancellation_reason: Optional[str] = None) -> Optional[HubMasterBookingModel]:
         """Cancels booking and releases escrow hold in authoritative double-entry ledger."""
         booking = self.get_booking_by_reference(reference)
@@ -1019,6 +1303,11 @@ class HubRepository:
 
         booking.status = "CANCELLED"
         booking.updated_at = datetime.utcnow()
+
+        # Cancel or refund payment intent if held via Stripe API
+        from packages.global_hub.backend.services.escrow_settlement import GlobalHubEscrowSettlement
+        if booking.stripe_payment_intent_id:
+            GlobalHubEscrowSettlement.cancel_or_refund_payment(booking.stripe_payment_intent_id)
 
         if booking.settlement:
             booking.settlement.status = "CANCELLED_REFUNDED"
@@ -1029,6 +1318,46 @@ class HubRepository:
         ).first()
         if telemetry:
             telemetry.status_text = f"Cancelled: {cancellation_reason or 'Passenger requested cancellation'}"
+
+        self.db.commit()
+        self.db.refresh(booking)
+        return booking
+
+    def complete_and_settle_booking(self, reference: str) -> Optional[HubMasterBookingModel]:
+        """
+        Marks booking as COMPLETED, captures pre-auth escrow funds, 
+        and executes the automated 80/10/10 Stripe Connect split payout.
+        """
+        booking = self.get_booking_by_reference(reference)
+        if not booking:
+            return None
+
+        booking.status = "COMPLETED"
+        booking.updated_at = datetime.utcnow()
+
+        if booking.invoice:
+            booking.invoice.payment_status = "SETTLED"
+
+        # Execute live or connected Stripe Connect transfer for the 80% servicing payout
+        if booking.settlement:
+            vendor = self.db.query(HubVendorProfileModel).filter(
+                HubVendorProfileModel.vendor_id == booking.assigned_vendor_id
+            ).first()
+            stripe_acct = vendor.stripe_connect_account_id if vendor else "acct_test_affiliate80"
+            from packages.global_hub.backend.services.escrow_settlement import GlobalHubEscrowSettlement
+            GlobalHubEscrowSettlement.execute_live_stripe_split_transfer(
+                db=self.db,
+                booking_id=booking.booking_id,
+                servicing_stripe_account=stripe_acct
+            )
+
+        telemetry = self.db.query(HubDriverTelemetryModel).filter(
+            HubDriverTelemetryModel.booking_id == booking.booking_id
+        ).first()
+        if telemetry:
+            telemetry.status_text = "Trip Completed - Thank you for riding with Global Hub."
+            telemetry.speed_mph = 0.0
+            telemetry.eta_minutes = 0
 
         self.db.commit()
         self.db.refresh(booking)
@@ -1100,7 +1429,7 @@ class HubRepository:
         self.db.refresh(telemetry)
         return telemetry
 
-    # --- FLIGHT RADAR & AIRPORT DELAY INGESTION ---
+    # --- FLIGHT RADAR & AIRPORT DELAY INGESTION (SPRINT 4) ---
     def process_flight_status_webhook(
         self,
         flight_number: str,
@@ -1108,7 +1437,7 @@ class HubRepository:
         estimated_arrival_str: Optional[str] = None,
         delay_minutes: int = 0
     ) -> List[HubMasterBookingModel]:
-        """Auto-adjusts airport pickup schedule when flights are delayed."""
+        """Auto-adjusts airport pickup schedule and chauffeur telemetry when flights are delayed, airborne, or landed."""
         clean_flight = flight_number.strip().upper()
         bookings = self.db.query(HubMasterBookingModel).filter(
             HubMasterBookingModel.flight_number == clean_flight,
@@ -1116,10 +1445,130 @@ class HubRepository:
         ).all()
 
         for b in bookings:
-            if delay_minutes > 0:
+            status_upper = flight_status.upper()
+            if status_upper == "DELAYED":
                 b.special_requests = f"[Flight Radar Update]: Flight {clean_flight} delayed by {delay_minutes} min. New ETA: {estimated_arrival_str or 'Adjusted'}."
+                if estimated_arrival_str:
+                    b.pickup_datetime_str = f"Estimated: {estimated_arrival_str} (Delayed +{delay_minutes}m)"
+            elif status_upper == "AIRBORNE":
+                b.special_requests = f"[Flight Radar]: Flight {clean_flight} Airborne. ETA: {estimated_arrival_str or 'On Time'}."
+            elif status_upper == "LANDED":
+                b.special_requests = f"[Flight Radar]: Flight {clean_flight} Touchdown Landed. Meet at Baggage Claim."
+            elif status_upper in ["DIVERTED", "CANCELLED"]:
+                b.special_requests = f"[URGENT - Flight Radar]: Flight {clean_flight} {status_upper}. Dispatch staging on standby."
+
             b.updated_at = datetime.utcnow()
+
+            # Update driver GPS telemetry status alert
+            telemetry = self.db.query(HubDriverTelemetryModel).filter(
+                HubDriverTelemetryModel.booking_id == b.booking_id
+            ).first()
+            if telemetry:
+                if status_upper == "DELAYED":
+                    telemetry.status_text = f"Flight {clean_flight} delayed +{delay_minutes}m. Stage adjusted to {estimated_arrival_str or 'new ETA'}."
+                    telemetry.eta_minutes = max(5, telemetry.eta_minutes + delay_minutes)
+                elif status_upper == "LANDED":
+                    telemetry.status_text = f"Flight {clean_flight} Landed. Chauffeur staging at Baggage Claim Meet & Greet."
+                    telemetry.eta_minutes = 2
+                elif status_upper == "AIRBORNE":
+                    telemetry.status_text = f"Flight {clean_flight} Airborne. In transit to destination airport."
 
         self.db.commit()
         return bookings
+
+    # --- SOURCING DESK: REVERSE AUCTION RFPS (SPRINT 4) ---
+    def dispatch_sourcing_rfp(
+        self,
+        itinerary_id: str,
+        leg_id: str,
+        target_city: str,
+        pickup_address: str,
+        dropoff_address: str,
+        pickup_time_utc: datetime,
+        vehicle_class: str = "BUSINESS_CLASS",
+        benchmark_payout_usd: Decimal = Decimal("185.00"),
+        vendor_targets: Optional[List[Dict[str, str]]] = None
+    ) -> List[HubRFPModel]:
+        """Dispatches encrypted reverse-auction RFP opportunities to qualified network affiliates."""
+        created_rfps = []
+        targets = vendor_targets or [
+            {"name": "Tri-State Executive Logistics", "email": "dispatch@tristatelimo.com", "phone": "+1 (215) 555-8811"},
+            {"name": "Keystone Premier Chauffeurs", "email": "operations@keystoneblackcar.com", "phone": "+1 (215) 555-9922"}
+        ]
+
+        from datetime import timedelta
+        escalation_deadline = datetime.utcnow() + timedelta(minutes=45)
+
+        for target in targets:
+            quote_token = f"rfp_tok_{uuid.uuid4().hex[:16]}"
+            rfp = HubRFPModel(
+                itinerary_id=itinerary_id,
+                leg_id=leg_id,
+                target_city=target_city,
+                target_vendor_name=target.get("name", "Vetted Network Affiliate"),
+                target_vendor_email=target.get("email", "affiliate@limo.hub"),
+                target_vendor_phone=target.get("phone", "+1 800 555 0199"),
+                pickup_address=pickup_address,
+                dropoff_address=dropoff_address,
+                pickup_time_utc=pickup_time_utc,
+                vehicle_class=vehicle_class,
+                benchmark_payout_usd=benchmark_payout_usd,
+                status="AI_DISPATCHED",
+                quote_token=quote_token,
+                escalation_deadline_utc=escalation_deadline
+            )
+            self.db.add(rfp)
+            created_rfps.append(rfp)
+
+        self.db.commit()
+        return created_rfps
+
+    def accept_sourcing_rfp(
+        self,
+        quote_token: str,
+        vendor_id: str,
+        quoted_rate_usd: Decimal,
+        chauffeur_name: str,
+        chauffeur_phone: str,
+        vehicle_plate: str
+    ) -> Optional[HubRFPModel]:
+        """Binds first accepting affiliate to the RFP and outbids/rejects competitors for the same leg."""
+        winning_rfp = self.db.query(HubRFPModel).filter(
+            HubRFPModel.quote_token == quote_token,
+            HubRFPModel.status == "AI_DISPATCHED"
+        ).first()
+
+        if not winning_rfp:
+            return None
+
+        # Bind winning RFP
+        winning_rfp.status = "ACCEPTED_BOUND"
+        winning_rfp.quoted_rate_usd = quoted_rate_usd
+
+        # Reject all other competing RFPs for the same leg
+        competing_rfps = self.db.query(HubRFPModel).filter(
+            HubRFPModel.leg_id == winning_rfp.leg_id,
+            HubRFPModel.rfp_id != winning_rfp.rfp_id,
+            HubRFPModel.status == "AI_DISPATCHED"
+        ).all()
+        for cr in competing_rfps:
+            cr.status = "REJECTED_OUTBID"
+
+        # Update Master Leg or Booking if linked
+        leg = self.db.query(HubLegModel).filter(HubLegModel.leg_id == winning_rfp.leg_id).first()
+        if leg:
+            leg.servicing_vendor_id = vendor_id
+            leg.price_status = "LOCKED_IN_NETWORK"
+            leg.total_leg_amount_usd = quoted_rate_usd
+
+        self.db.commit()
+        self.db.refresh(winning_rfp)
+        return winning_rfp
+
+    def list_active_rfps(self, target_city: Optional[str] = None) -> List[HubRFPModel]:
+        """Lists all open RFPs currently accepting affiliate bids."""
+        query = self.db.query(HubRFPModel).filter(HubRFPModel.status == "AI_DISPATCHED")
+        if target_city:
+            query = query.filter(HubRFPModel.target_city.ilike(f"%{target_city}%"))
+        return query.order_by(HubRFPModel.sent_at_utc.desc()).all()
 

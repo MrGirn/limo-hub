@@ -21,8 +21,9 @@ from app.database import db
 class VendorPricingAIService:
     @staticmethod
     def get_vendor_pricing_rule(vendor_id: str, vehicle_class: VehicleClass) -> VendorPricingRule:
-        """Fetch custom vendor pricing rule for a specific vehicle tier, or construct a calibrated rule from vendor configuration."""
-        vendor_rules = db.vendor_pricing_rules.get(vendor_id, {})
+        norm_id = vendor_id.replace("-", "_") if vendor_id else ""
+        alias_id = vendor_id.replace("_", "-") if vendor_id else ""
+        vendor_rules = db.vendor_pricing_rules.get(vendor_id) or db.vendor_pricing_rules.get(norm_id) or db.vendor_pricing_rules.get(alias_id) or {}
         if vehicle_class.value in vendor_rules:
             return vendor_rules[vehicle_class.value]
         
@@ -49,6 +50,7 @@ class VendorPricingAIService:
         per_mile = round(Decimal("3.85") * fx_multiplier, 2)
         airport_surcharge = round(regional_rule.airport_access_fee * fx_multiplier, 2)
         tax_rate = regional_rule.vat_or_sales_tax_rate
+        tax_label = getattr(vendor, "tax_label", None) or getattr(regional_rule, "tax_name", None) or "State & Municipal Sales Taxes"
         
         fuel_pct = Decimal(str(getattr(vendor, "fuel_surcharge_pct", 0.0) or 0.0))
         service_pct = Decimal(str(getattr(vendor, "service_charge_pct", 0.0) or 0.0))
@@ -63,20 +65,64 @@ class VendorPricingAIService:
         late_night_fee = getattr(vendor, "late_night_surcharge_net", None)
         meet_greet_fee = getattr(vendor, "inside_baggage_meet_and_greet_fee_net", None)
 
-        # 1. Dynamic extraction from vendor configuration / YAML pricing_matrix
+        # 1. Authoritative dynamic extraction from vendor database / live pricing_matrix
         pm = getattr(vendor, "pricing_matrix", None)
+        try:
+            from app.database_mysql import mysql_db, VendorModel
+            import json as _json
+            session = mysql_db.get_session()
+            if session and vendor_id:
+                try:
+                    norm_vid = vendor_id.replace("vnd_", "vendor_").replace("-", "_")
+                    alias_vid = vendor_id.replace("vnd_", "vendor-").replace("_", "-")
+                    db_v = session.query(VendorModel).filter(
+                        (VendorModel.id == vendor_id) | (VendorModel.id == norm_vid) | (VendorModel.id == alias_vid)
+                    ).first()
+                    if db_v and getattr(db_v, "pricing_matrix_json", None):
+                        pm_db = _json.loads(db_v.pricing_matrix_json)
+                        if isinstance(pm_db, dict):
+                            pm = pm_db
+                finally:
+                    session.close()
+        except Exception:
+            pass
+
+        pricing_model_type = "DYNAMIC_MATRIX"
+        tax_gratuity_display_mode = None
+        surcharge_stacking_mode = "HIGHEST_ONLY"
+        clearing_commission_pct = Decimal("0.10")
+        prog_tiers = None
+        min_fare_val = None
+
         if isinstance(pm, dict):
-            if "base_rate_usd" in pm:
+            if "pricing_model_type" in pm:
+                pricing_model_type = pm["pricing_model_type"]
+            if "tax_gratuity_display_mode" in pm:
+                tax_gratuity_display_mode = pm["tax_gratuity_display_mode"]
+            if "surcharge_stacking_mode" in pm:
+                surcharge_stacking_mode = pm["surcharge_stacking_mode"]
+            if "clearing_commission_pct" in pm:
+                clearing_commission_pct = Decimal(str(pm["clearing_commission_pct"]))
+            if "progressive_distance_tiers" in pm:
+                prog_tiers = pm["progressive_distance_tiers"]
+            if "minimum_fare_usd" in pm or "minimum_fare_net" in pm:
+                min_fare_val = round(Decimal(str(pm.get("minimum_fare_usd") or pm.get("minimum_fare_net"))) * fx_multiplier, 2)
+            if "business_class_base_rate_usd" in pm and (not "base_rate_usd" in pm):
+                base_rate = round(Decimal(str(pm["business_class_base_rate_usd"])) * fx_multiplier, 2)
+            elif "base_rate_usd" in pm:
                 base_rate = round(Decimal(str(pm["base_rate_usd"])) * fx_multiplier, 2)
             if "per_km_usd" in pm:
                 per_km_val = float(pm["per_km_usd"])
                 per_mile = round(Decimal(str(round(per_km_val * 1.60934, 2))) * fx_multiplier, 2)
-            if "per_mile_usd" in pm:
-                per_mile = round(Decimal(str(pm["per_mile_usd"])) * fx_multiplier, 2)
+            if "per_mile_usd" in pm or "per_mile_rate_usd" in pm:
+                pm_mile = pm.get("per_mile_rate_usd") or pm.get("per_mile_usd")
+                per_mile = round(Decimal(str(pm_mile)) * fx_multiplier, 2)
             if "airport_meet_and_greet_usd" in pm:
                 airport_surcharge = round(Decimal(str(pm["airport_meet_and_greet_usd"])) * fx_multiplier, 2)
             if "tax_rate_pct" in pm:
                 tax_rate = Decimal(str(round(float(pm["tax_rate_pct"]) / 100.0, 4)))
+            if "tax_label" in pm and pm["tax_label"]:
+                tax_label = str(pm["tax_label"])
             if "fuel_surcharge_pct" in pm:
                 fuel_pct = Decimal(str(pm["fuel_surcharge_pct"]))
             if "service_charge_pct" in pm:
@@ -102,19 +148,19 @@ class VendorPricingAIService:
             if "inside_baggage_meet_and_greet_fee_net" in pm:
                 meet_greet_fee = round(Decimal(str(pm["inside_baggage_meet_and_greet_fee_net"])) * fx_multiplier, 2)
 
-        # Class Multipliers based on luxury tier
+        # Class Multipliers based on luxury tier or explicit vendor matrix
         class_base = base_rate
         class_mile = per_mile
         
         vc_val = vehicle_class.value if hasattr(vehicle_class, "value") else str(vehicle_class)
         if vc_val in ("FIRST_CLASS", "VehicleClass.FIRST_CLASS"):
-            class_base = Decimal(str(round(float(base_rate) * 1.25, 2)))
+            class_base = round(Decimal(str(pm.get("first_class_base_rate_usd", float(base_rate) * 1.25))) * fx_multiplier, 2) if isinstance(pm, dict) and "first_class_base_rate_usd" in pm else Decimal(str(round(float(base_rate) * 1.25, 2)))
             class_mile = Decimal(str(round(float(per_mile) * 1.20, 2)))
         elif vc_val in ("LUXURY_SUV", "VehicleClass.LUXURY_SUV", "EXECUTIVE_SUV"):
-            class_base = Decimal(str(round(float(base_rate) * 1.10, 2)))
+            class_base = round(Decimal(str(pm.get("luxury_suv_base_rate_usd", float(base_rate) * 1.10))) * fx_multiplier, 2) if isinstance(pm, dict) and "luxury_suv_base_rate_usd" in pm else Decimal(str(round(float(base_rate) * 1.10, 2)))
             class_mile = Decimal(str(round(float(per_mile) * 1.15, 2)))
         elif vc_val in ("BUSINESS_VAN", "VehicleClass.BUSINESS_VAN", "SPRINTER_VAN"):
-            class_base = Decimal(str(round(float(base_rate) * 1.60, 2)))
+            class_base = round(Decimal(str(pm.get("business_van_base_rate_usd", float(base_rate) * 1.60))) * fx_multiplier, 2) if isinstance(pm, dict) and "business_van_base_rate_usd" in pm else Decimal(str(round(float(base_rate) * 1.60, 2)))
             class_mile = Decimal(str(round(float(per_mile) * 1.50, 2)))
         elif vc_val in ("ULTRA_LUXURY", "VehicleClass.ULTRA_LUXURY", "PRESTIGE"):
             class_base = Decimal(str(round(float(base_rate) * 1.85, 2)))
@@ -123,7 +169,7 @@ class VendorPricingAIService:
             class_base = Decimal(str(round(float(base_rate) * 1.15, 2)))
             class_mile = Decimal(str(round(float(per_mile) * 1.10, 2)))
         elif vc_val in ("BUSINESS_SEDAN", "VehicleClass.BUSINESS_SEDAN", "SEDAN"):
-            class_base = Decimal(str(round(float(base_rate) * 0.85, 2)))
+            class_base = round(Decimal(str(pm.get("business_class_base_rate_usd", float(base_rate) * 0.85))) * fx_multiplier, 2) if isinstance(pm, dict) and "business_class_base_rate_usd" in pm else Decimal(str(round(float(base_rate) * 0.85, 2)))
             class_mile = Decimal(str(round(float(per_mile) * 0.85, 2)))
 
         per_km_rate = Decimal(str(round(float(class_mile) / 1.60934, 2)))
@@ -156,7 +202,7 @@ class VendorPricingAIService:
             per_km_rate_net=per_km_rate,
             hourly_rate_net=Decimal(str(round(float(class_base) + (float(class_mile) * 15.0), 2))),
             hourly_minimum_hours=hourly_min,
-            minimum_fare_net=round(class_base * Decimal("1.25"), 2),
+            minimum_fare_net=min_fare_val if min_fare_val is not None else round(class_base * Decimal("1.25"), 2),
             deadhead_rate_per_mile=resolved_dh_mile,
             deadhead_rate_per_km=resolved_dh_km,
             deadhead_buffer_miles_outbound=resolved_outbound_buf,
@@ -169,14 +215,22 @@ class VendorPricingAIService:
             credit_card_fee_pct=cc_pct,
             airport_surcharge_net=airport_surcharge,
             tax_rate=tax_rate,
+            tax_label=tax_label,
             currency=currency,
-            distance_unit=unit
+            distance_unit=unit,
+            pricing_model_type=pricing_model_type,
+            tax_gratuity_display_mode=tax_gratuity_display_mode,
+            surcharge_stacking_mode=surcharge_stacking_mode,
+            clearing_commission_pct=clearing_commission_pct,
+            progressive_distance_tiers=prog_tiers
         )
-        # Cache and persist rule
+        # Cache and persist rule across aliases
         if vendor_id:
-            if vendor_id not in db.vendor_pricing_rules:
-                db.vendor_pricing_rules[vendor_id] = {}
-            db.vendor_pricing_rules[vendor_id][vehicle_class.value] = rule
+            for k in (vendor_id, norm_id, alias_id):
+                if k:
+                    if k not in db.vendor_pricing_rules:
+                        db.vendor_pricing_rules[k] = {}
+                    db.vendor_pricing_rules[k][vehicle_class.value] = rule
         return rule
 
     @staticmethod

@@ -16,7 +16,7 @@ from decimal import Decimal
 from sqlalchemy import (
     Column, String, Integer, Float, Boolean, DateTime, Text, ForeignKey, Numeric
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, foreign
 from packages.shared.database import Base
 
 
@@ -48,6 +48,13 @@ class HubMasterBookingModel(Base):
     pickup_meeting_point = Column(String(128), default="JFK Airport - Arrivals (Baggage Claim)")
     child_seats_count = Column(Integer, default=0)
     special_requests = Column(Text, nullable=True)
+    flight_status = Column(String(32), nullable=True) # ON_SCHEDULE, EN_ROUTE, DELAYED, LANDED, CANCELLED
+    flight_delay_minutes = Column(Integer, default=0)
+    flight_terminal = Column(String(32), nullable=True)
+    flight_gate = Column(String(32), nullable=True)
+    flight_baggage_claim = Column(String(64), nullable=True)
+    flight_estimated_arrival_utc = Column(DateTime, nullable=True)
+    flight_grace_period_minutes = Column(Integer, default=60)
     
     # Financial Totals (Unified Customer Charge)
     vehicle_class = Column(String(64), default="BUSINESS_CLASS")
@@ -65,6 +72,10 @@ class HubMasterBookingModel(Base):
     assigned_chauffeur_name = Column(String(128), default="Alex")
     assigned_chauffeur_phone = Column(String(32), default="+1 (212) 555-0199")
     assigned_vehicle_plate = Column(String(32), default="NYC 7264")
+    
+    # Rate & Commercial Agreement Immutability Snapshots (Section 5)
+    rate_card_snapshot_json = Column(Text, nullable=True)
+    commercial_terms_snapshot_json = Column(Text, nullable=True)
     
     # Timestamp Tracking
     pickup_datetime_utc = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
@@ -122,31 +133,64 @@ class HubDriverTelemetryModel(Base):
 
 
 class HubVendorProfileModel(Base):
-    """Verified Local Affiliate Vendor Profiles & Fleet Inventory (Airline-Style Comparison)."""
+    """Authoritative Sovereign Affiliate Vendor Entity in Global Hub."""
     __tablename__ = "hub_vendor_profiles"
 
     vendor_id = Column(String(64), primary_key=True, default=lambda: f"vnd-{uuid.uuid4().hex[:8]}")
     company_name = Column(String(128), nullable=False)
+    legal_business_name = Column(String(128), nullable=True)
     market_city = Column(String(64), nullable=False, index=True)
+    tax_id_ein = Column(String(64), nullable=True)
+    dot_number = Column(String(64), nullable=True)
+    mc_number = Column(String(64), nullable=True)
+    
+    # 4 Separate Lifecycle Status Dimensions (Section 4)
+    account_status = Column(String(32), default="ACTIVE", index=True) # ACTIVE, PENDING_REVIEW, RESTRICTED, SUSPENDED, OFFBOARDED
+    onboarding_status = Column(String(32), default="VERIFIED_APPROVED", index=True) # DRAFT, INVITED, DOCUMENTS_PENDING, UNDER_REVIEW, VERIFIED_APPROVED, REJECTED
+    network_eligibility = Column(String(32), default="ELIGIBLE", index=True) # ELIGIBLE, RESTRICTED_COVERAGE, INELIGIBLE_EXPIRED_DOCS, SUSPENDED_SLA
+    commercial_status = Column(String(32), default="ACTIVE_STANDARD_80_10_10", index=True)
+    health_status = Column(String(32), default="ONLINE_HEALTHY", index=True) # ONLINE_HEALTHY, DEGRADED, DISCONNECTED_OUTAGE
+
+    # Multi-Role Network Participation (Section 1)
+    is_software_customer = Column(Boolean, default=True)
+    is_network_supplier = Column(Boolean, default=True) # Receives farm-in trips
+    is_network_buyer = Column(Boolean, default=True) # Dispatches farm-out trips
+
+    # Contact & Organization
+    primary_contact_name = Column(String(128), default="Operations Desk")
+    primary_contact_email = Column(String(128), nullable=True)
+    primary_contact_phone = Column(String(32), default="+1 (215) 555-0144")
+    emergency_dispatch_phone = Column(String(32), default="+1 (800) 555-0199")
+    headquarters_address = Column(String(255), default="Center City Financial District")
+
+    # Fleet & Service Capabilities
     airport_corridors_json = Column(Text, default="[]")
     rating_score = Column(Numeric(3, 2), default=Decimal("4.96"))
     total_reviews_count = Column(Integer, default=2180)
     fleet_size = Column(Integer, default=28)
-    
     vehicle_makes = Column(String(255), default="Mercedes-Benz S580, Cadillac Escalade ESV, BMW 760i")
-    amenities_json = Column(Text, default='["Free High-Speed Wi-Fi", "Inside Baggage Claim Meet & Greet", "Fiji Water & Mints", "Live Radar Tracking"]')
+    amenities_json = Column(Text, default='["Free High-Speed Wi-Fi", "Meet & Greet Placard", "Fiji Water & Mints", "Flight Radar Tracking"]')
     cancellation_policy = Column(String(128), default="Free cancellation up to 24 hours before pickup")
-    
+
+    # Rate Cards (Base & Wholesale)
     business_class_base_rate_usd = Column(Numeric(10, 2), default=Decimal("125.00"))
     first_class_base_rate_usd = Column(Numeric(10, 2), default=Decimal("185.00"))
     business_van_base_rate_usd = Column(Numeric(10, 2), default=Decimal("165.00"))
-    
+    hourly_rate_business_usd = Column(Numeric(10, 2), default=Decimal("85.00"))
+    per_mile_rate_usd = Column(Numeric(10, 2), default=Decimal("4.25"))
+    waiting_time_rate_per_min_usd = Column(Numeric(10, 2), default=Decimal("1.25"))
+
+    # Integration & Financial Clearinghouse
     stripe_connect_account_id = Column(String(128), nullable=True)
+    api_endpoint_url = Column(String(255), default="http://localhost:8001")
+    api_key_secret_hash = Column(String(128), nullable=True)
+    webhook_signing_secret = Column(String(128), nullable=True)
+    last_sync_timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     is_active = Column(Boolean, default=True)
     is_vetted_partner = Column(Boolean, default=True)
     round_robin_weight = Column(Integer, default=100)
-    health_status = Column(String(32), default="ONLINE_HEALTHY", index=True) # ONLINE_HEALTHY, DEGRADED, OFFLINE
-    api_endpoint_url = Column(String(255), default="http://localhost:8001")
+
+    # Geo-Coordinates & Radius
     base_latitude = Column(Float, default=39.9526)
     base_longitude = Column(Float, default=-75.1652)
     operating_radius_miles = Column(Float, default=150.0)
@@ -154,7 +198,132 @@ class HubVendorProfileModel(Base):
     primary_chauffeur_phone = Column(String(32), default="+1 (215) 555-0144")
     primary_vehicle_plate = Column(String(32), default="PA 8492-LM")
     primary_vehicle_name = Column(String(128), default="Lincoln Navigator L")
+    # Google SEO & Analytics Suite (Multi-Vendor Isolated Tracking)
+    google_analytics_id = Column(String(64), nullable=True)      # e.g. "G-ANBPHILLY1"
+    google_tag_manager_id = Column(String(64), nullable=True)    # e.g. "GTM-ANB01"
+    seo_title = Column(String(255), nullable=True)
+    seo_description = Column(Text, nullable=True)
+    seo_keywords = Column(Text, nullable=True)
+    canonical_url = Column(String(255), nullable=True)
+    og_image_url = Column(String(512), nullable=True)
+
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    # Relationships
+    compliance_documents = relationship("HubVendorComplianceDocumentModel", primaryjoin="HubVendorProfileModel.vendor_id == foreign(HubVendorComplianceDocumentModel.vendor_id)", back_populates="vendor", cascade="all, delete-orphan")
+    commercial_agreements = relationship("HubVendorCommercialAgreementModel", primaryjoin="HubVendorProfileModel.vendor_id == foreign(HubVendorCommercialAgreementModel.vendor_id)", back_populates="vendor", cascade="all, delete-orphan")
+    disputes = relationship("HubVendorDisputeModel", primaryjoin="HubVendorProfileModel.vendor_id == foreign(HubVendorDisputeModel.vendor_id)", back_populates="vendor", cascade="all, delete-orphan")
+    performance_metrics = relationship("HubVendorPerformanceMetricsModel", uselist=False, primaryjoin="HubVendorProfileModel.vendor_id == foreign(HubVendorPerformanceMetricsModel.vendor_id)", back_populates="vendor", cascade="all, delete-orphan")
+    audit_events = relationship("HubVendorAuditEventModel", primaryjoin="HubVendorProfileModel.vendor_id == foreign(HubVendorAuditEventModel.vendor_id)", back_populates="vendor", cascade="all, delete-orphan")
+
+
+class HubVendorComplianceDocumentModel(Base):
+    """Authoritative Compliance Document Verification & Expiry Tracking (Section 4)."""
+    __tablename__ = "hub_vendor_compliance_documents"
+
+    document_id = Column(String(64), primary_key=True, default=lambda: f"doc-{uuid.uuid4().hex[:8]}")
+    vendor_id = Column(String(64), nullable=False, index=True)
+    document_type = Column(String(64), nullable=False) # CERTIFICATE_OF_INSURANCE, DOT_OPERATING_AUTHORITY, MUNICIPAL_LIVERY_LICENSE, AIRPORT_PERMIT, W9_TAX_FORM
+    document_name = Column(String(255), nullable=False)
+    file_url = Column(String(512), nullable=False)
+    policy_number = Column(String(128), nullable=True)
+    issuing_authority = Column(String(128), default="State Transportation Commission")
+    effective_date = Column(DateTime, nullable=True)
+    expiry_date = Column(DateTime, nullable=False, index=True)
+    
+    # Verification Audit Details (Never auto-verified)
+    verification_status = Column(String(32), default="PENDING", index=True) # PENDING, VERIFIED, REJECTED, EXPIRED
+    verified_by_user_id = Column(String(64), nullable=True)
+    verified_at = Column(DateTime, nullable=True)
+    rejection_reason = Column(Text, nullable=True)
+    verification_notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    vendor = relationship("HubVendorProfileModel", primaryjoin="foreign(HubVendorComplianceDocumentModel.vendor_id) == HubVendorProfileModel.vendor_id", back_populates="compliance_documents")
+
+
+class HubVendorCommercialAgreementModel(Base):
+    """Versioned Commercial Agreements & Payout Splits (Section 5)."""
+    __tablename__ = "hub_vendor_commercial_agreements"
+
+    agreement_id = Column(String(64), primary_key=True, default=lambda: f"agr-{uuid.uuid4().hex[:8]}")
+    vendor_id = Column(String(64), nullable=False, index=True)
+    agreement_name = Column(String(128), default="Master Network Supplier & Clearinghouse Agreement")
+    version = Column(String(16), default="1.0")
+    effective_from_utc = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    effective_until_utc = Column(DateTime, nullable=True)
+    
+    # Revenue Split Ratios
+    supplier_payout_pct = Column(Numeric(5, 2), default=Decimal("80.00")) # 80% executing partner
+    buyer_commission_pct = Column(Numeric(5, 2), default=Decimal("10.00")) # 10% originating booker
+    hub_clearing_fee_pct = Column(Numeric(5, 2), default=Decimal("10.00")) # 10% Global Hub
+    
+    # Negotiated Ancillary Terms
+    waiting_time_free_mins = Column(Integer, default=15)
+    waiting_time_per_min_usd = Column(Numeric(10, 2), default=Decimal("1.25"))
+    extra_stop_fee_usd = Column(Numeric(10, 2), default=Decimal("20.00"))
+    cancellation_lead_hours = Column(Integer, default=24)
+    no_show_fee_usd = Column(Numeric(10, 2), default=Decimal("100.00"))
+    is_current_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    vendor = relationship("HubVendorProfileModel", primaryjoin="foreign(HubVendorCommercialAgreementModel.vendor_id) == HubVendorProfileModel.vendor_id", back_populates="commercial_agreements")
+
+
+class HubVendorDisputeModel(Base):
+    """Quality, Damage, Fare Adjustments & SLA Disputes (Section 7)."""
+    __tablename__ = "hub_vendor_disputes"
+
+    dispute_id = Column(String(64), primary_key=True, default=lambda: f"dsp-{uuid.uuid4().hex[:8]}")
+    booking_id = Column(String(64), nullable=False, index=True)
+    vendor_id = Column(String(64), nullable=False, index=True)
+    initiator_role = Column(String(32), default="BUYER") # BUYER, SUPPLIER, PASSENGER, HUB_OPS
+    dispute_category = Column(String(64), nullable=False) # LATE_ARRIVAL, VEHICLE_CLASS_MISMATCH, NO_SHOW, FARE_ADJUSTMENT, CHAUFFEUR_CONDUCT
+    disputed_amount_usd = Column(Numeric(10, 2), default=Decimal("0.00"))
+    evidence_notes = Column(Text, nullable=False)
+    status = Column(String(32), default="OPEN", index=True) # OPEN, INVESTIGATING, RESOLVED_REFUNDED, RESOLVED_REJECTED
+    resolution_action = Column(String(64), nullable=True) # RELEASE_CARRIER, REFUND_PASSENGER, PARTIAL_SETTLEMENT
+    resolution_notes = Column(Text, nullable=True)
+    resolved_by = Column(String(64), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    resolved_at = Column(DateTime, nullable=True)
+
+    vendor = relationship("HubVendorProfileModel", primaryjoin="foreign(HubVendorDisputeModel.vendor_id) == HubVendorProfileModel.vendor_id", back_populates="disputes")
+
+
+class HubVendorPerformanceMetricsModel(Base):
+    """Deterministic Real-Time SLA Quality Metrics computed from DB Events (Section 7)."""
+    __tablename__ = "hub_vendor_performance_metrics"
+
+    metrics_id = Column(String(64), primary_key=True, default=lambda: f"met-{uuid.uuid4().hex[:8]}")
+    vendor_id = Column(String(64), unique=True, nullable=False, index=True)
+    total_assigned_trips = Column(Integer, default=0)
+    completed_trips_count = Column(Integer, default=0)
+    acceptance_rate_pct = Column(Numeric(5, 2), default=Decimal("100.00"))
+    on_time_arrival_pct = Column(Numeric(5, 2), default=Decimal("99.40"))
+    cancellation_rate_pct = Column(Numeric(5, 2), default=Decimal("0.60"))
+    active_disputes_count = Column(Integer, default=0)
+    calculated_at_utc = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    vendor = relationship("HubVendorProfileModel", primaryjoin="foreign(HubVendorPerformanceMetricsModel.vendor_id) == HubVendorProfileModel.vendor_id", back_populates="performance_metrics")
+
+
+class HubVendorAuditEventModel(Base):
+    """Immutable Audit Trail for Vendor Lifecycle & Configuration Changes (Section 11)."""
+    __tablename__ = "hub_vendor_audit_events"
+
+    audit_id = Column(String(64), primary_key=True, default=lambda: f"aud-{uuid.uuid4().hex[:8]}")
+    vendor_id = Column(String(64), nullable=False, index=True)
+    actor_email = Column(String(128), default="admin@limo.hub")
+    action_type = Column(String(64), nullable=False) # STATUS_CHANGE, RATE_UPDATE, DOCUMENT_VERIFIED, AGREEMENT_CREATED, DISPUTE_RESOLVED
+    field_changed = Column(String(64), nullable=True)
+    old_value = Column(Text, nullable=True)
+    new_value = Column(Text, nullable=True)
+    notes = Column(Text, nullable=True)
+    timestamp_utc = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+
+    vendor = relationship("HubVendorProfileModel", primaryjoin="foreign(HubVendorAuditEventModel.vendor_id) == HubVendorProfileModel.vendor_id", back_populates="audit_events")
 
 
 class HubItineraryModel(Base):
@@ -244,6 +413,8 @@ class HubEscrowSettlementModel(Base):
     originating_vendor_id = Column(String(64), nullable=False, index=True)
     stripe_payment_intent_id = Column(String(128), nullable=True)
     stripe_transfer_servicing_id = Column(String(128), nullable=True)
+    stripe_transfer_originating_id = Column(String(128), nullable=True)
+    resolution_action = Column(String(64), nullable=True)
     status = Column(String(32), default="PREAUTH_HELD", index=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 

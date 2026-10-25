@@ -5,6 +5,7 @@ import {
   ChevronRight, Crown, Phone, ShieldCheck, Wifi, Eye
 } from 'lucide-react';
 import { VendorBrandingProfile, ServiceType, VehicleClass } from '../../types';
+import { VendorSEOMetaManager } from './VendorSEOMetaManager';
 
 interface PublicHomePageProps {
   branding: VendorBrandingProfile;
@@ -54,6 +55,7 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
 
   return (
     <div className="public-homepage-root">
+      <VendorSEOMetaManager vendorId={(branding as any).vendor_id || 'vendor_anb_philly'} pageType="home_portal" />
       
       {/* --- 1. ULTRA-LUXURY EXECUTIVE HERO BANNER (PURE LIGHT MODE) --- */}
       <div className="public-hero-section">
@@ -365,28 +367,28 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '24px' }}>
           {[
             {
-              title: 'Mercedes-Maybach S 580',
+              title: 'Mercedes-Benz S-Class S580',
               badge: 'First-Class Sedan',
-              img: 'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&w=800&q=80',
+              img: '/assets/fleet/mercedes_s.jpg',
               pax: 3,
               luggage: 3,
-              desc: 'Reclining Nappa leather captain chairs, hot stone massage, champagne flute console.'
+              desc: 'Reclining Nappa leather captain chairs, Burmester 3D sound, and chilled champagne console.'
             },
             {
               title: 'Cadillac Escalade ESV',
               badge: 'Flagship Luxury SUV',
-              img: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=800&q=80',
+              img: '/assets/fleet/escalade.jpg',
               pax: 6,
               luggage: 6,
-              desc: 'Extended wheelbase with generous cargo volume for full international luggage sets.'
+              desc: 'Extended wheelbase Obsidian Black SUV with generous cargo volume for full luggage sets.'
             },
             {
-              title: 'Mercedes Sprinter Jet Lounge',
+              title: 'Mercedes Sprinter VIP Jet Lounge',
               badge: 'Private Jet Edition',
-              img: 'https://images.unsplash.com/photo-1570125909232-eb263c188f7e?auto=format&fit=crop&w=800&q=80',
+              img: '/assets/fleet/sprinter.jpg',
               pax: 12,
               luggage: 14,
-              desc: 'Standing walk-in height, starlight ceiling, conference club seating and 4K display.'
+              desc: 'High-roof standing walk-in height, starlight ceiling, conference club seating, and 4K displays.'
             }
           ].map((item, idx) => (
             <div

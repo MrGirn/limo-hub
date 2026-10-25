@@ -7,9 +7,12 @@ creates Driver Offers with 180s countdown timers, and manages lifecycle.
 
 import math
 import uuid
+import logging
 from decimal import Decimal
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List, Dict, Any, Tuple
+
+logger = logging.getLogger("DispatchService")
 from app.domain_models import (
     Vehicle, Driver, VehicleClass, Trip, TripEvent, TripStatus,
     DriverOffer, DriverOfferStatus, NetworkParticipationMode
@@ -119,6 +122,25 @@ class DispatchService:
             description=f"Autonomous offer dispatched to Chauffeur {offer.driver_name} with 180s countdown.",
             actor="AUTONOMOUS_DISPATCH_ENGINE"
         ))
+
+        # Live Twilio SMS Dispatch to Chauffeur Mobile
+        if offer.driver_phone:
+            try:
+                from app.services.twilio_notification_service import TwilioNotificationService
+                pickup_time_str = trip.pickup_time_utc.strftime("%b %d at %I:%M %p UTC") if getattr(trip, "pickup_time_utc", None) else "Immediate"
+                TwilioNotificationService.send_chauffeur_dispatch_offer(
+                    chauffeur_phone=offer.driver_phone,
+                    chauffeur_name=offer.driver_name,
+                    offer_id=offer.id,
+                    vehicle_title=offer.vehicle_details,
+                    pickup_address=getattr(trip, "pickup_address", "Executive Curbside"),
+                    dropoff_address=getattr(trip, "dropoff_address", "Destination"),
+                    pickup_time_str=pickup_time_str,
+                    payout_usd=float(offer.offered_payout_net)
+                )
+            except Exception as e:
+                logger.warning(f"Chauffeur dispatch SMS notice failed: {e}")
+
         return offer
 
     @staticmethod
@@ -136,6 +158,7 @@ class DispatchService:
         if not trip:
             raise ValueError("Trip not found")
 
+        vehicle = db.vehicles.get(offer.vehicle_id)
         trip.driver_id = offer.driver_id
         trip.vehicle_id = offer.vehicle_id
         trip.status = TripStatus.DRIVER_ACCEPTED
@@ -146,6 +169,27 @@ class DispatchService:
             description=f"Chauffeur {offer.driver_name} accepted the mission assignment.",
             actor=f"CHAUFFEUR_{offer.driver_name.upper()}"
         ))
+
+        # Live Twilio SMS Dispatch to Passenger
+        try:
+            booking = db.bookings.get(trip.booking_id)
+            party = getattr(booking, "party", None) or getattr(booking, "passenger_party", None) if booking else None
+            if booking and party and getattr(party, "passenger_phone", None):
+                from app.services.twilio_notification_service import TwilioNotificationService
+                plate = vehicle.license_plate if vehicle else "CHAUFFEUR"
+                v_title = getattr(offer, "vehicle_details", None) or getattr(offer, "vehicle_title", "Executive Luxury Vehicle")
+                TwilioNotificationService.send_chauffeur_assigned_passenger_update(
+                    passenger_phone=party.passenger_phone,
+                    passenger_name=party.passenger_name,
+                    booking_id=booking.id,
+                    chauffeur_name=offer.driver_name,
+                    chauffeur_phone=getattr(offer, "driver_phone", None) or "N/A",
+                    vehicle_title=v_title,
+                    license_plate=plate
+                )
+        except Exception as e:
+            logger.warning(f"Passenger assignment SMS notice failed: {e}")
+
         return trip
 
     @staticmethod

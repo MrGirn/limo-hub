@@ -27,9 +27,9 @@ app.include_router(global_hub_router)
 def on_startup():
     """Initializes authoritative database schema and registers all certified affiliate vendors with geo-coordinates on startup."""
     try:
-        from packages.shared.database import SessionLocal, Base, engine
+        from packages.shared.database import init_db, SessionLocal
         from packages.global_hub.backend.services.hub_repository import HubRepository
-        Base.metadata.create_all(bind=engine)
+        init_db()
         db = SessionLocal()
         try:
             repo = HubRepository(db)
@@ -61,7 +61,13 @@ def system_runtime_mode():
         "node_hostname": os.getenv("HOSTNAME", "global-hub-node")
     }
 
-from fastapi.responses import FileResponse
+class CachedStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        if response.status_code == 200:
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            response.headers["Access-Control-Allow-Origin"] = "*"
+        return response
 
 # Static Frontend Distribution & Assets Support for Global Hub (Page 1-12 Public Booking App)
 frontend_dist = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))
@@ -69,9 +75,11 @@ if not os.path.exists(frontend_dist):
     frontend_dist = os.path.abspath("packages/global_hub/frontend/dist")
 
 assets_dir = os.path.join(frontend_dist, "assets")
+if not os.path.exists(assets_dir):
+    assets_dir = os.path.abspath("packages/global_hub/frontend/public/assets")
 
 if os.path.exists(assets_dir):
-    app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+    app.mount("/assets", CachedStaticFiles(directory=assets_dir), name="assets")
 
 if os.path.exists(frontend_dist) and os.path.exists(os.path.join(frontend_dist, "index.html")):
     @app.get("/{full_path:path}")

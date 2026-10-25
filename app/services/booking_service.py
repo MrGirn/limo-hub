@@ -376,7 +376,7 @@ class BookingService:
             finally:
                 session.close()
 
-        # 4. Send Live Twilio SMS Confirmation to Passenger
+        # 4. Send Live Twilio SMS Confirmation to Passenger & Corporate Booker
         try:
             time_str = pickup_time_utc.strftime("%b %d, %Y at %I:%M %p UTC")
             TwilioNotificationService.send_booking_confirmation(
@@ -385,8 +385,24 @@ class BookingService:
                 booking_id=booking.id,
                 pickup_address=quote.pickup_address,
                 pickup_time_str=time_str,
-                vehicle_title=quote.vehicle_class.value.replace("_", " ")
+                vehicle_title=quote.vehicle_class.value.replace("_", " "),
+                vendor_id=quote.vendor_id
             )
+            # If booker phone is provided and distinct from passenger phone (e.g. corporate assistant / travel desk)
+            booker_phone = getattr(party, "booker_phone", None)
+            if booker_phone and booker_phone.strip() and booker_phone.strip() != party.passenger_phone.strip():
+                TwilioNotificationService.send_corporate_booker_confirmation(
+                    booker_phone=booker_phone.strip(),
+                    booker_name=getattr(party, "booker_name", None) or "Corporate Booker",
+                    passenger_name=party.passenger_name,
+                    booking_id=booking.id,
+                    pickup_address=quote.pickup_address,
+                    dropoff_address=getattr(quote, "dropoff_address", "Destination"),
+                    pickup_time_str=time_str,
+                    vehicle_title=quote.vehicle_class.value.replace("_", " "),
+                    total_fare_usd=float(getattr(quote, "total_gross", quote.final_payable_amount)),
+                    vendor_id=quote.vendor_id
+                )
         except Exception as e:
             logger.warning(f"Twilio SMS broadcast: {e}")
 
@@ -453,6 +469,118 @@ class BookingService:
             if booking and booking.payment:
                 StripePaymentService.capture_final_payment(booking.payment.id)
                 booking.status = BookingStatus.COMPLETED
+
+        # Real-Time SMS Milestone Dispatches Across Active Lifecycle
+        try:
+            booking = db.bookings.get(trip.booking_id)
+            party = getattr(booking, "party", None) if booking else None
+            driver = db.drivers.get(trip.driver_id) if trip.driver_id else None
+            vehicle = db.vehicles.get(trip.vehicle_id) if trip.vehicle_id else None
+
+            p_phone = getattr(party, "passenger_phone", None) if party else None
+            p_name = getattr(party, "passenger_name", "Valued Guest") if party else "Valued Guest"
+            b_phone = getattr(party, "booker_phone", None) if party else None
+            b_name = getattr(party, "booker_name", "Corporate Booker") if party else "Corporate Booker"
+            drv_name = getattr(driver, "name", "Your Chauffeur") if driver else "Your Chauffeur"
+            drv_phone = getattr(driver, "phone", "Dispatch") if driver else "Dispatch"
+            veh_title = getattr(vehicle, "model", None) or getattr(vehicle, "make", None) or "Executive Vehicle"
+            plate = getattr(vehicle, "license_plate", "VIP")
+            pickup_loc = getattr(trip, "pickup_address", None) or getattr(booking, "pickup_address", "Pickup Location")
+            dropoff_loc = getattr(trip, "dropoff_address", None) or getattr(booking, "dropoff_address", "Destination")
+            v_id = getattr(trip, "vendor_id", None) or getattr(booking, "vendor_id", None)
+
+            if new_status == TripStatus.EN_ROUTE and p_phone:
+                TwilioNotificationService.send_chauffeur_en_route_alert(
+                    passenger_phone=p_phone,
+                    passenger_name=p_name,
+                    booking_id=trip.booking_id,
+                    trip_id=trip.id,
+                    chauffeur_name=drv_name,
+                    chauffeur_phone=drv_phone,
+                    vehicle_title=veh_title,
+                    license_plate=plate,
+                    eta_minutes=15,
+                    vendor_id=v_id
+                )
+                if b_phone and b_phone.strip() != p_phone.strip():
+                    TwilioNotificationService.send_chauffeur_en_route_alert(
+                        passenger_phone=b_phone,
+                        passenger_name=p_name,
+                        booking_id=trip.booking_id,
+                        trip_id=trip.id,
+                        chauffeur_name=drv_name,
+                        chauffeur_phone=drv_phone,
+                        vehicle_title=veh_title,
+                        license_plate=plate,
+                        eta_minutes=15,
+                        vendor_id=v_id
+                    )
+
+            elif new_status == TripStatus.ARRIVED and p_phone:
+                TwilioNotificationService.send_chauffeur_arrived_alert(
+                    passenger_phone=p_phone,
+                    passenger_name=p_name,
+                    booking_id=trip.booking_id,
+                    chauffeur_name=drv_name,
+                    chauffeur_phone=drv_phone,
+                    vehicle_title=veh_title,
+                    license_plate=plate,
+                    pickup_address=pickup_loc,
+                    vendor_id=v_id,
+                    pickup_notes=note
+                )
+
+            elif new_status == TripStatus.PASSENGER_ONBOARD:
+                if b_phone and b_phone.strip() != getattr(p_phone, "strip", lambda: "")():
+                    TwilioNotificationService.send_passenger_onboard_alert(
+                        booker_phone=b_phone,
+                        booker_name=b_name,
+                        passenger_name=p_name,
+                        booking_id=trip.booking_id,
+                        dropoff_address=dropoff_loc,
+                        chauffeur_name=drv_name,
+                        vendor_id=v_id
+                    )
+
+            elif new_status == TripStatus.COMPLETED and p_phone:
+                total_fare = float(getattr(getattr(booking, "payment", None), "amount", 0.0))
+                TwilioNotificationService.send_trip_completed_receipt(
+                    recipient_phone=p_phone,
+                    recipient_name=p_name,
+                    booking_id=trip.booking_id,
+                    total_fare_usd=total_fare,
+                    dropoff_address=dropoff_loc,
+                    vendor_id=v_id
+                )
+                if b_phone and b_phone.strip() != p_phone.strip():
+                    TwilioNotificationService.send_trip_completed_receipt(
+                        recipient_phone=b_phone,
+                        recipient_name=b_name,
+                        booking_id=trip.booking_id,
+                        total_fare_usd=total_fare,
+                        dropoff_address=dropoff_loc,
+                        vendor_id=v_id
+                    )
+
+            elif new_status == TripStatus.CANCELLED:
+                if p_phone:
+                    TwilioNotificationService.send_trip_cancellation_alert(
+                        recipient_phone=p_phone,
+                        recipient_name=p_name,
+                        booking_id=trip.booking_id,
+                        role_type="PASSENGER",
+                        vendor_id=v_id
+                    )
+                if driver and getattr(driver, "phone", None):
+                    TwilioNotificationService.send_trip_cancellation_alert(
+                        recipient_phone=driver.phone,
+                        recipient_name=drv_name,
+                        booking_id=trip.booking_id,
+                        role_type="CHAUFFEUR",
+                        vendor_id=v_id
+                    )
+        except Exception as e:
+            logger.warning(f"Active trip status SMS milestone notification error: {e}")
 
         # MySQL Status Sync
         session = mysql_db.get_session()

@@ -6,6 +6,7 @@ export interface PlacePrediction {
   place_id: string;
   main_text: string;
   secondary_text: string;
+  formatted_blackcar?: string;
   category?: 'AIRPORT' | 'HOTEL' | 'TRAIN_STATION' | 'LANDMARK' | 'GENERAL';
   airport_code?: string | null;
   lat?: number;
@@ -106,7 +107,8 @@ export const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> =
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
-    onChange(place.description);
+    const cleanDisplay = place.formatted_blackcar || (place.secondary_text ? `${place.main_text} - ${place.secondary_text}` : place.main_text);
+    onChange(cleanDisplay);
     setIsOpen(false);
     setSuggestions([]);
     if (onSelectPlace) {

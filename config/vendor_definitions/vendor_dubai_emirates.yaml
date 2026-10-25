@@ -31,59 +31,31 @@ communications:
   twilio_voice_number: "+97143889900"
 
 pricing_matrix:
-  base_rate_usd: 85.00
+  base_rate_usd: 105.00
+  business_class_base_rate_usd: 105.00
+  first_class_base_rate_usd: 160.00
+  business_van_base_rate_usd: 140.00
+  hourly_rate_usd: 75.00
+  per_mile_rate_usd: 3.50
   per_km_usd: 3.50
   deadhead_rate_per_mile_usd: 1.80
   deadhead_rate_per_km_usd: 1.12
   deadhead_buffer_miles_outbound: 0.00
   deadhead_buffer_miles_return: 0.00
   tax_rate_pct: 5.00
+  tax_label: "UAE Value Added Tax (VAT)"
+  airport_terminal_fee_usd: 25.00
+  congestion_charge_usd: 0.00
   fuel_surcharge_pct: 5.00
   service_charge_pct: 10.00
   credit_card_fee_pct: 2.50
   airport_meet_and_greet_usd: 50.00
   tolls_bridge_tunnel_usd: 4.00
+  operating_radius_miles: 80.0
 
 database:
   db_type: "mysql_partition"
   partition_id: "db_partition_dubai_emirates_01"
-
-fleet_drivers:
-  - id: "driver_dxb_01"
-    name: "Tariq Al-Mansoor"
-    phone: "+971501234501"
-    vehicle: "Cadillac Escalade Platinum ESV"
-    license_plate: "DXB-VIP-01"
-  - id: "driver_dxb_02"
-    name: "Rashid Hamdan"
-    phone: "+971501234502"
-    vehicle: "GMC Yukon Denali XL"
-    license_plate: "DXB-VIP-02"
-  - id: "driver_dxb_03"
-    name: "Zayn Al-Fassi"
-    phone: "+971501234503"
-    vehicle: "Mercedes-Maybach S680"
-    license_plate: "DXB-VIP-03"
-  - id: "driver_dxb_04"
-    name: "Faris Al-Nuaimi"
-    phone: "+971501234504"
-    vehicle: "BMW 7 Series 760Li"
-    license_plate: "DXB-VIP-04"
-  - id: "driver_dxb_05"
-    name: "Khalid Bin Zayed"
-    phone: "+971501234505"
-    vehicle: "Rolls-Royce Ghost"
-    license_plate: "DXB-VIP-05"
-  - id: "driver_dxb_06"
-    name: "Omar Al-Khatib"
-    phone: "+971501234506"
-    vehicle: "Mercedes-Benz E-Class"
-    license_plate: "DXB-SED-01"
-  - id: "driver_dxb_07"
-    name: "Sultan Al-Ghurair"
-    phone: "+971501234507"
-    vehicle: "Mercedes-Benz Sprinter VIP Royal"
-    license_plate: "DXB-VAN-01"
 
 affiliate_policy:
   enable_federation: true
@@ -106,3 +78,13 @@ insurance_compliance:
   show_policy_amount: true
   carrier_name: "Oman Insurance Company (Sukoon)"
   policy_number: "SUKOON-DXB-981240"
+
+regional_tax_rules:
+  - jurisdiction_code: "AE_DXB"
+    country: "UAE"
+    city_or_region: "Dubai"
+    tax_name: "UAE Value Added Tax (VAT)"
+    vat_or_sales_tax_rate: 0.0500
+    airport_access_fee: 25.00
+    congestion_charge: 0.00
+    currency: "AED"

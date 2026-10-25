@@ -124,7 +124,7 @@ function computeSimulatedQuote(rule: Partial<VendorPricingRule> | null, scenario
     gratuityAmount = 0;
     totalGross = netSubtotal;
   } else {
-    const taxRate = Number(rule.tax_rate || 0.08875);
+    const taxRate = rule.tax_rate !== undefined && rule.tax_rate !== null ? Number(rule.tax_rate) : 0;
     taxAmount = netSubtotal * taxRate;
     const gratuityRate = Number(rule.gratuity_rate !== undefined ? rule.gratuity_rate : 0.20);
     gratuityAmount = netSubtotal * gratuityRate;

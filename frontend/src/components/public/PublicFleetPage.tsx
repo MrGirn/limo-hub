@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Briefcase, Sparkles, Shield, Wifi, Droplets, VolumeX, CheckCircle2, ArrowRight, Camera, ChevronLeft, ChevronRight, Eye, Award, Star, Compass, Wind, Coffee, Crown, Car } from 'lucide-react';
 import { VendorPortalConfig, VehicleClass } from '../../types';
+import { VendorSEOMetaManager } from './VendorSEOMetaManager';
 
 interface VehiclePhoto {
   url: string;
@@ -80,7 +81,7 @@ export const PublicFleetPage: React.FC<PublicFleetPageProps> = ({ config, onSele
     ]),
     photos: (v.photos && v.photos.length > 0) ? v.photos : [
       {
-        url: v.photoUrl || 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=1200&q=80',
+        url: v.photoUrl || v.photo_url || '/assets/fleet/escalade.jpg',
         caption: `${v.title || 'Executive Vehicle'} - Fleet Exterior Profile`,
         viewType: 'EXTERIOR'
       }
@@ -116,15 +117,21 @@ export const PublicFleetPage: React.FC<PublicFleetPageProps> = ({ config, onSele
               catName = 'VAN';
             }
 
+            const defaultPhoto = v.photo_url || (
+              catName === 'SEDAN' ? '/assets/fleet/mercedes_s.jpg' :
+              catName === 'VAN' ? '/assets/fleet/sprinter.jpg' :
+              '/assets/fleet/escalade.jpg'
+            );
+
             const photos: VehiclePhoto[] = Array.isArray(v.photos) && v.photos.length > 0
               ? v.photos.map((p: any) => ({
-                  url: p.photo_url || p.url,
+                  url: p.photo_url || p.url || defaultPhoto,
                   caption: p.label || p.caption || v.name,
                   viewType: (p.photo_type || 'EXTERIOR') as any
                 }))
               : [
                   {
-                    url: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=1200&q=80',
+                    url: defaultPhoto,
                     caption: `${v.name} - Fleet Exterior Profile`,
                     viewType: 'EXTERIOR'
                   }
@@ -136,7 +143,7 @@ export const PublicFleetPage: React.FC<PublicFleetPageProps> = ({ config, onSele
               categoryName: catName,
               title: v.name,
               makeModel: `${v.name}${v.exterior_color ? ` (${v.exterior_color})` : ''}`,
-              year: v.created_at ? `Certified ${new Date(v.created_at).getFullYear()}` : '2025 Fleet Model',
+              year: v.year ? `Certified ${v.year} Fleet Model` : '2025 Fleet Model',
               tagline: v.tagline || 'Pinnacle Chauffeur Luxury & Executive Transport',
               pax: v.passenger_capacity || 4,
               luggage: v.luggage_capacity || 3,
@@ -202,6 +209,7 @@ export const PublicFleetPage: React.FC<PublicFleetPageProps> = ({ config, onSele
 
   return (
     <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '32px 24px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      <VendorSEOMetaManager vendorId={config.vendor_id} pageType="fleet_catalog" />
       
       {/* --- 1. HERO HEADER WITH PRESTIGE BADGE --- */}
       <div style={{ textAlign: 'center', maxWidth: '840px', margin: '0 auto 40px auto' }}>

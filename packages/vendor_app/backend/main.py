@@ -31,6 +31,14 @@ app.include_router(vendor_router)
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
+class CachedStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        if response.status_code == 200:
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            response.headers["Access-Control-Allow-Origin"] = "*"
+        return response
+
 # Mount static fleet assets & frontend distribution
 frontend_dist = os.path.abspath("frontend/dist")
 if not os.path.exists(frontend_dist):
@@ -41,7 +49,7 @@ if not os.path.exists(assets_dir):
     assets_dir = os.path.abspath("frontend/public/assets")
 
 if os.path.exists(assets_dir):
-    app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+    app.mount("/assets", CachedStaticFiles(directory=assets_dir), name="assets")
 
 if os.path.exists(frontend_dist) and os.path.exists(os.path.join(frontend_dist, "index.html")):
     @app.get("/{full_path:path}")

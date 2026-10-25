@@ -12,8 +12,8 @@ import uuid
 from decimal import Decimal
 from datetime import datetime, timezone, timedelta
 from enum import Enum
-from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field, ConfigDict
+from typing import List, Optional, Dict, Any, Union
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 
 class VehicleClass(str, Enum):
@@ -122,6 +122,11 @@ class NetworkParticipationMode(str, Enum):
     LOCAL_PRIVATE_ONLY = "LOCAL_PRIVATE_ONLY"              # Dedicated solely to vendor's own private clients
 
 
+class DistanceTier(BaseModel):
+    up_to_miles: Decimal
+    rate_per_mile_net: Decimal
+
+
 class VendorPricingRule(BaseModel):
     vendor_id: str
     vehicle_class: VehicleClass
@@ -130,11 +135,14 @@ class VendorPricingRule(BaseModel):
     flat_per_mile_all_inclusive: Decimal = Decimal("5.50")
     flat_per_km_all_inclusive: Decimal = Decimal("3.45")
     base_rate_net: Decimal = Decimal("95.00")
+    base_fee_net: Optional[Decimal] = None
     per_mile_rate_net: Decimal = Decimal("4.25")
     per_km_rate_net: Decimal = Decimal("2.65")
     per_minute_rate_net: Decimal = Decimal("0.85")
     hourly_rate_net: Decimal = Decimal("145.00")
+    per_hour_rate_net: Optional[Decimal] = None
     hourly_minimum_hours: int = 2
+    hourly_min_hours: Optional[int] = None
     minimum_fare_net: Decimal = Decimal("120.00")
     deadhead_rate_per_mile: Decimal = Decimal("1.75")
     deadhead_rate_per_km: Decimal = Decimal("1.09")
@@ -151,8 +159,10 @@ class VendorPricingRule(BaseModel):
     late_night_start_hour: int = 23  # 11:00 PM
     late_night_end_hour: int = 5    # 05:00 AM
     free_wait_minutes: int = 60
+    wait_free_minutes: Optional[int] = None
     wait_minute_rate_net: Decimal = Decimal("1.50")
-    tax_rate: Decimal = Decimal("0.08875")
+    tax_rate: Optional[Decimal] = None
+    tax_label: Optional[str] = None
     include_gratuity_in_billing: bool = False
     gratuity_rate: Decimal = Decimal("0.00")
     currency: str = "USD"
@@ -160,6 +170,55 @@ class VendorPricingRule(BaseModel):
     child_seat_fee_net: Decimal = Decimal("25.00")
     wheelchair_lift_surcharge_net: Decimal = Decimal("45.00")
 
+    @model_validator(mode="before")
+    @classmethod
+    def sync_aliases(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "base_fee_net" in data and data["base_fee_net"] is not None:
+                data["base_rate_net"] = data["base_fee_net"]
+            if "per_hour_rate_net" in data and data["per_hour_rate_net"] is not None:
+                data["hourly_rate_net"] = data["per_hour_rate_net"]
+            if "hourly_min_hours" in data and data["hourly_min_hours"] is not None:
+                data["hourly_minimum_hours"] = data["hourly_min_hours"]
+            if "wait_free_minutes" in data and data["wait_free_minutes"] is not None:
+                data["free_wait_minutes"] = data["wait_free_minutes"]
+            if "tax_gratuity_display_mode" in data and data["tax_gratuity_display_mode"] is None:
+                data["tax_gratuity_display_mode"] = TaxGratuityDisplayMode.ITEMIZED_SEPARATE
+            if "deadhead_buffer_miles_outbound" in data and data["deadhead_buffer_miles_outbound"] is None:
+                data["deadhead_buffer_miles_outbound"] = Decimal("0.00")
+            if "deadhead_buffer_miles_return" in data and data["deadhead_buffer_miles_return"] is None:
+                data["deadhead_buffer_miles_return"] = Decimal("0.00")
+            if "fuel_surcharge_pct" in data and data["fuel_surcharge_pct"] is None:
+                data["fuel_surcharge_pct"] = Decimal("0.00")
+            if "service_charge_pct" in data and data["service_charge_pct"] is None:
+                data["service_charge_pct"] = Decimal("0.00")
+            if "credit_card_fee_pct" in data and data["credit_card_fee_pct"] is None:
+                data["credit_card_fee_pct"] = Decimal("0.00")
+        return data
+
+    # Progressive Tiered Mileage Pricing (e.g. [{"up_to_miles": 10, "rate": 4.0}, {"up_to_miles": 25, "rate": 3.0}])
+    progressive_distance_tiers: Optional[List[Union[DistanceTier, Dict[str, Any]]]] = None
+
+    # Granular Waiting Time Increments (e.g. 5-minute started blocks)
+    wait_block_minutes: int = 1
+    wait_block_rate_net: Optional[Decimal] = None
+
+    # Hourly Charter Overtime and Mileage Allowances
+    hourly_overtime_block_minutes: int = 15
+    hourly_included_miles_per_hour: Optional[Decimal] = None
+    hourly_excess_mile_rate_net: Optional[Decimal] = None
+
+    # Surcharge Stacking Policy & Commercial Adjustments
+    surcharge_stacking_mode: str = "ADDITIVE"  # 'ADDITIVE' | 'HIGHEST_ONLY'
+    discount_pct: Decimal = Decimal("0.00")
+    late_night_surcharge_pct: Optional[Decimal] = None
+    event_surcharge_pct: Decimal = Decimal("0.00")
+
+    # Commercial Margins & Payout Separations
+    target_gross_margin_pct: Optional[Decimal] = None
+    supplier_cost_markup_pct: Optional[Decimal] = None
+    supplier_cost_net: Optional[Decimal] = None
+    clearing_commission_pct: Decimal = Decimal("0.10")
     
     # Authoritative Vendor Cancellation Policy Rules
     cancellation_lead_hours_standard: int = 2
@@ -415,6 +474,8 @@ class Vendor(BaseModel):
     invoice_prefix: str = "INV"
     receipt_prefix: str = "REC"
     invoice_custom_footer: Optional[str] = "All rides operated by licensed & commercially insured executive chauffeurs."
+    tax_label: Optional[str] = "State & Municipal Sales Taxes"
+    tax_rate_pct: Optional[Decimal] = None
 
 
 
@@ -758,8 +819,9 @@ class RegionalTaxRule(BaseModel):
     jurisdiction_code: str                          # e.g. "US_NY", "UK_LON", "EU_FR", "JP_TYO", "AE_DXB"
     country: str                                    # e.g. "United States", "United Kingdom", "France", "Japan", "UAE"
     city_or_region: str                             # e.g. "New York", "London", "Paris", "Tokyo", "Dubai"
-    vat_or_sales_tax_rate: Decimal                  # e.g. 0.08875, 0.20, 0.20, 0.10, 0.05
-    airport_access_fee: Decimal                     # Terminal staging access fee
+    tax_name: Optional[str] = None                  # Authoritative tax tag determined by sovereign cell or jurisdiction
+    vat_or_sales_tax_rate: Decimal = Decimal("0.00") # Authoritative statutory tax rate (0.00 default, zero synthetic rates)
+    airport_access_fee: Decimal = Decimal("0.00")   # Terminal staging access fee
     congestion_charge: Decimal = Decimal("0.00")    # City centre / ULEZ congestion surcharge
     currency: str = "USD"
     notes: Optional[str] = None
@@ -796,6 +858,8 @@ class CorporateAccount(BaseModel):
     current_balance: Decimal = Decimal("0.00")
     cost_centers: List[DepartmentCostCenter] = Field(default_factory=list)
     travel_policy: CorporateTravelPolicy = Field(default_factory=CorporateTravelPolicy)
+    contracted_discount_pct: Decimal = Decimal("0.00")
+    negotiated_route_rates: Dict[str, Decimal] = Field(default_factory=dict)
     is_active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -1202,11 +1266,18 @@ class Quote(BaseModel):
     # Currency & Corporate Context
     fx_snapshot: Optional[FXRateSnapshot] = None
     tax_jurisdiction: Optional[str] = "US_NY"
+    tax_label: Optional[str] = "State & Municipal Sales Taxes"
     corporate_account_id: Optional[str] = None
     cost_center_code: Optional[str] = None
     
     # Dynamic Vendor-Governed Cancellation Policy
     cancellation_policy: Optional[CancellationPolicy] = None
+    
+    # Financial Separation & Margin Tracking (Internal to Platform & Sovereign Vendor)
+    supplier_cost_net: Optional[Decimal] = None
+    gross_margin_pct: Optional[Decimal] = None
+    supplier_markup_pct: Optional[Decimal] = None
+    signature_hash: Optional[str] = None
     
     line_items: List[QuoteLineItem] = []
     is_binding: bool = False
@@ -1262,11 +1333,15 @@ class DriverOffer(BaseModel):
     trip_id: str
     driver_id: str
     driver_name: str
+    driver_phone: Optional[str] = None
     vehicle_id: str
     vehicle_title: str = "Executive Luxury Vehicle"
+    vehicle_details: Optional[str] = None
+    booking_id: Optional[str] = None
     offered_payout_net: Decimal
     currency: str = "USD"
     status: DriverOfferStatus = DriverOfferStatus.PENDING
+    timeout_seconds: int = 180
     expires_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     responded_at: Optional[datetime] = None

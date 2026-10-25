@@ -92,9 +92,9 @@ GLOBAL_SUBSCRIPTION_PLANS: Dict[str, VendorSubscriptionPlan] = {
     "tier_enterprise_cluster": VendorSubscriptionPlan(
         id="tier_enterprise_cluster",
         tier=SubscriptionTier.ENTERPRISE_NETWORK,
-        name="Enterprise Cluster (Custom / Inquire)",
-        description="Multi-city dedicated cluster with custom VPC routing and enterprise SLA guarantees. (Pricing currently under review - contact sales).",
-        monthly_price_usd=0.0,
+        name="Enterprise Cluster",
+        description="Multi-city dedicated cluster with custom VPC routing and enterprise SLA guarantees.",
+        monthly_price_usd=249.0,
         included_vehicles=999,
         features=[
             "⏳ Multi-City High Availability Cluster (Coming Soon)",

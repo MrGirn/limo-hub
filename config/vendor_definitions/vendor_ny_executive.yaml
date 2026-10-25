@@ -27,52 +27,25 @@ communications:
   twilio_sms_number: "+12125550199"
 
 pricing_matrix:
-  base_rate_usd: 85.00
+  base_rate_usd: 125.00
+  business_class_base_rate_usd: 125.00
+  first_class_base_rate_usd: 185.00
+  business_van_base_rate_usd: 165.00
+  hourly_rate_usd: 95.00
+  per_mile_rate_usd: 4.25
+  deadhead_rate_per_mile_usd: 3.10
   per_km_usd: 3.80
   tax_rate_pct: 8.875
+  tax_label: "NY Combined Sales Tax"
+  airport_terminal_fee_usd: 18.00
+  congestion_charge_usd: 0.00
   airport_meet_and_greet_usd: 55.00
   tolls_bridge_tunnel_usd: 19.50
+  operating_radius_miles: 75.0
 
 database:
   db_type: "mysql_partition"
   partition_id: "db_partition_ny_exec_01"
-
-fleet_drivers:
-  - id: "driver_ny_01"
-    name: "James Thorne"
-    phone: "+12125550911"
-    vehicle: "Cadillac Escalade ESV (Black)"
-    license_plate: "NYC-TLC-01"
-  - id: "driver_ny_02"
-    name: "Michael Rossi"
-    phone: "+12125550912"
-    vehicle: "Chevrolet Suburban Premier (Black)"
-    license_plate: "NYC-TLC-02"
-  - id: "driver_ny_03"
-    name: "David Chen"
-    phone: "+12125550913"
-    vehicle: "Lincoln Navigator L (Black)"
-    license_plate: "NYC-TLC-03"
-  - id: "driver_ny_04"
-    name: "Dmitri Volkov"
-    phone: "+12125550914"
-    vehicle: "Mercedes-Benz S580 (Black)"
-    license_plate: "NYC-VIP-01"
-  - id: "driver_ny_05"
-    name: "Alexander Vance"
-    phone: "+12125550915"
-    vehicle: "BMW 760i xDrive (Black)"
-    license_plate: "NYC-VIP-02"
-  - id: "driver_ny_06"
-    name: "Robert Taylor"
-    phone: "+12125550916"
-    vehicle: "Lincoln Continental (Black)"
-    license_plate: "NYC-SED-01"
-  - id: "driver_ny_07"
-    name: "Marcus Green"
-    phone: "+12125550917"
-    vehicle: "Mercedes-Benz Sprinter High Roof (Black)"
-    license_plate: "NYC-VAN-01"
 
 affiliate_policy:
   enable_federation: true
@@ -95,4 +68,14 @@ insurance_compliance:
   show_policy_amount: true
   carrier_name: "Berkshire Hathaway TLC Livery"
   policy_number: "BH-NYC-884129"
+
+regional_tax_rules:
+  - jurisdiction_code: "US_NY"
+    country: "United States"
+    city_or_region: "New York"
+    tax_name: "NY Combined Sales Tax"
+    vat_or_sales_tax_rate: 0.08875
+    airport_access_fee: 18.00
+    congestion_charge: 0.00
+    currency: "USD"
 

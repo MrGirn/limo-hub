@@ -21,54 +21,30 @@ branding:
   logo_url: "/assets/royal_london_logo.png"
 
 pricing_matrix:
-  base_rate_usd: 75.00
+  base_rate_usd: 110.00
+  business_class_base_rate_usd: 110.00
+  first_class_base_rate_usd: 165.00
+  business_van_base_rate_usd: 145.00
+  hourly_rate_usd: 80.00
+  per_mile_rate_usd: 4.10
   per_km_usd: 3.65
-  deadhead_rate_per_mile_usd: 2.10
-  deadhead_rate_per_km_usd: 1.30
+  deadhead_rate_per_mile_usd: 2.50
+  deadhead_rate_per_km_usd: 1.55
   deadhead_buffer_miles_outbound: 0.00
   deadhead_buffer_miles_return: 0.00
   tax_rate_pct: 20.00
+  tax_label: "UK Value Added Tax (VAT)"
+  airport_terminal_fee_usd: 5.50
   fuel_surcharge_pct: 8.00
   service_charge_pct: 5.00
   credit_card_fee_pct: 2.9
   airport_meet_and_greet_usd: 40.00
   congestion_charge_usd: 15.00
+  operating_radius_miles: 50.0
 
 database:
   db_type: "mysql_partition"
   partition_id: "db_partition_london_royal_01"
-
-fleet_drivers:
-  - id: "driver_lon_01"
-    name: "Oliver Vance"
-    phone: "+442081234501"
-    vehicle: "Range Rover Autobiography (Black)"
-    license_plate: "LDN-VIP-01"
-  - id: "driver_lon_02"
-    name: "James Sterling"
-    phone: "+442081234502"
-    vehicle: "Mercedes-Benz S-Class S580e (Black)"
-    license_plate: "LDN-VIP-02"
-  - id: "driver_lon_03"
-    name: "William Hughes"
-    phone: "+442081234503"
-    vehicle: "BMW 750e M Sport (Black)"
-    license_plate: "LDN-VIP-03"
-  - id: "driver_lon_04"
-    name: "George Sinclair"
-    phone: "+442081234504"
-    vehicle: "Mercedes-Benz E-Class AMG Line (Black)"
-    license_plate: "LDN-SED-01"
-  - id: "driver_lon_05"
-    name: "Henry Kensington"
-    phone: "+442081234505"
-    vehicle: "Mercedes-Benz V-Class Extra Long (Black)"
-    license_plate: "LDN-VAN-01"
-  - id: "driver_lon_06"
-    name: "Arthur Pendelton"
-    phone: "+442081234506"
-    vehicle: "Mercedes-Benz Sprinter VIP Shuttle (Black)"
-    license_plate: "LDN-VAN-02"
 
 telecom_compliance:
   legal_business_name: "Royal Crown Chauffeurs London Ltd"
@@ -86,4 +62,14 @@ insurance_compliance:
   show_policy_amount: true
   carrier_name: "AXA Corporate Livery UK"
   policy_number: "AXA-LDN-449120"
+
+regional_tax_rules:
+  - jurisdiction_code: "UK_LON"
+    country: "United Kingdom"
+    city_or_region: "London"
+    tax_name: "UK Value Added Tax (VAT)"
+    vat_or_sales_tax_rate: 0.2000
+    airport_access_fee: 5.50
+    congestion_charge: 15.00
+    currency: "GBP"
 

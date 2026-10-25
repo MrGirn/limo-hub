@@ -27,7 +27,7 @@ from app.database_mysql import (
     QuoteModel, BookingModel, TripModel, TripEventModel, IncidentModel,
     CustomerModel, CustomerSavedAddressModel, VendorEmailConfigModel,
     VendorPricingRuleModel, VendorTeamMemberModel, VendorOmnichannelConfigModel,
-    VehicleClassOptionModel, CentralTollRecordModel, ProofOfDeliveryModel
+    VehicleClassOptionModel, CentralTollRecordModel, ProofOfDeliveryModel, RegionalTaxRuleModel
 )
 
 
@@ -243,7 +243,9 @@ class LimoDatabase:
                         brand_primary_color=getattr(v, 'brand_primary_color', '#0078D4') or '#0078D4',
                         invoice_prefix=getattr(v, 'invoice_prefix', 'INV') or 'INV',
                         receipt_prefix=getattr(v, 'receipt_prefix', 'REC') or 'REC',
-                        invoice_custom_footer=getattr(v, 'invoice_custom_footer', None)
+                        invoice_custom_footer=getattr(v, 'invoice_custom_footer', None),
+                        tax_label=getattr(v, 'tax_label', None) or 'State & Municipal Sales Taxes',
+                        tax_rate_pct=Decimal(str(v.tax_rate_pct)) if getattr(v, 'tax_rate_pct', None) is not None else None
                     )
                 # Load vehicles
                 for veh in session.query(VehicleModel).all():
@@ -360,6 +362,22 @@ class LimoDatabase:
                 except Exception:
                     pass
 
+                # Load Regional Tax Rules from Authoritative MySQL
+                try:
+                    for tr in session.query(RegionalTaxRuleModel).all():
+                        self.regional_tax_rules[tr.jurisdiction_code] = RegionalTaxRule(
+                            jurisdiction_code=tr.jurisdiction_code,
+                            country=tr.country,
+                            city_or_region=tr.city_or_region,
+                            tax_name=getattr(tr, "tax_name", None) or "State & Municipal Sales Taxes",
+                            vat_or_sales_tax_rate=Decimal(str(tr.vat_or_sales_tax_rate)),
+                            airport_access_fee=Decimal(str(tr.airport_access_fee or "0.00")),
+                            congestion_charge=Decimal(str(tr.congestion_charge or "0.00")),
+                            currency=tr.currency or "USD"
+                        )
+                except Exception as tax_err:
+                    pass
+
                 # Load bookings
                 for b in session.query(BookingModel).all():
                     q_model = session.query(QuoteModel).filter_by(id=b.quote_id).first()
@@ -378,11 +396,13 @@ class LimoDatabase:
                             estimated_duration_min=q_model.estimated_duration_min,
                             currency=q_model.currency,
                             base_net=Decimal(str(q_model.base_net)),
+                            passenger_distance_net=Decimal(str(q_model.distance_net)),
                             distance_net=Decimal(str(q_model.distance_net)),
                             wait_net=Decimal(str(q_model.wait_net)),
                             surcharges_net=Decimal(str(getattr(q_model, 'surcharges_net', None) or getattr(q_model, 'airport_train_surcharge_net', '0.00') or "0.00")),
                             deadhead_fee_net=Decimal(str(getattr(q_model, 'deadhead_fee_net', None) or getattr(q_model, 'return_deadhead_net', '0.00') or "0.00")),
                             subtotal_net=Decimal(str(q_model.subtotal_net or "0.00")),
+                            tax_label=getattr(q_model, 'tax_label', None) or 'State & Municipal Sales Taxes',
                             tax_rate=Decimal(str(q_model.tax_rate or "0.08875")),
                             tax_amount=Decimal(str(q_model.tax_amount or "0.00")),
                             gratuity_rate=Decimal(str(q_model.gratuity_rate or "0.20")),
@@ -450,6 +470,65 @@ class LimoDatabase:
             print("Successfully synced US operational records & Customer CRM from MySQL!")
         except Exception as e:
             print(f"Note: MySQL sync not available or deferred: {e}")
+        
+        # If MySQL regional tax rules table was empty or connection deferred, load declarative rules configured by sovereign cells
+        if len(self.regional_tax_rules) == 0:
+            self._load_declarative_cell_tax_rules()
+
+    def _load_declarative_cell_tax_rules(self):
+        """Loads regional tax rules declared by sovereign cell configurations in config/vendor_definitions/."""
+        import glob
+        import os
+        import yaml
+        candidate_dirs = [
+            "config/vendor_definitions",
+            "/app/config/vendor_definitions",
+            os.path.join(os.path.dirname(__file__), "../config/vendor_definitions")
+        ]
+        target_dir = next((d for d in candidate_dirs if d and os.path.isdir(d)), None)
+        if not target_dir:
+            return
+
+        for fpath in glob.glob(os.path.join(target_dir, "*.yaml")) + glob.glob(os.path.join(target_dir, "*.yml")):
+            if "vendor_golden_template" in os.path.basename(fpath):
+                continue
+            try:
+                with open(fpath, "r", encoding="utf-8") as f:
+                    data = yaml.safe_load(f) or {}
+                # Explicit regional tax rules list defined by cell owner
+                for rtr in data.get("regional_tax_rules") or data.get("tax_rules") or []:
+                    j_code = rtr.get("jurisdiction_code")
+                    if j_code and j_code not in self.regional_tax_rules:
+                        self.regional_tax_rules[j_code] = RegionalTaxRule(
+                            jurisdiction_code=j_code,
+                            country=rtr.get("country", "United States"),
+                            city_or_region=rtr.get("city_or_region", ""),
+                            tax_name=rtr.get("tax_name", "Sales Tax"),
+                            vat_or_sales_tax_rate=Decimal(str(rtr.get("vat_or_sales_tax_rate", "0.00"))),
+                            airport_access_fee=Decimal(str(rtr.get("airport_access_fee", "0.00"))),
+                            congestion_charge=Decimal(str(rtr.get("congestion_charge", "0.00"))),
+                            currency=rtr.get("currency", "USD"),
+                            notes=rtr.get("notes")
+                        )
+                # Primary vendor pricing matrix tax rate & label
+                pm = data.get("pricing_matrix", {})
+                v_data = data.get("vendor", {})
+                country_code = (v_data.get("country_code") or "US").upper()
+                state = (v_data.get("state") or "").upper()
+                j_code = f"{country_code}_{state}" if state else country_code
+                if j_code and j_code not in self.regional_tax_rules and pm.get("tax_rate_pct") is not None:
+                    self.regional_tax_rules[j_code] = RegionalTaxRule(
+                        jurisdiction_code=j_code,
+                        country=v_data.get("country", "United States"),
+                        city_or_region=v_data.get("city") or v_data.get("region") or state,
+                        tax_name=pm.get("tax_label") or "Sales Tax",
+                        vat_or_sales_tax_rate=Decimal(str(pm.get("tax_rate_pct", 0))) / Decimal("100.0"),
+                        airport_access_fee=Decimal(str(pm.get("airport_terminal_fee_usd", "0.00"))),
+                        congestion_charge=Decimal(str(pm.get("congestion_charge_usd", "0.00"))),
+                        currency=v_data.get("currency", "USD")
+                    )
+            except Exception:
+                pass
 
     def sync_vendor_to_mysql(self, vendor_id: str):
         """Persists or updates a single vendor entity and its fleet to MySQL."""
@@ -621,59 +700,8 @@ class LimoDatabase:
             )
         ]
 
-        # 9. Multi-Region Tax & Airport Surcharge Rules
-        self.regional_tax_rules = {
-            "US_NY": RegionalTaxRule(
-                jurisdiction_code="US_NY",
-                country="United States",
-                city_or_region="New York",
-                vat_or_sales_tax_rate=Decimal("0.08875"),
-                airport_access_fee=Decimal("18.00"),
-                congestion_charge=Decimal("0.00"),
-                currency="USD",
-                notes="NY State & City combined sales tax 8.875% with Port Authority airport access fee"
-            ),
-            "UK_LON": RegionalTaxRule(
-                jurisdiction_code="UK_LON",
-                country="United Kingdom",
-                city_or_region="London",
-                vat_or_sales_tax_rate=Decimal("0.20"),
-                airport_access_fee=Decimal("5.50"),
-                congestion_charge=Decimal("15.00"),
-                currency="GBP",
-                notes="HM Revenue & Customs standard 20% VAT with TfL London Congestion and Heathrow Terminal Dropoff charge"
-            ),
-            "EU_FR": RegionalTaxRule(
-                jurisdiction_code="EU_FR",
-                country="France",
-                city_or_region="Paris",
-                vat_or_sales_tax_rate=Decimal("0.20"),
-                airport_access_fee=Decimal("12.00"),
-                congestion_charge=Decimal("0.00"),
-                currency="EUR",
-                notes="French standard 20% TVA / VAT with CDG/ORY VIP access surcharge"
-            ),
-            "JP_TYO": RegionalTaxRule(
-                jurisdiction_code="JP_TYO",
-                country="Japan",
-                city_or_region="Tokyo",
-                vat_or_sales_tax_rate=Decimal("0.10"),
-                airport_access_fee=Decimal("2000.00"),
-                congestion_charge=Decimal("0.00"),
-                currency="JPY",
-                notes="Japan National Consumption Tax (JCT 10%) with Haneda/Narita airport chauffeur pass"
-            ),
-            "AE_DXB": RegionalTaxRule(
-                jurisdiction_code="AE_DXB",
-                country="UAE",
-                city_or_region="Dubai",
-                vat_or_sales_tax_rate=Decimal("0.05"),
-                airport_access_fee=Decimal("25.00"),
-                congestion_charge=Decimal("0.00"),
-                currency="AED",
-                notes="Federal Tax Authority 5% VAT with DXB VIP Terminal Chauffeur staging"
-            )
-        }
+        # 9. Multi-Region Tax & Airport Surcharge Rules: Authoritative, zero hardcoded presets
+        self.regional_tax_rules = {}
 
         # 10. Enterprise Corporate Accounts & Department Cost Centers
         gs_account = CorporateAccount(

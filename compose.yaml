@@ -10,6 +10,8 @@ services:
     restart: always
     ports:
       - "8000:8000"
+    env_file:
+      - .env
     environment:
       - DATABASE_URL=mysql+pymysql://root:%21891Mdsaaf@host.docker.internal:3306/limo_db
       - MYSQL_URL=mysql+pymysql://root:%21891Mdsaaf@host.docker.internal:3306/limo_db
@@ -21,9 +23,11 @@ services:
     volumes:
       - ./packages:/app/packages
       - ./app:/app/app
+      - ./config:/app/config
       - ./frontend:/app/frontend
       - ./data:/app/data
       - ./limo_database.db:/app/limo_database.db
+      - ./.env:/app/.env
     networks:
       - limo-net
 
@@ -38,6 +42,8 @@ services:
     restart: always
     ports:
       - "8001:8000"
+    env_file:
+      - .env
     environment:
       - DATABASE_URL=mysql+pymysql://root:%21891Mdsaaf@host.docker.internal:3306/limo_db
       - MYSQL_URL=mysql+pymysql://root:%21891Mdsaaf@host.docker.internal:3306/limo_db
@@ -53,8 +59,10 @@ services:
     volumes:
       - ./packages:/app/packages
       - ./app:/app/app
+      - ./config:/app/config
       - ./frontend:/app/frontend
       - ./limo_database.db:/app/limo_database.db
+      - ./.env:/app/.env
     networks:
       - limo-net
     depends_on:
@@ -68,6 +76,8 @@ services:
     restart: always
     ports:
       - "8002:8000"
+    env_file:
+      - .env
     environment:
       - DATABASE_URL=mysql+pymysql://root:%21891Mdsaaf@host.docker.internal:3306/limo_db
       - MYSQL_URL=mysql+pymysql://root:%21891Mdsaaf@host.docker.internal:3306/limo_db
@@ -83,8 +93,10 @@ services:
     volumes:
       - ./packages:/app/packages
       - ./app:/app/app
+      - ./config:/app/config
       - ./frontend:/app/frontend
       - ./limo_database.db:/app/limo_database.db
+      - ./.env:/app/.env
     networks:
       - limo-net
     depends_on:
@@ -98,6 +110,8 @@ services:
     restart: always
     ports:
       - "8003:8000"
+    env_file:
+      - .env
     environment:
       - DATABASE_URL=mysql+pymysql://root:%21891Mdsaaf@host.docker.internal:3306/limo_db
       - MYSQL_URL=mysql+pymysql://root:%21891Mdsaaf@host.docker.internal:3306/limo_db
@@ -113,8 +127,10 @@ services:
     volumes:
       - ./packages:/app/packages
       - ./app:/app/app
+      - ./config:/app/config
       - ./frontend:/app/frontend
       - ./limo_database.db:/app/limo_database.db
+      - ./.env:/app/.env
     networks:
       - limo-net
     depends_on:
@@ -128,6 +144,8 @@ services:
     restart: always
     ports:
       - "8004:8000"
+    env_file:
+      - .env
     environment:
       - DATABASE_URL=mysql+pymysql://root:%21891Mdsaaf@host.docker.internal:3306/limo_db
       - MYSQL_URL=mysql+pymysql://root:%21891Mdsaaf@host.docker.internal:3306/limo_db
@@ -143,8 +161,10 @@ services:
     volumes:
       - ./packages:/app/packages
       - ./app:/app/app
+      - ./config:/app/config
       - ./frontend:/app/frontend
       - ./limo_database.db:/app/limo_database.db
+      - ./.env:/app/.env
     networks:
       - limo-net
     depends_on:

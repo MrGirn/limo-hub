@@ -110,7 +110,9 @@ export const BookingConfirmationPage: React.FC<Props> = ({
               </button>
 
               <button
-                onClick={() => alert('Calendar invite (.ics) generated.')}
+                onClick={() => {
+                  window.location.href = `/api/v1/global-hub/public/booking/${state.bookingReference || 'LM-20481'}/calendar.ics`;
+                }}
                 style={{
                   background: '#FFFFFF',
                   color: '#111827',
@@ -128,16 +130,42 @@ export const BookingConfirmationPage: React.FC<Props> = ({
                 <Calendar size={14} /> Add to calendar
               </button>
 
-              <span
-                onClick={() => setShowReceiptModal(true)}
-                style={{ fontSize: '13px', fontWeight: '600', color: '#1D68FE', cursor: 'pointer', textDecoration: 'underline', marginLeft: '6px' }}
+              <button
+                onClick={() => {
+                  window.open(`/api/v1/global-hub/public/booking/${state.bookingReference || 'LM-20481'}/invoice-pdf`, '_blank');
+                }}
+                style={{
+                  background: '#F1F5F9',
+                  color: '#0F172A',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '8px',
+                  padding: '11px 18px',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
               >
-                Receipt
-              </span>
+                <Printer size={14} /> Printable Invoice
+              </button>
             </div>
 
-            <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '6px' }}>
-              ℹ Chauffeur details will appear before pickup.
+            <div style={{
+              background: '#F0FDF4',
+              border: '1px solid #BBF7D0',
+              borderRadius: '8px',
+              padding: '10px 14px',
+              fontSize: '12px',
+              color: '#15803D',
+              marginTop: '4px'
+            }}>
+              ✓ <strong>Notifications Sent:</strong> Confirmation email & SMS tracking link dispatched to <strong>{state.email}</strong> and <strong>{state.phone}</strong>.
+            </div>
+
+            <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px' }}>
+              ℹ Live chauffeur GPS radar and arrival alerts will activate 30 minutes before pickup.
             </div>
           </div>
 

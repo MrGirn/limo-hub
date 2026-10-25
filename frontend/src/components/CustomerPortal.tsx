@@ -6,7 +6,7 @@ import {
   Plus, Trash2, Globe, Shield, Wifi, Droplets, VolumeX, Baby,
   Calendar, Edit3, ChevronDown, ChevronUp, User, X, Check,
   Award, Star, HeartHandshake, Phone, ArrowUpRight, HelpCircle,
-  Snowflake, Zap, Layers, Info, Download, Loader2
+  Snowflake, Zap, Layers, Info, Download, Loader2, Building2
 } from 'lucide-react';
 import { ServiceType, VehicleClass, Quote, Booking, BookingParty, MasterItinerary, LegMode, FulfilmentType, VehicleOption } from '../types';
 import { 
@@ -67,6 +67,54 @@ const extractCityFromAddress = (address?: string): string => {
     return parts[1] || parts[0];
   }
   return parts[0] || '';
+};
+
+export interface ParsedBlackCarAddress {
+  title: string;
+  subtitle: string;
+  iconType: 'AIRPORT' | 'HOTEL' | 'TRAIN' | 'ADDRESS';
+}
+
+export const parseBlackCarAddress = (raw?: string): ParsedBlackCarAddress => {
+  if (!raw || !raw.trim()) return { title: '', subtitle: '', iconType: 'ADDRESS' };
+  const clean = raw.trim();
+  const lower = clean.toLowerCase();
+  let iconType: 'AIRPORT' | 'HOTEL' | 'TRAIN' | 'ADDRESS' = 'ADDRESS';
+  if (lower.includes('airport') || lower.includes('aerodrome') || /\([A-Z]{3}\)/.test(clean)) {
+    iconType = 'AIRPORT';
+  } else if (
+    lower.includes('hotel') || lower.includes('resort') || lower.includes('suites') || 
+    lower.includes('inn') || lower.includes('marriott') || lower.includes('hilton') || 
+    lower.includes('hyatt') || lower.includes('ritz') || lower.includes('plaza') ||
+    lower.includes('parkway') || lower.includes('tower') || lower.includes('center') || lower.includes('building')
+  ) {
+    iconType = 'HOTEL';
+  } else if (lower.includes('station') || lower.includes('amtrak') || lower.includes('terminal') || lower.includes('rail')) {
+    iconType = 'TRAIN';
+  }
+
+  if (clean.includes(' - ')) {
+    const parts = clean.split(' - ');
+    return { title: parts[0].trim(), subtitle: parts.slice(1).join(' - ').trim(), iconType };
+  }
+  if (clean.includes(' · ')) {
+    const parts = clean.split(' · ');
+    return { title: parts[0].trim(), subtitle: parts.slice(1).join(' · ').trim(), iconType };
+  }
+  if (clean.includes(',')) {
+    const parts = clean.split(',').map(p => p.trim()).filter(Boolean);
+    return { title: parts[0], subtitle: parts.slice(1).join(', '), iconType };
+  }
+  return { title: clean, subtitle: '', iconType };
+};
+
+const renderLocationIcon = (iconType: 'AIRPORT' | 'HOTEL' | 'TRAIN' | 'ADDRESS') => {
+  switch (iconType) {
+    case 'AIRPORT': return <Plane size={15} color="#0A192F" style={{ marginTop: '2px', flexShrink: 0 }} />;
+    case 'HOTEL': return <Building2 size={15} color="#0A192F" style={{ marginTop: '2px', flexShrink: 0 }} />;
+    case 'TRAIN': return <Train size={15} color="#0A192F" style={{ marginTop: '2px', flexShrink: 0 }} />;
+    default: return <MapPin size={15} color="#0A192F" style={{ marginTop: '2px', flexShrink: 0 }} />;
+  }
 };
 
 export interface CustomerPortalProps {
@@ -817,7 +865,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
       }
       setWizardStep(5);
     } catch (err: any) {
-      alert(err.message || 'Booking confirmation error');
+      setTermsError(err.message || 'Booking confirmation error');
     } finally {
       setBookingLoading(false);
     }
@@ -825,10 +873,13 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
 
   const activeQuoteObj = (bookingMode === 'ITINERARY_PLANNER' ? masterItinerary : quote) || vehicleQuotes[vehicleClass];
 
-  // Dynamic real-time calculation for user extras
-  const childSeatCost = (childSeats.infant + childSeats.toddler + childSeats.booster) * 20;
-  const carbonOffsetCost = amenities.carbonOffset ? 5.00 : 0.00;
-  const fulfilmentMultiplier = fulfilmentType === 'ASSISTED_AUTONOMOUS' ? 0.90 : 1.00;
+  // Dynamic real-time calculation for user extras based on active vendor pricing rules
+  const childSeatUnitPrice = Number((activeQuoteObj as any)?.child_seat_unit_price || (config as any)?.child_seat_fee || 25.00);
+  const childSeatCost = (childSeats.infant + childSeats.toddler + childSeats.booster) * childSeatUnitPrice;
+  const carbonOffsetUnitPrice = Number((config as any)?.carbon_offset_fee || 5.00);
+  const carbonOffsetCost = amenities.carbonOffset ? carbonOffsetUnitPrice : 0.00;
+  const autonomousDiscountPct = Number((config as any)?.autonomous_discount_pct || 10.00);
+  const fulfilmentMultiplier = fulfilmentType === 'ASSISTED_AUTONOMOUS' ? (1 - autonomousDiscountPct / 100) : 1.00;
 
   const baseQuoteNumber = activeQuoteObj ? Number(
     activeQuoteObj.all_inclusive_total ||
@@ -1059,21 +1110,35 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
             }}>
               {/* Route Display */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                  <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#10B981', marginTop: '5px', flexShrink: 0 }} />
-                  <div>
-                    <div style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>PICKUP</div>
-                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A', marginTop: '2px' }}>{booking.pickup_address}</div>
-                  </div>
-                </div>
+                {(() => {
+                  const pPickup = parseBlackCarAddress(booking.pickup_address);
+                  const pDropoff = parseBlackCarAddress(booking.dropoff_address || 'As Directed');
+                  return (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#10B981', marginTop: '5px', flexShrink: 0 }} />
+                        <div>
+                          <div style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>PICKUP</div>
+                          <div style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A', marginTop: '2px' }}>{pPickup.title}</div>
+                          {pPickup.subtitle && pPickup.subtitle !== pPickup.title && (
+                            <div style={{ fontSize: '11px', color: '#64748B' }}>{pPickup.subtitle}</div>
+                          )}
+                        </div>
+                      </div>
 
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                  <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#9A7B4F', marginTop: '5px', flexShrink: 0 }} />
-                  <div>
-                    <div style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>DESTINATION</div>
-                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A', marginTop: '2px' }}>{booking.dropoff_address || 'As Directed'}</div>
-                  </div>
-                </div>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#9A7B4F', marginTop: '5px', flexShrink: 0 }} />
+                        <div>
+                          <div style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>DESTINATION</div>
+                          <div style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A', marginTop: '2px' }}>{pDropoff.title}</div>
+                          {pDropoff.subtitle && pDropoff.subtitle !== pDropoff.title && (
+                            <div style={{ fontSize: '11px', color: '#64748B' }}>{pDropoff.subtitle}</div>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               {/* 4-Col Key Details Grid */}
@@ -2285,7 +2350,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
                                 gap: '6px'
                               }}
                             >
-                              <span>{idx === 0 ? 'Leg 1 · Outbound' : idx === 1 ? 'Leg 2 · Return' : `Leg ${idx + 1}`}: {leg.origin_address ? leg.origin_address.split(',')[0] : 'Origin'} → {leg.destination_address ? leg.destination_address.split(',')[0] : 'Dest'}</span>
+                              <span>{idx === 0 ? 'Leg 1 · Outbound' : idx === 1 ? 'Leg 2 · Return' : `Leg ${idx + 1}`}: {leg.origin_address ? parseBlackCarAddress(leg.origin_address).title : 'Origin'} → {leg.destination_address ? parseBlackCarAddress(leg.destination_address).title : 'Dest'}</span>
                             </button>
                           );
                         })}
@@ -2446,7 +2511,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
                   {/* Footer Row Matching Reference */}
                   <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '18px' }}>
                     <div style={{ fontSize: '11.5px', color: '#64748B' }}>
-                      Illustrative fares • Vehicle models may vary.
+                      Guaranteed all-inclusive fares • Live calculated from active fleet tariffs.
                     </div>
 
                     <button
@@ -3012,7 +3077,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
                               Origin (Pickup)
                             </div>
                             <div style={{ fontSize: '13px', fontWeight: 700, color: effPickup ? '#0F172A' : '#94A3B8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {effPickup ? effPickup.split(',')[0] : 'Enter pickup location'}
+                              {effPickup ? parseBlackCarAddress(effPickup).title : 'Enter pickup location'}
                             </div>
                           </div>
 
@@ -3023,7 +3088,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
                             <div style={{ fontSize: '13px', fontWeight: 700, color: selectedRideType === 'HOURLY' ? '#0F172A' : (effDropoff ? '#0F172A' : '#94A3B8'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {selectedRideType === 'HOURLY'
                                 ? `${hourlyHours} Hours As Directed`
-                                : (effDropoff ? effDropoff.split(',')[0] : 'Enter destination')}
+                                : (effDropoff ? parseBlackCarAddress(effDropoff).title : 'Enter destination')}
                             </div>
                           </div>
                         </div>
@@ -3054,16 +3119,23 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
                   
                   {selectedRideType === 'HOURLY' ? (
                     <>
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                        <Plane size={15} color="#0A192F" style={{ marginTop: '2px', flexShrink: 0 }} />
-                        <div style={{ flex: 1 }}>
-                          <span style={{ color: '#64748B', fontWeight: 600 }}>Pickup</span>
-                          <div style={{ fontWeight: 700, color: pickupAddress?.trim() ? '#0F172A' : '#94A3B8' }}>
-                            {pickupAddress?.trim() ? pickupAddress.split(',')[0] : 'Enter pickup location'}
+                      {(() => {
+                        const parsedPickup = parseBlackCarAddress(pickupAddress);
+                        return (
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                            {renderLocationIcon(parsedPickup.iconType)}
+                            <div style={{ flex: 1 }}>
+                              <span style={{ color: '#64748B', fontWeight: 600 }}>Pickup</span>
+                              <div style={{ fontWeight: 700, color: parsedPickup.title ? '#0F172A' : '#94A3B8' }}>
+                                {parsedPickup.title || 'Enter pickup location'}
+                              </div>
+                              {parsedPickup.subtitle && parsedPickup.subtitle !== parsedPickup.title && (
+                                <div style={{ fontSize: '10px', color: '#94A3B8' }}>{parsedPickup.subtitle}</div>
+                              )}
+                            </div>
                           </div>
-                          {pickupAddress?.trim() && <div style={{ fontSize: '10px', color: '#94A3B8' }}>{pickupAddress}</div>}
-                        </div>
-                      </div>
+                        );
+                      })()}
 
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                         <Clock size={15} color="#0A192F" style={{ marginTop: '2px', flexShrink: 0 }} />
@@ -3084,32 +3156,38 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
                         effPickupDisp.length >= 3 && 
                         effDropoffDisp.length >= 3
                       );
+                      const parsedPickup = parseBlackCarAddress(effPickupDisp);
+                      const parsedDropoff = parseBlackCarAddress(effDropoffDisp);
 
                       return (
                         <>
                           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                            <Plane size={15} color="#0A192F" style={{ marginTop: '2px', flexShrink: 0 }} />
+                            {renderLocationIcon(parsedPickup.iconType)}
                             <div style={{ flex: 1 }}>
                               <span style={{ color: '#64748B', fontWeight: 600 }}>Pickup</span>
                               <div style={{ fontWeight: 700, color: hasBoth ? '#0F172A' : (effPickupDisp ? '#475569' : '#94A3B8') }}>
                                 {hasBoth 
-                                  ? effPickupDisp.split(',')[0] 
-                                  : (effPickupDisp ? `${effPickupDisp.split(',')[0]} (Awaiting destination)` : 'Enter pickup location')}
+                                  ? parsedPickup.title 
+                                  : (parsedPickup.title ? `${parsedPickup.title} (Awaiting destination)` : 'Enter pickup location')}
                               </div>
-                              {hasBoth && <div style={{ fontSize: '10px', color: '#94A3B8' }}>{effPickupDisp}</div>}
+                              {hasBoth && parsedPickup.subtitle && parsedPickup.subtitle !== parsedPickup.title && (
+                                <div style={{ fontSize: '10px', color: '#94A3B8' }}>{parsedPickup.subtitle}</div>
+                              )}
                             </div>
                           </div>
 
                           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                            <MapPin size={15} color="#0A192F" style={{ marginTop: '2px', flexShrink: 0 }} />
+                            {renderLocationIcon(parsedDropoff.iconType)}
                             <div style={{ flex: 1 }}>
                               <span style={{ color: '#64748B', fontWeight: 600 }}>Destination</span>
                               <div style={{ fontWeight: 700, color: hasBoth ? '#0F172A' : (effDropoffDisp ? '#475569' : '#94A3B8') }}>
                                 {hasBoth 
-                                  ? effDropoffDisp.split(',')[0] 
-                                  : (effDropoffDisp ? `${effDropoffDisp.split(',')[0]} (Awaiting pickup)` : 'Enter destination')}
+                                  ? parsedDropoff.title 
+                                  : (parsedDropoff.title ? `${parsedDropoff.title} (Awaiting pickup)` : 'Enter destination')}
                               </div>
-                              {hasBoth && <div style={{ fontSize: '10px', color: '#94A3B8' }}>{effDropoffDisp}</div>}
+                              {hasBoth && parsedDropoff.subtitle && parsedDropoff.subtitle !== parsedDropoff.title && (
+                                <div style={{ fontSize: '10px', color: '#94A3B8' }}>{parsedDropoff.subtitle}</div>
+                              )}
                             </div>
                           </div>
                         </>
@@ -3265,7 +3343,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
 
                           {Number(taxesFormatted) > 0 && (
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', fontSize: '11.5px', color: '#64748B' }}>
-                              <span>State &amp; Municipal Sales Taxes {activeQuoteObj?.tax_rate ? `(${(Number(activeQuoteObj.tax_rate) * 100).toFixed(2)}%)` : ''}</span>
+                              <span>{activeQuoteObj?.tax_label || activeQuoteObj?.tax_name || 'Sales Tax & Surcharges'} {activeQuoteObj?.tax_rate ? `(${(Number(activeQuoteObj.tax_rate) * 100).toFixed(2)}%)` : ''}</span>
                               <span style={{ fontWeight: 700, color: '#0F172A' }}>${taxesFormatted}</span>
                             </div>
                           )}
@@ -3300,7 +3378,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
 
                           {Number(taxesFormatted) > 0 && (
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <span>State Taxes &amp; Surcharges</span>
+                              <span>{activeQuoteObj?.tax_label || activeQuoteObj?.tax_name || 'Sales Tax & Surcharges'} {activeQuoteObj?.tax_rate ? `(${(Number(activeQuoteObj.tax_rate) * 100).toFixed(2)}%)` : ''}</span>
                               <span style={{ fontWeight: 600, color: '#0F172A' }}>${taxesFormatted}</span>
                             </div>
                           )}
@@ -3559,7 +3637,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
                   </span>
                 </div>
                 <p style={{ margin: 0, fontSize: '12px', color: '#78350F', lineHeight: '1.6' }}>
-                  Your calculated fare includes statutory livery sales taxes, standard 20% chauffeur gratuity, and estimated tolls. No surprise charges will be added at destination.
+                  Your calculated fare includes statutory livery taxes{activeQuoteObj?.tax_label ? ` (${activeQuoteObj.tax_label})` : ''}, chauffeur gratuity{activeQuoteObj?.gratuity_rate ? ` (${(Number(activeQuoteObj.gratuity_rate) * 100).toFixed(0)}%)` : ''}, and estimated tolls. No surprise charges will be added at destination.
                 </p>
               </div>
             </div>

@@ -232,9 +232,9 @@ class SovereignCellInfraService:
             # Live driver & vehicle & booking counts from authoritative DB
             norm_id = vendor_id.replace("-", "_")
             alias_id = vendor_id.replace("_", "-")
-            active_drivers = len([d for d in db.drivers.values() if d.vendor_id in (vendor_id, norm_id, alias_id)])
-            active_vehicles = len([v for v in db.vehicles.values() if v.vendor_id in (vendor_id, norm_id, alias_id)])
-            total_bookings = len([b for b in db.bookings.values() if b.vendor_id in (vendor_id, norm_id, alias_id)])
+            active_drivers = len([d for d in db.drivers.values() if getattr(d, "vendor_id", None) in (vendor_id, norm_id, alias_id)])
+            active_vehicles = len([v for v in db.vehicles.values() if getattr(v, "vendor_id", None) in (vendor_id, norm_id, alias_id)])
+            total_bookings = len([b for b in db.bookings.values() if getattr(b, "vendor_id", None) in (vendor_id, norm_id, alias_id)])
 
             # Real database partition identification
             db_partition = (

@@ -24,6 +24,7 @@ from app.services.vendor_cell_engine import (
 from app.services.vendor_email_gateway_service import VendorEmailGatewayService
 from app.services.vendor_token_encryption_service import vendor_token_encryption_service
 from app.database import db
+from app.domain_models import RegionalTaxRule
 
 logger = logging.getLogger("VendorSpinupService")
 
@@ -60,6 +61,7 @@ class VendorSpinUpPayload(BaseModel):
     base_rate_usd: Optional[float] = None
     per_km_usd: Optional[float] = None
     tax_rate_pct: Optional[float] = None
+    tax_label: Optional[str] = None
     domain: Optional[str] = None
     inbound_email: Optional[str] = None
     contact_phone: Optional[str] = None
@@ -70,6 +72,7 @@ class VendorSpinUpPayload(BaseModel):
     pricing_matrix: Optional[Dict[str, Any]] = None
     telecom_compliance: Optional[Dict[str, Any]] = None
     operational_stats: Dict[str, Any] = Field(default_factory=dict)
+    regional_tax_rules: Optional[List[Dict[str, Any]]] = None
 
 
 import time
@@ -216,6 +219,9 @@ class VendorSpinupService:
                 fuel_surcharge_pct=Decimal(str(pm_raw["fuel_surcharge_pct"])) if "fuel_surcharge_pct" in pm_raw else None,
                 service_charge_pct=Decimal(str(pm_raw["service_charge_pct"])) if "service_charge_pct" in pm_raw else None,
                 credit_card_fee_pct=Decimal(str(pm_raw["credit_card_fee_pct"])) if "credit_card_fee_pct" in pm_raw else None,
+                tax_gratuity_display_mode=pm_raw.get("tax_gratuity_display_mode"),
+                tax_label=pm_raw.get("tax_label") or getattr(payload, "tax_label", None) or "State & Municipal Sales Taxes",
+                tax_rate_pct=Decimal(str(payload.tax_rate_pct)) if payload.tax_rate_pct is not None else None,
                 pricing_matrix=pm_raw,
                 operating_currency=payload.currency
             )
@@ -275,52 +281,113 @@ class VendorSpinupService:
             base_rate = Decimal(str(payload.base_rate_usd))
             per_km = Decimal(str(payload.per_km_usd))
             per_mile = Decimal(str(round(float(payload.per_km_usd) * 1.60934, 2)))
-            tax_r = Decimal(str(round(payload.tax_rate_pct / 100.0, 5)))
+            tax_r = Decimal(str(round(payload.tax_rate_pct / 100.0, 5))) if payload.tax_rate_pct is not None else Decimal("0.00")
+
+            prog_tiers = pm_raw.get("progressive_distance_tiers")
+            tg_mode = pm_raw.get("tax_gratuity_display_mode")
+            dh_buf_out = Decimal(str(pm_raw["deadhead_buffer_miles_outbound"])) if "deadhead_buffer_miles_outbound" in pm_raw else None
+            dh_buf_ret = Decimal(str(pm_raw["deadhead_buffer_miles_return"])) if "deadhead_buffer_miles_return" in pm_raw else None
+            fuel_surch = Decimal(str(pm_raw["fuel_surcharge_pct"])) if "fuel_surcharge_pct" in pm_raw else None
+            svc_chg = Decimal(str(pm_raw["service_charge_pct"])) if "service_charge_pct" in pm_raw else None
+            cc_fee = Decimal(str(pm_raw["credit_card_fee_pct"])) if "credit_card_fee_pct" in pm_raw else None
+            pricing_model = pm_raw.get("pricing_model_type", "DYNAMIC_MATRIX")
+            stack_mode = pm_raw.get("surcharge_stacking_mode", "HIGHEST_ONLY")
+            min_fare_val = Decimal(str(pm_raw.get("minimum_fare_usd", base_rate))) if "minimum_fare_usd" in pm_raw else None
+
+            suv_base = Decimal(str(pm_raw.get("luxury_suv_base_rate_usd", float(base_rate) * 1.2))) if "luxury_suv_base_rate_usd" in pm_raw else base_rate * Decimal("1.2")
+            first_base = Decimal(str(pm_raw.get("first_class_base_rate_usd", float(base_rate) * 1.25))) if "first_class_base_rate_usd" in pm_raw else base_rate * Decimal("1.25")
+            sedan_base = Decimal(str(pm_raw.get("business_class_base_rate_usd", float(base_rate) * 0.85))) if "business_class_base_rate_usd" in pm_raw else base_rate * Decimal("0.85")
+            van_base = Decimal(str(pm_raw.get("business_van_base_rate_usd", float(base_rate) * 1.6))) if "business_van_base_rate_usd" in pm_raw else base_rate * Decimal("1.6")
+            tax_lbl = pm_raw.get("tax_label") or getattr(payload, "tax_label", None) or "Sales Tax"
 
             rules_dict = {
                 VehicleClass.LUXURY_SUV.value: VendorPricingRule(
                     vendor_id=payload.vendor_id,
                     vehicle_class=VehicleClass.LUXURY_SUV,
-                    base_rate_net=base_rate * Decimal("1.2"),
+                    base_rate_net=suv_base,
                     per_mile_rate_net=per_mile * Decimal("1.2"),
                     per_km_rate_net=per_km * Decimal("1.2"),
-                    hourly_rate_net=Decimal(str(round(float(base_rate * Decimal("1.2")) + (float(per_mile * Decimal("1.2")) * 15.0), 2))),
+                    hourly_rate_net=Decimal(str(round(float(suv_base) + (float(per_mile * Decimal("1.2")) * 15.0), 2))),
                     hourly_minimum_hours=getattr(payload, "hourly_minimum_hours", 2) or 2,
+                    minimum_fare_net=min_fare_val or round(suv_base * Decimal("1.25"), 2),
+                    deadhead_buffer_miles_outbound=dh_buf_out,
+                    deadhead_buffer_miles_return=dh_buf_ret,
+                    fuel_surcharge_pct=fuel_surch,
+                    service_charge_pct=svc_chg,
+                    credit_card_fee_pct=cc_fee,
                     tax_rate=tax_r,
-                    currency=payload.currency
+                    tax_label=tax_lbl,
+                    currency=payload.currency,
+                    pricing_model_type=pricing_model,
+                    tax_gratuity_display_mode=tg_mode,
+                    surcharge_stacking_mode=stack_mode,
+                    progressive_distance_tiers=prog_tiers
                 ),
                 VehicleClass.FIRST_CLASS.value: VendorPricingRule(
                     vendor_id=payload.vendor_id,
                     vehicle_class=VehicleClass.FIRST_CLASS,
-                    base_rate_net=base_rate * Decimal("1.25"),
+                    base_rate_net=first_base,
                     per_mile_rate_net=per_mile * Decimal("1.20"),
                     per_km_rate_net=per_km * Decimal("1.20"),
-                    hourly_rate_net=Decimal(str(round(float(base_rate * Decimal("1.25")) + (float(per_mile * Decimal("1.20")) * 15.0), 2))),
+                    hourly_rate_net=Decimal(str(round(float(first_base) + (float(per_mile * Decimal("1.20")) * 15.0), 2))),
                     hourly_minimum_hours=getattr(payload, "hourly_minimum_hours", 2) or 2,
+                    minimum_fare_net=min_fare_val or round(first_base * Decimal("1.25"), 2),
+                    deadhead_buffer_miles_outbound=dh_buf_out,
+                    deadhead_buffer_miles_return=dh_buf_ret,
+                    fuel_surcharge_pct=fuel_surch,
+                    service_charge_pct=svc_chg,
+                    credit_card_fee_pct=cc_fee,
                     tax_rate=tax_r,
-                    currency=payload.currency
+                    tax_label=tax_lbl,
+                    currency=payload.currency,
+                    pricing_model_type=pricing_model,
+                    tax_gratuity_display_mode=tg_mode,
+                    surcharge_stacking_mode=stack_mode,
+                    progressive_distance_tiers=prog_tiers
                 ),
                 VehicleClass.BUSINESS_SEDAN.value: VendorPricingRule(
                     vendor_id=payload.vendor_id,
                     vehicle_class=VehicleClass.BUSINESS_SEDAN,
-                    base_rate_net=base_rate * Decimal("0.85"),
+                    base_rate_net=sedan_base,
                     per_mile_rate_net=per_mile * Decimal("0.85"),
                     per_km_rate_net=per_km * Decimal("0.85"),
-                    hourly_rate_net=Decimal(str(round(float(base_rate * Decimal("0.85")) + (float(per_mile * Decimal("0.85")) * 15.0), 2))),
+                    hourly_rate_net=Decimal(str(round(float(sedan_base) + (float(per_mile * Decimal("0.85")) * 15.0), 2))),
                     hourly_minimum_hours=getattr(payload, "hourly_minimum_hours", 2) or 2,
+                    minimum_fare_net=min_fare_val or round(sedan_base * Decimal("1.25"), 2),
+                    deadhead_buffer_miles_outbound=dh_buf_out,
+                    deadhead_buffer_miles_return=dh_buf_ret,
+                    fuel_surcharge_pct=fuel_surch,
+                    service_charge_pct=svc_chg,
+                    credit_card_fee_pct=cc_fee,
                     tax_rate=tax_r,
-                    currency=payload.currency
+                    tax_label=tax_lbl,
+                    currency=payload.currency,
+                    pricing_model_type=pricing_model,
+                    tax_gratuity_display_mode=tg_mode,
+                    surcharge_stacking_mode=stack_mode,
+                    progressive_distance_tiers=prog_tiers
                 ),
                 VehicleClass.BUSINESS_VAN.value: VendorPricingRule(
                     vendor_id=payload.vendor_id,
                     vehicle_class=VehicleClass.BUSINESS_VAN,
-                    base_rate_net=base_rate * Decimal("1.6"),
+                    base_rate_net=van_base,
                     per_mile_rate_net=per_mile * Decimal("1.5"),
                     per_km_rate_net=per_km * Decimal("1.5"),
-                    hourly_rate_net=Decimal(str(round(float(base_rate * Decimal("1.6")) + (float(per_mile * Decimal("1.5")) * 15.0), 2))),
+                    hourly_rate_net=Decimal(str(round(float(van_base) + (float(per_mile * Decimal("1.5")) * 15.0), 2))),
                     hourly_minimum_hours=3,
+                    minimum_fare_net=min_fare_val or round(van_base * Decimal("1.25"), 2),
+                    deadhead_buffer_miles_outbound=dh_buf_out,
+                    deadhead_buffer_miles_return=dh_buf_ret,
+                    fuel_surcharge_pct=fuel_surch,
+                    service_charge_pct=svc_chg,
+                    credit_card_fee_pct=cc_fee,
                     tax_rate=tax_r,
-                    currency=payload.currency
+                    tax_label=tax_lbl,
+                    currency=payload.currency,
+                    pricing_model_type=pricing_model,
+                    tax_gratuity_display_mode=tg_mode,
+                    surcharge_stacking_mode=stack_mode,
+                    progressive_distance_tiers=prog_tiers
                 ),
                 VehicleClass.ELECTRIC_VIP.value: VendorPricingRule(
                     vendor_id=payload.vendor_id,
@@ -330,8 +397,19 @@ class VendorSpinupService:
                     per_km_rate_net=per_km * Decimal("1.1"),
                     hourly_rate_net=Decimal(str(round(float(base_rate * Decimal("1.15")) + (float(per_mile * Decimal("1.1")) * 15.0), 2))),
                     hourly_minimum_hours=getattr(payload, "hourly_minimum_hours", 2) or 2,
+                    minimum_fare_net=min_fare_val or round(base_rate * Decimal("1.15") * Decimal("1.25"), 2),
+                    deadhead_buffer_miles_outbound=dh_buf_out,
+                    deadhead_buffer_miles_return=dh_buf_ret,
+                    fuel_surcharge_pct=fuel_surch,
+                    service_charge_pct=svc_chg,
+                    credit_card_fee_pct=cc_fee,
                     tax_rate=tax_r,
-                    currency=payload.currency
+                    tax_label=tax_lbl,
+                    currency=payload.currency,
+                    pricing_model_type=pricing_model,
+                    tax_gratuity_display_mode=tg_mode,
+                    surcharge_stacking_mode=stack_mode,
+                    progressive_distance_tiers=prog_tiers
                 ),
                 VehicleClass.ULTRA_LUXURY.value: VendorPricingRule(
                     vendor_id=payload.vendor_id,
@@ -341,28 +419,65 @@ class VendorSpinupService:
                     per_km_rate_net=per_km * Decimal("1.75"),
                     hourly_rate_net=Decimal(str(round(float(base_rate * Decimal("1.85")) + (float(per_mile * Decimal("1.75")) * 15.0), 2))),
                     hourly_minimum_hours=getattr(payload, "hourly_minimum_hours", 2) or 2,
+                    minimum_fare_net=min_fare_val or round(base_rate * Decimal("1.85") * Decimal("1.25"), 2),
+                    deadhead_buffer_miles_outbound=dh_buf_out,
+                    deadhead_buffer_miles_return=dh_buf_ret,
+                    fuel_surcharge_pct=fuel_surch,
+                    service_charge_pct=svc_chg,
+                    credit_card_fee_pct=cc_fee,
                     tax_rate=tax_r,
-                    currency=payload.currency
+                    tax_label=tax_lbl,
+                    currency=payload.currency,
+                    pricing_model_type=pricing_model,
+                    tax_gratuity_display_mode=tg_mode,
+                    surcharge_stacking_mode=stack_mode,
+                    progressive_distance_tiers=prog_tiers
                 )
             }
             target_db.vendor_pricing_rules[payload.vendor_id] = rules_dict
             target_db.vendor_pricing_rules[alias_id] = rules_dict
 
-            # 2d. Regional Tax Rule
-            jurisdiction_code = f"{payload.country_code.upper()}_{payload.state.upper()}" if payload.state else payload.country_code.upper()
-            if jurisdiction_code not in target_db.regional_tax_rules:
-                target_db.regional_tax_rules[jurisdiction_code] = RegionalTaxRule(
-                    jurisdiction_code=jurisdiction_code,
+            # 2d. Regional Tax Rule Provisioning (Sovereign Cell Decided)
+            airport_fee_val = Decimal(str(pm_raw.get("airport_terminal_fee_usd", "0.00")))
+            congestion_fee_val = Decimal(str(pm_raw.get("congestion_charge_usd", "0.00")))
+
+            # A. Provision any explicit regional tax rules declared by the cell owner
+            if payload.regional_tax_rules:
+                for rtr in payload.regional_tax_rules:
+                    j_code = rtr.get("jurisdiction_code") or (f"{payload.country_code.upper()}_{payload.state.upper()}" if payload.state else payload.country_code.upper())
+                    rule_obj = RegionalTaxRule(
+                        jurisdiction_code=j_code,
+                        country=rtr.get("country", payload.country),
+                        city_or_region=rtr.get("city_or_region", payload.region or payload.city or payload.state),
+                        tax_name=rtr.get("tax_name", tax_lbl),
+                        vat_or_sales_tax_rate=Decimal(str(rtr.get("vat_or_sales_tax_rate", tax_r))),
+                        airport_access_fee=Decimal(str(rtr.get("airport_access_fee", airport_fee_val))),
+                        congestion_charge=Decimal(str(rtr.get("congestion_charge", congestion_fee_val))),
+                        currency=rtr.get("currency", payload.currency),
+                        notes=rtr.get("notes", f"Authoritative tax rule configured by {payload.name}")
+                    )
+                    target_db.regional_tax_rules[j_code] = rule_obj
+                    self._persist_regional_tax_rule_to_mysql(rule_obj)
+
+            # B. Provision primary cell jurisdiction tax rule
+            default_jcode = f"{payload.country_code.upper()}_{payload.state.upper()}" if payload.state else payload.country_code.upper()
+            if default_jcode not in target_db.regional_tax_rules:
+                default_rule = RegionalTaxRule(
+                    jurisdiction_code=default_jcode,
                     country=payload.country,
                     city_or_region=payload.region or payload.city or payload.state,
+                    tax_name=tax_lbl,
                     vat_or_sales_tax_rate=tax_r,
-                    airport_access_fee=Decimal("15.00"),
-                    congestion_charge=Decimal("0.00"),
+                    airport_access_fee=airport_fee_val,
+                    congestion_charge=congestion_fee_val,
                     currency=payload.currency,
-                    notes=f"Auto-provisioned tax rule for {payload.name}"
+                    notes=f"Authoritative tax rule configured by {payload.name}"
                 )
-            if payload.state.upper() not in target_db.regional_tax_rules:
-                target_db.regional_tax_rules[payload.state.upper()] = target_db.regional_tax_rules[jurisdiction_code]
+                target_db.regional_tax_rules[default_jcode] = default_rule
+                self._persist_regional_tax_rule_to_mysql(default_rule)
+
+            if payload.state and payload.state.upper() not in target_db.regional_tax_rules:
+                target_db.regional_tax_rules[payload.state.upper()] = target_db.regional_tax_rules[default_jcode]
 
         # 3. Store branding profile, telecom compliance, and operational stats
         self.branding_profiles[payload.vendor_id] = payload.branding
@@ -482,7 +597,9 @@ class VendorSpinupService:
             time_zone=vendor_data.get("time_zone", "America/New_York"),
             base_rate_usd=pricing_data.get("base_rate_usd", 75.0),
             per_km_usd=pricing_data.get("per_km_usd", 3.25),
-            tax_rate_pct=pricing_data.get("tax_rate_pct", 8.0),
+            tax_rate_pct=pricing_data.get("tax_rate_pct"),
+            tax_label=pricing_data.get("tax_label"),
+            regional_tax_rules=data.get("regional_tax_rules") or data.get("tax_rules") or [],
             domain=branding_data.get("domain", "limo-ops.com"),
             inbound_email=comms_data.get("inbound_email", "rides@limo-ops.com"),
             contact_phone=branding_data.get("contact_phone", "+18005550199"),
@@ -541,6 +658,36 @@ class VendorSpinupService:
 
 
     load_all_definitions = load_all_declarative_definitions
+
+    @staticmethod
+    def _persist_regional_tax_rule_to_mysql(rule: RegionalTaxRule):
+        """Persists or updates an authoritative regional tax rule in MySQL database."""
+        try:
+            from app.database_mysql import SessionLocal, RegionalTaxRuleModel
+            if SessionLocal:
+                with SessionLocal() as session:
+                    existing = session.query(RegionalTaxRuleModel).filter_by(jurisdiction_code=rule.jurisdiction_code).first()
+                    if existing:
+                        existing.tax_name = rule.tax_name
+                        existing.vat_or_sales_tax_rate = rule.vat_or_sales_tax_rate
+                        existing.airport_access_fee = rule.airport_access_fee
+                        existing.congestion_charge = rule.congestion_charge
+                        existing.currency = rule.currency
+                    else:
+                        m = RegionalTaxRuleModel(
+                            jurisdiction_code=rule.jurisdiction_code,
+                            country=rule.country,
+                            city_or_region=rule.city_or_region,
+                            tax_name=rule.tax_name,
+                            vat_or_sales_tax_rate=rule.vat_or_sales_tax_rate,
+                            airport_access_fee=rule.airport_access_fee,
+                            congestion_charge=rule.congestion_charge,
+                            currency=rule.currency
+                        )
+                        session.add(m)
+                    session.commit()
+        except Exception as e:
+            logger.debug(f"MySQL sync for RegionalTaxRule {rule.jurisdiction_code} skipped/deferred: {e}")
 
     def get_portal_branding(self, vendor_id: str) -> Dict[str, Any]:
         """Returns white-label portal branding, public metadata, and encrypted secure cellular URL token."""

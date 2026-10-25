@@ -175,6 +175,26 @@ class VendorOmnichannelDeskService:
                 "message": "Passenger has unsubscribed via STOP. Cannot deliver SMS/WhatsApp."
             }
 
+        # Live Twilio Dispatch
+        dispatch_status = "DELIVERED"
+        twilio_sid = None
+        error_detail = None
+        target_to = f"whatsapp:{recipient_phone}" if channel.upper() == "WHATSAPP" else recipient_phone
+
+        try:
+            from app.services.twilio_notification_service import TwilioNotificationService
+            t_res = TwilioNotificationService.send_sms(target_to, body)
+            if t_res.get("success"):
+                twilio_sid = t_res.get("message_sid")
+                dispatch_status = "SENT_LIVE"
+            else:
+                dispatch_status = t_res.get("status", "FAILED")
+                error_detail = t_res.get("error")
+        except Exception as e:
+            logger.error(f"Live Twilio omnichannel dispatch error: {e}")
+            dispatch_status = "FAILED"
+            error_detail = str(e)
+
         msg = OmnichannelChatMessage(
             vendor_id=self.vendor_id,
             channel=channel.upper(),
@@ -184,11 +204,17 @@ class VendorOmnichannelDeskService:
             sender_name=f"{self.company_name} Dispatch",
             body=body,
             quick_action_type=quick_action_type,
-            status="DELIVERED"
+            status=dispatch_status
         )
         self.chat_history.append(msg)
-        logger.info(f"Delivered {channel} message to {recipient_phone} for vendor {self.vendor_id}")
-        return {"success": True, "message": msg.model_dump()}
+        logger.info(f"Dispatched {channel} to {recipient_phone} for vendor {self.vendor_id} (Twilio Status: {dispatch_status}, SID: {twilio_sid})")
+        return {
+            "success": dispatch_status in ("SENT_LIVE", "DELIVERED"),
+            "twilio_sid": twilio_sid,
+            "status": dispatch_status,
+            "error": error_detail,
+            "message": msg.model_dump()
+        }
 
     def record_simulated_voice_call(
         self,

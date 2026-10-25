@@ -163,6 +163,26 @@ export async function logoutApi(): Promise<{ success: boolean; message: string }
   return { success: true, message: 'Logged out successfully' };
 }
 
+export interface OAuthConfigResponse {
+  google_client_id: string;
+  apple_client_id: string;
+  google_enabled: boolean;
+}
+
+export async function getOAuthConfigApi(): Promise<OAuthConfigResponse> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/v1/auth/oauth-config`, {
+      headers: getAuthHeaders()
+    });
+    if (!res.ok) {
+      return { google_client_id: '', apple_client_id: '', google_enabled: false };
+    }
+    return await res.json();
+  } catch {
+    return { google_client_id: '', apple_client_id: '', google_enabled: false };
+  }
+}
+
 export async function oauthLoginApi(params: {
   provider: 'apple' | 'google' | 'email' | 'magic-link' | 'corporate' | 'passkey' | 'password' | string;
   email: string;
@@ -1484,6 +1504,46 @@ export async function managerPhoneOverrideApi(payload: {
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.detail || 'Failed to log manager phone override');
+  }
+  return res.json();
+}
+
+export async function fetchVendorExternalPartners(vendorId: string): Promise<any[]> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/external-partners`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch external partners');
+  return res.json();
+}
+
+export async function addVendorExternalPartner(vendorId: string, payload: any): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/external-partners`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to add external partner');
+  }
+  return res.json();
+}
+
+export async function sendNetworkInvitationApi(payload: {
+  company_name: string;
+  contact_name?: string;
+  email: string;
+  city?: string;
+  partner_id?: string;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/sourcing/send-network-invitation`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to send network invitation');
   }
   return res.json();
 }
@@ -3098,6 +3158,27 @@ export async function fetchVendorSeoSchemaApi(vendorId: string): Promise<any> {
   return res.json();
 }
 
+export async function fetchVendorTelecomComplianceApi(vendorId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/telecom-compliance`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch telecom compliance status');
+  return res.json();
+}
+
+export async function registerVendorBrandApi(vendorId: string, payload: any): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/telecom-compliance/register-brand`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Brand registration failed');
+  }
+  return res.json();
+}
+
 export async function fetchVendorEmailConfigApi(vendorId: string): Promise<any> {
   const res = await fetch(`${BASE_URL}/api/v1/vendor-cell/${vendorId}/email/config`, {
     headers: getAuthHeaders()
@@ -3569,6 +3650,47 @@ export async function fetchRegionalTaxRulesApi(): Promise<any[]> {
 }
 
 export const fetchTaxRulesApi = fetchRegionalTaxRulesApi;
+
+export async function saveRegionalTaxRuleApi(payload: {
+  jurisdiction_code: string;
+  country: string;
+  city_or_region: string;
+  tax_name?: string;
+  vat_or_sales_tax_rate: number;
+  airport_access_fee?: number;
+  congestion_charge?: number;
+  currency?: string;
+  notes?: string;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/pricing/tax-rules`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to save regional tax rule'));
+  }
+  return res.json();
+}
+
+export async function updateVendorCellTaxConfigApi(vendorId: string, payload: {
+  tax_rate_pct: number;
+  tax_label: string;
+  airport_terminal_fee_usd?: number;
+  congestion_charge_usd?: number;
+}): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/vendors/${vendorId}/tax-configuration`, {
+    method: 'PUT',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to update vendor cell tax configuration'));
+  }
+  return res.json();
+}
 
 export async function aiValidatePricingQuoteApi(payload: {
   vendor_id?: string;

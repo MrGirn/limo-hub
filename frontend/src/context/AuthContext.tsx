@@ -15,6 +15,7 @@ interface AuthContextType {
   currentPersonaKey: string;
   personas: Record<string, ActorPersonaOption>;
   isLoading: boolean;
+  setSession: (user: UserSession, token: string) => void;
   switchPersona: (personaKey: string) => Promise<void>;
   login: (email: string, password?: string, role?: string) => Promise<void>;
   logout: () => void;
@@ -42,25 +43,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const personaData = await fetchPersonas();
         if (personaData && Object.keys(personaData).length > 0) {
           setPersonas(personaData);
+        }
 
-          // 2. Resolve active persona from stored key or first available
-          const preferredKey = currentPersonaKey in personaData ? currentPersonaKey : 'customer';
-          
+        // 2. Authoritative session restoration (only when real stored token is present)
+        const storedToken = localStorage.getItem('limo_auth_token');
+        if (storedToken) {
           try {
-            // Try fetching active session
             const sessionRes = await fetchCurrentSession();
             setUser(sessionRes.user);
             setToken(sessionRes.token);
             setAuthToken(sessionRes.token, sessionRes.user.role);
           } catch {
-            // If no token or expired, switch to the preferred database persona
-            const switchRes = await switchPersonaApi(preferredKey);
-            setUser(switchRes.user);
-            setToken(switchRes.token);
-            setCurrentPersonaKey(preferredKey);
-            localStorage.setItem('limo_persona_key', preferredKey);
-            setAuthToken(switchRes.token, switchRes.user.role);
+            // Token expired or invalid; cleanly clear session
+            setUser(null);
+            setToken(null);
+            setAuthToken(null, null);
+            localStorage.removeItem('limo_auth_token');
+            localStorage.removeItem('limo_persona_key');
+            localStorage.removeItem('limo_actor_role');
           }
+        } else {
+          setUser(null);
+          setToken(null);
+          setAuthToken(null, null);
         }
       } catch (err) {
         console.error('Failed to initialize dynamic auth from API:', err);
@@ -105,12 +110,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const setSession = (sessionUser: UserSession, sessionToken: string) => {
+    setUser(sessionUser);
+    setToken(sessionToken);
+    localStorage.setItem('limo_auth_token', sessionToken);
+    setAuthToken(sessionToken, sessionUser.role);
+  };
+
   const logout = () => {
     setUser(null);
     setToken(null);
     setAuthToken(null, null);
     localStorage.removeItem('limo_auth_token');
     localStorage.removeItem('limo_persona_key');
+    localStorage.removeItem('limo_actor_role');
   };
 
   const hasRole = (roles: UserRole[]): boolean => {
@@ -134,6 +147,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentPersonaKey,
         personas,
         isLoading,
+        setSession,
         switchPersona,
         login,
         logout,

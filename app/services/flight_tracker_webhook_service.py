@@ -91,9 +91,10 @@ class FlightTrackerWebhookService:
         affected_trips: List[str] = []
 
         # Find all active bookings matching this flight number
-        for b_id, booking in db.bookings.items():
-            if booking.flight_number:
-                b_flight_clean = booking.flight_number.replace(" ", "").upper()
+        for b_id, booking in list(db.bookings.items()):
+            b_flt = getattr(booking, "flight_number", None)
+            if b_flt:
+                b_flight_clean = str(b_flt).replace(" ", "").upper()
                 if b_flight_clean == flight_number_clean or flight_number_clean in b_flight_clean:
                     old_pickup = booking.pickup_time_utc
                     # Recalibrate pickup time: arrival + 35m customs buffer for intl, 15m for domestic
@@ -118,6 +119,48 @@ class FlightTrackerWebhookService:
                             actor="FLIGHTAWARE_RADAR_WEBHOOK",
                             timestamp=now_utc
                         ))
+
+                    # Live Twilio SMS Dispatch to Passenger
+                    party = getattr(booking, "party", None) or getattr(booking, "passenger_party", None)
+                    p_phone = getattr(party, "passenger_phone", None) if party else getattr(booking, "passenger_phone", None)
+                    p_name = getattr(party, "passenger_name", "Valued Passenger") if party else "Valued Passenger"
+                    new_time_str = new_pickup.strftime("%b %d at %I:%M %p UTC")
+                    v_id = getattr(booking, "vendor_id", None)
+
+                    if p_phone and delay_minutes > 0:
+                        try:
+                            from app.services.twilio_notification_service import TwilioNotificationService
+                            TwilioNotificationService.send_flight_delay_update(
+                                passenger_phone=p_phone,
+                                passenger_name=p_name,
+                                flight_number=flight_number,
+                                delay_min=delay_minutes,
+                                new_pickup_time=new_time_str,
+                                terminal=terminal,
+                                vendor_id=v_id
+                            )
+                        except Exception as e:
+                            logger.warning(f"Failed to dispatch flight delay SMS notice: {e}")
+
+                    # Live Twilio SMS Dispatch to Assigned Chauffeur
+                    if getattr(trip, "driver_id", None) and delay_minutes > 0:
+                        try:
+                            from app.database import db
+                            from app.services.twilio_notification_service import TwilioNotificationService
+                            driver = db.drivers.get(trip.driver_id)
+                            if driver and getattr(driver, "phone", None):
+                                TwilioNotificationService.send_flight_delay_to_chauffeur(
+                                    chauffeur_phone=driver.phone,
+                                    chauffeur_name=getattr(driver, "name", "Chauffeur"),
+                                    passenger_name=p_name,
+                                    flight_number=flight_number,
+                                    delay_min=delay_minutes,
+                                    new_pickup_time=new_time_str,
+                                    terminal=terminal,
+                                    vendor_id=v_id
+                                )
+                        except Exception as e:
+                            logger.warning(f"Failed to dispatch flight delay SMS to chauffeur: {e}")
 
         # Log WebhookEvent
         webhook_event = WebhookEvent(

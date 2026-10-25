@@ -50,7 +50,7 @@ const DEFAULT_BRANDING: VendorBrandingProfile = {
 };
 
 const MainLayout: React.FC = () => {
-  const { user, role, switchPersona } = useAuth();
+  const { user, role, switchPersona, setSession, logout } = useAuth();
   const [activeView, setActiveView] = useState<PortalView>('PUBLIC_WEBSITE');
   const [publicPage, setPublicPage] = useState<PublicPage>('HOME');
   const [pendingBookingDetails, setPendingBookingDetails] = useState<any>(null);
@@ -212,20 +212,16 @@ const MainLayout: React.FC = () => {
   }, []);
 
   const handleAuthSuccess = (authenticatedUser: any, token: string) => {
+    setSession(authenticatedUser, token);
     if (authenticatedUser.role === 'ROLE_CHAUFFEUR') {
-      switchPersona('ROLE_CHAUFFEUR');
       setActiveView('DRIVER_APP');
     } else if (authenticatedUser.role === 'ROLE_CORPORATE_BOOKER') {
-      switchPersona('ROLE_CORPORATE_BOOKER');
       setActiveView('CORPORATE_PORTAL');
     } else if (authenticatedUser.role === 'ROLE_SUPER_ADMIN') {
-      switchPersona('ROLE_SUPER_ADMIN');
       setActiveView('GLOBAL_HUB_ADMIN');
     } else if (authenticatedUser.role === 'ROLE_VENDOR_ADMIN' || authenticatedUser.role === 'ROLE_DISPATCHER') {
-      switchPersona('ROLE_VENDOR_ADMIN');
       setActiveView('VENDOR_OWNER_DASHBOARD');
     } else {
-      switchPersona('ROLE_CUSTOMER');
       setPublicPage('BOOKING');
       setActiveView('PUBLIC_WEBSITE');
     }
@@ -282,6 +278,27 @@ const MainLayout: React.FC = () => {
                 }}
               >
                 🌐 Public Website
+              </button>
+
+              <button
+                onClick={() => {
+                  logout();
+                  setActiveView('PUBLIC_WEBSITE');
+                  setPublicPage('HOME');
+                }}
+                style={{
+                  background: '#FEF2F2',
+                  color: '#DC2626',
+                  border: '1px solid #FECACA',
+                  borderRadius: '6px',
+                  padding: '6px 14px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+                title="Sign out of Driver Portal"
+              >
+                Sign Out
               </button>
             </div>
           </div>
@@ -341,6 +358,27 @@ const MainLayout: React.FC = () => {
                 }}
               >
                 🌐 Public Website
+              </button>
+
+              <button
+                onClick={() => {
+                  logout();
+                  setActiveView('PUBLIC_WEBSITE');
+                  setPublicPage('HOME');
+                }}
+                style={{
+                  background: '#FEF2F2',
+                  color: '#DC2626',
+                  border: '1px solid #FECACA',
+                  borderRadius: '6px',
+                  padding: '6px 14px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+                title="Sign out of Corporate Portal"
+              >
+                Sign Out
               </button>
             </div>
           </div>

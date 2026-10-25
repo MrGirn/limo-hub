@@ -9,7 +9,8 @@ import {
   Send, Volume2, Globe, Key, CheckCircle, ExternalLink, Sparkles, Download, Zap,
   CreditCard, Percent, Banknote, Receipt, ArrowDownRight, UserCheck, Lock, Unlock, UserPlus,
   Copy, Inbox, AtSign, BookOpen, Settings, Trash2, HelpCircle, Edit3, Camera, AlertCircle,
-  Plane, Printer, ChevronUp, PhoneCall, Headphones, Calendar, RotateCcw
+  Plane, Printer, ChevronUp, PhoneCall, Headphones, Calendar, RotateCcw,
+  LogOut
 } from 'lucide-react';
 import { 
   VendorPortalConfig, TeamMember, RoleMatrixResponse, CertifiedAffiliatePartner, 
@@ -36,12 +37,15 @@ import {
   fetchVendorIntakeConfigApi, updateVendorIntakeConfigApi,
   fetchVendorSeoSchemaApi, fetchVendorEmailConfigApi, updateVendorEmailConfigApi,
   fetchOmnichannelWorkspaceApi, sendOmnichannelMessageApi, recordVoiceStudioCallApi,
-  updateVendorOmnichannelConfigApi, exportCorporateInvoiceCsvApi
+  updateVendorOmnichannelConfigApi, exportCorporateInvoiceCsvApi,
+  fetchVendorTelecomComplianceApi, registerVendorBrandApi, processInboundSmsComplianceApi, testVendorEmailConnectionApi
 } from '../api';
 import { DispatcherPhoneBookingModal } from './DispatcherPhoneBookingModal';
 import { VendorFleetAndPricingHub } from './VendorFleetAndPricingHub';
 import { VendorCommercialGuideModal } from './VendorCommercialGuideModal';
 import { VendorSupportInboxTab } from './vendor/VendorSupportInboxTab';
+import { SourcingConciergeDesk } from './SourcingConciergeDesk';
+import { VendorAccountingAndPayoutsDesk } from './vendor/VendorAccountingAndPayoutsDesk';
 import { 
   compressStudioImage, toggleAiStudioLighting, formatBytes, ProcessedStudioImage 
 } from '../utils/imageStudioCompressor';
@@ -58,7 +62,7 @@ interface VendorOwnerDashboardProps {
 type AutonomyLevel = 'L5_FULL_AUTONOMY' | 'L3_SHADOW_ASSIST' | 'L0_MANUAL_KILL_SWITCH';
 
 interface NavItem {
-  id: 'overview' | 'dispatch' | 'fleet' | 'drivers' | 'support' | 'corporate' | 'pricing' | 'payouts' | 'email_rfq' | 'team' | 'affiliates' | 'voice_ai' | 'omnichannel' | 'subscription';
+  id: 'overview' | 'dispatch' | 'fleet' | 'drivers' | 'support' | 'corporate' | 'pricing' | 'payouts' | 'email_rfq' | 'team' | 'affiliates' | 'voice_ai' | 'omnichannel' | 'subscription' | 'sourcing_rolodex';
   label: string;
   icon: React.ReactNode;
   category: string;
@@ -99,10 +103,10 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
   config,
   onNavigateToStorefront
 }) => {
-  const { switchPersona, role: currentAuthRole } = useAuth();
+  const { switchPersona, role: currentAuthRole, logout, user } = useAuth();
   const localeSpecs = getVendorLocaleSpecs(config);
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'dispatch' | 'fleet' | 'drivers' | 'support' | 'corporate' | 'pricing' | 'payouts' | 'email_rfq' | 'team' | 'affiliates' | 'voice_ai' | 'omnichannel' | 'subscription'
+    'overview' | 'dispatch' | 'fleet' | 'drivers' | 'support' | 'corporate' | 'pricing' | 'payouts' | 'email_rfq' | 'team' | 'affiliates' | 'voice_ai' | 'omnichannel' | 'subscription' | 'sourcing_rolodex'
   >('overview');
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -486,18 +490,19 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
 
   const navItems: NavItem[] = [
     { id: 'overview', label: 'Executive Overview', icon: <TrendingUp size={16} />, category: 'Operations' },
-    { id: 'dispatch', label: 'Live Dispatch Matrix', icon: <Car size={16} />, category: 'Operations', badge: trips.filter(t => t.status === 'UNASSIGNED').length > 0 ? '1' : undefined },
+    { id: 'dispatch', label: 'Live Dispatch Matrix', icon: <Car size={16} />, category: 'Operations' },
     { id: 'fleet', label: 'Fleet & PPA/TLC Permits', icon: <Shield size={16} />, category: 'Fleet' },
     { id: 'drivers', label: 'Chauffeurs & Payroll', icon: <Users size={16} />, category: 'Fleet' },
-    { id: 'support', label: 'Support & Inquiries', icon: <Inbox size={16} />, category: 'Operations', badge: 'Live SLA' },
+    { id: 'support', label: 'Support & Inquiries', icon: <Inbox size={16} />, category: 'Operations' },
     { id: 'corporate', label: 'Corporate B2B Accounts', icon: <Building2 size={16} />, category: 'Commercial' },
     { id: 'pricing', label: 'Dynamic Tariff Matrix', icon: <Sliders size={16} />, category: 'Commercial' },
-    { id: 'payouts', label: 'Direct Payouts & Banking', icon: <Banknote size={16} />, category: 'Commercial', badge: stripeConnectStatus?.payouts_enabled ? 'Active' : '⚠️ Setup' },
-    { id: 'email_rfq', label: 'Email Gateway & BYOE', icon: <Mail size={16} />, category: 'Intelligence', badge: emailInbox.filter(e => e.status === 'PARSED_AWAITING_CONVERSION').length > 0 ? `${emailInbox.filter(e => e.status === 'PARSED_AWAITING_CONVERSION').length}` : undefined },
-    { id: 'team', label: 'Team & RBAC Access', icon: <ShieldCheck size={16} />, category: 'Administration', badge: `${teamMembers.length} Staff` },
-    { id: 'subscription', label: 'Platform Billing & Services', icon: <CreditCard size={16} />, category: 'Administration', badge: subscriptionData?.billing_status === 'PAST_DUE' ? '⚠️ Due' : 'Active' },
-    { id: 'affiliates', label: 'Affiliate Network (Hub)', icon: <ArrowUpRight size={16} />, category: 'Commercial', badge: '85%' },
-    { id: 'omnichannel', label: 'Omnichannel & Telecom', icon: <Radio size={16} />, category: 'Communications', badge: '10DLC OK' },
+    { id: 'payouts', label: 'Accounting & Payouts Desk', icon: <Banknote size={16} />, category: 'Commercial' },
+    { id: 'email_rfq', label: 'Email Gateway & BYOE', icon: <Mail size={16} />, category: 'Intelligence' },
+    { id: 'team', label: 'Team & RBAC Access', icon: <ShieldCheck size={16} />, category: 'Administration' },
+    { id: 'subscription', label: 'Platform Billing & Services', icon: <CreditCard size={16} />, category: 'Administration' },
+    { id: 'affiliates', label: 'Affiliate Network (Hub)', icon: <ArrowUpRight size={16} />, category: 'Commercial' },
+    { id: 'sourcing_rolodex', label: 'Sourcing & Partner Rolodex', icon: <Globe size={16} />, category: 'Commercial' },
+    { id: 'omnichannel', label: 'Omnichannel & Telecom', icon: <Radio size={16} />, category: 'Communications' },
     { id: 'voice_ai', label: 'Voice AI Telephony', icon: <Phone size={16} />, category: 'Intelligence' },
   ];
 
@@ -681,6 +686,36 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
         }
       })
       .catch(err => console.log('Could not fetch omnichannel desk data:', err));
+
+    fetchVendorTelecomComplianceApi(config.vendor_id)
+      .then(dossier => {
+        if (dossier && dossier.a2p_10dlc?.brand) {
+          const b = dossier.a2p_10dlc.brand;
+          setTcrBrandForm(prev => ({
+            ...prev,
+            legal_name: b.legal_business_name || prev.legal_name,
+            ein_tax_id: b.ein_tax_id || prev.ein_tax_id,
+            business_type: b.business_type || prev.business_type,
+            vertical: b.vertical || prev.vertical,
+            address: b.physical_address || prev.address,
+            website: b.website_url || prev.website,
+            contact_email: b.contact_email || prev.contact_email,
+            contact_phone: b.contact_phone || prev.contact_phone
+          }));
+        }
+        if (dossier && dossier.gateway_config) {
+          if (dossier.gateway_config.gateway_mode) {
+            setByokMode(dossier.gateway_config.gateway_mode);
+          }
+          if (dossier.gateway_config.custom_twilio_account_sid) {
+            setCustomTwilioSid(dossier.gateway_config.custom_twilio_account_sid);
+          }
+          if (dossier.gateway_config.custom_twilio_phone_number) {
+            setCustomTwilioPhone(dossier.gateway_config.custom_twilio_phone_number);
+          }
+        }
+      })
+      .catch(err => console.log('Telecom compliance load notice:', err));
   };
 
   const [supportPlans, setSupportPlans] = useState<SupportDeskPlan[]>([]);
@@ -2165,6 +2200,87 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
     }
   };
 
+  const handleSubmit10DlcRegistration = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!config?.vendor_id) return;
+    setLoading(true);
+    setActionNotice('📡 Submitting Legal Business Profile & Campaign to Twilio Trust Hub & TCR API...');
+    try {
+      const res = await registerVendorBrandApi(config.vendor_id, {
+        legal_business_name: tcrBrandForm.legal_name,
+        ein_tax_id: tcrBrandForm.ein_tax_id,
+        business_type: tcrBrandForm.business_type,
+        vertical: tcrBrandForm.vertical || 'TRANSPORTATION_AND_LOGISTICS',
+        physical_address: tcrBrandForm.address,
+        website_url: tcrBrandForm.opt_in_url || tcrBrandForm.website,
+        contact_email: tcrBrandForm.contact_email,
+        contact_phone: tcrBrandForm.contact_phone
+      });
+      if (res.success && res.brand) {
+        setTcrBrandForm(prev => ({
+          ...prev,
+          legal_name: res.brand.legal_business_name || prev.legal_name,
+          ein_tax_id: res.brand.ein_tax_id || prev.ein_tax_id,
+          address: res.brand.physical_address || prev.address,
+          contact_email: res.brand.contact_email || prev.contact_email,
+          contact_phone: res.brand.contact_phone || prev.contact_phone
+        }));
+        setShow10DlcWizard(false);
+        setActionNotice(`✅ 10DLC Brand "${res.brand.legal_business_name}" & Campaign successfully vetted with TCR! Brand SID: ${res.brand.brand_sid}, Campaign SID: ${res.campaign?.campaign_sid || 'CP_ACTIVE'}. Status: ${res.brand.status} (${res.campaign?.carrier_throughput_tps || 75} msg/sec).`);
+        loadOmnichannelDesk();
+      } else {
+        setActionNotice(`⚠️ TCR Registration: ${res.message || 'Submission pending carrier review'}`);
+      }
+    } catch (err: any) {
+      setActionNotice(`⚠️ TCR Submission Error: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSimulateCarrierInbound = async () => {
+    if (!config?.vendor_id) return;
+    setLoading(true);
+    try {
+      const res = await processInboundSmsComplianceApi(config.vendor_id, {
+        sender_phone: tcrBrandForm.contact_phone || '+12155550188',
+        text_body: tcpaTestKeyword
+      });
+      if (res.action === 'OPT_OUT') {
+        setTcpaTestResponse(`✅ TCPA OPT-OUT RECORDED: "${res.reply_message}"`);
+      } else if (res.action === 'OPT_IN') {
+        setTcpaTestResponse(`🟢 OPT-IN RE-ENABLED: "${res.reply_message}"`);
+      } else if (res.action === 'HELP') {
+        setTcpaTestResponse(`ℹ️ HELP AUTO-RESPONDER: "${res.reply_message}"`);
+      } else {
+        setTcpaTestResponse(`📨 INBOUND FORWARDED TO DISPATCH: "${res.text || tcpaTestKeyword}"`);
+      }
+    } catch (err: any) {
+      setTcpaTestResponse(`⚠️ Compliance Test Notice: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendDkimTestEmail = async () => {
+    if (!config?.vendor_id) return;
+    setLoading(true);
+    try {
+      const target = testEmailRecipient || (config.branding?.domain ? `dispatch@${config.branding.domain}` : 'dispatcher@vip.com');
+      setActionNotice(`✉️ Dispatching DKIM-signed test receipt via AWS SES / SMTP to ${target}...`);
+      const res = await testVendorEmailConnectionApi(config.vendor_id, target);
+      if (res.status === 'DELIVERED' || res.status === 'SENT' || res.message_id) {
+        setActionNotice(`✅ Sent DKIM-signed test confirmation email to ${target}! Status: ${res.status || 'DELIVERED'}. Delivery ID: ${res.message_id || 'msg_live'}`);
+      } else {
+        setActionNotice(`⚠️ SES Test notice: ${res.status || 'SENT'}`);
+      }
+    } catch (err: any) {
+      setActionNotice(`⚠️ SES Email test error: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAcceptAffiliateJob = (jobId: string, chauffeurName: string) => {
     setAffiliateJobs(prev => prev.map(j => j.id === jobId ? { ...j, chauffeur: chauffeurName, status: 'IN_TRANSIT' } : j));
     setActionNotice(`✅ Farmed-In Job ${jobId} accepted! Chauffeur ${chauffeurName} assigned. 85% Net Fare locked in ledger.`);
@@ -2591,6 +2707,32 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
           >
             <span>← Storefront</span>
           </button>
+
+          <button
+            onClick={() => {
+              logout();
+              onNavigateToStorefront();
+            }}
+            style={{
+              padding: '6px 12px',
+              backgroundColor: '#FEF2F2',
+              color: '#DC2626',
+              border: '1px solid #FECACA',
+              borderRadius: '6px',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+              transition: 'all 0.2s ease'
+            }}
+            title="Sign out of active session"
+          >
+            <LogOut size={13} />
+            <span>Sign Out</span>
+          </button>
         </div>
       </header>
 
@@ -2696,6 +2838,16 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
           >
             ← Storefront
           </button>
+          <button
+            onClick={() => {
+              setIsMobileNavOpen(false);
+              logout();
+              onNavigateToStorefront();
+            }}
+            style={{ flex: 1, padding: '8px', backgroundColor: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+          >
+            <LogOut size={13} /> Sign Out
+          </button>
         </div>
 
         {/* 13 Nav Items in Drawer */}
@@ -2729,18 +2881,6 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                   <span style={{ color: isActive ? '#0078D4' : '#6B7280' }}>{item.icon}</span>
                   <span>{item.label}</span>
                 </div>
-                {item.badge && (
-                  <span style={{
-                    fontSize: '10.5px',
-                    fontWeight: 800,
-                    backgroundColor: item.id === 'dispatch' ? '#DC2626' : '#0078D4',
-                    color: '#FFFFFF',
-                    padding: '2px 8px',
-                    borderRadius: '10px'
-                  }}>
-                    {item.badge}
-                  </span>
-                )}
               </button>
             );
           })}
@@ -2849,18 +2989,6 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                       <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.label}</span>
                     )}
                   </div>
-                  {!isSidebarCollapsed && item.badge && (
-                    <span style={{
-                      fontSize: '10px',
-                      fontWeight: 800,
-                      backgroundColor: item.id === 'dispatch' ? '#DC2626' : '#0078D4',
-                      color: '#FFFFFF',
-                      padding: '1px 6px',
-                      borderRadius: '10px'
-                    }}>
-                      {item.badge}
-                    </span>
-                  )}
                 </button>
               );
             })}
@@ -3167,6 +3295,13 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
               })()
             )}
             
+            {/* TAB: SOURCING & TRUSTED PARTNER ROLODEX */}
+            {activeTab === 'sourcing_rolodex' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <SourcingConciergeDesk />
+              </div>
+            )}
+
             {/* TAB 1: EXECUTIVE OVERVIEW */}
             {activeTab === 'overview' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -11261,21 +11396,11 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                               style={{ flex: 1, padding: '8px 10px', border: '1px solid #D1D5DB', borderRadius: '6px', fontSize: '12px', fontWeight: 700 }}
                             />
                             <button
-                              onClick={() => {
-                                const vName = config.vendor_name || 'Limo Company';
-                                const vPhone = config.branding?.contact_phone || tcrBrandForm.contact_phone || '+1 (215) 555-0144';
-                                const vDomain = config.branding?.domain || 'limo-mesh.net';
-                                if (tcpaTestKeyword === 'STOP') {
-                                  setTcpaTestResponse(`✅ TCPA OPT-OUT RECORDED: "${vName}: You have been unsubscribed and will receive no further SMS. Reply START to rejoin."`);
-                                } else if (tcpaTestKeyword === 'HELP') {
-                                  setTcpaTestResponse(`ℹ️ HELP AUTO-RESPONDER: "${vName} Support: Call ${vPhone} or visit ${vDomain}."`);
-                                } else {
-                                  setTcpaTestResponse(`🟢 OPT-IN RE-ENABLED: "${vName}: You are now subscribed to chauffeur & ride notifications."`);
-                                }
-                              }}
+                              onClick={handleSimulateCarrierInbound}
+                              disabled={loading}
                               style={{ padding: '8px 14px', backgroundColor: '#0078D4', color: '#FFFFFF', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
                             >
-                              Simulate Carrier Inbound
+                              {loading ? 'Testing...' : 'Simulate Carrier Inbound'}
                             </button>
                           </div>
 
@@ -11369,16 +11494,7 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                           </div>
 
                           {wizardMode === 'API_AUTO' ? (
-                            <form onSubmit={(e) => {
-                              e.preventDefault();
-                              setLoading(true);
-                              setActionNotice('📡 Submitting Legal Business Profile & Campaign to Twilio Trust Hub & TCR API...');
-                              setTimeout(() => {
-                                setLoading(false);
-                                setShow10DlcWizard(false);
-                                setActionNotice(`✅ 10DLC Brand "${tcrBrandForm.legal_name}" & Campaign successfully submitted to Twilio Trust Hub! TCR Brand SID: BN_${Math.random().toString(36).substring(2, 8).toUpperCase()}, Campaign SID: CP_${Math.random().toString(36).substring(2, 8).toUpperCase()}. Verified with 75 msg/sec throughput.`);
-                              }, 800);
-                            }} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <form onSubmit={handleSubmit10DlcRegistration} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                               
                               <div style={{ backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '6px', border: '1px solid #E2E8F0', fontSize: '11px', color: '#334155' }}>
                                 💡 <strong>How Automated API Registration Works:</strong> Submits via Twilio Trust Hub REST API (`/v2/a2p/BrandRegistrations` and `/v1/Messaging/Services/.../Compliance/Usa2p`). Brand verification matches IRS records in ~5 minutes; carrier campaign vetting is automatically queued.
@@ -11662,10 +11778,11 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                       </div>
 
                       <button
-                        onClick={() => setActionNotice('✅ Sent DKIM-signed test PDF receipt to dispatcher email.')}
+                        onClick={handleSendDkimTestEmail}
+                        disabled={loading}
                         style={{ padding: '8px', backgroundColor: '#0078D4', color: '#FFFFFF', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', marginTop: '8px' }}
                       >
-                        ✉️ Send DKIM Test Confirmation Email
+                        {loading ? 'Sending DKIM Test...' : '✉️ Send DKIM Test Confirmation Email'}
                       </button>
                     </div>
 
@@ -11969,10 +12086,11 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
                     )}
 
                     <button
-                      onClick={() => setActionNotice('✅ Omnichannel routing and telecom credentials successfully updated.')}
+                      onClick={handleSaveByokConfig}
+                      disabled={loading}
                       style={{ padding: '12px', backgroundColor: '#16A34A', color: '#FFFFFF', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}
                     >
-                      Save & Apply Omnichannel Configuration
+                      {loading ? 'Saving...' : 'Save & Apply Omnichannel Configuration'}
                     </button>
                   </div>
                 )}
@@ -12011,317 +12129,12 @@ export const VendorOwnerDashboard: React.FC<VendorOwnerDashboardProps> = ({
               </div>
             )}
 
-            {/* TAB: DIRECT PAYOUTS & BANKING (STRIPE CONNECT EXPRESS) */}
-            {/* TAB: DIRECT PAYOUTS, BANKING & ESCROW CLEARING */}
+            {/* TAB: DIRECT PAYOUTS, BANKING & ESCROW CLEARING (PHASE 1: LIVE ACCOUNTING DESK) */}
             {activeTab === 'payouts' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
-                {/* Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
-                  <div>
-                    <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Banknote size={22} color="#0078D4" />
-                      Direct Payouts &amp; Banking
-                    </h2>
-                    <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#6B7280' }}>
-                      Automated 24h Stripe Connect Express bank deposits, merchant verification, and direct ledger settlements.
-                    </p>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <button
-                      onClick={() => {
-                        loadStripeStatus();
-                        loadPayoutLedger();
-                      }}
-                      disabled={isLoadingStripe || isLoadingLedger}
-                      style={{
-                        padding: '6px 14px',
-                        backgroundColor: '#FFFFFF',
-                        color: '#374151',
-                        border: '1px solid #D1D5DB',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
-                      }}
-                    >
-                      <RefreshCw size={13} className={(isLoadingStripe || isLoadingLedger) ? 'animate-spin' : ''} />
-                      <span>Refresh</span>
-                    </button>
-
-                    <button
-                      onClick={handleOpenStripeLogin}
-                      disabled={isLoadingStripe}
-                      style={{
-                        padding: '6px 14px',
-                        backgroundColor: '#0078D4',
-                        color: '#FFFFFF',
-                        border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        boxShadow: '0 1px 3px rgba(0, 120, 212, 0.3)'
-                      }}
-                    >
-                      <ExternalLink size={13} />
-                      <span>Stripe Express Portal</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Unified Stripe Connect & Bank Settlement Card */}
-                <div style={{
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: '10px',
-                  border: '1px solid #E2E8F0',
-                  padding: '18px 20px',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '14px'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <div style={{
-                        width: '42px',
-                        height: '42px',
-                        borderRadius: '8px',
-                        backgroundColor: stripeConnectStatus?.payouts_enabled !== false ? '#EFF6FF' : '#FEF3C7',
-                        color: stripeConnectStatus?.payouts_enabled !== false ? '#0078D4' : '#D97706',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        border: '1px solid #E2E8F0',
-                        flexShrink: 0
-                      }}>
-                        <CreditCard size={20} />
-                      </div>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>
-                            Stripe Connect Express Direct Payouts
-                          </h3>
-                          <span style={{
-                            fontSize: '10.5px',
-                            fontWeight: 800,
-                            padding: '2px 8px',
-                            borderRadius: '12px',
-                            backgroundColor: stripeConnectStatus?.payouts_enabled !== false ? '#DCFCE7' : '#FEF3C7',
-                            color: stripeConnectStatus?.payouts_enabled !== false ? '#15803D' : '#B45309',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}>
-                            {stripeConnectStatus?.payouts_enabled !== false ? '● ACTIVE & VERIFIED' : '▲ SETUP REQUIRED'}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
-                          {stripeConnectStatus?.payouts_enabled !== false
-                            ? `Automated 24-hour direct deposit is active for ${config.vendor_name}. Net passenger fares clear automatically to your bank account.`
-                            : `Link your sovereign business bank account to receive automated direct deposits for customer bookings.`
-                          }
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      {stripeConnectStatus?.payouts_enabled !== false ? (
-                        <button
-                          onClick={handleOpenStripeLogin}
-                          style={{
-                            padding: '7px 14px',
-                            backgroundColor: '#FFFFFF',
-                            color: '#0078D4',
-                            border: '1px solid #0078D4',
-                            borderRadius: '6px',
-                            fontSize: '12px',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            boxShadow: '0 1px 2px rgba(0, 120, 212, 0.08)'
-                          }}
-                        >
-                          <CheckCircle2 size={13} color="#0078D4" /> Manage Bank Account &amp; Tax Documents ↗
-                        </button>
-                      ) : (
-                        <button
-                          onClick={handleOpenStripeConnect}
-                          style={{
-                            padding: '8px 16px',
-                            backgroundColor: '#0078D4',
-                            color: '#FFFFFF',
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontSize: '12px',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            boxShadow: '0 2px 6px rgba(0, 120, 212, 0.25)'
-                          }}
-                        >
-                          <Zap size={13} /> Connect Bank Account &amp; Enable Payouts ↗
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Compact Telemetry & Verification Grid */}
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                    gap: '10px',
-                    padding: '12px 14px',
-                    backgroundColor: '#F8FAFC',
-                    borderRadius: '8px',
-                    border: '1px solid #E2E8F0',
-                    fontSize: '11.5px'
-                  }}>
-                    <div>
-                      <div style={{ color: '#64748B', fontWeight: 600, fontSize: '10px', textTransform: 'uppercase' }}>LINKED BANK ACCOUNT</div>
-                      <div style={{ fontWeight: 800, color: (stripeConnectStatus?.bank_name || stripeConnectStatus?.bank_last4) ? '#0F172A' : '#D97706', marginTop: '2px' }}>
-                        {(stripeConnectStatus?.bank_name && stripeConnectStatus?.bank_last4)
-                          ? `🏦 ${stripeConnectStatus.bank_name} (•••• ${stripeConnectStatus.bank_last4})`
-                          : (stripeConnectStatus?.bank_name 
-                              ? `🏦 ${stripeConnectStatus.bank_name}` 
-                              : '⚠️ No Bank Account Linked')}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div style={{ color: '#64748B', fontWeight: 600, fontSize: '10px', textTransform: 'uppercase' }}>PAYOUT FREQUENCY</div>
-                      <div style={{ fontWeight: 800, color: '#16A34A', marginTop: '2px' }}>
-                        ⚡ {stripeConnectStatus?.payout_frequency || `Direct Net Settlement (${localeSpecs.currencyCode})`}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div style={{ color: '#64748B', fontWeight: 600, fontSize: '10px', textTransform: 'uppercase' }}>SETTLEMENT CURRENCY</div>
-                      <div style={{ fontWeight: 800, color: '#0078D4', marginTop: '2px' }}>
-                        {stripeConnectStatus?.default_currency || localeSpecs.currencyCode} ({localeSpecs.currencySymbol}) · {localeSpecs.countryName}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div style={{ color: '#64748B', fontWeight: 600, fontSize: '10px', textTransform: 'uppercase' }}>LEGAL ENTITY &amp; EIN</div>
-                      <div style={{ fontWeight: 800, color: (stripeConnectStatus?.ein_tax_id || config.telecom_compliance?.ein_tax_id) ? '#0F172A' : '#64748B', marginTop: '2px' }}>
-                        {(stripeConnectStatus?.ein_tax_id || config.telecom_compliance?.ein_tax_id) 
-                          ? `✓ ${stripeConnectStatus?.ein_tax_id || config.telecom_compliance?.ein_tax_id}` 
-                          : '⚠️ Tax ID / EIN Not on File'}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div style={{ color: '#64748B', fontWeight: 600, fontSize: '10px', textTransform: 'uppercase' }}>SURETY &amp; COMPLIANCE</div>
-                      <div style={{ fontWeight: 800, color: '#16A34A', marginTop: '2px' }}>
-                        ✓ {stripeConnectStatus?.surety_policy || 'Commercial Livery Policy'}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div style={{ color: '#64748B', fontWeight: 600, fontSize: '10px', textTransform: 'uppercase' }}>STRIPE ACCOUNT ID</div>
-                      <div style={{ fontWeight: 800, color: stripeConnectStatus?.stripe_account_id ? '#475569' : '#94A3B8', marginTop: '2px', fontFamily: 'monospace', fontSize: '11px' }}>
-                        {stripeConnectStatus?.stripe_account_id || 'Not Connected'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Recent Escrow Transfers & Payout Ledger */}
-                <div style={{
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: '10px',
-                  border: '1px solid #E2E8F0',
-                  overflow: 'hidden',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
-                }}>
-                  <div style={{ padding: '14px 18px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>
-                        Recent Cleared Payouts &amp; Bank Transfers
-                      </h3>
-                      <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748B' }}>
-                        Live immutable clearing records settled via Stripe Connect Express.
-                      </p>
-                    </div>
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#15803D', backgroundColor: '#DCFCE7', padding: '3px 8px', borderRadius: '12px' }}>
-                      ● 100% On-Time Settlement
-                    </span>
-                  </div>
-
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
-                    <thead>
-                      <tr style={{ backgroundColor: '#F8FAFC', color: '#64748B', borderBottom: '1px solid #E2E8F0', fontSize: '10.5px', textTransform: 'uppercase' }}>
-                        <th style={{ padding: '10px 16px', fontWeight: 700 }}>TRANSFER ID</th>
-                        <th style={{ padding: '10px 16px', fontWeight: 700 }}>TRIP / SOURCE</th>
-                        <th style={{ padding: '10px 16px', fontWeight: 700 }}>GROSS FARE</th>
-                        <th style={{ padding: '10px 16px', fontWeight: 700 }}>NET DEPOSIT</th>
-                        <th style={{ padding: '10px 16px', fontWeight: 700 }}>DESTINATION</th>
-                        <th style={{ padding: '10px 16px', fontWeight: 700 }}>STATUS</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {isLoadingLedger ? (
-                        <tr>
-                          <td colSpan={6} style={{ padding: '32px', textAlign: 'center', color: '#64748B' }}>
-                            <RefreshCw size={20} className="animate-spin" style={{ margin: '0 auto 8px auto', display: 'block', color: '#0078D4' }} />
-                            Loading live clearing records...
-                          </td>
-                        </tr>
-                      ) : payoutLedgerRecords.length === 0 ? (
-                        <tr>
-                          <td colSpan={6} style={{ padding: '32px', textAlign: 'center', color: '#64748B' }}>
-                            <div style={{ fontWeight: 700, color: '#334155', fontSize: '13px' }}>No Cleared Payout Records Yet</div>
-                            <div style={{ fontSize: '12px', marginTop: '4px' }}>
-                              Completed storefront passenger bookings and affiliate network settlements will clear automatically to your linked bank account.
-                            </div>
-                          </td>
-                        </tr>
-                      ) : (
-                        payoutLedgerRecords.map((tx) => (
-                          <tr key={tx.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                            <td style={{ padding: '12px 16px', fontWeight: 800, fontFamily: 'monospace', color: '#0078D4' }}>{tx.id}</td>
-                            <td style={{ padding: '12px 16px', color: '#0F172A', fontWeight: 600 }}>
-                              {tx.desc}
-                              <div style={{ fontSize: '10.5px', color: '#64748B' }}>{tx.date}</div>
-                            </td>
-                            <td style={{ padding: '12px 16px', color: '#64748B', fontWeight: 600 }}>
-                              {localeSpecs.currencySymbol}{tx.gross.toFixed(2)}
-                            </td>
-                            <td style={{ padding: '12px 16px', color: '#15803D', fontWeight: 800, fontSize: '13px' }}>
-                              +{localeSpecs.currencySymbol}{tx.net.toFixed(2)}
-                            </td>
-                            <td style={{ padding: '12px 16px', color: '#334155' }}>{tx.bank}</td>
-                            <td style={{ padding: '12px 16px' }}>
-                              <span style={{
-                                fontSize: '11px',
-                                fontWeight: 800,
-                                color: tx.status === 'CLEARED' ? '#15803D' : '#D97706',
-                                backgroundColor: tx.status === 'CLEARED' ? '#DCFCE7' : '#FEF3C7',
-                                padding: '2px 8px',
-                                borderRadius: '10px'
-                              }}>
-                                ✓ {tx.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              <VendorAccountingAndPayoutsDesk
+                vendorId={config?.vendor_id || 'vendor_anb_philly'}
+                vendorName={config?.vendor_name || 'ANB Trans Inc'}
+              />
             )}
 
             {/* TAB 10: VENDOR PLATFORM SERVICES & AUTO-PAY BILLING HUB */}

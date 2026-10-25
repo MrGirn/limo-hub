@@ -271,6 +271,14 @@ def quote(request: QuoteRequest):
     return calculate_quote(read_policy(), request.distance_km, request.wait_minutes)
 
 
+class CachedStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        if response.status_code == 200:
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            response.headers["Access-Control-Allow-Origin"] = "*"
+        return response
+
 # Mount static assets & frontend distribution
 frontend_dist = Path(__file__).parent.parent / 'frontend' / 'dist'
 frontend_assets = frontend_dist / 'assets'
@@ -278,7 +286,7 @@ if not frontend_assets.exists():
     frontend_assets = Path(__file__).parent.parent / 'frontend' / 'public' / 'assets'
 
 if frontend_assets.exists():
-    app.mount("/assets", StaticFiles(directory=str(frontend_assets)), name="assets")
+    app.mount("/assets", CachedStaticFiles(directory=str(frontend_assets)), name="assets")
 
 if frontend_dist.exists() and (frontend_dist / 'index.html').exists():
     app.mount("/", StaticFiles(directory=str(frontend_dist), html=True), name="static_frontend")

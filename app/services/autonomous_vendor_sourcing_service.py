@@ -249,11 +249,10 @@ class AutonomousVendorSourcingService:
         quote_token_hint: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Autonomous LLM / NLP Inbound Email Response Parser:
-        1. Reads unstructured text reply from an external vendor.
-        2. Extracts quoted payout rate ($), driver name, phone number, vehicle model.
-        3. Matches against active RFPs by sender_email or quote_token.
-        4. Auto-submits quote and locks leg if confidence is high.
+        Dual-Engine Inbound Email Response Parser:
+        1. Primary: Deterministic Structured Template Tag Parser (STATUS, NET PAYOUT QUOTE, DRIVER, PHONE, VEHICLE, PLATE).
+        2. Fallback: Autonomous LLM / NLP heuristic extraction.
+        3. Matches active RFP and transitions leg to SOURCED_AND_CONFIRMED.
         """
         import re
 
@@ -273,28 +272,53 @@ class AutonomousVendorSourcingService:
             if open_rfps:
                 matched_rfp = open_rfps[0]
 
-        # NLP extraction patterns
-        rate_match = re.search(r'\$\s*(\d{2,4}(?:\.\d{2})?)|\b(\d{2,4})\s*(?:usd|dollars|net|all in)', raw_email_text, re.IGNORECASE)
-        extracted_rate = Decimal(rate_match.group(1) or rate_match.group(2)) if rate_match else (matched_rfp.suggested_benchmark_payout_usd if matched_rfp else Decimal("185.00"))
+        # 1. Deterministic Structured Tag Extraction
+        tmpl_status = re.search(r'(?:STATUS|RESPONSE)\s*:\s*([^\r\n]+)', raw_email_text, re.IGNORECASE)
+        tmpl_rate = re.search(r'(?:NET PAYOUT QUOTE|RATE|PAYOUT|NET FARE)\s*:\s*\$?\s*(\d{2,4}(?:\.\d{2})?)', raw_email_text, re.IGNORECASE)
+        tmpl_driver = re.search(r'(?:DRIVER FULL NAME|DRIVER NAME|CHAUFFEUR|DRIVER)\s*:\s*([^\r\n]+)', raw_email_text, re.IGNORECASE)
+        tmpl_phone = re.search(r'(?:DRIVER DIRECT CELL|DRIVER PHONE|CELL|PHONE)\s*:\s*([^\r\n]+)', raw_email_text, re.IGNORECASE)
+        tmpl_vehicle = re.search(r'(?:VEHICLE MAKE\/MODEL|VEHICLE MODEL|VEHICLE)\s*:\s*([^\r\n]+)', raw_email_text, re.IGNORECASE)
+        tmpl_plate = re.search(r'(?:VEHICLE COLOR & LICENSE PLATE|LICENSE PLATE|PLATE)\s*:\s*([^\r\n]+)', raw_email_text, re.IGNORECASE)
+        tmpl_notes = re.search(r'(?:DISPATCHER NOTES|NOTES|COMMENTS)\s*:\s*([^\r\n]+)', raw_email_text, re.IGNORECASE)
 
-        phone_match = re.search(r'(\+?1?[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})', raw_email_text)
-        extracted_phone = phone_match.group(1) if phone_match else (matched_rfp.target_vendor_phone if matched_rfp else "+1-800-555-0199")
+        # 2. NLP / Heuristic Fallbacks if template tags not found
+        if tmpl_rate:
+            extracted_rate = Decimal(tmpl_rate.group(1).strip())
+        else:
+            rate_match = re.search(r'\$\s*(\d{2,4}(?:\.\d{2})?)|\b(\d{2,4})\s*(?:usd|dollars|net|all in)', raw_email_text, re.IGNORECASE)
+            extracted_rate = Decimal(rate_match.group(1) or rate_match.group(2)) if rate_match else (matched_rfp.suggested_benchmark_payout_usd if matched_rfp else Decimal("185.00"))
 
-        driver_match = re.search(r'(?:driver|chauffeur|assigned to|name is)\s*:?\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)', raw_email_text, re.IGNORECASE)
-        extracted_driver = driver_match.group(1) if driver_match else "Assigned Lead Chauffeur"
+        if tmpl_driver:
+            extracted_driver = tmpl_driver.group(1).strip()
+        else:
+            driver_match = re.search(r'(?:driver|chauffeur|assigned to|name is)\s*:?\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)', raw_email_text, re.IGNORECASE)
+            extracted_driver = driver_match.group(1) if driver_match else "Assigned Lead Chauffeur"
 
-        vehicle_match = re.search(r'(Escalade|Navigator|Suburban|Yukon|S-Class|Maybach|Sprinter|BMW 7|Audi A8)', raw_email_text, re.IGNORECASE)
-        extracted_vehicle = f"Cadillac {vehicle_match.group(1)}" if vehicle_match else "Executive Luxury SUV"
+        if tmpl_phone:
+            extracted_phone = tmpl_phone.group(1).strip()
+        else:
+            phone_match = re.search(r'(\+?1?[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})', raw_email_text)
+            extracted_phone = phone_match.group(1) if phone_match else (matched_rfp.target_vendor_phone if matched_rfp else "+1-800-555-0199")
+
+        if tmpl_vehicle:
+            extracted_vehicle = tmpl_vehicle.group(1).strip()
+            if tmpl_plate:
+                extracted_vehicle += f" ({tmpl_plate.group(1).strip()})"
+        else:
+            vehicle_match = re.search(r'(Escalade|Navigator|Suburban|Yukon|S-Class|Maybach|Sprinter|BMW 7|Audi A8)', raw_email_text, re.IGNORECASE)
+            extracted_vehicle = f"Cadillac {vehicle_match.group(1)}" if vehicle_match else "Executive Luxury SUV"
+
+        dispatcher_notes = tmpl_notes.group(1).strip() if tmpl_notes else "Ingested via Inbound Email Gateway"
 
         if matched_rfp:
             sub = VendorQuoteSubmission(
                 quote_token=matched_rfp.quote_token,
                 quoted_payout_usd=extracted_rate,
                 vendor_company_name=matched_rfp.target_vendor_name,
-                dispatcher_or_driver_name=f"{extracted_driver} (via Email Parser)",
+                dispatcher_or_driver_name=f"{extracted_driver} (via Email Gateway)",
                 contact_phone=extracted_phone,
                 vehicle_model=extracted_vehicle,
-                special_notes=f"Auto-parsed from inbound email reply: '{raw_email_text[:120]}...'"
+                special_notes=f"{dispatcher_notes} | Raw: '{raw_email_text[:120]}...'"
             )
             submission_res = cls.handle_vendor_quote_submission(sub)
             return {
@@ -318,7 +342,7 @@ class AutonomousVendorSourcingService:
     @classmethod
     def build_rfp_email_content(cls, rfp: OutboundVendorRFP, vendor_meta: Dict[str, Any]) -> str:
         """
-        Builds the dual-audience RFP email with Internal Manager Banner on top and formal B2B request below.
+        Builds the dual-audience RFP email with Internal Manager Banner, One-Time Mobile Link, and Structured Quick-Reply Template.
         """
         pickup_fmt = rfp.pickup_time_utc.strftime("%B %d, %Y at %H:%M UTC")
         return f"""
@@ -337,27 +361,91 @@ Dear Dispatch Team at {rfp.target_vendor_name},
 The Global Executive Chauffeur Network has an upcoming VIP client trip in your service corridor and is requesting your quote to service this booking:
 
 TRIP DETAILS:
+• Ref / Leg ID: #{rfp.leg_id}
 • Date & Scheduled Pickup: {pickup_fmt}
 • Pickup Location: {rfp.pickup_address}
 • Destination: {rfp.dropoff_address}
 • Requested Tier: {rfp.vehicle_class.value.replace('_', ' ')}
 • Passenger Count: {rfp.passenger_count} Passenger(s), {rfp.luggage_count} Luggage Bags
-• VIP Profile: C-Suite Executive / Verified High-Value Booker
+• Suggested Net Payout: ${rfp.suggested_benchmark_payout_usd} USD (All-inclusive guaranteed payout)
 
-SUBMIT YOUR RATE IN 10 SECONDS:
-Click the secure link below to submit your net payout rate and accept the trip:
-👉 http://localhost:5173/sourcing/quote/{rfp.quote_token}
+HOW TO ACCEPT & LOCK THIS TRIP (CHOOSE EITHER OPTION):
 
-BENEFITS FOR YOUR FLEET:
-✓ Guaranteed Instant Escrow Payout upon completion (Stripe Connect or Direct ACH)
-✓ Zero membership fees or commissions deducted from your net quote
-✓ Instant provisional affiliate status to receive recurring VIP dispatch volume
+👉 OPTION 1: 1-CLICK SECURE MOBILE WEB PAGE (Recommended)
+Click the secure link below to review trip details, assign your driver/vehicle, and accept in 15 seconds:
+🔗 http://localhost:5173/sourcing/quote/{rfp.quote_token}
 
-If you have questions, reply directly to this email (our 24/7 team is on CC) or call +1 (800) 555-0199.
+👉 OPTION 2: REPLY DIRECTLY TO THIS EMAIL
+Simply hit "Reply" in your email client and copy/paste this completed template:
+
+---------------------- COPY & PASTE BELOW ----------------------
+STATUS: ACCEPTED
+NET PAYOUT QUOTE: ${rfp.suggested_benchmark_payout_usd} USD
+DRIVER FULL NAME: [Chauffeur Name]
+DRIVER DIRECT CELL: [Chauffeur Phone]
+VEHICLE MAKE/MODEL: [e.g. 2024 Cadillac Escalade ESV]
+VEHICLE COLOR & LICENSE PLATE: [e.g. Black / State-Plate]
+DISPATCHER NOTES: [Optional Notes]
+----------------------------------------------------------------
+
+⚡ GUARANTEED INSTANT STRIPE CONNECT PAYOUT:
+✓ 100% of your net payout is pre-authorized in escrow.
+✓ Instant automatic bank deposit / debit card transfer upon passenger drop-off.
+✓ Zero deduction, commission, or membership fee taken from your net quote.
+
+If you have questions, reply directly to this email or call our 24/7 Operations Desk at +1 (800) 555-0199.
 
 Warm regards,
 Global Chauffeur Dispatch & Affiliate Clearinghouse
 """
+
+    @classmethod
+    def build_network_invitation_email_content(
+        cls,
+        vendor_name: str,
+        contact_name: Optional[str] = None,
+        city: str = "your market",
+        partner_id: Optional[str] = None
+    ) -> str:
+        """
+        Builds the high-converting B2B Affiliate Recruitment & Fleet Growth Email.
+        """
+        greeting = f"Dear {contact_name or 'Fleet Owner / Dispatch Manager'} at {vendor_name},"
+        onboarding_link = f"http://localhost:5173/affiliate-onboarding?partner_ref={partner_id or 'prov-' + uuid.uuid4().hex[:6]}"
+        return f"""
+Subject: 🤝 Expand Your Luxury Fleet Revenue: Join the Global Executive Chauffeur Network
+
+{greeting}
+
+We recently partnered with your team to service VIP rides in {city}. We were impressed by your fleet standards and would like to formally invite {vendor_name} to become a Certified Sovereign Partner on the Global Chauffeur Network.
+
+WHAT YOUR FLEET GETS BY JOINING:
+
+1. 💰 Free Inbound VIP Dispatch Volume
+   • Receive recurring, high-paying corporate, private aviation (FBO), and hotel bookings in {city} without spending a dollar on marketing.
+
+2. ⚡ Instant 80% Escrow Payouts via Stripe Connect
+   • No 30-day or 60-day billing delays. Payments are deposited directly to your bank account / debit card upon passenger drop-off.
+
+3. 🌐 10% Reciprocal Farm-Out Revenue Worldwide
+   • When your local clients travel to New York, London, Dubai, Paris, or Los Angeles, book them through your portal and earn a passive 10% commission on every leg.
+
+4. 🛡️ Sovereign Brand Independence & Modern Technology
+   • Keep 100% control of your own local pricing, rate cards, driver fleet, and dispatch portal.
+   • Zero monthly subscription fees or software lock-in.
+
+READY TO GROW YOUR FLEET?
+Complete your 3-minute partner verification and Stripe Connect payout setup below:
+👉 {onboarding_link}
+
+We look forward to sending more VIP business your way!
+
+Best regards,
+Affiliate Network Partnerships Team
+Global Executive Chauffeur Network
+partners@limo-network.com | +1 (800) 555-0199
+"""
+
 
     @classmethod
     def handle_vendor_quote_submission(

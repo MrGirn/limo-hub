@@ -13,7 +13,7 @@ import { SharedBookingHeader } from './pages/SharedBookingHeader';
 import { SharedBookingFooter } from './pages/SharedBookingFooter';
 
 interface LimoAppProps {
-  onOpenOperationsPortal?: () => void;
+  onOpenOperationsPortal?: (blade?: string) => void;
   isAuthenticatedAsAdmin?: boolean;
 }
 
@@ -85,56 +85,119 @@ export const LimoPublicBookingApp: React.FC<LimoAppProps> = ({
         whiteSpace: 'nowrap',
         gap: '12px'
       }}>
-        <span style={{ color: '#38BDF8', letterSpacing: '0.05em' }}>
-          PAGE PREVIEW:
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ color: '#38BDF8', letterSpacing: '0.05em' }}>
+            PUBLIC FLOW:
+          </span>
 
-        <div style={{ display: 'flex', gap: '6px' }}>
-          {[
-            { id: 'HOME', label: 'Home Search' },
-            { id: 'RIDE_DETAILS', label: 'Ride Details' },
-            { id: 'PASSENGER_DETAILS', label: 'Passenger Details' },
-            { id: 'REVIEW_PAY', label: 'Review & Pay' },
-            { id: 'BOOKING_CONFIRMED', label: 'Booking Confirmed' },
-            { id: 'MY_BOOKINGS', label: 'My Bookings' },
-            { id: 'MANAGE_TRACK_RIDE', label: 'Manage / Track' },
-            { id: 'SIGN_IN_FIND_BOOKING', label: 'Sign In / Find' },
-            { id: 'HELP_CONTACT', label: 'Help & Contact' }
-          ].map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setCurrentPage(item.id as PublicPageIdentifier)}
-              style={{
-                background: currentPage === item.id ? '#1D68FE' : 'rgba(255,255,255,0.08)',
-                color: currentPage === item.id ? '#FFFFFF' : '#CBD5E1',
-                border: 'none',
-                padding: '4px 10px',
-                borderRadius: '6px',
-                fontSize: '11px',
-                fontWeight: '700',
-                cursor: 'pointer'
-              }}
-            >
-              {item.label}
-            </button>
-          ))}
+          <div style={{ display: 'flex', gap: '5px' }}>
+            {[
+              { id: 'HOME', label: 'Home Search' },
+              { id: 'RIDE_DETAILS', label: 'Ride Details' },
+              { id: 'PASSENGER_DETAILS', label: 'Passenger Details' },
+              { id: 'REVIEW_PAY', label: 'Review & Pay' },
+              { id: 'BOOKING_CONFIRMED', label: 'Booking Confirmed' },
+              { id: 'MY_BOOKINGS', label: 'My Bookings' },
+              { id: 'MANAGE_TRACK_RIDE', label: 'Manage / Track' },
+              { id: 'SIGN_IN_FIND_BOOKING', label: 'Sign In / Find' },
+              { id: 'HELP_CONTACT', label: 'Help & Contact' }
+            ].map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setCurrentPage(item.id as PublicPageIdentifier)}
+                style={{
+                  background: currentPage === item.id ? '#1D68FE' : 'rgba(255,255,255,0.08)',
+                  color: currentPage === item.id ? '#FFFFFF' : '#CBD5E1',
+                  border: 'none',
+                  padding: '3px 9px',
+                  borderRadius: '5px',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  cursor: 'pointer'
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {onOpenOperationsPortal && (
-          <button
-            onClick={onOpenOperationsPortal}
-            style={{
-              background: '#334155',
-              color: '#F8FAFC',
-              border: 'none',
-              padding: '4px 10px',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontWeight: '800'
-            }}
-          >
-            🔒 Operations Portal
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ color: '#64748B', fontSize: '10px' }}>ADMIN / OPS:</span>
+            <button
+              onClick={() => onOpenOperationsPortal('cells')}
+              style={{
+                background: '#0284C7',
+                color: '#FFFFFF',
+                border: 'none',
+                padding: '3px 9px',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                fontWeight: '700',
+                fontSize: '11px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              title="Vendor Network & Lifecycle Management"
+            >
+              🏢 Vendor Network
+            </button>
+            <button
+              onClick={() => onOpenOperationsPortal('rules')}
+              style={{
+                background: '#4F46E5',
+                color: '#FFFFFF',
+                border: 'none',
+                padding: '3px 9px',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                fontWeight: '700',
+                fontSize: '11px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              title="Marketplace Configuration & Clearinghouse Rules"
+            >
+              ⚙️ Marketplace Rules
+            </button>
+            <button
+              onClick={() => onOpenOperationsPortal('financials')}
+              style={{
+                background: '#059669',
+                color: '#FFFFFF',
+                border: 'none',
+                padding: '3px 9px',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                fontWeight: '700',
+                fontSize: '11px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              title="Financial Reports & Escrow Ledger"
+            >
+              📊 Escrow Ledger
+            </button>
+            <button
+              onClick={() => onOpenOperationsPortal('sourcing')}
+              style={{
+                background: '#002050',
+                color: '#38BDF8',
+                border: '1px solid #0284C7',
+                padding: '3px 9px',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                fontWeight: '800',
+                fontSize: '11px'
+              }}
+            >
+              🔒 Azure Operations Hub
+            </button>
+          </div>
         )}
       </div>
 

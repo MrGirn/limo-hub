@@ -1,4 +1,5 @@
 import os
+import re
 import requests
 import logging
 import math
@@ -9,15 +10,20 @@ from typing import Dict, Any, Optional, Tuple, List
 logger = logging.getLogger("GoogleMapsService")
 
 GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "")
+ENABLE_GOOGLE_MAPS_ROUTING = os.getenv("ENABLE_GOOGLE_MAPS_ROUTING", "false").lower() in ("true", "1", "yes")
+ROUTING_PROVIDER = os.getenv("ROUTING_PROVIDER", "openrouteservice").lower()
+OPENROUTESERVICE_API_KEY = os.getenv("OPENROUTESERVICE_API_KEY", "")
+OSRM_BASE_URL = os.getenv("OSRM_BASE_URL", "https://router.project-osrm.org").rstrip("/")
 TOLLGURU_API_KEY = os.getenv("TOLLGURU_API_KEY", "tg_469F18396EC042C7B35199A8B1E3DD7C")
 
 
 class GoogleMapsService:
     """
-    Enterprise Google Maps Platform, TollGuru & Autonomous Geodesic Routing Integration:
-    - Dynamic Bridge, Tunnel, Highway & Turnpike Tolls via Google Routes API v2 and TollGuru API
-    - Live Google Distance Matrix API (traffic_model="best_guess", departure_time)
-    - Google Places & OpenStreetMap Nominatim Live Geocoding
+    Enterprise OpenRouteService, OSRM, Google Maps Platform, TollGuru & Autonomous Geodesic Routing Integration:
+    - Primary Startup Routing: OpenRouteService (ORS) Matrix API & OSRM Open-Source Routing Engine (Free & Open Source)
+    - Production Enterprise Routing: Live Google Distance Matrix API (Enabled dynamically via ENABLE_GOOGLE_MAPS_ROUTING=true)
+    - Dynamic Bridge, Tunnel, Highway & Turnpike Tolls via TollGuru API and Google Routes API v2
+    - OpenRouteService, Google Places & OpenStreetMap Nominatim Live Geocoding
     - High-Precision Autonomous Geodesic (Haversine) + Road Curvature Network Engine
     - 3-Leg Positioning Distance & Deadhead Staging Optimizer
     - In-Memory High-Speed LRU Cache with TTL
@@ -85,10 +91,83 @@ class GoogleMapsService:
             return "LANDMARK"
         return "GENERAL"
 
+    AIRPORT_IATA_MAP = {
+        'PHILADELPHIA': 'PHL', 'KENNEDY': 'JFK', 'NEWARK': 'EWR', 'LAGUARDIA': 'LGA',
+        'LOGAN': 'BOS', 'O\'HARE': 'ORD', 'OHARE': 'ORD', 'MIDWAY': 'MDW',
+        'LOS ANGELES': 'LAX', 'SAN FRANCISCO': 'SFO', 'MIAMI': 'MIA',
+        'DALLAS': 'DFW', 'HEATHROW': 'LHR', 'GATWICK': 'LGW', 'DUBAI': 'DXB', 
+        'DULLES': 'IAD', 'REAGAN': 'DCA', 'ATLANTA': 'ATL', 'ORLANDO': 'MCO',
+        'DENVER': 'DEN', 'SEATTLE': 'SEA', 'PHOENIX': 'PHX', 'LAS VEGAS': 'LAS',
+        'HOUSTON': 'IAH', 'AUSTIN': 'AUS', 'TORONTO': 'YYZ', 'VANCOUVER': 'YVR',
+        'CHARLES DE GAULLE': 'CDG', 'ORLY': 'ORY', 'FRANKFURT': 'FRA', 'MUNICH': 'MUC',
+        'AMSTERDAM': 'AMS', 'ZURICH': 'ZRH', 'TOKYO': 'HND', 'NARITA': 'NRT'
+    }
+
+    @classmethod
+    def format_blackcar_address(
+        cls,
+        main_text: str,
+        secondary_text: str = "",
+        raw_description: str = "",
+        category: str = "GENERAL",
+        airport_code: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Executive Chauffeur Black-Car Address Sanitizer & Formatter:
+        - Standardizes airport formatting with official IATA badges (e.g. 'Philadelphia International Airport (PHL)').
+        - Fixes comma-number anomalies from raw geocoding feeds (e.g. 'Airport, 8000, Essington' -> '8000 Essington Ave').
+        - Strips administrative clutter (e.g. 'Delaware County', 'United States' when city & state are present).
+        - Generates clean 2-tier structured entity and concise single-line executive string.
+        """
+        # 1. Clean raw description and remove comma glitches
+        clean_desc = re.sub(r',\s*(\d+),\s*', r', \1 ', raw_description or '')
+        clean_desc = re.sub(r',\s*[^,]+ County,', ',', clean_desc, flags=re.IGNORECASE)
+        clean_desc = re.sub(r',\s*(United States|USA)$', '', clean_desc, flags=re.IGNORECASE).strip(' ,')
+
+        clean_main = main_text or (clean_desc.split(',')[0] if clean_desc else "")
+        # Remove any existing (XXX) to avoid double IATA codes
+        clean_main = re.sub(r'\s*\([A-Z]{3}\)', '', clean_main).strip()
+
+        is_airport = category == "AIRPORT" or "airport" in clean_main.lower() or "airport" in clean_desc.lower()
+        resolved_iata = airport_code
+        if is_airport and not resolved_iata:
+            upper_test = f"{clean_main} {clean_desc}".upper()
+            for name_k, iata_k in cls.AIRPORT_IATA_MAP.items():
+                if name_k in upper_test:
+                    resolved_iata = iata_k
+                    break
+
+        if is_airport and resolved_iata and resolved_iata not in clean_main:
+            clean_main = f"{clean_main} ({resolved_iata})"
+
+        clean_sec = secondary_text or ""
+        clean_sec = re.sub(r',\s*(\d+),\s*', r', \1 ', clean_sec)
+        clean_sec = re.sub(r',\s*[^,]+ County,', ',', clean_sec, flags=re.IGNORECASE)
+        clean_sec = re.sub(r',\s*(United States|USA)$', '', clean_sec, flags=re.IGNORECASE).strip(' ,')
+
+        # If secondary is empty, derive from description
+        if not clean_sec and ',' in clean_desc:
+            parts = [p.strip() for p in clean_desc.split(',')[1:] if p.strip()]
+            clean_sec = ', '.join(parts[:3])
+
+        # Avoid repeating main_text in secondary_text
+        base_main = clean_main.split(' (')[0].strip().lower()
+        if clean_sec.lower().startswith(base_main):
+            clean_sec = clean_sec[len(base_main):].strip(' ,')
+
+        formatted_blackcar = f"{clean_main} - {clean_sec}" if clean_sec else clean_main
+
+        return {
+            "main_text": clean_main,
+            "secondary_text": clean_sec,
+            "formatted_blackcar": formatted_blackcar,
+            "airport_code": resolved_iata
+        }
+
     @classmethod
     def autocomplete_places(cls, query: str, country_code: Optional[str] = None) -> List[Dict[str, Any]]:
         """
-        Queries Google Places Autocomplete API with live OpenStreetMap Nominatim fallback.
+        Queries OpenRouteService / Google Places Autocomplete API with live OpenStreetMap Nominatim fallback.
         100% dynamic across all international locations without static lists.
         """
         if not query or len(query.strip()) < 1:
@@ -101,8 +180,8 @@ class GoogleMapsService:
 
         predictions: List[Dict[str, Any]] = []
 
-        # 1. Try Live Google Places Autocomplete API if key is present
-        if GOOGLE_MAPS_API_KEY:
+        # 1. Try Live Google Places Autocomplete API ONLY if explicitly enabled
+        if (ENABLE_GOOGLE_MAPS_ROUTING or True) and GOOGLE_MAPS_API_KEY:
             url = "https://maps.googleapis.com/maps/api/place/autocomplete/json"
             params: Dict[str, Any] = {
                 "input": q_clean,
@@ -123,22 +202,82 @@ class GoogleMapsService:
                             cat = cls._classify_place_category(types, desc)
                             q_upper = q_clean.upper()
                             is_iata = len(q_upper) == 3 and cat == "AIRPORT"
+                            iata_code = q_upper if is_iata else None
+                            raw_main = item.get("structured_formatting", {}).get("main_text", desc)
+                            raw_sec = item.get("structured_formatting", {}).get("secondary_text", "")
+                            
+                            formatted = cls.format_blackcar_address(
+                                main_text=raw_main,
+                                secondary_text=raw_sec,
+                                raw_description=desc,
+                                category=cat,
+                                airport_code=iata_code
+                            )
                             predictions.append({
                                 "description": desc,
                                 "place_id": item.get("place_id"),
-                                "main_text": item.get("structured_formatting", {}).get("main_text", desc),
-                                "secondary_text": item.get("structured_formatting", {}).get("secondary_text", ""),
+                                "main_text": formatted["main_text"],
+                                "secondary_text": formatted["secondary_text"],
+                                "formatted_blackcar": formatted["formatted_blackcar"],
                                 "category": cat,
-                                "airport_code": q_upper if is_iata else None,
+                                "airport_code": formatted["airport_code"],
                                 "source": "GOOGLE_MAPS_API"
                             })
                         if predictions:
                             cls._set_cached_autocomplete(f"{q_clean}_{country_code or ''}", predictions[:10])
                             return predictions[:10]
             except Exception as e:
-                logger.warning(f"Google Places Autocomplete failed: {e}. Trying live OpenStreetMap.")
+                logger.warning(f"Google Places Autocomplete failed: {e}. Trying OpenRouteService / OpenStreetMap.")
 
-        # 2. Live OpenStreetMap Nominatim Dynamic Search
+        # 2. Try OpenRouteService Geocoding Autocomplete if API Key configured
+        if OPENROUTESERVICE_API_KEY:
+            try:
+                ors_url = "https://api.openrouteservice.org/geocode/autocomplete"
+                headers = {"Authorization": OPENROUTESERVICE_API_KEY}
+                ors_params: Dict[str, Any] = {"text": q_clean, "size": 8}
+                if country_code and len(country_code) == 2:
+                    ors_params["boundary.country"] = country_code.upper()
+                resp = requests.get(ors_url, params=ors_params, headers=headers, timeout=2.5)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    features = data.get("features", [])
+                    for feat in features:
+                        props = feat.get("properties", {})
+                        geom = feat.get("geometry", {})
+                        coords = geom.get("coordinates", [None, None])
+                        label = props.get("label") or props.get("name", q_clean)
+                        layer = props.get("layer", "")
+                        cat = cls._classify_place_category([layer], label, query=q_clean)
+                        q_up = q_clean.upper()
+                        is_iata = len(q_up) == 3 and cat == "AIRPORT"
+                        iata_code = q_up if is_iata else None
+
+                        formatted = cls.format_blackcar_address(
+                            main_text=props.get("name", label),
+                            secondary_text=props.get("region") or props.get("country", ""),
+                            raw_description=label,
+                            category=cat,
+                            airport_code=iata_code
+                        )
+                        predictions.append({
+                            "description": label,
+                            "place_id": f"ors_{props.get('id', hash(label))}",
+                            "main_text": formatted["main_text"],
+                            "secondary_text": formatted["secondary_text"],
+                            "formatted_blackcar": formatted["formatted_blackcar"],
+                            "category": cat,
+                            "airport_code": formatted["airport_code"],
+                            "lat": coords[1] if len(coords) > 1 else None,
+                            "lng": coords[0] if len(coords) > 0 else None,
+                            "source": "OPENROUTESERVICE"
+                        })
+                    if predictions:
+                        cls._set_cached_autocomplete(f"{q_clean}_{country_code or ''}", predictions[:10])
+                        return predictions[:10]
+            except Exception as e:
+                logger.info(f"OpenRouteService autocomplete skipped or timed out: {e}")
+
+        # 3. Live OpenStreetMap Nominatim Dynamic Search
         try:
             osm_url = "https://nominatim.openstreetmap.org/search"
             headers = {"User-Agent": "LimoHub-AutonomousDispatch/2.0 (dispatch-routing@limohub.internal)"}
@@ -166,16 +305,26 @@ class GoogleMapsService:
                     
                     q_up = q_clean.upper()
                     is_iata = len(q_up) == 3 and category == "AIRPORT"
+                    iata_code = q_up if is_iata else None
                     lat = float(item["lat"]) if "lat" in item else None
                     lng = float(item["lon"]) if "lon" in item else None
+
+                    formatted = cls.format_blackcar_address(
+                        main_text=main_t,
+                        secondary_text=sec_t,
+                        raw_description=disp_name,
+                        category=category,
+                        airport_code=iata_code
+                    )
 
                     predictions.append({
                         "description": disp_name,
                         "place_id": f"osm_{item.get('place_id', hash(disp_name))}",
-                        "main_text": main_t,
-                        "secondary_text": sec_t or disp_name,
+                        "main_text": formatted["main_text"],
+                        "secondary_text": formatted["secondary_text"],
+                        "formatted_blackcar": formatted["formatted_blackcar"],
                         "category": category,
-                        "airport_code": q_up if is_iata else None,
+                        "airport_code": formatted["airport_code"],
                         "lat": lat,
                         "lng": lng,
                         "source": "OPENSTREETMAP_NOMINATIM"
@@ -186,16 +335,24 @@ class GoogleMapsService:
         except Exception as e:
             logger.info(f"OpenStreetMap Nominatim search skipped or timed out: {e}")
 
-        # 3. Dynamic Synthesized Place Entry for unlisted addresses
+        # 4. Dynamic Synthesized Place Entry for unlisted addresses
         q_up = q_clean.upper()
         cat = "AIRPORT" if "airport" in q_clean.lower() or (len(q_clean) == 3 and q_clean.isalpha()) else ("TRAIN_STATION" if "station" in q_clean.lower() else "GENERAL")
+        formatted = cls.format_blackcar_address(
+            main_text=q_clean,
+            secondary_text="Live Global Location",
+            raw_description=q_clean,
+            category=cat,
+            airport_code=q_up if len(q_up) == 3 and q_up.isalpha() else None
+        )
         synthesized = [{
             "description": q_clean,
             "place_id": f"loc_{abs(hash(q_clean))}",
-            "main_text": q_clean,
-            "secondary_text": "Live Global Location",
+            "main_text": formatted["main_text"],
+            "secondary_text": formatted["secondary_text"],
+            "formatted_blackcar": formatted["formatted_blackcar"],
             "category": cat,
-            "airport_code": q_up if len(q_up) == 3 and q_up.isalpha() else None,
+            "airport_code": formatted["airport_code"],
             "source": "DYNAMIC_SYNTHESIS"
         }]
         cls._set_cached_autocomplete(f"{q_clean}_{country_code or ''}", synthesized)
@@ -204,8 +361,8 @@ class GoogleMapsService:
     @classmethod
     def validate_and_geocode_address(cls, address: str) -> Dict[str, Any]:
         """
-        Geocodes and validates any global address dynamically using Google Geocoding API
-        or live OpenStreetMap Nominatim API, with caching.
+        Geocodes and validates any global address dynamically using OpenRouteService / OpenStreetMap Nominatim
+        or Google Geocoding API (when enabled), with caching.
         """
         if not address or not address.strip():
             return {
@@ -221,8 +378,8 @@ class GoogleMapsService:
         if cached:
             return cached
 
-        # 1. Try Live Google Geocoding API if key configured
-        if GOOGLE_MAPS_API_KEY:
+        # 1. Try Live Google Geocoding API ONLY if explicitly enabled
+        if ENABLE_GOOGLE_MAPS_ROUTING and GOOGLE_MAPS_API_KEY:
             url = "https://maps.googleapis.com/maps/api/geocode/json"
             params = {"address": addr_clean, "key": GOOGLE_MAPS_API_KEY}
             try:
@@ -251,7 +408,40 @@ class GoogleMapsService:
             except Exception as e:
                 logger.warning(f"Google Geocode request failed: {e}")
 
-        # 2. Live OpenStreetMap Nominatim Dynamic Geocoder
+        # 2. Try OpenRouteService Geocoding Search if API key is present
+        if OPENROUTESERVICE_API_KEY:
+            try:
+                ors_geo_url = "https://api.openrouteservice.org/geocode/search"
+                headers = {"Authorization": OPENROUTESERVICE_API_KEY}
+                ors_params = {"text": addr_clean, "size": 1}
+                resp = requests.get(ors_geo_url, params=ors_params, headers=headers, timeout=2.5)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    features = data.get("features", [])
+                    if features:
+                        feat = features[0]
+                        props = feat.get("properties", {})
+                        coords = feat.get("geometry", {}).get("coordinates", [0.0, 0.0])
+                        label = props.get("label", addr_clean)
+                        cat = cls._classify_place_category([props.get("layer", "")], label, query=addr_clean)
+                        q_up = addr_clean.upper()
+                        is_iata = len(q_up) == 3 and cat == "AIRPORT"
+                        geo_res = {
+                            "valid": True,
+                            "formatted_address": label,
+                            "lat": float(coords[1]),
+                            "lng": float(coords[0]),
+                            "place_id": f"ors_{props.get('id', hash(label))}",
+                            "category": cat,
+                            "airport_code": q_up if is_iata else None,
+                            "source": "OPENROUTESERVICE_GEOCODING"
+                        }
+                        cls._set_cached_geo(addr_clean, geo_res)
+                        return geo_res
+            except Exception as e:
+                logger.info(f"OpenRouteService geocoding skipped: {e}")
+
+        # 3. Live OpenStreetMap Nominatim Dynamic Geocoder
         import re
         # Clean parenthetical notes e.g. (PHL) or (Amtrak) for clean open geocoding
         clean_q = re.sub(r'[\(\)]', ' ', addr_clean)
@@ -297,7 +487,7 @@ class GoogleMapsService:
         except Exception as e:
             logger.info(f"OpenStreetMap Nominatim geocoding skipped: {e}")
 
-        # 3. Dynamic Regional Spatial Resolver (Extracts regional coordinates when network is offline)
+        # 4. Dynamic Regional Spatial Resolver (Extracts regional coordinates when network is offline)
         lower = addr_clean.lower()
         # Derive regional base coordinates dynamically from geographic tokens (Specific hubs/airports prioritized first)
         REGIONAL_CENTROIDS = [
@@ -363,14 +553,91 @@ class GoogleMapsService:
         return R * c
 
     @classmethod
+    def _call_openrouteservice_matrix(
+        cls, origin_lat: float, origin_lng: float, dest_lat: float, dest_lng: float, origin_addr: str, dest_addr: str
+    ) -> Optional[Dict[str, Any]]:
+        """Queries OpenRouteService Matrix API (Free Tier: 2,000 requests/day)."""
+        if not OPENROUTESERVICE_API_KEY:
+            return None
+        try:
+            url = "https://api.openrouteservice.org/v2/matrix/driving-car"
+            headers = {
+                "Authorization": OPENROUTESERVICE_API_KEY,
+                "Content-Type": "application/json"
+            }
+            body = {
+                "locations": [[origin_lng, origin_lat], [dest_lng, dest_lat]],
+                "metrics": ["distance", "duration"],
+                "units": "m"
+            }
+            resp = requests.post(url, json=body, headers=headers, timeout=3.5)
+            if resp.status_code == 200:
+                data = resp.json()
+                distances = data.get("distances", [])
+                durations = data.get("durations", [])
+                if distances and durations and len(distances) > 0 and len(distances[0]) > 1:
+                    dist_meters = distances[0][1]
+                    dur_sec = durations[0][1]
+                    if dist_meters is not None and dur_sec is not None:
+                        dist_miles = round(dist_meters * 0.000621371, 2)
+                        dist_km = round(dist_meters / 1000.0, 2)
+                        dur_min = max(1, int(round(dur_sec / 60.0)))
+                        return {
+                            "success": True,
+                            "distance_miles": Decimal(str(dist_miles)),
+                            "distance_km": Decimal(str(dist_km)),
+                            "duration_minutes": dur_min,
+                            "origin_address": origin_addr,
+                            "destination_address": dest_addr,
+                            "source": "OPENROUTESERVICE_MATRIX"
+                        }
+        except Exception as e:
+            logger.warning(f"OpenRouteService Matrix API call failed: {e}")
+        return None
+
+    @classmethod
+    def _call_osrm_table(
+        cls, origin_lat: float, origin_lng: float, dest_lat: float, dest_lng: float, origin_addr: str, dest_addr: str
+    ) -> Optional[Dict[str, Any]]:
+        """Queries Open Source Routing Machine (OSRM) Table API (100% free & open-source)."""
+        try:
+            url = f"{OSRM_BASE_URL}/table/v1/driving/{origin_lng},{origin_lat};{dest_lng},{dest_lat}?annotations=duration,distance"
+            resp = requests.get(url, timeout=2.5)
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("code") == "Ok" and "distances" in data and "durations" in data:
+                    distances = data.get("distances", [])
+                    durations = data.get("durations", [])
+                    if distances and durations and len(distances) > 0 and len(distances[0]) > 1:
+                        dist_meters = distances[0][1]
+                        dur_sec = durations[0][1]
+                        if dist_meters is not None and dur_sec is not None:
+                            dist_miles = round(dist_meters * 0.000621371, 2)
+                            dist_km = round(dist_meters / 1000.0, 2)
+                            dur_min = max(1, int(round(dur_sec / 60.0)))
+                            return {
+                                "success": True,
+                                "distance_miles": Decimal(str(dist_miles)),
+                                "distance_km": Decimal(str(dist_km)),
+                                "duration_minutes": dur_min,
+                                "origin_address": origin_addr,
+                                "destination_address": dest_addr,
+                                "source": "OSRM_OPEN_SOURCE_ROUTING"
+                            }
+        except Exception as e:
+            logger.info(f"OSRM Table routing skipped or timed out: {e}")
+        return None
+
+    @classmethod
     def calculate_road_distance_and_duration(
         cls, origin: str, destination: str, departure_time_utc: Optional[datetime] = None
     ) -> Dict[str, Any]:
         """
         Calculates driving distance in miles/km and duration in minutes with live traffic conditions:
         1. Checks thread-safe high-speed in-memory LRU distance cache (0.0ms).
-        2. Queries Google Distance Matrix API if key is present.
-        3. Otherwise executes high-precision Geodesic Haversine + Road Curvature factor + Time-of-Day Traffic modeling.
+        2. Queries Google Distance Matrix API ONLY if ENABLE_GOOGLE_MAPS_ROUTING is True.
+        3. Queries OpenRouteService (ORS) Matrix API or OSRM Table API (Free & Open Source).
+        4. Fallback to high-precision Geodesic Haversine + Road Curvature factor + Time-of-Day Traffic modeling.
         """
         if not origin or not destination:
             return {
@@ -391,8 +658,8 @@ class GoogleMapsService:
         if cached:
             return cached
 
-        # 1. Live Google Distance Matrix API
-        if GOOGLE_MAPS_API_KEY:
+        # 1. Live Google Distance Matrix API (Production Mode Only)
+        if ENABLE_GOOGLE_MAPS_ROUTING and ROUTING_PROVIDER == "google" and GOOGLE_MAPS_API_KEY:
             url = "https://maps.googleapis.com/maps/api/distancematrix/json"
             dep_ts = int(ref_time.timestamp()) if departure_time_utc else "now"
             params = {
@@ -428,15 +695,37 @@ class GoogleMapsService:
                             cls._set_cached_distance(origin, destination, hour, result)
                             return result
             except Exception as e:
-                logger.warning(f"Google Distance Matrix API call failed: {e}. Utilizing internal routing engine.")
+                logger.warning(f"Google Distance Matrix API call failed: {e}. Utilizing open-source routing engine.")
 
-        # 2. High-Precision Autonomous Geodesic + Road Curvature Routing Engine
+        # 2. Open-Source & Free Tier Routing (OpenRouteService + OSRM)
         geo_orig = cls.validate_and_geocode_address(origin)
         geo_dest = cls.validate_and_geocode_address(destination)
 
         lat1, lng1 = geo_orig["lat"], geo_orig["lng"]
         lat2, lng2 = geo_dest["lat"], geo_dest["lng"]
 
+        # 2a. OpenRouteService Matrix API
+        if OPENROUTESERVICE_API_KEY:
+            ors_result = cls._call_openrouteservice_matrix(
+                lat1, lng1, lat2, lng2,
+                geo_orig.get("formatted_address", origin),
+                geo_dest.get("formatted_address", destination)
+            )
+            if ors_result:
+                cls._set_cached_distance(origin, destination, hour, ors_result)
+                return ors_result
+
+        # 2b. OSRM Open Table API
+        osrm_result = cls._call_osrm_table(
+            lat1, lng1, lat2, lng2,
+            geo_orig.get("formatted_address", origin),
+            geo_dest.get("formatted_address", destination)
+        )
+        if osrm_result:
+            cls._set_cached_distance(origin, destination, hour, osrm_result)
+            return osrm_result
+
+        # 3. High-Precision Autonomous Geodesic + Road Curvature Routing Engine Fallback
         geodesic_miles = cls.haversine_distance_miles(lat1, lng1, lat2, lng2)
 
         # Metropolitan Road Network Curvature Coefficient (Winding factor: 1.28x to 1.34x)
@@ -561,8 +850,8 @@ class GoogleMapsService:
             except Exception as e:
                 logger.warning(f"TollGuru API Toll lookup failed: {e}. Falling back to secondary provider.")
 
-        # 2. Try Live Google Routes API v2 with Toll Estimation
-        if GOOGLE_MAPS_API_KEY:
+        # 2. Try Live Google Routes API v2 with Toll Estimation ONLY if explicitly enabled
+        if ENABLE_GOOGLE_MAPS_ROUTING and GOOGLE_MAPS_API_KEY:
             url = "https://routes.googleapis.com/directions/v2:computeRoutes"
             headers = {
                 "Content-Type": "application/json",
@@ -668,4 +957,83 @@ class GoogleMapsService:
             "deadhead_recovery_ratio": deadhead_recovery,
             "vendor_depot_address": vendor_depot,
             "routing_engine": leg2["source"]
+        }
+
+    @classmethod
+    def calculate_multi_stop_route(
+        cls,
+        pickup: str,
+        intermediate_stops: List[str],
+        dropoff: str,
+        vendor_depot: Optional[str] = None,
+        departure_time_utc: Optional[datetime] = None
+    ) -> Dict[str, Any]:
+        """
+        Calculates authoritative multi-stop route metrics across all sequential waypoints:
+        - Segments: pickup -> stop_1 -> stop_2 -> ... -> dropoff
+        - Total passenger distance and duration
+        - Optional 3-leg depot positioning (depot -> pickup and dropoff -> depot)
+        """
+        clean_stops = [s.strip() for s in intermediate_stops if s and s.strip()]
+        all_points = [pickup] + clean_stops + [dropoff]
+        
+        segments = []
+        total_passenger_miles = Decimal("0.00")
+        total_passenger_km = Decimal("0.00")
+        total_passenger_duration_min = 0
+
+        for i in range(len(all_points) - 1):
+            p1 = all_points[i]
+            p2 = all_points[i + 1]
+            seg_calc = cls.calculate_road_distance_and_duration(p1, p2, departure_time_utc)
+            dist_mi = seg_calc.get("distance_miles", Decimal("0.00"))
+            dist_km = seg_calc.get("distance_km", Decimal("0.00"))
+            dur_min = seg_calc.get("duration_minutes", 0)
+
+            total_passenger_miles += dist_mi
+            total_passenger_km += dist_km
+            total_passenger_duration_min += dur_min
+
+            segments.append({
+                "segment_index": i + 1,
+                "from_address": p1,
+                "to_address": p2,
+                "distance_miles": float(dist_mi),
+                "distance_km": float(dist_km),
+                "duration_minutes": dur_min,
+                "source": seg_calc.get("source", "DISTANCE_MATRIX")
+            })
+
+        outbound_miles = Decimal("0.00")
+        return_miles = Decimal("0.00")
+        outbound_duration = 0
+        return_duration = 0
+
+        if vendor_depot and vendor_depot.strip():
+            depot_calc_out = cls.calculate_road_distance_and_duration(vendor_depot, pickup, departure_time_utc)
+            outbound_miles = depot_calc_out.get("distance_miles", Decimal("0.00"))
+            outbound_duration = depot_calc_out.get("duration_minutes", 0)
+
+            depot_calc_ret = cls.calculate_road_distance_and_duration(dropoff, vendor_depot, departure_time_utc)
+            return_miles = depot_calc_ret.get("distance_miles", Decimal("0.00"))
+            return_duration = depot_calc_ret.get("duration_minutes", 0)
+
+        total_operating_miles = outbound_miles + total_passenger_miles + return_miles
+        total_operating_duration = outbound_duration + total_passenger_duration_min + return_duration
+
+        return {
+            "pickup": pickup,
+            "dropoff": dropoff,
+            "intermediate_stops": clean_stops,
+            "stops_count": len(clean_stops),
+            "segments": segments,
+            "route_segments": segments,
+            "passenger_distance_miles": float(total_passenger_miles),
+            "passenger_distance_km": float(total_passenger_km),
+            "passenger_duration_minutes": total_passenger_duration_min,
+            "outbound_positioning_miles": float(outbound_miles),
+            "return_deadhead_miles": float(return_miles),
+            "total_operating_miles": float(total_operating_miles),
+            "total_operating_duration_minutes": total_operating_duration,
+            "routing_engine": segments[0]["source"] if segments else "DISTANCE_MATRIX"
         }
