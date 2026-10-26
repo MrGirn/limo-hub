@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Menu, X, Calendar, LogOut, User } from 'lucide-react';
+import { Menu, X, Calendar, LogOut, User, ChevronDown, Building2, Car } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { VendorPortalConfig, UserSession } from '../../types';
 import { PublicAuthDropdown } from './PublicAuthDropdown';
@@ -38,6 +38,8 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLookupModalOpen, setIsLookupModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const menuToggleRef = useRef<HTMLButtonElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
@@ -53,7 +55,7 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
     token && user && user.role === 'ROLE_CHAUFFEUR'
   );
 
-  // Close mobile menu on Escape key and restore focus
+  // Close mobile menu or user dropdown on Escape key and restore focus
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -64,11 +66,29 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
         if (isAuthDropdownOpen) {
           setIsAuthDropdownOpen(false);
         }
+        if (isUserMenuOpen) {
+          setIsUserMenuOpen(false);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isMobileMenuOpen, isAuthDropdownOpen]);
+  }, [isMobileMenuOpen, isAuthDropdownOpen, isUserMenuOpen]);
+
+  // Close user menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    if (isUserMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isUserMenuOpen]);
 
   const handleNavClick = (tab: PublicPage) => {
     onSelectTab(tab);
@@ -146,43 +166,48 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
           {/* Actions: Sign In + Book a Ride + Mobile Menu Toggle */}
           <div className="public-header__actions">
             
-            {/* User Session Profile & Sign Out or Sign In Trigger */}
+            {/* User Session Dropdown or Sign In Trigger */}
             {token && user ? (
-              <div className="public-header__user-session" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div ref={userMenuRef} className="public-header-desktop-only" style={{ position: 'relative' }}>
                 <button
                   type="button"
-                  onClick={() => setIsProfileModalOpen(true)}
+                  onClick={() => setIsUserMenuOpen(prev => !prev)}
+                  aria-expanded={isUserMenuOpen}
+                  aria-haspopup="true"
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '6px',
-                    padding: '4px 10px',
-                    backgroundColor: '#F8FAFC',
-                    borderRadius: '20px',
-                    border: '1px solid #CBD5E1',
-                    fontSize: '12px',
-                    color: '#0F172A',
+                    gap: '8px',
+                    padding: '5px 12px 5px 6px',
+                    backgroundColor: isUserMenuOpen ? '#FDFBF7' : '#FFFFFF',
+                    borderRadius: '24px',
+                    border: isUserMenuOpen ? '1px solid #C5A572' : '1px solid #E2E8F0',
+                    fontSize: '12.5px',
+                    color: '#0B1B2D',
                     fontWeight: 600,
                     cursor: 'pointer',
-                    transition: 'all 0.15s ease'
+                    transition: 'all 0.18s ease',
+                    boxShadow: isUserMenuOpen ? '0 2px 8px rgba(150, 123, 66, 0.2)' : '0 1px 3px rgba(11, 27, 45, 0.05)'
                   }}
-                  title="Open Executive Profile & VIP Ride Preferences"
+                  title="Open Account Menu"
                 >
                   <span style={{
-                    width: '20px',
-                    height: '20px',
+                    width: '26px',
+                    height: '26px',
                     borderRadius: '50%',
-                    backgroundColor: '#0A192F',
+                    backgroundColor: '#0B1B2D',
                     color: '#D4AF37',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '11px',
-                    fontWeight: 800
+                    fontSize: '12px',
+                    fontWeight: 800,
+                    border: '1px solid rgba(212, 175, 55, 0.35)',
+                    flexShrink: 0
                   }}>
                     {(user.full_name || user.email || 'U').charAt(0).toUpperCase()}
                   </span>
-                  <span style={{ maxWidth: '110px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ maxWidth: '115px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {user.full_name || user.email.split('@')[0]}
                   </span>
                   <span style={{
@@ -190,59 +215,209 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
                     fontWeight: 800,
                     padding: '2px 5px',
                     borderRadius: '4px',
-                    letterSpacing: '0.3px',
-                    backgroundColor: user.role === 'ROLE_VENDOR_ADMIN' ? '#FEF3C7' : user.role === 'ROLE_DISPATCHER' ? '#DBEAFE' : user.role === 'ROLE_CHAUFFEUR' ? '#DCFCE7' : user.role === 'ROLE_CORPORATE_BOOKER' ? '#F3E8FF' : '#F1F5F9',
-                    color: user.role === 'ROLE_VENDOR_ADMIN' ? '#92400E' : user.role === 'ROLE_DISPATCHER' ? '#1E40AF' : user.role === 'ROLE_CHAUFFEUR' ? '#166534' : user.role === 'ROLE_CORPORATE_BOOKER' ? '#6B21A8' : '#475569'
+                    letterSpacing: '0.4px',
+                    textTransform: 'uppercase',
+                    backgroundColor: user.role === 'ROLE_VENDOR_ADMIN' ? '#FEF3C7' : user.role === 'ROLE_DISPATCHER' ? '#DBEAFE' : user.role === 'ROLE_CHAUFFEUR' ? '#DCFCE7' : user.role === 'ROLE_CORPORATE_BOOKER' ? '#F3E8FF' : '#FDF4E7',
+                    color: user.role === 'ROLE_VENDOR_ADMIN' ? '#92400E' : user.role === 'ROLE_DISPATCHER' ? '#1E40AF' : user.role === 'ROLE_CHAUFFEUR' ? '#166534' : user.role === 'ROLE_CORPORATE_BOOKER' ? '#6B21A8' : '#967B42',
+                    border: user.role === 'ROLE_CUSTOMER' ? '1px solid rgba(150, 123, 66, 0.25)' : 'none'
                   }}>
-                    {user.role === 'ROLE_VENDOR_ADMIN' ? 'ADMIN' : user.role === 'ROLE_DISPATCHER' ? 'DISPATCH' : user.role === 'ROLE_CHAUFFEUR' ? 'CHAUFFEUR' : user.role === 'ROLE_CORPORATE_BOOKER' ? 'CORP' : 'GUEST'}
+                    {user.role === 'ROLE_VENDOR_ADMIN' ? 'ADMIN' : user.role === 'ROLE_DISPATCHER' ? 'DISPATCH' : user.role === 'ROLE_CHAUFFEUR' ? 'DRIVER' : user.role === 'ROLE_CORPORATE_BOOKER' ? 'CORP' : 'VIP'}
                   </span>
+                  <ChevronDown
+                    size={14}
+                    style={{
+                      color: '#64748B',
+                      transition: 'transform 0.2s ease',
+                      transform: isUserMenuOpen ? 'rotate(180deg)' : 'none'
+                    }}
+                  />
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => setIsProfileModalOpen(true)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    padding: '6px 10px',
-                    backgroundColor: '#F8FAFC',
-                    color: '#0F172A',
-                    border: '1px solid #CBD5E1',
-                    borderRadius: '6px',
-                    fontSize: '11.5px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
-                  title="Manage personal profile, password, 2FA, and VIP ride preferences"
-                >
-                  <User size={13} />
-                  <span>Profile</span>
-                </button>
+                {/* Floating Luxury User Dropdown Menu */}
+                {isUserMenuOpen && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 8px)',
+                      right: 0,
+                      width: '260px',
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '12px',
+                      border: '1px solid #E2E8F0',
+                      boxShadow: '0 16px 36px -4px rgba(11, 27, 45, 0.16), 0 4px 12px -2px rgba(11, 27, 45, 0.08)',
+                      padding: '8px',
+                      zIndex: 1000
+                    }}
+                  >
+                    {/* Header info */}
+                    <div style={{ padding: '8px 10px 10px', borderBottom: '1px solid #F1F5F9', marginBottom: '4px' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: '#0B1B2D', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {user.full_name || 'VIP Client'}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {user.email}
+                      </div>
+                    </div>
 
-                <button
-                  type="button"
-                  onClick={logout}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    padding: '6px 10px',
-                    backgroundColor: '#FEF2F2',
-                    color: '#DC2626',
-                    border: '1px solid #FECACA',
-                    borderRadius: '6px',
-                    fontSize: '11.5px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
-                  title="Sign out of your session"
-                >
-                  <LogOut size={13} />
-                  <span>Sign Out</span>
-                </button>
+                    {/* Menu items */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        setIsProfileModalOpen(true);
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '8px 10px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        backgroundColor: 'transparent',
+                        color: '#1E293B',
+                        fontSize: '12.5px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        transition: 'background 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F8FAFC')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      <User size={15} style={{ color: '#D4AF37', flexShrink: 0 }} />
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span>Profile &amp; Preferences</span>
+                        <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 400 }}>VIP cabin temp, audio, beverage</span>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        setIsLookupModalOpen(true);
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '8px 10px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        backgroundColor: 'transparent',
+                        color: '#1E293B',
+                        fontSize: '12.5px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        transition: 'background 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F8FAFC')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      <Calendar size={15} style={{ color: '#3B82F6', flexShrink: 0 }} />
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span>My Bookings &amp; Status</span>
+                        <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 400 }}>Active ride GPS &amp; schedule</span>
+                      </div>
+                    </button>
+
+                    {isOwnerOrDispatcher && onOpenOwnerPortal && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          onOpenOwnerPortal();
+                        }}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          padding: '8px 10px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          color: '#0B1B2D',
+                          fontSize: '12.5px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'background 0.15s ease'
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F8FAFC')}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                      >
+                        <Building2 size={15} style={{ color: '#0284C7', flexShrink: 0 }} />
+                        <span>Owner Operations Console</span>
+                      </button>
+                    )}
+
+                    {isChauffeur && onOpenDriverApp && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          onOpenDriverApp();
+                        }}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          padding: '8px 10px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          color: '#0B1B2D',
+                          fontSize: '12.5px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'background 0.15s ease'
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F8FAFC')}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                      >
+                        <Car size={15} style={{ color: '#059669', flexShrink: 0 }} />
+                        <span>Driver App Manifest</span>
+                      </button>
+                    )}
+
+                    <div style={{ height: '1px', backgroundColor: '#F1F5F9', margin: '4px 0' }} />
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        logout();
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '8px 10px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        backgroundColor: 'transparent',
+                        color: '#DC2626',
+                        fontSize: '12.5px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        transition: 'background 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#FEF2F2')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      <LogOut size={15} style={{ flexShrink: 0 }} />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="public-header__signin-wrapper" style={{ position: 'relative' }}>
@@ -276,56 +451,6 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
             >
               Book a Ride
             </button>
-
-            {/* Owner Operations Portal Shortcut (Authorized Role Only) */}
-            {isOwnerOrDispatcher && onOpenOwnerPortal && (
-              <button
-                type="button"
-                className="public-header-desktop-only"
-                onClick={onOpenOwnerPortal}
-                style={{
-                  background: '#0F172A',
-                  color: '#FFFFFF',
-                  border: '1px solid #334155',
-                  borderRadius: '6px',
-                  padding: '7px 12px',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px'
-                }}
-                title="Return to Sovereign Vendor Operations & Dispatch Console"
-              >
-                <span>🏢 Owner Console</span>
-              </button>
-            )}
-
-            {/* Chauffeur Mobile Portal Shortcut (Authorized Chauffeur Only) */}
-            {isChauffeur && onOpenDriverApp && (
-              <button
-                type="button"
-                className="public-header-desktop-only"
-                onClick={onOpenDriverApp}
-                style={{
-                  background: '#064E3B',
-                  color: '#FFFFFF',
-                  border: '1px solid #059669',
-                  borderRadius: '6px',
-                  padding: '7px 12px',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px'
-                }}
-                title="Open Chauffeur Mobile Manifest"
-              >
-                <span>🚗 Driver App</span>
-              </button>
-            )}
 
             {/* Mobile Menu Toggle Button */}
             <button
