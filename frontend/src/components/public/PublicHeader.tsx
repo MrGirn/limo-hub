@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Menu, X, Calendar, LogOut } from 'lucide-react';
+import { Menu, X, Calendar, LogOut, User } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { VendorPortalConfig, UserSession } from '../../types';
 import { PublicAuthDropdown } from './PublicAuthDropdown';
 import { CustomerBookingsLookupModal } from './CustomerBookingsLookupModal';
+import { UserProfileModal } from './UserProfileModal';
 
 export type PublicPage = 'HOME' | 'FLEET' | 'ABOUT' | 'SERVICES' | 'POLICIES' | 'CONTACT' | 'BOOKING';
 export type PublicPageTab = PublicPage;
@@ -32,10 +33,11 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
   onOpenDriverApp,
   isSovereignMode
 }) => {
-  const { user, token, logout } = useAuth();
+  const { user, token, logout, setSession } = useAuth();
   const [isAuthDropdownOpen, setIsAuthDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLookupModalOpen, setIsLookupModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const menuToggleRef = useRef<HTMLButtonElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
@@ -147,18 +149,25 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
             {/* User Session Profile & Sign Out or Sign In Trigger */}
             {token && user ? (
               <div className="public-header__user-session" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '4px 10px',
-                  backgroundColor: '#F8FAFC',
-                  borderRadius: '20px',
-                  border: '1px solid #E2E8F0',
-                  fontSize: '12px',
-                  color: '#0F172A',
-                  fontWeight: 600
-                }}>
+                <button
+                  type="button"
+                  onClick={() => setIsProfileModalOpen(true)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 10px',
+                    backgroundColor: '#F8FAFC',
+                    borderRadius: '20px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '12px',
+                    color: '#0F172A',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                  title="Open Executive Profile & VIP Ride Preferences"
+                >
                   <span style={{
                     width: '20px',
                     height: '20px',
@@ -187,7 +196,30 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
                   }}>
                     {user.role === 'ROLE_VENDOR_ADMIN' ? 'ADMIN' : user.role === 'ROLE_DISPATCHER' ? 'DISPATCH' : user.role === 'ROLE_CHAUFFEUR' ? 'CHAUFFEUR' : user.role === 'ROLE_CORPORATE_BOOKER' ? 'CORP' : 'GUEST'}
                   </span>
-                </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsProfileModalOpen(true)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '6px 10px',
+                    backgroundColor: '#F8FAFC',
+                    color: '#0F172A',
+                    border: '1px solid #CBD5E1',
+                    borderRadius: '6px',
+                    fontSize: '11.5px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                  title="Manage personal profile, password, 2FA, and VIP ride preferences"
+                >
+                  <User size={13} />
+                  <span>Profile</span>
+                </button>
 
                 <button
                   type="button"
@@ -390,6 +422,29 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
                 </span>
               </div>
               <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setIsProfileModalOpen(true);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  color: '#0F172A',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  padding: '8px 10px',
+                  backgroundColor: '#F1F5F9',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                <User size={16} />
+                <span>Profile &amp; Preferences</span>
+              </button>
+              <button
                 onClick={() => {
                   setIsMobileMenuOpen(false);
                   logout();
@@ -456,6 +511,18 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
       <CustomerBookingsLookupModal
         isOpen={isLookupModalOpen}
         onClose={() => setIsLookupModalOpen(false)}
+      />
+
+      {/* Executive User Profile, Security & Preferences Modal */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        currentUser={user}
+        onUpdateUser={(updatedUser) => {
+          if (token) {
+            setSession(updatedUser, token);
+          }
+        }}
       />
     </>
   );

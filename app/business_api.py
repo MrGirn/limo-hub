@@ -3332,6 +3332,327 @@ def standard_logout(request: Request, response: Response, user: UserSession = De
 
 
 # ==============================================================================
+# AUTHORITATIVE USER PROFILE, VIP SERVICE PREFERENCES & SAVED ADDRESSES
+# ==============================================================================
+
+class UserProfileUpdateRequest(BaseModel):
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+    company_name: Optional[str] = None
+    mfa_enabled: Optional[bool] = None
+    mfa_phone: Optional[str] = None
+    current_password: Optional[str] = None
+    new_password: Optional[str] = None
+    # VIP Ride Preferences
+    preferred_vehicle_class: Optional[str] = None
+    target_cabin_temp_f: Optional[int] = None
+    cabin_audio_preference: Optional[str] = None
+    beverage_preference: Optional[str] = None
+    seating_notes: Optional[str] = None
+    chauffeur_etiquette_notes: Optional[str] = None
+
+
+class CustomerSavedAddressRequest(BaseModel):
+    label: str  # "Home", "Office", "PHL Airport", etc.
+    formatted_address: str
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+    is_default_pickup: Optional[bool] = False
+    is_default_dropoff: Optional[bool] = False
+
+
+@router.get("/auth/profile")
+def get_user_profile(user: UserSession = Depends(get_current_user)):
+    """
+    Authoritative Profile Lookup:
+    Retrieves user identity, security settings, 5-star VIP ride preferences,
+    and saved frequent addresses from MySQL.
+    """
+    from app.database_mysql import mysql_db, UserModel, CustomerModel, CustomerSavedAddressModel
+
+    if not user or not user.email:
+        raise HTTPException(status_code=401, detail="Authentication required to view profile.")
+
+    clean_email = user.email.strip().lower()
+    session = mysql_db.get_session()
+    
+    db_u = None
+    db_c = None
+    saved_addresses = []
+
+    if session:
+        try:
+            db_u = session.query(UserModel).filter(UserModel.email == clean_email).first()
+            db_c = session.query(CustomerModel).filter(CustomerModel.email == clean_email).first()
+            if db_c:
+                saved_addresses = [
+                    {
+                        "id": addr.id,
+                        "label": addr.label,
+                        "formatted_address": addr.formatted_address,
+                        "lat": addr.lat,
+                        "lng": addr.lng,
+                        "is_default_pickup": bool(addr.is_default_pickup),
+                        "is_default_dropoff": bool(addr.is_default_dropoff)
+                    }
+                    for addr in db_c.saved_addresses
+                ]
+        finally:
+            session.close()
+
+    full_name = (db_u.full_name if db_u else None) or (db_c.full_name if db_c else None) or user.full_name or ""
+    phone = (db_u.phone if db_u else None) or (db_c.phone if db_c else None) or ""
+
+    return {
+        "success": True,
+        "user_id": (db_u.id if db_u else None) or user.user_id,
+        "email": user.email,
+        "full_name": full_name,
+        "phone": phone,
+        "role": (db_u.role if db_u else None) or (user.role.value if hasattr(user.role, "value") else str(user.role)),
+        "company_name": db_c.company_name if db_c else None,
+        "vendor_id": user.vendor_id or (db_u.vendor_id if db_u else None) or "vendor_anb_philly",
+        "mfa_enabled": bool(db_u.mfa_enabled) if db_u else False,
+        "mfa_phone": (db_u.mfa_phone if db_u else None) or phone,
+        # VIP Preferences
+        "preferred_vehicle_class": db_c.preferred_vehicle_class if db_c else "LUXURY_SUV",
+        "target_cabin_temp_f": db_c.target_cabin_temp_f if db_c else 68,
+        "cabin_audio_preference": db_c.cabin_audio_preference if db_c else "Quiet Ride / Do Not Disturb",
+        "beverage_preference": db_c.beverage_preference if db_c else "Chilled Fiji Water",
+        "seating_notes": db_c.seating_notes if db_c else "",
+        "chauffeur_etiquette_notes": db_c.chauffeur_etiquette_notes if db_c else "",
+        "saved_addresses": saved_addresses,
+        "has_password": bool(db_u and db_u.password_hash)
+    }
+
+
+@router.put("/auth/profile")
+def update_user_profile(req: UserProfileUpdateRequest, user: UserSession = Depends(get_current_user)):
+    """
+    Authoritative Profile & Preferences Update:
+    Persists personal details, security credentials (PBKDF2), and 5-star VIP ride preferences.
+    """
+    from app.security.auth_manager import AuthManager
+    from app.database_mysql import mysql_db, UserModel, CustomerModel, AuthAuditLogModel
+
+    if not user or not user.email:
+        raise HTTPException(status_code=401, detail="Authentication required to update profile.")
+
+    clean_email = user.email.strip().lower()
+    session = mysql_db.get_session()
+    if not session:
+        raise HTTPException(status_code=503, detail="Database service temporarily unavailable.")
+
+    updated_full_name = user.full_name
+    updated_phone = None
+
+    try:
+        # 1. Update or Create UserModel
+        db_u = session.query(UserModel).filter(UserModel.email == clean_email).first()
+        if not db_u:
+            db_u = UserModel(
+                id=f"usr-{uuid.uuid4().hex[:10]}",
+                tenant_id="tenant-us-east",
+                vendor_id=user.vendor_id or "vendor_anb_philly",
+                email=clean_email,
+                full_name=req.full_name.strip() if req.full_name else (user.full_name or "VIP Client"),
+                role=user.role.value if hasattr(user.role, "value") else str(user.role),
+                is_active=True
+            )
+            session.add(db_u)
+
+        if req.full_name and req.full_name.strip():
+            db_u.full_name = req.full_name.strip()
+            updated_full_name = db_u.full_name
+
+        if req.phone is not None:
+            db_u.phone = req.phone.strip()
+            updated_phone = db_u.phone
+
+        if req.mfa_enabled is not None:
+            db_u.mfa_enabled = req.mfa_enabled
+
+        if req.mfa_phone is not None:
+            db_u.mfa_phone = req.mfa_phone.strip()
+
+        # Password update with verification
+        if req.new_password and req.new_password.strip():
+            new_pw = req.new_password.strip()
+            if len(new_pw) < 8:
+                raise HTTPException(status_code=400, detail="New password must be at least 8 characters.")
+
+            # If user already has a password set, verify current password
+            if db_u.password_hash:
+                if not req.current_password or not AuthManager.verify_password(req.current_password, db_u.password_hash):
+                    raise HTTPException(status_code=400, detail="Current password verification failed.")
+
+            db_u.password_hash = AuthManager.hash_password(new_pw)
+
+            # Audit log for password change
+            audit_log = AuthAuditLogModel(
+                id=f"log-{uuid.uuid4().hex[:12]}",
+                user_id=db_u.id,
+                email=clean_email,
+                event_type="PASSWORD_CHANGED",
+                ip_address="user_profile",
+                details="User updated password via profile settings."
+            )
+            session.add(audit_log)
+
+        # 2. Update or Create CustomerModel (for VIP ride preferences)
+        db_c = session.query(CustomerModel).filter(CustomerModel.email == clean_email).first()
+        if not db_c:
+            db_c = CustomerModel(
+                id=f"cust-{uuid.uuid4().hex[:10]}",
+                vendor_id=user.vendor_id or "vendor_anb_philly",
+                full_name=db_u.full_name,
+                email=clean_email,
+                phone=db_u.phone or "+10000000000",
+                company_name=req.company_name
+            )
+            session.add(db_c)
+
+        if req.full_name:
+            db_c.full_name = db_u.full_name
+        if req.phone:
+            db_c.phone = db_u.phone
+        if req.company_name is not None:
+            db_c.company_name = req.company_name.strip()
+        if req.preferred_vehicle_class:
+            db_c.preferred_vehicle_class = req.preferred_vehicle_class
+        if req.target_cabin_temp_f is not None:
+            db_c.target_cabin_temp_f = req.target_cabin_temp_f
+        if req.cabin_audio_preference is not None:
+            db_c.cabin_audio_preference = req.cabin_audio_preference
+        if req.beverage_preference is not None:
+            db_c.beverage_preference = req.beverage_preference
+        if req.seating_notes is not None:
+            db_c.seating_notes = req.seating_notes
+        if req.chauffeur_etiquette_notes is not None:
+            db_c.chauffeur_etiquette_notes = req.chauffeur_etiquette_notes
+
+        session.commit()
+
+        # Create refreshed session object & token
+        updated_session = UserSession(
+            user_id=db_u.id,
+            email=clean_email,
+            full_name=updated_full_name,
+            role=user.role,
+            tenant_id=user.tenant_id or "tenant-us-east",
+            vendor_id=user.vendor_id or db_u.vendor_id,
+            driver_id=user.driver_id,
+            permissions=user.permissions
+        )
+        new_token = create_access_token(updated_session)
+
+        return {
+            "success": True,
+            "message": "Profile and service preferences updated successfully.",
+            "user": updated_session,
+            "token": new_token
+        }
+    except HTTPException:
+        session.rollback()
+        raise
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Error updating user profile: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to save profile updates.")
+    finally:
+        session.close()
+
+
+@router.post("/auth/profile/saved-address")
+def add_saved_address(req: CustomerSavedAddressRequest, user: UserSession = Depends(get_current_user)):
+    """Adds a frequent VIP pickup or dropoff address to the customer's profile."""
+    from app.database_mysql import mysql_db, CustomerModel, CustomerSavedAddressModel
+
+    if not user or not user.email:
+        raise HTTPException(status_code=401, detail="Authentication required.")
+
+    clean_email = user.email.strip().lower()
+    session = mysql_db.get_session()
+    if not session:
+        raise HTTPException(status_code=503, detail="Database unavailable.")
+
+    try:
+        db_c = session.query(CustomerModel).filter(CustomerModel.email == clean_email).first()
+        if not db_c:
+            db_c = CustomerModel(
+                id=f"cust-{uuid.uuid4().hex[:10]}",
+                vendor_id=user.vendor_id or "vendor_anb_philly",
+                full_name=user.full_name or "VIP Client",
+                email=clean_email,
+                phone="+10000000000"
+            )
+            session.add(db_c)
+            session.flush()
+
+        addr_id = f"addr-{uuid.uuid4().hex[:8]}"
+        new_addr = CustomerSavedAddressModel(
+            id=addr_id,
+            customer_id=db_c.id,
+            label=req.label.strip(),
+            formatted_address=req.formatted_address.strip(),
+            lat=req.lat,
+            lng=req.lng,
+            is_default_pickup=bool(req.is_default_pickup),
+            is_default_dropoff=bool(req.is_default_dropoff)
+        )
+        session.add(new_addr)
+        session.commit()
+
+        return {
+            "success": True,
+            "address": {
+                "id": new_addr.id,
+                "label": new_addr.label,
+                "formatted_address": new_addr.formatted_address,
+                "lat": new_addr.lat,
+                "lng": new_addr.lng,
+                "is_default_pickup": new_addr.is_default_pickup,
+                "is_default_dropoff": new_addr.is_default_dropoff
+            }
+        }
+    finally:
+        session.close()
+
+
+@router.delete("/auth/profile/saved-address/{address_id}")
+def delete_saved_address(address_id: str, user: UserSession = Depends(get_current_user)):
+    """Removes a saved address from the customer's profile."""
+    from app.database_mysql import mysql_db, CustomerModel, CustomerSavedAddressModel
+
+    if not user or not user.email:
+        raise HTTPException(status_code=401, detail="Authentication required.")
+
+    clean_email = user.email.strip().lower()
+    session = mysql_db.get_session()
+    if not session:
+        raise HTTPException(status_code=503, detail="Database unavailable.")
+
+    try:
+        db_c = session.query(CustomerModel).filter(CustomerModel.email == clean_email).first()
+        if not db_c:
+            raise HTTPException(status_code=404, detail="Customer record not found.")
+
+        addr = session.query(CustomerSavedAddressModel).filter(
+            CustomerSavedAddressModel.id == address_id,
+            CustomerSavedAddressModel.customer_id == db_c.id
+        ).first()
+
+        if not addr:
+            raise HTTPException(status_code=404, detail="Address not found.")
+
+        session.delete(addr)
+        session.commit()
+        return {"success": True, "message": "Saved address deleted."}
+    finally:
+        session.close()
+
+
+# ==============================================================================
 # MODEL 2: SOVEREIGN DATABASE-PER-VENDOR & REGIONAL RESIDENCY ENDPOINTS
 # ==============================================================================
 

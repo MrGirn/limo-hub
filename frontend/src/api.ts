@@ -219,6 +219,111 @@ export async function logoutApi(): Promise<{ success: boolean; message: string }
   return { success: true, message: 'Logged out successfully' };
 }
 
+export interface UserProfileResponse {
+  success: boolean;
+  user_id: string;
+  email: string;
+  full_name: string;
+  phone: string;
+  role: string;
+  company_name?: string;
+  vendor_id?: string;
+  mfa_enabled?: boolean;
+  mfa_phone?: string;
+  preferred_vehicle_class?: string;
+  target_cabin_temp_f?: number;
+  cabin_audio_preference?: string;
+  beverage_preference?: string;
+  seating_notes?: string;
+  chauffeur_etiquette_notes?: string;
+  saved_addresses?: Array<{
+    id: string;
+    label: string;
+    formatted_address: string;
+    lat?: number;
+    lng?: number;
+    is_default_pickup?: boolean;
+    is_default_dropoff?: boolean;
+  }>;
+  has_password?: boolean;
+}
+
+export interface UserProfileUpdateRequest {
+  full_name?: string;
+  phone?: string;
+  company_name?: string;
+  mfa_enabled?: boolean;
+  mfa_phone?: string;
+  current_password?: string;
+  new_password?: string;
+  preferred_vehicle_class?: string;
+  target_cabin_temp_f?: number;
+  cabin_audio_preference?: string;
+  beverage_preference?: string;
+  seating_notes?: string;
+  chauffeur_etiquette_notes?: string;
+}
+
+export async function getUserProfileApi(): Promise<UserProfileResponse> {
+  const res = await fetch(`${BASE_URL}/api/v1/auth/profile`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to fetch user profile'));
+  }
+  return res.json();
+}
+
+export async function updateUserProfileApi(data: UserProfileUpdateRequest): Promise<{ success: boolean; user: UserSession; token: string; message: string }> {
+  const res = await fetch(`${BASE_URL}/api/v1/auth/profile`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to update profile'));
+  }
+  const result = await res.json();
+  if (result.token && result.user) {
+    setAuthToken(result.token, result.user.role);
+  }
+  return result;
+}
+
+export async function addSavedAddressApi(data: {
+  label: string;
+  formatted_address: string;
+  lat?: number;
+  lng?: number;
+  is_default_pickup?: boolean;
+  is_default_dropoff?: boolean;
+}): Promise<{ success: boolean; address: any }> {
+  const res = await fetch(`${BASE_URL}/api/v1/auth/profile/saved-address`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to save address'));
+  }
+  return res.json();
+}
+
+export async function deleteSavedAddressApi(addressId: string): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(`${BASE_URL}/api/v1/auth/profile/saved-address/${addressId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(extractErrorMessage(err, 'Failed to delete address'));
+  }
+  return res.json();
+}
+
 export interface OAuthConfigResponse {
   google_client_id: string;
   apple_client_id: string;
