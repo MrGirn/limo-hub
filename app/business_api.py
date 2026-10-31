@@ -4244,9 +4244,14 @@ def get_trip_live_tracking(trip_id: str):
 
 @router.get("/bookings/{booking_id}/live-tracking")
 def get_booking_live_tracking(booking_id: str):
-    """Returns authoritative live tracking and dispatch status for a booking by reference ID."""
+    """Returns authoritative live tracking and dispatch status for a booking or trip reference ID."""
     from app.database_mysql import mysql_db, BookingModel, TripModel
-    booking = db.bookings.get(booking_id)
+    clean_id = booking_id.lstrip("#").strip()
+
+    if clean_id in db.trips:
+        return get_trip_live_tracking(clean_id)
+
+    booking = db.bookings.get(clean_id)
     trip_id = None
     if booking and getattr(booking, "trip", None):
         trip_id = booking.trip.id
@@ -4257,18 +4262,20 @@ def get_booking_live_tracking(booking_id: str):
         session = mysql_db.get_session()
         if session:
             try:
-                t_model = session.query(TripModel).filter_by(booking_id=booking_id).first()
+                t_model = session.query(TripModel).filter(
+                    (TripModel.booking_id == clean_id) | (TripModel.id == clean_id)
+                ).first()
                 if t_model:
                     trip_id = t_model.id
                 else:
-                    b_model = session.query(BookingModel).filter_by(id=booking_id).first()
+                    b_model = session.query(BookingModel).filter_by(id=clean_id).first()
                     if not b_model:
-                        raise HTTPException(status_code=404, detail=f"Booking {booking_id} not found")
+                        raise HTTPException(status_code=404, detail=f"Booking {clean_id} not found")
             finally:
                 session.close()
 
     if not trip_id:
-        trip_id = f"trip-{booking_id}"
+        trip_id = f"trip-{clean_id}"
 
     return get_trip_live_tracking(trip_id)
 

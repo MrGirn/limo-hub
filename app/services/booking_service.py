@@ -494,13 +494,55 @@ class BookingService:
         note: Optional[str] = None
     ) -> Trip:
         trip = db.trips.get(trip_id)
+        session = mysql_db.get_session()
+        if not trip and session:
+            try:
+                t_model = session.query(TripModel).filter_by(id=trip_id).first()
+                if t_model:
+                    trip = Trip(
+                        id=t_model.id,
+                        booking_id=t_model.booking_id,
+                        tenant_id=t_model.tenant_id,
+                        vendor_id=t_model.vendor_id,
+                        driver_id=t_model.driver_id,
+                        vehicle_id=t_model.vehicle_id,
+                        status=TripStatus(t_model.status) if t_model.status in TripStatus._value2member_map_ else TripStatus.SCHEDULED,
+                        pickup_time_utc=t_model.pickup_time_utc or datetime.now(timezone.utc),
+                        pickup_address=t_model.pickup_address,
+                        dropoff_address=t_model.dropoff_address,
+                        flight_number=t_model.flight_number,
+                        train_number=t_model.train_number,
+                        driver_current_lat=t_model.driver_current_lat,
+                        driver_current_lng=t_model.driver_current_lng
+                    )
+                    db.trips[trip.id] = trip
+            except Exception as e:
+                logger.warning(f"MySQL trip load warning in update_trip_status: {e}")
+
         if not trip:
+            if session:
+                session.close()
             raise ValueError(f"Trip {trip_id} not found")
 
         trip.status = new_status
-        if lat and lng:
+        if lat is not None and lng is not None:
             trip.driver_current_lat = lat
             trip.driver_current_lng = lng
+
+        if session:
+            try:
+                t_model = session.query(TripModel).filter_by(id=trip_id).first()
+                if t_model:
+                    t_model.status = new_status.value if hasattr(new_status, "value") else str(new_status)
+                    if lat is not None and lng is not None:
+                        t_model.driver_current_lat = lat
+                        t_model.driver_current_lng = lng
+                    session.commit()
+            except Exception as e:
+                session.rollback()
+                logger.warning(f"MySQL trip status update warning: {e}")
+            finally:
+                session.close()
 
         event_desc = note or f"Trip status advanced to {new_status.value}"
         trip.events.append(

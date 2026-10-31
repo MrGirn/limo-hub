@@ -690,7 +690,9 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
             borderTop: '1px solid #E2E8F0',
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center'
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '10px'
           }}
         >
           <div style={{ fontSize: '11px', color: '#64748B' }}>
@@ -699,23 +701,46 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
               : '🕒 Live GPS telemetry begins 60 minutes before scheduled departure'}
           </div>
 
-          <button
-            onClick={onClose}
-            style={{
-              padding: '9px 20px',
-              backgroundColor: '#0078D4',
-              color: '#FFFFFF',
-              borderRadius: '8px',
-              border: 'none',
-              fontSize: '12px',
-              fontWeight: 800,
-              cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(0, 120, 212, 0.3)',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            Close
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={() => {
+                const trackUrl = `${window.location.origin}/?track=${encodeURIComponent(trackingData?.booking_id || bookingId)}`;
+                navigator.clipboard?.writeText(trackUrl);
+              }}
+              style={{
+                padding: '8px 14px',
+                backgroundColor: '#F8FAFC',
+                color: '#0F172A',
+                borderRadius: '8px',
+                border: '1px solid #CBD5E1',
+                fontSize: '11.5px',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+              title="Copy direct passenger tracking link"
+            >
+              Copy Passenger Link
+            </button>
+
+            <button
+              onClick={onClose}
+              style={{
+                padding: '9px 20px',
+                backgroundColor: '#0078D4',
+                color: '#FFFFFF',
+                borderRadius: '8px',
+                border: 'none',
+                fontSize: '12px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(0, 120, 212, 0.3)',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>

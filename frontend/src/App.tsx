@@ -23,6 +23,7 @@ import { PublicVendorQuotePortal } from './components/PublicVendorQuotePortal';
 import { MultiVendorComparisonStudio } from './components/MultiVendorComparisonStudio';
 import { VendorCommercialGuideModal } from './components/VendorCommercialGuideModal';
 import { CustomerBookingsLookupModal } from './components/public/CustomerBookingsLookupModal';
+import { LiveRideTrackingModal } from './components/public/LiveRideTrackingModal';
 import { CustomerSupportChatWidget } from './components/public/CustomerSupportChatWidget';
 import { VendorBrandingProfile, VendorPortalConfig, SystemRuntimeMode } from './types';
 import { fetchVendorPortalConfig, resolveVendorByDomain, fetchSystemRuntimeMode } from './api';
@@ -56,6 +57,7 @@ const MainLayout: React.FC = () => {
   const [pendingBookingDetails, setPendingBookingDetails] = useState<any>(null);
   const [runtimeMode, setRuntimeMode] = useState<SystemRuntimeMode | null>(null);
   const [isCustomerLookupOpen, setIsCustomerLookupOpen] = useState(false);
+  const [directTrackingBookingId, setDirectTrackingBookingId] = useState<string | null>(null);
   
   // Active Vendor White-Label Configuration Profile
   const [vendorConfig, setVendorConfig] = useState<VendorPortalConfig>({
@@ -109,6 +111,14 @@ const MainLayout: React.FC = () => {
 
         if (searchParams.get('lookup') === 'true') {
           setIsCustomerLookupOpen(true);
+        }
+
+        const trackParam = searchParams.get('track') || searchParams.get('tracking');
+        const pathMatch = window.location.pathname.match(/\/(?:trips|bookings)\/([^/]+)\/live-tracking/i);
+        if (trackParam) {
+          setDirectTrackingBookingId(trackParam.replace(/^#/, '').trim());
+        } else if (pathMatch && pathMatch[1]) {
+          setDirectTrackingBookingId(decodeURIComponent(pathMatch[1]).replace(/^#/, '').trim());
         }
 
         const mode = await fetchSystemRuntimeMode();
@@ -655,6 +665,22 @@ const MainLayout: React.FC = () => {
       <div style={{ flex: 1 }}>
         {renderViewContent()}
       </div>
+      {directTrackingBookingId && (
+        <LiveRideTrackingModal
+          bookingId={directTrackingBookingId}
+          isOpen={Boolean(directTrackingBookingId)}
+          onClose={() => {
+            setDirectTrackingBookingId(null);
+            const url = new URL(window.location.href);
+            url.searchParams.delete('track');
+            url.searchParams.delete('tracking');
+            if (/\/(?:trips|bookings)\/[^/]+\/live-tracking/i.test(url.pathname)) {
+              url.pathname = '/';
+            }
+            window.history.replaceState({}, '', url.toString());
+          }}
+        />
+      )}
     </div>
   );
 };
