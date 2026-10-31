@@ -21,6 +21,7 @@ interface BookingOperationsModalProps {
   onClose: () => void;
   onSuccess: () => void;
   initialTab?: 'invoice' | 'receipt' | 'pod' | 'cancel' | 'payment' | 'refund';
+  mode?: 'customer' | 'operations';
 }
 
 export const BookingOperationsModal: React.FC<BookingOperationsModalProps> = ({
@@ -28,8 +29,10 @@ export const BookingOperationsModal: React.FC<BookingOperationsModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
-  initialTab = 'invoice'
+  initialTab = 'invoice',
+  mode = 'operations'
 }) => {
+  const isCustomerMode = mode === 'customer';
   const [activeTab, setActiveTab] = useState<'invoice' | 'receipt' | 'pod' | 'cancel' | 'payment' | 'refund'>(initialTab);
   const [htmlContent, setHtmlContent] = useState<string>('');
   const [podData, setPodData] = useState<any>(null);
@@ -54,6 +57,12 @@ export const BookingOperationsModal: React.FC<BookingOperationsModalProps> = ({
 
   // Dispute Form
   const [disputeReason, setDisputeReason] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab(initialTab);
+    }
+  }, [isOpen, initialTab]);
 
   useEffect(() => {
     if (!isOpen || !bookingId) return;
@@ -235,29 +244,40 @@ export const BookingOperationsModal: React.FC<BookingOperationsModalProps> = ({
         <div style={{
           background: '#0F172A',
           color: '#FFFFFF',
-          padding: '16px 24px',
+          padding: '18px 24px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           borderBottom: '1px solid #1E293B'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <FileText size={20} color="#38BDF8" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
+              background: 'rgba(154, 123, 79, 0.18)',
+              border: '1px solid rgba(154, 123, 79, 0.45)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <FileText size={18} color="#D4AF37" />
+            </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, letterSpacing: '0.02em' }}>
-                Booking Operations & Settlement Console
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, letterSpacing: '-0.01em' }}>
+                {isCustomerMode ? 'Official Reservation Financial Documents' : 'Booking Operations & Settlement Console'}
               </h3>
-              <p style={{ margin: 0, fontSize: '12px', color: '#94A3B8' }}>
-                Booking ID: <span style={{ color: '#F1F5F9', fontWeight: 700 }}>{bookingId}</span>
+              <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#94A3B8' }}>
+                Reservation Ref: <span style={{ color: '#F8FAFC', fontWeight: 700, fontFamily: 'monospace' }}>#{bookingId}</span>
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            style={{ background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '4px' }}
+            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', color: '#CBD5E1', cursor: 'pointer', padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
@@ -266,38 +286,45 @@ export const BookingOperationsModal: React.FC<BookingOperationsModalProps> = ({
           display: 'flex',
           background: '#F8FAFC',
           borderBottom: '1px solid #E2E8F0',
-          padding: '0 16px',
+          padding: '0 20px',
           overflowX: 'auto',
-          gap: '4px'
+          gap: '8px'
         }}>
-          {[
-            { id: 'invoice', label: '📄 Master Invoice', icon: <FileText size={13} /> },
-            { id: 'receipt', label: '💳 Payment Receipt', icon: <Receipt size={13} /> },
-            { id: 'pod', label: '🛡️ Proof of Delivery (POD)', icon: <ShieldCheck size={13} /> },
-            { id: 'payment', label: '⚡ Capture / Settle', icon: <DollarSign size={13} /> },
-            { id: 'refund', label: '↩️ Issue Courtesy Refund', icon: <Sparkles size={13} /> },
-            { id: 'cancel', label: '🚫 Cancel Reservation', icon: <Ban size={13} /> }
-          ].map(tab => (
+          {(isCustomerMode
+            ? [
+                { id: 'invoice', label: 'Master Tax Invoice', icon: <FileText size={14} /> },
+                { id: 'receipt', label: 'Payment Receipt', icon: <Receipt size={14} /> }
+              ]
+            : [
+                { id: 'invoice', label: 'Master Invoice', icon: <FileText size={14} /> },
+                { id: 'receipt', label: 'Payment Receipt', icon: <Receipt size={14} /> },
+                { id: 'pod', label: 'Proof of Delivery (POD)', icon: <ShieldCheck size={14} /> },
+                { id: 'payment', label: 'Capture / Settle', icon: <DollarSign size={14} /> },
+                { id: 'refund', label: 'Issue Courtesy Refund', icon: <Sparkles size={14} /> },
+                { id: 'cancel', label: 'Cancel Reservation', icon: <Ban size={14} /> }
+              ]
+          ).map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                padding: '12px 16px',
+                gap: '7px',
+                padding: '13px 16px',
                 border: 'none',
                 background: 'transparent',
-                borderBottom: activeTab === tab.id ? '2px solid #0078D4' : '2px solid transparent',
-                color: activeTab === tab.id ? '#0078D4' : '#64748B',
+                borderBottom: activeTab === tab.id ? '2.5px solid #0F172A' : '2.5px solid transparent',
+                color: activeTab === tab.id ? '#0F172A' : '#64748B',
                 fontWeight: activeTab === tab.id ? 800 : 600,
-                fontSize: '12.5px',
+                fontSize: '13px',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
                 transition: 'all 0.15s ease'
               }}
             >
-              {tab.icon} {tab.label}
+              {tab.icon}
+              <span>{tab.label}</span>
             </button>
           ))}
         </div>

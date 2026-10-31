@@ -480,29 +480,10 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
                 whiteSpace: 'nowrap'
               }}
             >
-              <span>{loading ? 'Searching...' : 'Find trips'}</span>
+              <span>{loading ? 'Searching...' : 'Find Reservation'}</span>
               <Search size={15} />
             </button>
           </form>
-
-          {/* Quick search suggestions */}
-          <div style={{ display: 'flex', gap: '8px', marginTop: '10px', alignItems: 'center', fontSize: '11.5px', color: '#64748B', flexWrap: 'wrap' }}>
-            <span>Quick search:</span>
-            <button
-              type="button"
-              onClick={() => { setSearchQuery('+14848006629'); handleSearch('+14848006629'); }}
-              style={{ background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '4px', padding: '3px 8px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', color: '#0A192F' }}
-            >
-              +1 (484) 800-6629
-            </button>
-            <button
-              type="button"
-              onClick={() => { setSearchQuery('billing@client.com'); handleSearch('billing@client.com'); }}
-              style={{ background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '4px', padding: '3px 8px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', color: '#0A192F' }}
-            >
-              billing@client.com
-            </button>
-          </div>
         </div>
 
         {/* Results Body */}
@@ -596,237 +577,310 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
 
                 const countdown = computeCancellationCountdown(b);
                 const isCalDropdownOpen = activeCalendarDropdownId === b.id;
+                const isLiveActive = ['EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'PASSENGER_ONBOARD'].includes(
+                  String(b.trip?.status || '').toUpperCase()
+                );
+                const assignedDriverName = (b.trip as any)?.driver_name || b.trip?.active_offer?.driver_name;
+                const formattedVehicleClass = ((b as any).vehicle_class || (b as any).vehicle_category || (b as any).tier || 'Executive Class').replace(/_/g, ' ');
+                const formattedServiceType = ((b as any).service_type || 'CHAUFFEUR_SERVICE').replace(/_/g, ' ');
 
                 return (
                   <div
                     key={b.id}
                     style={{
                       backgroundColor: '#FFFFFF',
-                      borderRadius: '12px',
-                      border: '1px solid #E2E8F0',
-                      padding: '24px',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                      borderRadius: '14px',
+                      border: '1px solid #CBD5E1',
+                      boxShadow: '0 8px 24px -6px rgba(15, 23, 42, 0.06)',
+                      overflow: 'hidden',
                       position: 'relative'
                     }}
                   >
-                    {/* Top Row: Ref + Status + Guaranteed Fare */}
-                    <div className="lookup-card-top-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px', borderBottom: '1px solid #F1F5F9', paddingBottom: '14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '14px', color: '#0A192F' }}>
-                          #{b.id}
-                        </span>
-                        <button
-                          onClick={() => copyToClipboard(b.id)}
-                          style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
-                          title="Copy Booking ID"
-                        >
-                          {copiedId === b.id ? <Check size={14} color="#16A34A" /> : <Copy size={14} />}
-                        </button>
+                    {/* Executive Top Header Bar */}
+                    <div
+                      className="lookup-card-top-row"
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '16px 24px',
+                        backgroundColor: '#F8FAFC',
+                        borderBottom: '1px solid #E2E8F0',
+                        flexWrap: 'wrap',
+                        gap: '12px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        <div style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          backgroundColor: '#FFFFFF',
+                          border: '1px solid #CBD5E1',
+                          borderRadius: '6px',
+                          padding: '4px 10px'
+                        }}>
+                          <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '13.5px', color: '#0A192F' }}>
+                            #{b.id}
+                          </span>
+                          <button
+                            onClick={() => copyToClipboard(b.id)}
+                            style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                            title="Copy Booking Reference"
+                          >
+                            {copiedId === b.id ? <Check size={13} color="#16A34A" /> : <Copy size={13} />}
+                          </button>
+                        </div>
+
                         <span style={{
-                          fontSize: '10.5px',
-                          fontWeight: 700,
+                          fontSize: '11px',
+                          fontWeight: 800,
                           backgroundColor: statusTheme.bg,
                           color: statusTheme.text,
                           border: `1px solid ${statusTheme.border}`,
-                          padding: '2px 8px',
-                          borderRadius: '4px',
-                          letterSpacing: '0.04em'
+                          padding: '4px 10px',
+                          borderRadius: '20px',
+                          letterSpacing: '0.04em',
+                          textTransform: 'uppercase'
                         }}>
-                          {b.trip?.status || b.status || 'SCHEDULED'}
+                          ● {b.trip?.status || b.status || 'SCHEDULED'}
+                        </span>
+
+                        <span style={{
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          color: '#475569',
+                          backgroundColor: '#F1F5F9',
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.03em'
+                        }}>
+                          {formattedServiceType} · {formattedVehicleClass}
                         </span>
                       </div>
 
-                      {/* Clear Fare: guaranteed price and currency together */}
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 500 }}>Guaranteed fare</div>
-                        <div style={{ fontSize: '20px', fontWeight: 800, color: '#0A192F', lineHeight: '1.2' }}>
-                          ${Number(b.total_amount || 265).toFixed(2)} <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#64748B' }}>USD</span>
+                        <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          Guaranteed All-Inclusive Fare
+                        </div>
+                        <div style={{ fontSize: '21px', fontWeight: 900, color: '#0A192F', lineHeight: '1.2', marginTop: '1px' }}>
+                          ${Number(b.total_amount || 0).toFixed(2)} <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748B' }}>{b.currency || 'USD'}</span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Trip Details First: 3-column scan */}
-                    <div className="chauffeur-trip-grid" style={{ marginBottom: '18px' }}>
-                      
-                      {/* Col 1: Date & Departure Time */}
-                      <div>
-                        <div style={{ fontSize: '13px', color: '#475569', fontWeight: 500 }}>
-                          {departureDateFormatted}
-                        </div>
-                        <div style={{ fontSize: '28px', fontWeight: 800, color: '#0A192F', margin: '4px 0 2px 0', lineHeight: 1.1 }}>
-                          {departureTimeFormatted}
-                        </div>
-                        <div style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                          DEPARTURE TIME
-                        </div>
-
-                        {b.flight_number && (
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', padding: '3px 7px', borderRadius: '4px', fontSize: '11px', fontWeight: 600, color: '#1E40AF', marginTop: '8px' }}>
-                            <Plane size={11} />
-                            <span>Flight {b.flight_number}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Col 2: Pickup & Destination Route */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', position: 'relative' }}>
+                    {/* Main Card Content */}
+                    <div style={{ padding: '22px 24px 18px 24px' }}>
+                      {/* 3-Column Itinerary & Dispatch Grid */}
+                      <div className="chauffeur-trip-grid" style={{ marginBottom: '18px', alignItems: 'stretch' }}>
                         
-                        {/* Pickup */}
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                          <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#0A192F', marginTop: '4px', flexShrink: 0 }} />
+                        {/* Col 1: Schedule & Passenger Summary */}
+                        <div style={{ paddingRight: '12px', borderRight: '1px solid #F1F5F9' }}>
+                          <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#9A7B4F', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '4px' }}>
+                            SCHEDULED DEPARTURE
+                          </div>
+                          <div style={{ fontSize: '26px', fontWeight: 900, color: '#0A192F', lineHeight: 1.1 }}>
+                            {departureTimeFormatted}
+                          </div>
+                          <div style={{ fontSize: '13px', color: '#334155', fontWeight: 600, marginTop: '4px' }}>
+                            {departureDateFormatted}
+                          </div>
+
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px' }}>
+                            {b.party?.passenger_name && (
+                              <span style={{ fontSize: '11.5px', color: '#475569', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '5px', padding: '3px 8px', fontWeight: 600 }}>
+                                Passenger: <strong style={{ color: '#0F172A' }}>{b.party.passenger_name}</strong>
+                              </span>
+                            )}
+                            {b.flight_number && (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', padding: '3px 8px', borderRadius: '5px', fontSize: '11.5px', fontWeight: 700, color: '#1E40AF' }}>
+                                <Plane size={11} />
+                                <span>Flight {b.flight_number}</span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Col 2: Route Timeline */}
+                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '16px', position: 'relative', padding: '0 8px' }}>
+                          {/* Connecting vertical line */}
+                          <div style={{
+                            position: 'absolute',
+                            left: '12px',
+                            top: '14px',
+                            bottom: '24px',
+                            width: '2px',
+                            backgroundColor: '#E2E8F0'
+                          }} />
+
+                          {/* Pickup */}
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', position: 'relative', zIndex: 1 }}>
+                            <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#0A192F', border: '2px solid #FFFFFF', boxShadow: '0 0 0 2px #0A192F', marginTop: '4px', flexShrink: 0 }} />
+                            <div>
+                              <div style={{ fontSize: '10px', fontWeight: 800, color: '#64748B', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                                PICKUP ORIGIN
+                              </div>
+                              <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#0F172A', marginTop: '2px', lineHeight: 1.35 }}>
+                                {b.pickup_address}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Dropoff */}
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', position: 'relative', zIndex: 1 }}>
+                            <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#9A7B4F', border: '2px solid #FFFFFF', boxShadow: '0 0 0 2px #9A7B4F', marginTop: '4px', flexShrink: 0 }} />
+                            <div>
+                              <div style={{ fontSize: '10px', fontWeight: 800, color: '#64748B', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                                DESTINATION
+                              </div>
+                              <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#0F172A', marginTop: '2px', lineHeight: 1.35 }}>
+                                {b.dropoff_address || 'As Directed'}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Col 3: Chauffeur & Telemetry Panel */}
+                        <div style={{
+                          backgroundColor: '#F8FAFC',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: '10px',
+                          padding: '14px 16px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between',
+                          gap: '10px'
+                        }}>
                           <div>
-                            <div style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                              PICKUP
+                            <div style={{ fontSize: '10px', fontWeight: 800, color: '#64748B', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                              CHAUFFEUR &amp; TELEMETRY
                             </div>
-                            <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#0F172A', marginTop: '1px' }}>
-                              {b.pickup_address}
+                            <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#0F172A', marginTop: '4px' }}>
+                              {assignedDriverName || 'Dispatched 60m Prior to Pickup'}
                             </div>
-                          </div>
-                        </div>
-
-                        {/* Dropoff */}
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                          <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#9A7B4F', marginTop: '4px', flexShrink: 0 }} />
-                          <div>
-                            <div style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                              DESTINATION
-                            </div>
-                            <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#0F172A', marginTop: '1px' }}>
-                              {b.dropoff_address || 'As Directed'}
+                            <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '2px', lineHeight: 1.35 }}>
+                              {assignedDriverName
+                                ? `${formattedVehicleClass} · Verified Chauffeur`
+                                : 'Live GPS radar & direct contact activate when chauffeur goes En Route.'}
                             </div>
                           </div>
-                        </div>
 
-                      </div>
-
-                      {/* Col 3: Chauffeur Status */}
-                      <div>
-                        <div style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                          CHAUFFEUR
-                        </div>
-                        <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#0F172A', marginTop: '2px' }}>
-                          {(b.trip as any)?.driver_name || b.trip?.active_offer?.driver_name || 'Assigned 60m Prior to Pickup'}
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
-                          {((b as any).vehicle_class || (b as any).vehicle_category || (b as any).tier || 'Executive Class').replace(/_/g, ' ')}
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => setLiveTrackingBookingId(b.id)}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '7px 12px',
-                            borderRadius: '6px',
-                            border: '1.5px solid #0A192F',
-                            backgroundColor: '#FFFFFF',
-                            color: '#0A192F',
-                            fontSize: '12px',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            marginTop: '10px',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          <MapPin size={13} color="#0A192F" />
-                          <span>
-                            {['EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'PASSENGER_ONBOARD'].includes(String(b.trip?.status || '').toUpperCase())
-                              ? 'Live Chauffeur Radar'
-                              : 'Dispatch & Radar Status'}
-                          </span>
-                        </button>
-                      </div>
-
-                    </div>
-
-                    {/* Quieter Cancellation Notice: Deadline clearly shown, cancellation as secondary action */}
-                    {!isCancelled && (
-                      <div style={{
-                        backgroundColor: countdown.badgeBg,
-                        border: `1px solid ${countdown.badgeBorder}`,
-                        borderRadius: '8px',
-                        padding: '10px 14px',
-                        marginBottom: '18px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '12px',
-                        flexWrap: 'wrap'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '220px' }}>
-                          <CheckCircle2 size={16} color={countdown.badgeText} style={{ flexShrink: 0 }} />
-                          <div style={{ fontSize: '12.5px', color: countdown.badgeText }}>
-                            <span style={{ fontWeight: 700 }}>{countdown.statusText}</span>
-                            <span style={{ opacity: 0.85, marginLeft: '6px' }}>· {countdown.detailText}</span>
-                          </div>
-                        </div>
-
-                        {countdown.isFreeActive && (
                           <button
                             type="button"
-                            onClick={() => setCancelModalBooking(b)}
+                            onClick={() => setLiveTrackingBookingId(b.id)}
                             style={{
-                              background: 'none',
-                              border: 'none',
-                              color: '#64748B',
+                              width: '100%',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '7px',
+                              padding: '9px 14px',
+                              borderRadius: '8px',
+                              border: isLiveActive ? 'none' : '1.5px solid #0A192F',
+                              backgroundColor: isLiveActive ? '#0A192F' : '#FFFFFF',
+                              color: isLiveActive ? '#FFFFFF' : '#0A192F',
                               fontSize: '12px',
-                              fontWeight: 600,
-                              textDecoration: 'underline',
+                              fontWeight: 800,
                               cursor: 'pointer',
-                              padding: '2px 4px',
-                              whiteSpace: 'nowrap'
+                              transition: 'all 0.15s ease'
                             }}
                           >
-                            Cancel ride
+                            <MapPin size={13} color={isLiveActive ? '#D4AF37' : '#0A192F'} />
+                            <span>{isLiveActive ? 'Open Live Chauffeur Radar' : 'Dispatch & Radar Status'}</span>
                           </button>
-                        )}
-                      </div>
-                    )}
+                        </div>
 
-                    {/* Grouped Documents Section */}
-                    <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '16px', marginBottom: '16px' }}>
-                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
-                        Trip documents
                       </div>
 
-                      <div className="chauffeur-docs-grid">
-                        
-                        {/* PDF Voucher & Terms */}
+                      {/* Cancellation Policy Status Banner */}
+                      {!isCancelled && (
+                        <div style={{
+                          backgroundColor: countdown.badgeBg,
+                          border: `1px solid ${countdown.badgeBorder}`,
+                          borderRadius: '8px',
+                          padding: '10px 14px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '12px',
+                          flexWrap: 'wrap'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '220px' }}>
+                            <ShieldCheck size={16} color={countdown.badgeText} style={{ flexShrink: 0 }} />
+                            <div style={{ fontSize: '12px', color: countdown.badgeText }}>
+                              <span style={{ fontWeight: 800 }}>{countdown.statusText}</span>
+                              <span style={{ opacity: 0.9, marginLeft: '6px' }}>· {countdown.detailText}</span>
+                            </div>
+                          </div>
+
+                          {countdown.isFreeActive && (
+                            <button
+                              type="button"
+                              onClick={() => setCancelModalBooking(b)}
+                              style={{
+                                background: '#FFFFFF',
+                                border: '1px solid #FCA5A5',
+                                color: '#DC2626',
+                                borderRadius: '6px',
+                                fontSize: '11.5px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                padding: '5px 10px',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              Cancel Reservation
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Unified Executive Footer Toolbar: Documents, Calendar & Concierge */}
+                    <div style={{
+                      backgroundColor: '#FAFBFD',
+                      borderTop: '1px solid #E2E8F0',
+                      padding: '12px 24px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: '10px'
+                    }}>
+                      {/* Left: Official Documents & Calendar */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <button
                           type="button"
                           onClick={() => handleDownloadTerms(b)}
                           disabled={downloadingVoucherId === b.id}
                           style={{
-                            padding: '10px 14px',
-                            borderRadius: '8px',
+                            padding: '7px 12px',
+                            borderRadius: '6px',
                             border: '1px solid #CBD5E1',
                             backgroundColor: '#FFFFFF',
                             color: '#0F172A',
                             fontSize: '12px',
                             fontWeight: 700,
-                            display: 'flex',
+                            display: 'inline-flex',
                             alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '7px',
+                            gap: '6px',
                             cursor: 'pointer'
                           }}
                         >
                           {downloadingVoucherId === b.id ? (
                             <>
-                              <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
-                              <span>Generating PDF...</span>
+                              <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
+                              <span>Generating...</span>
                             </>
                           ) : (
                             <>
-                              <Download size={14} color="#9A7B4F" />
-                              <span>PDF Voucher &amp; Terms</span>
+                              <Download size={13} color="#9A7B4F" />
+                              <span>Booking Voucher</span>
                             </>
                           )}
                         </button>
 
-                        {/* Master Invoice */}
                         <button
                           type="button"
                           onClick={() => {
@@ -834,25 +888,23 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
                             setViewingDocType('invoice');
                           }}
                           style={{
-                            padding: '10px 14px',
-                            borderRadius: '8px',
+                            padding: '7px 12px',
+                            borderRadius: '6px',
                             border: '1px solid #CBD5E1',
                             backgroundColor: '#FFFFFF',
                             color: '#0F172A',
                             fontSize: '12px',
                             fontWeight: 700,
-                            display: 'flex',
+                            display: 'inline-flex',
                             alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '7px',
+                            gap: '6px',
                             cursor: 'pointer'
                           }}
                         >
-                          <FileText size={14} color="#0A192F" />
-                          <span>Master Invoice</span>
+                          <FileText size={13} color="#0A192F" />
+                          <span>Tax Invoice</span>
                         </button>
 
-                        {/* Receipt */}
                         <button
                           type="button"
                           onClick={() => {
@@ -860,168 +912,152 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
                             setViewingDocType('receipt');
                           }}
                           style={{
-                            padding: '10px 14px',
-                            borderRadius: '8px',
+                            padding: '7px 12px',
+                            borderRadius: '6px',
                             border: '1px solid #CBD5E1',
                             backgroundColor: '#FFFFFF',
                             color: '#0F172A',
                             fontSize: '12px',
                             fontWeight: 700,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '7px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          <CreditCard size={14} color="#0A192F" />
-                          <span>Receipt</span>
-                        </button>
-
-                      </div>
-                    </div>
-
-                    {/* Bottom Action Controls: One Calendar Dropdown & Support */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '14px', flexWrap: 'wrap', gap: '10px' }}>
-                      
-                      {/* One Calendar Control: Google, Apple, Outlook in Dropdown */}
-                      <div style={{ position: 'relative' }}>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveCalendarDropdownId(isCalDropdownOpen ? null : b.id);
-                          }}
-                          style={{
-                            padding: '8px 14px',
-                            borderRadius: '6px',
-                            border: '1px solid #CBD5E1',
-                            backgroundColor: '#FFFFFF',
-                            color: '#0A192F',
-                            fontSize: '12px',
-                            fontWeight: 700,
-                            display: 'flex',
+                            display: 'inline-flex',
                             alignItems: 'center',
                             gap: '6px',
                             cursor: 'pointer'
                           }}
                         >
-                          <Calendar size={14} color="#0A192F" />
-                          <span>Add to calendar</span>
-                          <ChevronDown size={14} color="#64748B" />
+                          <CreditCard size={13} color="#0A192F" />
+                          <span>Payment Receipt</span>
                         </button>
 
-                        {isCalDropdownOpen && (
-                          <div 
-                            style={{
-                              position: 'absolute',
-                              bottom: 'calc(100% + 6px)',
-                              left: 0,
-                              backgroundColor: '#FFFFFF',
-                              border: '1px solid #CBD5E1',
-                              borderRadius: '8px',
-                              boxShadow: '0 10px 25px rgba(0,0,0,0.12)',
-                              zIndex: 100,
-                              minWidth: '180px',
-                              padding: '4px 0',
-                              display: 'flex',
-                              flexDirection: 'column'
+                        {/* Add to Calendar Dropdown */}
+                        <div style={{ position: 'relative' }}>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveCalendarDropdownId(isCalDropdownOpen ? null : b.id);
                             }}
-                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                              padding: '7px 12px',
+                              borderRadius: '6px',
+                              border: '1px solid #CBD5E1',
+                              backgroundColor: '#FFFFFF',
+                              color: '#0A192F',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              cursor: 'pointer'
+                            }}
                           >
-                            <a
-                              href={generateGoogleCalendarUrl(b)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={() => setActiveCalendarDropdownId(null)}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                padding: '9px 14px',
-                                color: '#0F172A',
-                                fontSize: '12px',
-                                fontWeight: 600,
-                                textDecoration: 'none',
-                                transition: 'background-color 0.15s'
-                              }}
-                              onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#F8FAFC')}
-                              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                            >
-                              <Calendar size={13} color="#0A192F" />
-                              <span>Google Calendar</span>
-                            </a>
+                            <Calendar size={13} color="#0A192F" />
+                            <span>Add to Calendar</span>
+                            <ChevronDown size={13} color="#64748B" />
+                          </button>
 
-                            <a
-                              href={getBookingCalendarIcsUrl(b.id)}
-                              download={`reservation-${b.id}.ics`}
-                              onClick={() => setActiveCalendarDropdownId(null)}
+                          {isCalDropdownOpen && (
+                            <div 
                               style={{
+                                position: 'absolute',
+                                bottom: 'calc(100% + 6px)',
+                                left: 0,
+                                backgroundColor: '#FFFFFF',
+                                border: '1px solid #CBD5E1',
+                                borderRadius: '8px',
+                                boxShadow: '0 10px 25px rgba(0,0,0,0.12)',
+                                zIndex: 100,
+                                minWidth: '180px',
+                                padding: '4px 0',
                                 display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                padding: '9px 14px',
-                                color: '#0F172A',
-                                fontSize: '12px',
-                                fontWeight: 600,
-                                textDecoration: 'none',
-                                transition: 'background-color 0.15s'
+                                flexDirection: 'column'
                               }}
-                              onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#F8FAFC')}
-                              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                              onClick={(e) => e.stopPropagation()}
                             >
-                              <Download size={13} color="#9A7B4F" />
-                              <span>Apple / .ICS</span>
-                            </a>
+                              <a
+                                href={generateGoogleCalendarUrl(b)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={() => setActiveCalendarDropdownId(null)}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px',
+                                  padding: '9px 14px',
+                                  color: '#0F172A',
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  textDecoration: 'none'
+                                }}
+                              >
+                                <Calendar size={13} color="#0A192F" />
+                                <span>Google Calendar</span>
+                              </a>
 
-                            <a
-                              href={generateOutlookCalendarUrl(b)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={() => setActiveCalendarDropdownId(null)}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                padding: '9px 14px',
-                                color: '#0F172A',
-                                fontSize: '12px',
-                                fontWeight: 600,
-                                textDecoration: 'none',
-                                transition: 'background-color 0.15s'
-                              }}
-                              onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#F8FAFC')}
-                              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                            >
-                              <Calendar size={13} color="#0A192F" />
-                              <span>Outlook 365</span>
-                            </a>
-                          </div>
-                        )}
+                              <a
+                                href={getBookingCalendarIcsUrl(b.id)}
+                                download={`reservation-${b.id}.ics`}
+                                onClick={() => setActiveCalendarDropdownId(null)}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px',
+                                  padding: '9px 14px',
+                                  color: '#0F172A',
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  textDecoration: 'none'
+                                }}
+                              >
+                                <Download size={13} color="#9A7B4F" />
+                                <span>Apple / .ICS</span>
+                              </a>
+
+                              <a
+                                href={generateOutlookCalendarUrl(b)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={() => setActiveCalendarDropdownId(null)}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px',
+                                  padding: '9px 14px',
+                                  color: '#0F172A',
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  textDecoration: 'none'
+                                }}
+                              >
+                                <Calendar size={13} color="#0A192F" />
+                                <span>Outlook 365</span>
+                              </a>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
-                      {/* Contact Support Button */}
+                      {/* Right: Concierge Support */}
                       <button
                         type="button"
                         onClick={() => setSupportModalBooking(b)}
                         style={{
-                          padding: '8px 14px',
+                          padding: '7px 14px',
                           borderRadius: '6px',
-                          border: '1px solid #CBD5E1',
+                          border: '1px solid #0A192F',
                           backgroundColor: '#0A192F',
                           color: '#FFFFFF',
                           fontSize: '12px',
                           fontWeight: 700,
-                          display: 'flex',
+                          display: 'inline-flex',
                           alignItems: 'center',
                           gap: '6px',
                           cursor: 'pointer'
                         }}
                       >
-                        <MessageSquare size={13} color="#9A7B4F" />
-                        <span>Contact support</span>
+                        <MessageSquare size={13} color="#D4AF37" />
+                        <span>Concierge Support</span>
                       </button>
-
                     </div>
 
                   </div>
@@ -1188,6 +1224,7 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
           bookingId={viewingDocBookingId}
           isOpen={!!viewingDocBookingId}
           initialTab={viewingDocType}
+          mode="customer"
           onClose={() => setViewingDocBookingId(null)}
           onSuccess={() => {}}
         />

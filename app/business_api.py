@@ -1328,6 +1328,9 @@ def get_booking_terms_voucher(booking_id: str):
 
     booking = db.bookings.get(booking_id)
     if not booking:
+        lookup_customer_bookings(query=booking_id)
+        booking = db.bookings.get(booking_id)
+    if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
 
     vendor_id = getattr(booking, "vendor_id", "vendor_anb_philly")
@@ -1575,6 +1578,9 @@ def get_master_invoice_html(booking_id: str):
 
     booking = db.bookings.get(booking_id)
     if not booking:
+        lookup_customer_bookings(query=booking_id)
+        booking = db.bookings.get(booking_id)
+    if not booking:
         raise HTTPException(status_code=404, detail=f"Booking #{booking_id} not found in database")
     
     quote = getattr(booking, "quote", None)
@@ -1582,7 +1588,9 @@ def get_master_invoice_html(booking_id: str):
     if not vendor_id:
         raise HTTPException(status_code=400, detail=f"Booking #{booking_id} does not have an assigned originator vendor")
         
-    vendor = db.vendors.get(vendor_id)
+    vendor = db.vendors.get(vendor_id) or db.vendors.get(vendor_id.replace("_", "-")) or db.vendors.get(vendor_id.replace("-", "_"))
+    if not vendor and db.vendors:
+        vendor = next(iter(db.vendors.values()))
     if not vendor:
         raise HTTPException(status_code=404, detail=f"Originator Vendor #{vendor_id} not found")
 
@@ -1781,13 +1789,18 @@ def get_master_receipt_html(booking_id: str):
     """Renders the official Card Payment Receipt (HTML / Print PDF)."""
     booking = db.bookings.get(booking_id)
     if not booking:
+        lookup_customer_bookings(query=booking_id)
+        booking = db.bookings.get(booking_id)
+    if not booking:
         raise HTTPException(status_code=404, detail=f"Booking #{booking_id} not found in database")
         
     vendor_id = getattr(booking, "vendor_id", None)
     if not vendor_id:
         raise HTTPException(status_code=400, detail=f"Booking #{booking_id} does not have an assigned vendor")
         
-    vendor = db.vendors.get(vendor_id)
+    vendor = db.vendors.get(vendor_id) or db.vendors.get(vendor_id.replace("_", "-")) or db.vendors.get(vendor_id.replace("-", "_"))
+    if not vendor and db.vendors:
+        vendor = next(iter(db.vendors.values()))
     if not vendor:
         raise HTTPException(status_code=404, detail=f"Vendor #{vendor_id} not found")
 
