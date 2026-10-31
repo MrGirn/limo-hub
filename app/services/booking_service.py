@@ -150,31 +150,50 @@ class BookingService:
     ) -> Booking:
         quote = db.quotes.get(quote_id)
         if not quote and mysql_db and mysql_db.is_available():
-            try:
-                session = mysql_db.get_session()
-                q_model = session.query(QuoteModel).filter(QuoteModel.id == quote_id).first()
-                if q_model:
-                    quote = Quote(
-                        id=q_model.id,
-                        tenant_id=q_model.tenant_id,
-                        vendor_id=q_model.vendor_id,
-                        service_type=ServiceType(q_model.service_type),
-                        vehicle_class=VehicleClass(q_model.vehicle_class),
-                        pickup_address=q_model.pickup_address,
-                        dropoff_address=q_model.dropoff_address,
-                        distance_miles=Decimal(str(q_model.distance_miles or 0)),
-                        subtotal_net=Decimal(str(q_model.subtotal_net or 0)),
-                        tax_amount=Decimal(str(q_model.tax_amount or 0)),
-                        total_gross=Decimal(str(q_model.total_gross or 0)),
-                        final_payable_amount=Decimal(str(q_model.final_payable_amount or 0)),
-                        currency=q_model.currency or "USD",
-                        created_at=q_model.created_at or datetime.now(timezone.utc),
-                        expires_at=q_model.expires_at or (datetime.now(timezone.utc) + timedelta(minutes=30))
-                    )
-                    db.quotes[quote.id] = quote
-                session.close()
-            except Exception as ex:
-                logger.warning(f"Failed to load quote from MySQL: {ex}")
+            session = mysql_db.get_session()
+            if session:
+                try:
+                    q_model = session.query(QuoteModel).filter(QuoteModel.id == quote_id).first()
+                    if q_model:
+                        quote = Quote(
+                            id=q_model.id,
+                            tenant_id=q_model.tenant_id or "tenant-us-east",
+                            vendor_id=q_model.vendor_id or "vendor_anb_philly",
+                            service_type=ServiceType(q_model.service_type),
+                            vehicle_class=VehicleClass(q_model.vehicle_class),
+                            pickup_address=q_model.pickup_address or "",
+                            dropoff_address=q_model.dropoff_address,
+                            flight_number=q_model.flight_number,
+                            train_number=q_model.train_number,
+                            distance_miles=Decimal(str(q_model.distance_miles or 0)),
+                            estimated_duration_min=int(q_model.estimated_duration_min or 45),
+                            hourly_hours=q_model.hourly_hours,
+                            wait_minutes=int(q_model.wait_minutes or 0),
+                            base_net=Decimal(str(q_model.base_net or 0)),
+                            passenger_distance_net=Decimal(str(q_model.distance_net or 0)),
+                            outbound_positioning_net=Decimal(str(q_model.outbound_positioning_net or 0)),
+                            return_deadhead_net=Decimal(str(q_model.return_deadhead_net or 0)),
+                            estimated_tolls_net=Decimal(str(q_model.estimated_tolls_net or 0)),
+                            airport_train_surcharge_net=Decimal(str(q_model.airport_train_surcharge_net or 0)),
+                            wait_net=Decimal(str(q_model.wait_net or 0)),
+                            subtotal_net=Decimal(str(q_model.subtotal_net or 0)),
+                            tax_rate=Decimal(str(q_model.tax_rate or "0.08")),
+                            tax_amount=Decimal(str(q_model.tax_amount or 0)),
+                            gratuity_rate=Decimal(str(q_model.gratuity_rate or "0.00")),
+                            gratuity_amount=Decimal(str(q_model.gratuity_amount or 0)),
+                            total_gross=Decimal(str(q_model.total_gross or 0)),
+                            final_payable_amount=Decimal(str(q_model.final_payable_amount or 0)),
+                            deposit_hold_amount=Decimal(str(q_model.deposit_hold_amount or 0)),
+                            currency=q_model.currency or "USD",
+                            is_binding=bool(q_model.is_binding),
+                            created_at=q_model.created_at or datetime.now(timezone.utc),
+                            expires_at=q_model.expires_at or (datetime.now(timezone.utc) + timedelta(minutes=30))
+                        )
+                        db.quotes[quote.id] = quote
+                except Exception as ex:
+                    logger.warning(f"Failed to load quote from MySQL: {ex}")
+                finally:
+                    session.close()
 
         if not quote:
             raise ValueError(f"Quote {quote_id} not found or has expired. Please select a vehicle to refresh pricing.")

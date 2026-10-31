@@ -199,6 +199,59 @@ def request_quote_matrix(dto: QuoteRequestDTO):
     for q in matrix.values():
         db.quotes[q.id] = q
 
+    # Persist matrix quotes to MySQL so quotes survive container restarts / load balancing
+    try:
+        from app.database_mysql import mysql_db, QuoteModel
+        session = mysql_db.get_session()
+        if session:
+            try:
+                for q in matrix.values():
+                    q_model = QuoteModel(
+                        id=q.id,
+                        tenant_id=q.tenant_id,
+                        vendor_id=q.vendor_id,
+                        service_type=q.service_type.value,
+                        vehicle_class=q.vehicle_class.value,
+                        pickup_address=q.pickup_address,
+                        dropoff_address=q.dropoff_address,
+                        flight_number=q.flight_number,
+                        train_number=q.train_number,
+                        distance_miles=q.distance_miles,
+                        outbound_positioning_miles=q.route_metrics.outbound_positioning_miles,
+                        return_deadhead_miles=q.route_metrics.return_deadhead_miles,
+                        total_operating_miles=q.route_metrics.total_operating_miles,
+                        estimated_duration_min=q.estimated_duration_min,
+                        hourly_hours=q.hourly_hours,
+                        wait_minutes=q.wait_minutes,
+                        currency=q.currency,
+                        base_net=q.base_net,
+                        distance_net=q.passenger_distance_net,
+                        outbound_positioning_net=q.outbound_positioning_net,
+                        return_deadhead_net=q.return_deadhead_net,
+                        estimated_tolls_net=q.estimated_tolls_net,
+                        airport_train_surcharge_net=q.airport_train_surcharge_net,
+                        wait_net=q.wait_net,
+                        subtotal_net=q.subtotal_net,
+                        tax_rate=q.tax_rate,
+                        tax_amount=q.tax_amount,
+                        gratuity_rate=q.gratuity_rate,
+                        gratuity_amount=q.gratuity_amount,
+                        total_gross=q.total_gross,
+                        final_payable_amount=q.final_payable_amount,
+                        deposit_hold_amount=q.deposit_hold_amount,
+                        vendor_office_address=q.route_metrics.vendor_depot_address,
+                        is_binding=q.is_binding,
+                        expires_at=q.expires_at
+                    )
+                    session.merge(q_model)
+                session.commit()
+            except Exception:
+                session.rollback()
+            finally:
+                session.close()
+    except Exception:
+        pass
+
     return matrix
 
 

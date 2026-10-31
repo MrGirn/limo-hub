@@ -1427,6 +1427,12 @@ class MySQLManager:
         """Returns metadata for all provisioned sovereign vendor databases."""
         return list(self._vendor_metadata.values())
 
+    def is_available(self) -> bool:
+        """Returns True if MySQL connection is active or can be initialized."""
+        if not self.is_connected:
+            self.initialize()
+        return bool(self.is_connected and self.SessionLocal is not None)
+
     def get_session(self, vendor_id: Optional[str] = None) -> Optional[Session]:
         """
         Retrieves a scoped database session.
