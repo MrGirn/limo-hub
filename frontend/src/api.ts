@@ -2659,13 +2659,13 @@ export async function escalateTicketToGlobalHubApi(ticketId: string, reason: str
 // --- LIVE CHAUFFEUR GPS TELEMETRY & TRACKING API ---
 
 export interface LiveTrackingTelemetry {
-  lat: number;
-  lng: number;
-  speed_mph: number;
-  heading: number;
-  dist_miles: number;
-  eta_minutes: number;
-  updated_at: string;
+  lat: number | null;
+  lng: number | null;
+  speed_mph: number | null;
+  heading: number | null;
+  dist_miles: number | null;
+  eta_minutes: number | null;
+  updated_at: string | null;
 }
 
 export interface LiveTrackingResponse {
@@ -2673,27 +2673,34 @@ export interface LiveTrackingResponse {
   trip_id: string;
   booking_id: string;
   status: string;
+  telemetry_active?: boolean;
+  pickup_time_utc?: string | null;
+  seconds_until_pickup?: number | null;
+  telemetry_starts_at_utc?: string | null;
+  telemetry_activation_window_minutes?: number;
   driver: {
     id: string;
     name: string;
     phone: string;
     badge_id: string;
     rating: number;
+    trips_completed?: number;
     photo_url?: string;
-  };
+  } | null;
   vehicle: {
-    model: string;
-    license_plate: string;
-    color: string;
+    id?: string;
+    model: string | null;
+    license_plate: string | null;
+    color: string | null;
     class: string;
   };
   telemetry: LiveTrackingTelemetry;
   route: {
     pickup_address: string;
     dropoff_address: string;
-    pickup_lat?: number;
-    pickup_lng?: number;
-    flight_number?: string;
+    pickup_lat?: number | null;
+    pickup_lng?: number | null;
+    flight_number?: string | null;
   };
 }
 

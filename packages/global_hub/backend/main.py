@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import FileResponse
 from packages.global_hub.backend.api import router as global_hub_router
+from app.business_api import router as business_router
 
 app = FastAPI(
     title="Global Hub Marketplace & Clearinghouse API",
@@ -21,6 +22,7 @@ app.add_middleware(
 )
 
 app.include_router(global_hub_router)
+app.include_router(business_router)
 
 
 @app.on_event("startup")

@@ -1,15 +1,47 @@
 import React, { useState, useEffect } from 'react';
 import {
-  X, MapPin, Navigation, Car, Phone, MessageSquare, ShieldCheck,
-  Clock, Activity, RefreshCw, CheckCircle2, AlertCircle, Sparkles,
-  Compass, Radio, Zap
+  X, Car, Phone, MessageSquare, ShieldCheck,
+  Clock, Activity, RefreshCw, CheckCircle2, AlertCircle,
+  Compass, Radio, Calendar
 } from 'lucide-react';
-import { fetchBookingLiveTrackingApi, sendDriverLocationPingApi, LiveTrackingResponse } from '../../api';
+import { fetchBookingLiveTrackingApi, LiveTrackingResponse } from '../../api';
 
 interface LiveRideTrackingModalProps {
   bookingId: string;
   isOpen: boolean;
   onClose: () => void;
+}
+
+function formatCountdownToTelemetry(secondsUntilPickup?: number | null, windowMinutes: number = 60): string {
+  if (secondsUntilPickup === null || secondsUntilPickup === undefined) {
+    return `Live GPS telemetry activates ${windowMinutes} minutes prior to scheduled departure.`;
+  }
+  const secondsUntilTelemetry = secondsUntilPickup - windowMinutes * 60;
+  if (secondsUntilTelemetry <= 0) {
+    return 'Within dispatch window — awaiting chauffeur En Route status broadcast.';
+  }
+  const days = Math.floor(secondsUntilTelemetry / 86400);
+  const hours = Math.floor((secondsUntilTelemetry % 86400) / 3600);
+  const mins = Math.max(1, Math.floor((secondsUntilTelemetry % 3600) / 60));
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (hours > 0) parts.push(`${hours}h`);
+  parts.push(`${mins}m`);
+  return `Live GPS radar activates ${windowMinutes}m before pickup (in ${parts.join(' ')}) once chauffeur goes En Route`;
+}
+
+function formatScheduledDeparture(iso?: string | null): string {
+  if (!iso) return 'Scheduled Future Departure';
+  const dt = new Date(iso);
+  if (isNaN(dt.getTime())) return 'Scheduled Future Departure';
+  return dt.toLocaleString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
 }
 
 export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
@@ -20,8 +52,6 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
   const [trackingData, setTrackingData] = useState<LiveTrackingResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [simulating, setSimulating] = useState(false);
-  const [simStep, setSimStep] = useState(0);
 
   const loadTracking = async () => {
     try {
@@ -29,7 +59,7 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
       const data = await fetchBookingLiveTrackingApi(bookingId);
       setTrackingData(data);
     } catch (err: any) {
-      setError(err.message || 'Unable to stream live chauffeur telemetry');
+      setError(err.message || 'Unable to fetch reservation telemetry status');
     } finally {
       setLoading(false);
     }
@@ -37,50 +67,30 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
 
   useEffect(() => {
     if (!isOpen) return;
+    setLoading(true);
     loadTracking();
-    const interval = setInterval(loadTracking, 3000);
+    const interval = setInterval(loadTracking, 5000);
     return () => clearInterval(interval);
   }, [isOpen, bookingId]);
 
   if (!isOpen) return null;
 
-  // Simulation steps for interactive testing
-  const handleSimulateGpsMove = async () => {
-    setSimulating(true);
-    try {
-      const nextStep = (simStep + 1) % 4;
-      setSimStep(nextStep);
+  const isTelemetryActive = Boolean(
+    trackingData?.telemetry_active &&
+    trackingData?.telemetry?.lat !== null &&
+    trackingData?.telemetry?.lat !== undefined &&
+    trackingData?.telemetry?.lng !== null &&
+    trackingData?.telemetry?.lng !== undefined
+  );
 
-      // Coordinates stepping from Center City Philly towards PHL Airport
-      const coords = [
-        { lat: 39.9526, lng: -75.1652, speed: 32, note: 'Departing Center City Garage' },
-        { lat: 39.9150, lng: -75.1950, speed: 48, note: 'Cruising on I-95 South' },
-        { lat: 39.8820, lng: -75.2350, speed: 25, note: 'Entering Airport Terminal Corridor' },
-        { lat: 39.8744, lng: -75.2424, speed: 0, note: 'Arrived at Terminal Curbside VIP Geofence' }
-      ];
+  const hasAssignedDriver = Boolean(trackingData?.driver && trackingData.driver.id);
 
-      const currentPoint = coords[nextStep];
-      await sendDriverLocationPingApi({
-        driver_id: trackingData?.driver?.id || 'drv_01',
-        trip_id: trackingData?.trip_id,
-        latitude: currentPoint.lat,
-        longitude: currentPoint.lng,
-        speed_mph: currentPoint.speed
-      });
-
-      await loadTracking();
-    } catch (err: any) {
-      console.warn('Simulation ping notice:', err.message);
-    } finally {
-      setSimulating(false);
-    }
-  };
-
-  const getStepIndex = (status: string) => {
+  const getStepIndex = (status: string, driverAssigned: boolean) => {
     switch (status?.toUpperCase()) {
       case 'SCHEDULED':
       case 'CONFIRMED':
-        return 1;
+      case 'OFFER_SENT':
+        return driverAssigned ? 2 : 1;
       case 'DRIVER_ACCEPTED':
       case 'ACCEPTED':
         return 2;
@@ -89,16 +99,20 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
       case 'ARRIVED':
         return 4;
       case 'IN_PROGRESS':
+      case 'PASSENGER_ONBOARD':
       case 'ONBOARD':
         return 5;
       case 'COMPLETED':
         return 6;
       default:
-        return 2;
+        return 1;
     }
   };
 
-  const currentStep = getStepIndex(trackingData?.status || 'EN_ROUTE');
+  const currentStep = getStepIndex(trackingData?.status || 'SCHEDULED', hasAssignedDriver);
+  const routeProgressPercent = isTelemetryActive
+    ? Math.min(100, Math.max(15, ((currentStep - 1) / 5) * 100))
+    : 0;
 
   return (
     <div
@@ -131,7 +145,7 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
           border: '1px solid #E2E8F0'
         }}
       >
-        {/* Header (Light Mode) */}
+        {/* Header */}
         <div
           style={{
             padding: '18px 24px',
@@ -149,21 +163,25 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
                 width: '38px',
                 height: '38px',
                 borderRadius: '8px',
-                backgroundColor: '#FEF3C7',
-                border: '1px solid #FCD34D',
+                backgroundColor: isTelemetryActive ? '#FEF3C7' : '#EFF6FF',
+                border: `1px solid ${isTelemetryActive ? '#FCD34D' : '#BFDBFE'}`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
               }}
             >
-              <Radio size={20} color="#D97706" className="pulse-live" />
+              {isTelemetryActive ? (
+                <Radio size={20} color="#D97706" className="pulse-live" />
+              ) : (
+                <Calendar size={20} color="#1D4ED8" />
+              )}
             </div>
             <div>
               <div style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.01em' }}>
-                Live Chauffeur Radar &amp; Telemetry
+                {isTelemetryActive ? 'Live Chauffeur Radar & Telemetry' : 'Dispatch Timeline & Telemetry Status'}
               </div>
               <div style={{ fontSize: '12px', color: '#64748B' }}>
-                Booking Ref: <span style={{ color: '#D97706', fontFamily: 'monospace', fontWeight: 800, backgroundColor: '#FFFBEB', padding: '1px 6px', borderRadius: '4px', border: '1px solid #FEF3C7' }}>#{bookingId}</span> · Real-Time GPS Stream
+                Booking Ref: <span style={{ color: '#D97706', fontFamily: 'monospace', fontWeight: 800, backgroundColor: '#FFFBEB', padding: '1px 6px', borderRadius: '4px', border: '1px solid #FEF3C7' }}>#{bookingId}</span> · {isTelemetryActive ? 'Real-Time GPS Stream Active' : 'Scheduled Reservation Standby'}
               </div>
             </div>
           </div>
@@ -192,7 +210,7 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
           {loading && !trackingData && (
             <div style={{ textAlign: 'center', padding: '40px 0', color: '#64748B' }}>
               <RefreshCw size={28} color="#0078D4" className="pulse-live" style={{ margin: '0 auto 12px auto' }} />
-              <div style={{ fontWeight: 700, fontSize: '14px' }}>Connecting to Chauffeur GPS Stream...</div>
+              <div style={{ fontWeight: 700, fontSize: '14px' }}>Checking Reservation Dispatch &amp; Telemetry Status...</div>
             </div>
           )}
 
@@ -205,61 +223,133 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
 
           {trackingData && (
             <>
-              {/* ETA Radar & Status Hero Banner (Light Mode) */}
-              <div
-                style={{
-                  background: 'linear-gradient(135deg, #FFFFFF 0%, #EFF6FF 100%)',
-                  borderRadius: '14px',
-                  border: '1px solid #BFDBFE',
-                  padding: '18px 22px',
-                  color: '#0F172A',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  boxShadow: '0 4px 14px rgba(0, 120, 212, 0.08)',
-                  flexWrap: 'wrap',
-                  gap: '12px'
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#1D4ED8', fontWeight: 800 }}>
-                    Estimated Time of Arrival
+              {/* Hero Banner: Active ETA vs Scheduled Standby */}
+              {isTelemetryActive ? (
+                <div
+                  style={{
+                    background: 'linear-gradient(135deg, #FFFFFF 0%, #EFF6FF 100%)',
+                    borderRadius: '14px',
+                    border: '1px solid #BFDBFE',
+                    padding: '18px 22px',
+                    color: '#0F172A',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    boxShadow: '0 4px 14px rgba(0, 120, 212, 0.08)',
+                    flexWrap: 'wrap',
+                    gap: '12px'
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#1D4ED8', fontWeight: 800 }}>
+                      Estimated Time of Arrival
+                    </div>
+                    <div style={{ fontSize: '28px', fontWeight: 900, color: '#0F172A', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span>
+                        {trackingData.telemetry?.eta_minutes !== null && trackingData.telemetry?.eta_minutes !== undefined
+                          ? `${trackingData.telemetry.eta_minutes} Mins`
+                          : 'Arriving'}
+                      </span>
+                      {trackingData.telemetry?.dist_miles !== null && trackingData.telemetry?.dist_miles !== undefined && (
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#64748B' }}>
+                          ({trackingData.telemetry.dist_miles} mi away)
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '11.5px', color: '#475569', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Activity size={13} color="#059669" />
+                      <span>
+                        {trackingData.telemetry?.speed_mph !== null && trackingData.telemetry?.speed_mph !== undefined
+                          ? <>Speed: <strong>{trackingData.telemetry.speed_mph} mph</strong></>
+                          : 'Live GPS Feed Connected'}
+                        {trackingData.telemetry?.heading !== null && trackingData.telemetry?.heading !== undefined
+                          ? <> · Heading: <strong>{trackingData.telemetry.heading}°</strong></>
+                          : null}
+                      </span>
+                    </div>
                   </div>
-                  <div style={{ fontSize: '28px', fontWeight: 900, color: '#0F172A', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span>{trackingData.telemetry?.eta_minutes || 4} Mins</span>
-                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#64748B' }}>
-                      ({trackingData.telemetry?.dist_miles || 1.8} mi away)
+
+                  <div style={{ textAlign: 'right' }}>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        backgroundColor: '#DCFCE7',
+                        border: '1px solid #86EFAC',
+                        color: '#166534',
+                        padding: '4px 12px',
+                        borderRadius: '20px',
+                        fontSize: '12px',
+                        fontWeight: 800,
+                        letterSpacing: '0.04em'
+                      }}
+                    >
+                      ● {trackingData.status}
                     </span>
-                  </div>
-                  <div style={{ fontSize: '11.5px', color: '#475569', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Activity size={13} color="#059669" />
-                    <span>Speed: <strong>{trackingData.telemetry?.speed_mph || 28} mph</strong> · Heading: <strong>{trackingData.telemetry?.heading || 135}° SE</strong></span>
-                  </div>
-                </div>
-
-                <div style={{ textAlign: 'right' }}>
-                  <span
-                    style={{
-                      display: 'inline-block',
-                      backgroundColor: '#DCFCE7',
-                      border: '1px solid #86EFAC',
-                      color: '#166534',
-                      padding: '4px 12px',
-                      borderRadius: '20px',
-                      fontSize: '12px',
-                      fontWeight: 800,
-                      letterSpacing: '0.04em'
-                    }}
-                  >
-                    ● {trackingData.status || 'EN_ROUTE'}
-                  </span>
-                  <div style={{ fontSize: '10.5px', color: '#64748B', marginTop: '6px', fontWeight: 600 }}>
-                    Synced {new Date(trackingData.telemetry?.updated_at || Date.now()).toLocaleTimeString()}
+                    {trackingData.telemetry?.updated_at && (
+                      <div style={{ fontSize: '10.5px', color: '#64748B', marginTop: '6px', fontWeight: 600 }}>
+                        Synced {new Date(trackingData.telemetry.updated_at).toLocaleTimeString()}
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div
+                  style={{
+                    background: 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
+                    borderRadius: '14px',
+                    border: '1px solid #CBD5E1',
+                    padding: '18px 22px',
+                    color: '#0F172A',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)',
+                    flexWrap: 'wrap',
+                    gap: '12px'
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: '240px' }}>
+                    <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#475569', fontWeight: 800 }}>
+                      Scheduled Departure — Live Telemetry Standby
+                    </div>
+                    <div style={{ fontSize: '20px', fontWeight: 900, color: '#0F172A', marginTop: '4px' }}>
+                      {formatScheduledDeparture(trackingData.pickup_time_utc)}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#0369A1', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+                      <Clock size={14} color="#0284C7" style={{ flexShrink: 0 }} />
+                      <span>
+                        {formatCountdownToTelemetry(
+                          trackingData.seconds_until_pickup,
+                          trackingData.telemetry_activation_window_minutes || 60
+                        )}
+                      </span>
+                    </div>
+                  </div>
 
-              {/* Interactive Vector Radar Map (Light Mode) */}
+                  <div style={{ textAlign: 'right' }}>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        backgroundColor: '#EFF6FF',
+                        border: '1px solid #BFDBFE',
+                        color: '#1D4ED8',
+                        padding: '4px 12px',
+                        borderRadius: '20px',
+                        fontSize: '12px',
+                        fontWeight: 800,
+                        letterSpacing: '0.04em'
+                      }}
+                    >
+                      ● {trackingData.status || 'SCHEDULED'}
+                    </span>
+                    <div style={{ fontSize: '10.5px', color: '#64748B', marginTop: '6px', fontWeight: 600 }}>
+                      GPS Radar Standby
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Corridor Visualization */}
               <div
                 style={{
                   backgroundColor: '#FFFFFF',
@@ -268,14 +358,13 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
                   padding: '20px',
                   position: 'relative',
                   overflow: 'hidden',
-                  minHeight: '160px',
+                  minHeight: '150px',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
                   boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
                 }}
               >
-                {/* Visual Grid Dots */}
                 <div
                   style={{
                     position: 'absolute',
@@ -289,31 +378,39 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
                   }}
                 />
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 1, flexWrap: 'wrap', gap: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: '#0F172A', fontWeight: 800 }}>
-                    <Compass size={14} color="#0078D4" />
-                    <span>Live GPS Corridor Telemetry</span>
+                    <Compass size={14} color={isTelemetryActive ? '#0078D4' : '#64748B'} />
+                    <span>{isTelemetryActive ? 'Live GPS Corridor Telemetry' : 'Reserved Route Corridor'}</span>
                   </div>
-                  <span style={{ fontSize: '10px', backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #DBEAFE', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>
-                    Lat: {Number(trackingData.telemetry?.lat || 39.9526).toFixed(4)}, Lng: {Number(trackingData.telemetry?.lng || -75.1652).toFixed(4)}
-                  </span>
+                  {isTelemetryActive ? (
+                    <span style={{ fontSize: '10px', backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #DBEAFE', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>
+                      Lat: {Number(trackingData.telemetry.lat).toFixed(4)}, Lng: {Number(trackingData.telemetry.lng).toFixed(4)}
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: '10px', backgroundColor: '#F1F5F9', color: '#475569', border: '1px solid #CBD5E1', padding: '3px 8px', borderRadius: '4px', fontWeight: 700 }}>
+                      Awaiting T-{trackingData.telemetry_activation_window_minutes || 60}m Dispatch Window
+                    </span>
+                  )}
                 </div>
 
-                {/* Animated Route Line */}
+                {/* Route Line */}
                 <div style={{ position: 'relative', margin: '24px 12px', zIndex: 1 }}>
                   <div style={{ height: '5px', backgroundColor: '#E2E8F0', borderRadius: '3px', width: '100%', position: 'relative' }}>
-                    <div
-                      style={{
-                        position: 'absolute',
-                        left: 0,
-                        top: 0,
-                        bottom: 0,
-                        width: `${Math.min(100, Math.max(15, (currentStep / 6) * 100))}%`,
-                        backgroundColor: '#0078D4',
-                        borderRadius: '3px',
-                        transition: 'width 0.5s ease'
-                      }}
-                    />
+                    {isTelemetryActive && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: 0,
+                          top: 0,
+                          bottom: 0,
+                          width: `${routeProgressPercent}%`,
+                          backgroundColor: '#0078D4',
+                          borderRadius: '3px',
+                          transition: 'width 0.5s ease'
+                        }}
+                      />
+                    )}
                   </div>
 
                   {/* Pickup Dot */}
@@ -333,27 +430,29 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
                     title="Pickup Location"
                   />
 
-                  {/* Vehicle Moving Marker */}
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: `${Math.min(90, Math.max(10, (currentStep / 6) * 100))}%`,
-                      top: '50%',
-                      transform: 'translate(-50%, -50%)',
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '50%',
-                      backgroundColor: '#0078D4',
-                      border: '3px solid #FFFFFF',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: '0 2px 10px rgba(0, 120, 212, 0.45)',
-                      transition: 'left 0.5s ease'
-                    }}
-                  >
-                    <Car size={16} color="#FFFFFF" />
-                  </div>
+                  {/* Vehicle Moving Marker — only shown when telemetry is genuinely active */}
+                  {isTelemetryActive && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: `${Math.min(92, Math.max(10, routeProgressPercent))}%`,
+                        top: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        backgroundColor: '#0078D4',
+                        border: '3px solid #FFFFFF',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 2px 10px rgba(0, 120, 212, 0.45)',
+                        transition: 'left 0.5s ease'
+                      }}
+                    >
+                      <Car size={16} color="#FFFFFF" />
+                    </div>
+                  )}
 
                   {/* Dropoff Dot */}
                   <div
@@ -386,7 +485,7 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
                 </div>
               </div>
 
-              {/* VIP Chauffeur & Vehicle Credentials Card */}
+              {/* VIP Chauffeur & Vehicle Assignment Card */}
               <div
                 style={{
                   backgroundColor: '#FFFFFF',
@@ -400,79 +499,131 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
                   gap: '14px'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <div
-                    style={{
-                      width: '54px',
-                      height: '54px',
-                      borderRadius: '50%',
-                      backgroundImage: `url(${trackingData.driver?.photo_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80'})`,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                      border: '2px solid #0078D4',
-                      flexShrink: 0
-                    }}
-                  />
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <div style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A' }}>
-                        {trackingData.driver?.name || 'Marcus Sterling'}
+                {hasAssignedDriver && trackingData.driver ? (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div
+                        style={{
+                          width: '50px',
+                          height: '50px',
+                          borderRadius: '50%',
+                          backgroundColor: '#0F172A',
+                          color: '#F8FAFC',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 800,
+                          fontSize: '16px',
+                          border: '2px solid #0078D4',
+                          flexShrink: 0
+                        }}
+                      >
+                        {trackingData.driver.name
+                          .split(' ')
+                          .map((n) => n[0])
+                          .join('')
+                          .slice(0, 2)
+                          .toUpperCase()}
                       </div>
-                      <span style={{ fontSize: '10.5px', backgroundColor: '#FEF3C7', color: '#B45309', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
-                        ★ {trackingData.driver?.rating || 4.99}
-                      </span>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <div style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A' }}>
+                            {trackingData.driver.name}
+                          </div>
+                          {trackingData.driver.rating !== null && trackingData.driver.rating !== undefined && (
+                            <span style={{ fontSize: '10.5px', backgroundColor: '#FEF3C7', color: '#B45309', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
+                              ★ {trackingData.driver.rating}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+                          {trackingData.vehicle?.model || trackingData.vehicle?.class || 'Reserved Fleet Vehicle'}
+                          {trackingData.vehicle?.license_plate && (
+                            <> · <strong style={{ color: '#0F172A' }}>{trackingData.vehicle.license_plate}</strong></>
+                          )}
+                        </div>
+                        {trackingData.driver.badge_id && (
+                          <div style={{ fontSize: '11px', color: '#0078D4', fontWeight: 600, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <ShieldCheck size={13} />
+                            <span>Livery Badge: {trackingData.driver.badge_id} (Verified)</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
-                      {trackingData.vehicle?.model || 'Cadillac Escalade ESV'} · <strong style={{ color: '#0F172A' }}>{trackingData.vehicle?.license_plate || 'PA-LIV-9921'}</strong>
+
+                    {trackingData.driver.phone && (
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <a
+                          href={`tel:${trackingData.driver.phone}`}
+                          style={{
+                            textDecoration: 'none',
+                            backgroundColor: '#EFF6FF',
+                            color: '#0078D4',
+                            border: '1px solid #BFDBFE',
+                            padding: '8px 14px',
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          <Phone size={14} />
+                          <span>Call Chauffeur</span>
+                        </a>
+
+                        <a
+                          href={`sms:${trackingData.driver.phone}`}
+                          style={{
+                            textDecoration: 'none',
+                            backgroundColor: '#0F172A',
+                            color: '#FFFFFF',
+                            padding: '8px 14px',
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          <MessageSquare size={14} />
+                          <span>SMS</span>
+                        </a>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', width: '100%' }}>
+                    <div
+                      style={{
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: '50%',
+                        backgroundColor: '#F1F5F9',
+                        border: '1px solid #CBD5E1',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}
+                    >
+                      <Car size={22} color="#475569" />
                     </div>
-                    <div style={{ fontSize: '11px', color: '#0078D4', fontWeight: 600, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <ShieldCheck size={13} />
-                      <span>Livery Badge: {trackingData.driver?.badge_id || 'PPA-CH-88219'} (Verified)</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>
+                        Chauffeur &amp; Vehicle Dispatch Scheduled
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#475569', marginTop: '2px' }}>
+                        Reserved Class: <strong>{(trackingData.vehicle?.class || 'EXECUTIVE_CLASS').replace(/_/g, ' ')}</strong>
+                      </div>
+                      <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '4px' }}>
+                        Your assigned chauffeur’s identity, license plate, direct phone, and live GPS feed are dispatched 60 minutes prior to your scheduled departure.
+                      </div>
                     </div>
                   </div>
-                </div>
-
-                {/* Call & SMS Buttons */}
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <a
-                    href={`tel:${trackingData.driver?.phone || '+12155550199'}`}
-                    style={{
-                      textDecoration: 'none',
-                      backgroundColor: '#EFF6FF',
-                      color: '#0078D4',
-                      border: '1px solid #BFDBFE',
-                      padding: '8px 14px',
-                      borderRadius: '8px',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <Phone size={14} />
-                    <span>Call Chauffeur</span>
-                  </a>
-
-                  <a
-                    href={`sms:${trackingData.driver?.phone || '+12155550199'}`}
-                    style={{
-                      textDecoration: 'none',
-                      backgroundColor: '#0F172A',
-                      color: '#FFFFFF',
-                      padding: '8px 14px',
-                      borderRadius: '8px',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <MessageSquare size={14} />
-                    <span>SMS</span>
-                  </a>
-                </div>
+                )}
               </div>
 
               {/* Trip Lifecycle Stepper */}
@@ -488,8 +639,9 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
                   Trip Lifecycle Progress
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px', textAlign: 'center' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px', textAlign: 'center' }}>
                   {[
+                    { label: 'Reserved', step: 1 },
                     { label: 'Assigned', step: 2 },
                     { label: 'En Route', step: 3 },
                     { label: 'Arrived', step: 4 },
@@ -515,7 +667,7 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
                             border: isCurrent ? '2px solid #0078D4' : 'none'
                           }}
                         >
-                          {isPassed ? <CheckCircle2 size={14} /> : s.step - 1}
+                          {isPassed ? <CheckCircle2 size={14} /> : s.step}
                         </div>
                         <span style={{ fontSize: '10.5px', fontWeight: isCurrent ? 800 : 600, color: isCurrent ? '#0078D4' : (isPassed ? '#0F172A' : '#94A3B8') }}>
                           {s.label}
@@ -524,49 +676,6 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
                     );
                   })}
                 </div>
-              </div>
-
-              {/* Dev Simulation Bar for Quick Interactive Testing */}
-              <div
-                style={{
-                  backgroundColor: '#FEF3C7',
-                  border: '1px solid #FCD34D',
-                  borderRadius: '10px',
-                  padding: '12px 16px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  gap: '8px'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Zap size={16} color="#B45309" />
-                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#92400E' }}>
-                    Live GPS Telemetry Simulator (Dev / Field Testing)
-                  </span>
-                </div>
-
-                <button
-                  onClick={handleSimulateGpsMove}
-                  disabled={simulating}
-                  style={{
-                    backgroundColor: '#B45309',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    borderRadius: '6px',
-                    padding: '6px 12px',
-                    fontSize: '11.5px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                >
-                  <Navigation size={12} />
-                  <span>{simulating ? 'Broadcasting...' : 'Broadcast Next GPS Ping'}</span>
-                </button>
               </div>
             </>
           )}
@@ -585,7 +694,9 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
           }}
         >
           <div style={{ fontSize: '11px', color: '#64748B' }}>
-            🛰️ Live telemetry updates automatically every 3 seconds
+            {isTelemetryActive
+              ? '🛰️ Live GPS telemetry streams automatically every 5 seconds'
+              : '🕒 Live GPS telemetry begins 60 minutes before scheduled departure'}
           </div>
 
           <button
@@ -603,7 +714,7 @@ export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({
               transition: 'all 0.15s ease'
             }}
           >
-            Close Radar
+            Close
           </button>
         </div>
       </div>

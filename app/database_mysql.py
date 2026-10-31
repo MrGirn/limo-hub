@@ -923,7 +923,8 @@ class MySQLManager:
                     
                     for col, col_def in [
                         ("pricing_model_type", "VARCHAR(64) DEFAULT 'DYNAMIC_MATRIX'"),
-                        ("tax_gratuity_display_mode", "VARCHAR(64) DEFAULT 'ITEMIZED_SEPARATE'")
+                        ("tax_gratuity_display_mode", "VARCHAR(64) DEFAULT 'ITEMIZED_SEPARATE'"),
+                        ("tax_label", "VARCHAR(128) DEFAULT 'State & Municipal Sales Taxes'")
                     ]:
                         try:
                             conn.execute(text(f"ALTER TABLE quotes ADD COLUMN {col} {col_def}"))
@@ -937,7 +938,9 @@ class MySQLManager:
                         ("office_city", "VARCHAR(128) NULL"),
                         ("office_state", "VARCHAR(32) NULL"),
                         ("office_zip", "VARCHAR(32) NULL"),
-                        ("deadhead_rate_per_mile", "DECIMAL(10,2) NULL")
+                        ("deadhead_rate_per_mile", "DECIMAL(10,2) NULL"),
+                        ("tax_label", "VARCHAR(128) DEFAULT 'State & Municipal Sales Taxes'"),
+                        ("tax_rate_pct", "DECIMAL(6,4) NULL")
                     ]:
                         try:
                             conn.execute(text(f"ALTER TABLE vendors ADD COLUMN {col} {col_def}"))
@@ -1355,6 +1358,37 @@ class MySQLManager:
 
             # 3. Create all tables in the vendor's isolated database
             Base.metadata.create_all(bind=vendor_engine)
+            try:
+                with vendor_engine.connect() as conn:
+                    from sqlalchemy import text
+                    for tbl, col, col_def in [
+                        ("vendor_pricing_rules", "pricing_model_type", "VARCHAR(64) DEFAULT 'DYNAMIC_MATRIX'"),
+                        ("vendor_pricing_rules", "tax_gratuity_display_mode", "VARCHAR(64) DEFAULT 'ITEMIZED_SEPARATE'"),
+                        ("vendor_pricing_rules", "flat_per_mile_all_inclusive", "DECIMAL(10,2) DEFAULT 5.50"),
+                        ("vendor_pricing_rules", "flat_per_km_all_inclusive", "DECIMAL(10,2) DEFAULT 3.45"),
+                        ("vendor_pricing_rules", "hourly_rate", "DECIMAL(10,2) DEFAULT 125.00"),
+                        ("vendor_pricing_rules", "hourly_minimum_hours", "INT DEFAULT 2"),
+                        ("quotes", "pricing_model_type", "VARCHAR(64) DEFAULT 'DYNAMIC_MATRIX'"),
+                        ("quotes", "tax_gratuity_display_mode", "VARCHAR(64) DEFAULT 'ITEMIZED_SEPARATE'"),
+                        ("quotes", "tax_label", "VARCHAR(128) DEFAULT 'State & Municipal Sales Taxes'"),
+                        ("vendors", "currency", "VARCHAR(8) DEFAULT 'USD'"),
+                        ("vendors", "settlement_currency", "VARCHAR(8) DEFAULT 'USD'"),
+                        ("vendors", "office_city", "VARCHAR(128) NULL"),
+                        ("vendors", "office_state", "VARCHAR(32) NULL"),
+                        ("vendors", "office_zip", "VARCHAR(32) NULL"),
+                        ("vendors", "deadhead_rate_per_mile", "DECIMAL(10,2) NULL"),
+                        ("vendors", "pricing_matrix_json", "TEXT NULL"),
+                        ("vendors", "tax_label", "VARCHAR(128) DEFAULT 'State & Municipal Sales Taxes'"),
+                        ("vendors", "tax_rate_pct", "DECIMAL(6,4) NULL"),
+                        ("bookings", "customer_id", "VARCHAR(64) NULL"),
+                    ]:
+                        try:
+                            conn.execute(text(f"ALTER TABLE {tbl} ADD COLUMN {col} {col_def}"))
+                            conn.commit()
+                        except Exception:
+                            pass
+            except Exception:
+                pass
 
             # 4. Bind dedicated sessionmaker
             session_factory = sessionmaker(autocommit=False, autoflush=False, bind=vendor_engine)

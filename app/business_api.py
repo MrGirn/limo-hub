@@ -789,7 +789,8 @@ def lookup_customer_bookings(query: str = Query(..., min_length=2, description="
     results = []
     for b in db.bookings.values():
         match = False
-        if q_norm in b.id.lower() or (b.itinerary_id and q_norm in b.itinerary_id.lower()):
+        itinerary_id_val = getattr(b, "itinerary_id", None)
+        if q_norm in b.id.lower() or (itinerary_id_val and q_norm in itinerary_id_val.lower()):
             match = True
         elif b.party:
             if b.party.passenger_name and q_norm in b.party.passenger_name.lower():
@@ -830,8 +831,18 @@ def lookup_customer_bookings(query: str = Query(..., min_length=2, description="
                     if bm.id not in existing_ids:
                         tm = session.query(TripModel).filter(TripModel.booking_id == bm.id).first()
                         
+                        bm_pickup = bm.pickup_time_utc or datetime.now(timezone.utc)
+                        if bm_pickup.tzinfo is None:
+                            bm_pickup = bm_pickup.replace(tzinfo=timezone.utc)
+                        bm_created = bm.created_at or datetime.now(timezone.utc)
+                        if bm_created.tzinfo is None:
+                            bm_created = bm_created.replace(tzinfo=timezone.utc)
+
                         trip_obj = None
                         if tm:
+                            tm_pickup = tm.pickup_time_utc or bm_pickup
+                            if tm_pickup.tzinfo is None:
+                                tm_pickup = tm_pickup.replace(tzinfo=timezone.utc)
                             trip_obj = Trip(
                                 id=tm.id,
                                 booking_id=bm.id,
@@ -840,7 +851,7 @@ def lookup_customer_bookings(query: str = Query(..., min_length=2, description="
                                 driver_id=tm.driver_id,
                                 vehicle_id=tm.vehicle_id,
                                 status=TripStatus(tm.status) if tm.status in [s.value for s in TripStatus] else TripStatus.SCHEDULED,
-                                pickup_time_utc=tm.pickup_time_utc,
+                                pickup_time_utc=tm_pickup,
                                 pickup_address=tm.pickup_address,
                                 dropoff_address=tm.dropoff_address,
                                 flight_number=tm.flight_number,
@@ -866,7 +877,7 @@ def lookup_customer_bookings(query: str = Query(..., min_length=2, description="
                             status=BookingStatus(bm.status) if bm.status in [s.value for s in BookingStatus] else BookingStatus.CONFIRMED,
                             service_type=ServiceType(bm.service_type) if bm.service_type in [st.value for st in ServiceType] else ServiceType.POINT_TO_POINT,
                             vehicle_class=VehicleClass(bm.vehicle_class) if bm.vehicle_class in [vc.value for vc in VehicleClass] else VehicleClass.FIRST_CLASS,
-                            pickup_time_utc=bm.pickup_time_utc,
+                            pickup_time_utc=bm_pickup,
                             pickup_address=bm.pickup_address,
                             dropoff_address=bm.dropoff_address,
                             flight_number=bm.flight_number,
@@ -875,16 +886,22 @@ def lookup_customer_bookings(query: str = Query(..., min_length=2, description="
                             total_amount=bm.total_amount,
                             currency=bm.currency or "USD",
                             trip=trip_obj,
-                            created_at=bm.created_at
+                            created_at=bm_created
                         )
                         results.append(b_obj)
                         db.bookings[b_obj.id] = b_obj
+                        if trip_obj:
+                            db.trips[trip_obj.id] = trip_obj
             finally:
                 session.close()
     except Exception as e:
-        pass
+        logger.warning(f"Booking lookup MySQL fallback warning: {e}")
 
     for b in results:
+        if getattr(b, "pickup_time_utc", None) and b.pickup_time_utc.tzinfo is None:
+            b.pickup_time_utc = b.pickup_time_utc.replace(tzinfo=timezone.utc)
+        if getattr(b, "created_at", None) and b.created_at.tzinfo is None:
+            b.created_at = b.created_at.replace(tzinfo=timezone.utc)
         if not getattr(b, "cancellation_policy", None):
             try:
                 from app.services.pricing_service import PricingService
@@ -897,7 +914,13 @@ def lookup_customer_bookings(query: str = Query(..., min_length=2, description="
             except Exception:
                 pass
 
-    results.sort(key=lambda x: x.created_at if hasattr(x, 'created_at') and x.created_at else datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+    def _safe_created_at(item):
+        dt = getattr(item, "created_at", None)
+        if not dt:
+            return datetime.min.replace(tzinfo=timezone.utc)
+        return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+
+    results.sort(key=_safe_created_at, reverse=True)
     return results
 
 
@@ -2101,91 +2124,6 @@ def get_trip(trip_id: str):
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
     return trip
-
-
-@router.get("/trips/{trip_id}/live-tracking")
-def get_trip_live_tracking(trip_id: str):
-    trip = db.trips.get(trip_id)
-    if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
-    
-    # Locate booking
-    booking = next((b for b in db.bookings.values() if getattr(b, "trip_id", None) == trip_id or (getattr(b, "trip", None) and b.trip.id == trip_id)), None)
-    booking_id = booking.id if booking else f"BK-{trip_id[-6:]}"
-
-    # Resolve driver
-    driver = db.drivers.get(trip.driver_id) if trip.driver_id else None
-    if not driver and db.drivers:
-        driver = next(iter(db.drivers.values()))
-
-    # Resolve vehicle
-    vehicle = db.vehicles.get(trip.vehicle_id) if trip.vehicle_id else None
-    if not vehicle and db.vehicles:
-        vehicle = next(iter(db.vehicles.values()))
-
-    # Telemetry
-    cur_lat = getattr(driver, "current_lat", None) or getattr(trip, "pickup_lat", None) or 39.9526
-    cur_lng = getattr(driver, "current_lng", None) or getattr(trip, "pickup_lng", None) or -75.1652
-
-    pickup_lat = getattr(trip, "pickup_lat", 39.9526) or 39.9526
-    pickup_lng = getattr(trip, "pickup_lng", -75.1652) or -75.1652
-
-    dist_miles = round(haversine_distance_miles(cur_lat, cur_lng, pickup_lat, pickup_lng), 1) if (cur_lat and cur_lng and pickup_lat and pickup_lng) else 2.4
-    status_str = trip.status.value if hasattr(trip.status, "value") else str(trip.status)
-    eta_minutes = max(1, int(dist_miles * 2.2)) if status_str in ["EN_ROUTE", "DRIVER_ACCEPTED", "SCHEDULED", "OFFER_SENT"] else 0
-    if status_str in ["ARRIVED", "IN_PROGRESS", "PASSENGER_ONBOARD", "COMPLETED"]:
-        eta_minutes = 0
-
-    return {
-        "success": True,
-        "trip_id": trip.id,
-        "booking_id": booking_id,
-        "status": status_str,
-        "driver": {
-            "id": driver.id if driver else "drv_01",
-            "name": f"{driver.first_name} {driver.last_name}" if driver else "Executive Chauffeur",
-            "phone": getattr(driver, "phone", "+1 (215) 555-0199"),
-            "badge_id": getattr(driver, "license_number", "PPA-LM-88192"),
-            "rating": getattr(driver, "rating", 4.98),
-            "photo_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"
-        },
-        "vehicle": {
-            "model": f"{vehicle.year} {vehicle.make} {vehicle.model}" if vehicle else "2024 Cadillac Escalade ESV",
-            "license_plate": getattr(vehicle, "license_plate", "PA-LM-9921"),
-            "color": getattr(vehicle, "exterior_color", "Onyx Black"),
-            "class": vehicle.vehicle_class.value if (vehicle and hasattr(vehicle.vehicle_class, "value")) else "LUXURY_SUV"
-        },
-        "telemetry": {
-            "lat": cur_lat,
-            "lng": cur_lng,
-            "speed_mph": 28.0 if status_str == "EN_ROUTE" else 0.0,
-            "heading": 90.0,
-            "dist_miles": dist_miles,
-            "eta_minutes": eta_minutes,
-            "updated_at": datetime.now(timezone.utc).isoformat()
-        },
-        "route": {
-            "pickup_address": trip.pickup_address,
-            "dropoff_address": trip.dropoff_address,
-            "pickup_lat": pickup_lat,
-            "pickup_lng": pickup_lng,
-            "flight_number": getattr(trip, "flight_number", None)
-        }
-    }
-
-
-@router.get("/bookings/{booking_id}/live-tracking")
-def get_booking_live_tracking(booking_id: str):
-    booking = db.bookings.get(booking_id)
-    if not booking:
-        raise HTTPException(status_code=404, detail="Booking not found")
-
-    trip_id = getattr(booking, "trip_id", None) or (booking.trip.id if getattr(booking, "trip", None) else None)
-    if not trip_id:
-        raise HTTPException(status_code=404, detail="No active trip associated with this booking")
-
-    return get_trip_live_tracking(trip_id)
-
 
 
 # --- AUTONOMOUS RECOVERY SIMULATIONS ---
@@ -4084,20 +4022,28 @@ def settle_driver_payout_endpoint(dto: SettleDriverPayoutDTO):
 
 @router.get("/trips/{trip_id}/live-tracking")
 def get_trip_live_tracking(trip_id: str):
-    """Returns real-time chauffeur telemetry, ETA countdown, vehicle details, and route coordinates."""
-    from app.database_mysql import mysql_db, BookingModel, TripModel
+    """Returns authoritative chauffeur assignment, dispatch timeline, and live telemetry when the trip is active."""
+    from app.database_mysql import mysql_db, BookingModel, TripModel, DriverModel, VehicleModel
+
     trip = db.trips.get(trip_id)
-    if not trip:
-        session = mysql_db.get_session()
-        if session:
-            try:
-                t_model = session.query(TripModel).filter_by(id=trip_id).first()
-                if t_model:
+    booking = None
+    db_driver = None
+    db_vehicle = None
+    booking_vehicle_class = "LUXURY_SUV"
+
+    session = mysql_db.get_session()
+    if session:
+        try:
+            t_model = session.query(TripModel).filter_by(id=trip_id).first()
+            if t_model:
+                if not trip:
                     trip = Trip(
                         id=t_model.id,
                         booking_id=t_model.booking_id,
                         tenant_id=t_model.tenant_id,
                         vendor_id=t_model.vendor_id,
+                        driver_id=t_model.driver_id,
+                        vehicle_id=t_model.vehicle_id,
                         status=TripStatus(t_model.status) if t_model.status in TripStatus._value2member_map_ else TripStatus.SCHEDULED,
                         pickup_time_utc=t_model.pickup_time_utc or datetime.now(timezone.utc),
                         pickup_address=t_model.pickup_address,
@@ -4107,59 +4053,184 @@ def get_trip_live_tracking(trip_id: str):
                         driver_current_lat=t_model.driver_current_lat,
                         driver_current_lng=t_model.driver_current_lng
                     )
-            finally:
-                session.close()
+                else:
+                    # Sync latest persisted status, driver, vehicle, and coordinates from MySQL
+                    if t_model.status in TripStatus._value2member_map_:
+                        trip.status = TripStatus(t_model.status)
+                    if t_model.driver_id:
+                        trip.driver_id = t_model.driver_id
+                    if t_model.vehicle_id:
+                        trip.vehicle_id = t_model.vehicle_id
+                    if t_model.driver_current_lat is not None:
+                        trip.driver_current_lat = t_model.driver_current_lat
+                    if t_model.driver_current_lng is not None:
+                        trip.driver_current_lng = t_model.driver_current_lng
+                    if t_model.pickup_time_utc:
+                        trip.pickup_time_utc = t_model.pickup_time_utc
+
+            b_id = trip.booking_id if trip else None
+            if b_id:
+                b_model = session.query(BookingModel).filter_by(id=b_id).first()
+                if b_model:
+                    booking_vehicle_class = b_model.vehicle_class or booking_vehicle_class
+                    if trip and not getattr(trip, "pickup_time_utc", None) and b_model.pickup_time_utc:
+                        trip.pickup_time_utc = b_model.pickup_time_utc
+
+            if trip and getattr(trip, "driver_id", None):
+                d_model = session.query(DriverModel).filter_by(id=trip.driver_id).first()
+                if d_model:
+                    db_driver = {
+                        "id": d_model.id,
+                        "name": f"{d_model.first_name} {d_model.last_name}".strip(),
+                        "phone": d_model.phone,
+                        "badge_id": d_model.license_number,
+                        "rating": float(d_model.rating) if d_model.rating is not None else None,
+                        "trips_completed": int(d_model.trips_completed or 0),
+                        "current_lat": d_model.current_lat,
+                        "current_lng": d_model.current_lng,
+                        "current_vehicle_id": d_model.current_vehicle_id,
+                    }
+
+            resolved_vehicle_id = (
+                getattr(trip, "vehicle_id", None)
+                or (db_driver.get("current_vehicle_id") if db_driver else None)
+            )
+            if resolved_vehicle_id:
+                v_model = session.query(VehicleModel).filter_by(id=resolved_vehicle_id).first()
+                if v_model:
+                    db_vehicle = {
+                        "id": v_model.id,
+                        "model": f"{v_model.year} {v_model.make} {v_model.model}".strip(),
+                        "license_plate": v_model.license_plate,
+                        "color": v_model.exterior_color,
+                        "class": v_model.vehicle_class,
+                    }
+        finally:
+            session.close()
 
     if not trip:
         raise HTTPException(status_code=404, detail=f"Trip {trip_id} not found")
 
-    driver_id = "drv_01"
-    driver_name = "Marcus Sterling"
-    driver_phone = "+1 (215) 555-0199"
-    driver_badge = "PPA-CH-88219"
-    vehicle_model = "Cadillac Escalade ESV (Black)"
-    vehicle_plate = "PA-LIV-9921"
-    rating = 4.99
+    if not booking and trip.booking_id:
+        booking = db.bookings.get(trip.booking_id)
+    if booking and getattr(booking, "vehicle_class", None):
+        vc = booking.vehicle_class
+        booking_vehicle_class = vc.value if hasattr(vc, "value") else str(vc)
 
+    # Check in-memory driver/vehicle if assigned on trip and not already loaded from MySQL
+    if not db_driver and getattr(trip, "driver_id", None):
+        mem_drv = db.drivers.get(trip.driver_id)
+        if mem_drv:
+            db_driver = {
+                "id": mem_drv.id,
+                "name": f"{mem_drv.first_name} {mem_drv.last_name}".strip(),
+                "phone": getattr(mem_drv, "phone", None),
+                "badge_id": getattr(mem_drv, "license_number", None),
+                "rating": getattr(mem_drv, "rating", None),
+                "trips_completed": getattr(mem_drv, "trips_completed", 0),
+                "current_lat": getattr(mem_drv, "current_lat", None),
+                "current_lng": getattr(mem_drv, "current_lng", None),
+                "current_vehicle_id": getattr(mem_drv, "current_vehicle_id", None),
+            }
+
+    if not db_vehicle and getattr(trip, "vehicle_id", None):
+        mem_veh = db.vehicles.get(trip.vehicle_id)
+        if mem_veh:
+            vc_val = mem_veh.vehicle_class.value if hasattr(mem_veh.vehicle_class, "value") else str(mem_veh.vehicle_class)
+            db_vehicle = {
+                "id": mem_veh.id,
+                "model": f"{mem_veh.year} {mem_veh.make} {mem_veh.model}".strip(),
+                "license_plate": getattr(mem_veh, "license_plate", None),
+                "color": getattr(mem_veh, "exterior_color", None),
+                "class": vc_val,
+            }
+
+    status_str = trip.status.value if hasattr(trip.status, "value") else str(trip.status)
+
+    pickup_dt = getattr(trip, "pickup_time_utc", None) or (getattr(booking, "pickup_time_utc", None) if booking else None)
+    now_utc = datetime.now(timezone.utc)
+    if pickup_dt:
+        if pickup_dt.tzinfo is None:
+            pickup_dt = pickup_dt.replace(tzinfo=timezone.utc)
+        seconds_until_pickup = int((pickup_dt - now_utc).total_seconds())
+        telemetry_starts_at_utc = (pickup_dt - timedelta(minutes=60)).isoformat()
+        pickup_time_iso = pickup_dt.isoformat()
+    else:
+        seconds_until_pickup = None
+        telemetry_starts_at_utc = None
+        pickup_time_iso = None
+
+    active_live_statuses = {"EN_ROUTE", "ARRIVED", "IN_PROGRESS", "PASSENGER_ONBOARD"}
     driver_lat = getattr(trip, "driver_current_lat", None)
     driver_lng = getattr(trip, "driver_current_lng", None)
-    
-    if driver_lat is None or driver_lng is None:
-        driver_lat = 39.9526  # Philly Center City
-        driver_lng = -75.1652
+    if (driver_lat is None or driver_lng is None) and db_driver:
+        driver_lat = db_driver.get("current_lat")
+        driver_lng = db_driver.get("current_lng")
 
-    pickup_lat = getattr(trip, "pickup_lat", 39.8744)
-    pickup_lng = getattr(trip, "pickup_lng", -75.2424)
-    dist_miles = haversine_distance_miles(driver_lat, driver_lng, pickup_lat, pickup_lng)
-    eta_minutes = max(1, int(dist_miles / 25.0 * 60.0))
+    # Live GPS telemetry is ONLY active when the trip is actively underway (EN_ROUTE / ARRIVED / IN_PROGRESS / PASSENGER_ONBOARD)
+    # or within the T-60m dispatch window after a chauffeur has accepted and broadcast real coordinates.
+    is_within_dispatch_window = seconds_until_pickup is not None and seconds_until_pickup <= 3600
+    telemetry_active = (
+        status_str in active_live_statuses
+        or (status_str == "DRIVER_ACCEPTED" and is_within_dispatch_window and driver_lat is not None and driver_lng is not None)
+    )
+
+    pickup_lat = getattr(trip, "pickup_lat", None)
+    pickup_lng = getattr(trip, "pickup_lng", None)
+
+    dist_miles = None
+    eta_minutes = None
+    speed_mph = None
+    heading = None
+
+    if telemetry_active and driver_lat is not None and driver_lng is not None:
+        if pickup_lat is not None and pickup_lng is not None:
+            dist_miles = round(haversine_distance_miles(driver_lat, driver_lng, pickup_lat, pickup_lng), 2)
+        else:
+            dist_miles = 0.0
+        if status_str in ("ARRIVED", "IN_PROGRESS", "PASSENGER_ONBOARD", "COMPLETED"):
+            eta_minutes = 0
+            speed_mph = 0.0 if status_str == "ARRIVED" else None
+        else:
+            eta_minutes = max(1, int((dist_miles / 25.0) * 60.0)) if dist_miles is not None else None
+            speed_mph = None
+    else:
+        # Do not expose fabricated coordinates, speed, or ETA when the trip is still SCHEDULED in the future
+        driver_lat = None
+        driver_lng = None
 
     return {
         "success": True,
         "trip_id": trip.id,
         "booking_id": trip.booking_id,
-        "status": trip.status.value if hasattr(trip.status, "value") else str(trip.status),
+        "status": status_str,
+        "telemetry_active": telemetry_active,
+        "pickup_time_utc": pickup_time_iso,
+        "seconds_until_pickup": seconds_until_pickup,
+        "telemetry_starts_at_utc": telemetry_starts_at_utc,
+        "telemetry_activation_window_minutes": 60,
         "driver": {
-            "id": driver_id,
-            "name": driver_name,
-            "phone": driver_phone,
-            "badge_id": driver_badge,
-            "rating": rating,
-            "photo_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80"
-        },
-        "vehicle": {
-            "model": vehicle_model,
-            "license_plate": vehicle_plate,
-            "color": "Executive Obsidian Black",
-            "class": "LUXURY_SUV"
+            "id": db_driver["id"],
+            "name": db_driver["name"],
+            "phone": db_driver["phone"],
+            "badge_id": db_driver["badge_id"],
+            "rating": db_driver["rating"],
+            "trips_completed": db_driver.get("trips_completed", 0),
+        } if db_driver else None,
+        "vehicle": db_vehicle if db_vehicle else {
+            "model": None,
+            "license_plate": None,
+            "color": None,
+            "class": booking_vehicle_class
         },
         "telemetry": {
             "lat": driver_lat,
             "lng": driver_lng,
-            "speed_mph": 28.5,
-            "heading": 135.0,
-            "dist_miles": round(dist_miles, 2),
+            "speed_mph": speed_mph,
+            "heading": heading,
+            "dist_miles": dist_miles,
             "eta_minutes": eta_minutes,
-            "updated_at": datetime.now(timezone.utc).isoformat()
+            "updated_at": now_utc.isoformat() if telemetry_active else None
         },
         "route": {
             "pickup_address": trip.pickup_address,
@@ -4173,21 +4244,26 @@ def get_trip_live_tracking(trip_id: str):
 
 @router.get("/bookings/{booking_id}/live-tracking")
 def get_booking_live_tracking(booking_id: str):
-    """Returns live tracking for a booking by reference ID."""
+    """Returns authoritative live tracking and dispatch status for a booking by reference ID."""
     from app.database_mysql import mysql_db, BookingModel, TripModel
     booking = db.bookings.get(booking_id)
     trip_id = None
-    if booking and booking.trip:
+    if booking and getattr(booking, "trip", None):
         trip_id = booking.trip.id
-    elif not booking:
+    elif booking and getattr(booking, "trip_id", None):
+        trip_id = booking.trip_id
+
+    if not trip_id:
         session = mysql_db.get_session()
         if session:
             try:
-                b_model = session.query(BookingModel).filter_by(id=booking_id).first()
-                if b_model:
-                    t_model = session.query(TripModel).filter_by(booking_id=booking_id).first()
-                    if t_model:
-                        trip_id = t_model.id
+                t_model = session.query(TripModel).filter_by(booking_id=booking_id).first()
+                if t_model:
+                    trip_id = t_model.id
+                else:
+                    b_model = session.query(BookingModel).filter_by(id=booking_id).first()
+                    if not b_model:
+                        raise HTTPException(status_code=404, detail=f"Booking {booking_id} not found")
             finally:
                 session.close()
 

@@ -705,10 +705,10 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
                           CHAUFFEUR
                         </div>
                         <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#0F172A', marginTop: '2px' }}>
-                          {(b.trip as any)?.driver_name || b.trip?.active_offer?.driver_name || 'Executive Chauffeur Assigned'}
+                          {(b.trip as any)?.driver_name || b.trip?.active_offer?.driver_name || 'Assigned 60m Prior to Pickup'}
                         </div>
                         <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
-                          {(b as any).vehicle_category || (b as any).tier || 'Executive Class'}
+                          {((b as any).vehicle_class || (b as any).vehicle_category || (b as any).tier || 'Executive Class').replace(/_/g, ' ')}
                         </div>
 
                         <button
@@ -731,7 +731,11 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
                           }}
                         >
                           <MapPin size={13} color="#0A192F" />
-                          <span>View live tracking</span>
+                          <span>
+                            {['EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'PASSENGER_ONBOARD'].includes(String(b.trip?.status || '').toUpperCase())
+                              ? 'Live Chauffeur Radar'
+                              : 'Dispatch & Radar Status'}
+                          </span>
                         </button>
                       </div>
 
