@@ -30,18 +30,28 @@ function formatCountdownToTelemetry(secondsUntilPickup?: number | null, windowMi
   return `Live GPS radar activates ${windowMinutes}m before pickup (in ${parts.join(' ')}) once chauffeur goes En Route`;
 }
 
+function parseUtcIso(iso?: string | null): Date | null {
+  if (!iso) return null;
+  const s = String(iso).trim();
+  const hasOffset = s.endsWith('Z') || /[+-]\d{2}:?\d{2}$/.test(s);
+  const dt = new Date(hasOffset ? s : `${s}Z`);
+  return isNaN(dt.getTime()) ? null : dt;
+}
+
 function formatScheduledDeparture(iso?: string | null): string {
-  if (!iso) return 'Scheduled Future Departure';
-  const dt = new Date(iso);
-  if (isNaN(dt.getTime())) return 'Scheduled Future Departure';
-  return dt.toLocaleString('en-US', {
+  const dt = parseUtcIso(iso);
+  if (!dt) return 'Scheduled Future Departure';
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const formatted = dt.toLocaleString('en-US', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
     year: 'numeric',
     hour: 'numeric',
-    minute: '2-digit'
+    minute: '2-digit',
+    timeZoneName: 'short'
   });
+  return tz ? `${formatted} (${tz})` : formatted;
 }
 
 export const LiveRideTrackingModal: React.FC<LiveRideTrackingModalProps> = ({

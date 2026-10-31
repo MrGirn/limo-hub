@@ -94,12 +94,21 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const parseUtcDate = (iso?: string | null): Date => {
+    if (!iso) return new Date();
+    const s = String(iso).trim();
+    const hasOffset = s.endsWith('Z') || /[+-]\d{2}:?\d{2}$/.test(s);
+    return new Date(hasOffset ? s : `${s}Z`);
+  };
+
+  const passengerTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Local Time';
+
   const computeCancellationCountdown = (booking: Booking) => {
     const policy = booking.cancellation_policy;
     const cutoffHours = policy?.cutoff_hours || 2;
     const vendorName = policy?.vendor_name || 'Operating Carrier';
-    const pickupDate = booking.pickup_time_utc ? new Date(booking.pickup_time_utc) : new Date(Date.now() + 24 * 3600 * 1000);
-    const deadlineDate = policy?.deadline_utc ? new Date(policy.deadline_utc) : new Date(pickupDate.getTime() - cutoffHours * 3600 * 1000);
+    const pickupDate = booking.pickup_time_utc ? parseUtcDate(booking.pickup_time_utc) : new Date(Date.now() + 24 * 3600 * 1000);
+    const deadlineDate = policy?.deadline_utc ? parseUtcDate(policy.deadline_utc) : new Date(pickupDate.getTime() - cutoffHours * 3600 * 1000);
     const now = new Date(currentTick);
     const diffMs = deadlineDate.getTime() - now.getTime();
 
@@ -173,7 +182,7 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
       if (printWindow) {
         const vendor = voucherData.vendor || {};
         const policy = voucherData.policy || {};
-        const pickupStr = booking.pickup_time_utc ? new Date(booking.pickup_time_utc).toLocaleString('en-US', {
+        const pickupStr = booking.pickup_time_utc ? parseUtcDate(booking.pickup_time_utc).toLocaleString('en-US', {
           weekday: 'long',
           year: 'numeric',
           month: 'long',
@@ -562,7 +571,7 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
                 const statusTheme = getStatusColor(b.trip?.status || b.status || 'SCHEDULED');
                 const isCancelled = (b.trip?.status || b.status) === 'CANCELLED';
                 
-                const pickupDateObj = b.pickup_time_utc ? new Date(b.pickup_time_utc) : new Date();
+                const pickupDateObj = b.pickup_time_utc ? parseUtcDate(b.pickup_time_utc) : new Date();
                 const departureDateFormatted = pickupDateObj.toLocaleDateString('en-US', {
                   weekday: 'long',
                   day: 'numeric',
@@ -572,7 +581,8 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
                 const departureTimeFormatted = pickupDateObj.toLocaleTimeString('en-US', {
                   hour: 'numeric',
                   minute: '2-digit',
-                  hour12: true
+                  hour12: true,
+                  timeZoneName: 'short'
                 });
 
                 const countdown = computeCancellationCountdown(b);
@@ -678,9 +688,9 @@ export const CustomerBookingsLookupModal: React.FC<CustomerBookingsLookupModalPr
                         {/* Col 1: Schedule & Passenger Summary */}
                         <div style={{ paddingRight: '12px', borderRight: '1px solid #F1F5F9' }}>
                           <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#9A7B4F', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '4px' }}>
-                            SCHEDULED DEPARTURE
+                            SCHEDULED DEPARTURE ({passengerTimeZone})
                           </div>
-                          <div style={{ fontSize: '26px', fontWeight: 900, color: '#0A192F', lineHeight: 1.1 }}>
+                          <div style={{ fontSize: '24px', fontWeight: 900, color: '#0A192F', lineHeight: 1.1 }}>
                             {departureTimeFormatted}
                           </div>
                           <div style={{ fontSize: '13px', color: '#334155', fontWeight: 600, marginTop: '4px' }}>

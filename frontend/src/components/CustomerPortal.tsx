@@ -57,7 +57,18 @@ const getDynamicUpcomingTimeSlot = (hoursAhead = 2): string => {
 };
 
 const getDynamicTodayDate = (): string => {
-  return new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+const parseUtcToLocalDate = (iso?: string | null): Date => {
+  if (!iso) return new Date();
+  const trimmed = String(iso).trim();
+  const hasOffset = trimmed.endsWith('Z') || /[+-]\d{2}:?\d{2}$/.test(trimmed);
+  return new Date(hasOffset ? trimmed : `${trimmed}Z`);
 };
 
 const extractCityFromAddress = (address?: string): string => {
@@ -425,7 +436,8 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
     if (!dateStr || !dateStr.trim()) return undefined;
     try {
       const time24 = parseTimeTo24Hour(timeStr);
-      const d = new Date(`${dateStr.trim()}T${time24}Z`);
+      // Parse in the passenger's local browser timezone, then serialize to canonical UTC ISO string
+      const d = new Date(`${dateStr.trim()}T${time24}`);
       if (isNaN(d.getTime())) return undefined;
       return d.toISOString();
     } catch (_) {
@@ -784,7 +796,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
                   <div><strong>Pickup:</strong> ${data.pickup_address}</div>
                   <div><strong>Destination:</strong> ${data.dropoff_address}</div>
                   <div><strong>Lead Passenger:</strong> ${data.passenger_name} (${data.passenger_phone})</div>
-                  <div><strong>Date & Time (UTC):</strong> ${new Date(data.pickup_time_utc).toLocaleString()}</div>
+                  <div><strong>Date & Time (Passenger Local):</strong> ${parseUtcToLocalDate(data.pickup_time_utc).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' })}</div>
                   <div><strong>Guaranteed Total:</strong> $${data.total_amount_usd.toFixed(2)} USD</div>
                   <div><strong>Pre-Auth Escrow Status:</strong> ${data.preauth_status} (Card ending in ${data.card_last4})</div>
                 </div>
@@ -859,7 +871,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
       };
 
       if ((bookingMode === 'ITINERARY_PLANNER' || hasReturnTrip) && masterItinerary) {
-        const pickupDateResolved = tripDate || new Date().toISOString().split('T')[0];
+        const pickupDateResolved = tripDate || getDynamicTodayDate();
         const pickupTimeResolved = safeFormatIsoDateTime(pickupDateResolved, tripTime) || new Date().toISOString();
         const res = await bookItinerary(
           masterItinerary.itinerary_id,
@@ -887,7 +899,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
           payment: { card_last4: last4 }
         });
       } else if (quote) {
-        const pickupDateResolved = tripDate || new Date().toISOString().split('T')[0];
+        const pickupDateResolved = tripDate || getDynamicTodayDate();
         const pickupTime = safeFormatIsoDateTime(pickupDateResolved, tripTime) || new Date().toISOString();
         const b = await bookQuote(quote.id, resolvedParty, pickupTime);
         setBooking(b);
@@ -1186,7 +1198,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
                 <div>
                   <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>DATE & TIME</div>
                   <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#0F172A', marginTop: '2px' }}>
-                    {booking.pickup_time_utc ? new Date(booking.pickup_time_utc).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Scheduled'}
+                    {booking.pickup_time_utc ? parseUtcToLocalDate(booking.pickup_time_utc).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }) : 'Scheduled'}
                   </div>
                 </div>
 
