@@ -163,6 +163,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
   const [bagsCount, setBagsCount] = useState(1);
   const [flightNumber, setFlightNumber] = useState('');
   const [vehicleClass, setVehicleClass] = useState<VehicleClass>('LUXURY_SUV');
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
   const [hourlyHours, setHourlyHours] = useState(3);
   const [hasReturnTrip, setHasReturnTrip] = useState(false);
   const [returnDate, setReturnDate] = useState(() => getDynamicTodayDate());
@@ -211,12 +212,23 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
     ? dynamicVehicleOptions
     : (config?.vehicle_options || []);
 
-  // Ensure selected vehicleClass matches an active option available in this vendor's fleet inventory
+  const getVehicleKey = (veh: VehicleOption, idx?: number): string =>
+    veh.id || `${veh.type}::${veh.title || idx || 0}`;
+
+  // Ensure selected vehicleClass & selectedVehicleId match a single active option in this vendor's fleet inventory
   useEffect(() => {
-    if (vehicleOptions.length > 0 && !vehicleOptions.some(v => v.type === vehicleClass)) {
-      setVehicleClass(vehicleOptions[0].type);
+    if (vehicleOptions.length > 0) {
+      const hasCurrentId = Boolean(
+        selectedVehicleId && vehicleOptions.some((v, idx) => getVehicleKey(v, idx) === selectedVehicleId)
+      );
+      if (!hasCurrentId) {
+        const matchByClass = vehicleOptions.find(v => v.type === vehicleClass) || vehicleOptions[0];
+        const matchIdx = vehicleOptions.indexOf(matchByClass);
+        setVehicleClass(matchByClass.type);
+        setSelectedVehicleId(getVehicleKey(matchByClass, matchIdx >= 0 ? matchIdx : 0));
+      }
     }
-  }, [vehicleOptions, vehicleClass]);
+  }, [vehicleOptions, vehicleClass, selectedVehicleId]);
 
   // Sync initial details if navigated from Quick Quote Widget or Fleet page
   useEffect(() => {
@@ -237,6 +249,14 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
         }
       }
       if (initialDetails.vehicleClass) setVehicleClass(initialDetails.vehicleClass);
+      if (initialDetails.vehicleId) {
+        setSelectedVehicleId(initialDetails.vehicleId);
+      } else if (initialDetails.vehicleClass && vehicleOptions.length > 0) {
+        const matched = vehicleOptions.find(v => v.type === initialDetails.vehicleClass);
+        if (matched) {
+          setSelectedVehicleId(getVehicleKey(matched, vehicleOptions.indexOf(matched)));
+        }
+      }
       if (initialDetails.pickupLocation) setPickupAddress(initialDetails.pickupLocation);
       if (initialDetails.dropoffLocation) setDropoffAddress(initialDetails.dropoffLocation);
       if (initialDetails.flightNumber) setFlightNumber(initialDetails.flightNumber);
@@ -514,7 +534,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
     setQuoteError(null);
     try {
       const classes: VehicleClass[] = (vehicleOptions && vehicleOptions.length > 0)
-        ? vehicleOptions.map(v => v.type)
+        ? Array.from(new Set(vehicleOptions.map(v => v.type)))
         : ['LUXURY_SUV', 'FIRST_CLASS', 'ELECTRIC_VIP', 'BUSINESS_VAN', 'BUSINESS_SEDAN'];
 
       if (bookingMode === 'ITINERARY_PLANNER' || hasReturnTrip) {
@@ -670,8 +690,13 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
     await calculateLiveQuotes(true);
   };
 
-  const handleSelectVehicleClass = (vc: VehicleClass) => {
+  const handleSelectVehicleClass = (vc: VehicleClass, veh?: VehicleOption, vehIdx?: number) => {
     setVehicleClass(vc);
+    const chosenOpt = veh || vehicleOptions.find(o => o.type === vc);
+    if (chosenOpt) {
+      const resolvedIdx = vehIdx !== undefined ? vehIdx : vehicleOptions.indexOf(chosenOpt);
+      setSelectedVehicleId(getVehicleKey(chosenOpt, resolvedIdx >= 0 ? resolvedIdx : 0));
+    }
     if (bookingMode === 'ITINERARY_PLANNER' || hasReturnTrip) {
       if (vehicleQuotes[vc]) {
         setMasterItinerary(vehicleQuotes[vc]);
@@ -679,8 +704,8 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
       const updated = [...itineraryLegs];
       if (updated[selectedLegIndex]) {
         updated[selectedLegIndex].vehicle_class = vc;
-        const opt = vehicleOptions.find(o => o.type === vc);
-        updated[selectedLegIndex].vehicle_title = opt?.title || vc;
+        updated[selectedLegIndex].vehicle_id = chosenOpt ? getVehicleKey(chosenOpt, vehIdx) : undefined;
+        updated[selectedLegIndex].vehicle_title = chosenOpt?.title || vc;
         setItineraryLegs(updated);
       }
     } else {
@@ -692,10 +717,14 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
 
   const handleApplyVehicleToAllLegs = (vc: VehicleClass) => {
     setVehicleClass(vc);
-    const opt = vehicleOptions.find(o => o.type === vc);
+    const opt = vehicleOptions.find((o, idx) => getVehicleKey(o, idx) === selectedVehicleId) || vehicleOptions.find(o => o.type === vc);
+    if (opt) {
+      setSelectedVehicleId(getVehicleKey(opt, vehicleOptions.indexOf(opt)));
+    }
     const updated = itineraryLegs.map(l => ({
       ...l,
       vehicle_class: vc,
+      vehicle_id: opt ? getVehicleKey(opt) : undefined,
       vehicle_title: opt?.title || vc
     }));
     setItineraryLegs(updated);
@@ -918,7 +947,11 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
   };
 
   const selectedVehicleObj = (vehicleOptions && vehicleOptions.length > 0)
-    ? (vehicleOptions.find(v => v.type === vehicleClass) || vehicleOptions[0])
+    ? (
+        vehicleOptions.find((v, idx) => getVehicleKey(v, idx) === selectedVehicleId) ||
+        vehicleOptions.find(v => v.type === vehicleClass) ||
+        vehicleOptions[0]
+      )
     : fallbackVehicle;
 
   return (
@@ -1166,7 +1199,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
                 <div>
                   <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>VEHICLE TIER</div>
                   <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#0F172A', marginTop: '2px' }}>
-                    {vehicleOptions.find(v => v.type === booking.vehicle_class)?.title || 'Executive Vehicle'}
+                    {selectedVehicleObj?.title || vehicleOptions.find(v => v.type === booking.vehicle_class)?.title || 'Executive Vehicle'}
                   </div>
                 </div>
 
@@ -2152,18 +2185,22 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
                                 </div>
 
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
-                                  {vehicleOptions.map((opt) => {
-                                    const isChosen = (leg.vehicle_class || 'FIRST_CLASS') === opt.type;
+                                  {vehicleOptions.map((opt, optIdx) => {
+                                    const optKey = getVehicleKey(opt, optIdx);
+                                    const isChosen = leg.vehicle_id
+                                      ? leg.vehicle_id === optKey
+                                      : (leg.vehicle_title ? leg.vehicle_title === opt.title : vehicleOptions.findIndex(v => v.type === (leg.vehicle_class || 'FIRST_CLASS')) === optIdx);
                                     const isOptUnderMaint = activeFleetClasses[opt.type] === false;
                                     return (
                                       <button
-                                        key={opt.type}
+                                        key={optKey}
                                         type="button"
                                         disabled={isOptUnderMaint}
                                         onClick={() => {
                                           if (isOptUnderMaint) return;
                                           const updated = [...itineraryLegs];
                                           updated[idx].vehicle_class = opt.type;
+                                          updated[idx].vehicle_id = optKey;
                                           updated[idx].vehicle_title = opt.title;
                                           updated[idx].vehicle_desc = opt.models || opt.subtitle || 'Spacious. Refined. Always professional.';
                                           setItineraryLegs(updated);
@@ -2360,9 +2397,12 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
 
                   {/* Vehicle Cards List */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    {vehicleOptions.map((veh) => {
-                      const isSelected = vehicleClass === veh.type;
-                      const isExpanded = Boolean(expandedVehicles[veh.type] ?? isSelected);
+                    {vehicleOptions.map((veh, vehIdx) => {
+                      const vehKey = getVehicleKey(veh, vehIdx);
+                      const isSelected = selectedVehicleId
+                        ? selectedVehicleId === vehKey
+                        : vehicleOptions.findIndex(v => v.type === vehicleClass) === vehIdx;
+                      const isExpanded = Boolean(expandedVehicles[vehKey] ?? isSelected);
                       const qData = vehicleQuotes[veh.type];
                       
                       // Authoritative live API price
@@ -2381,14 +2421,14 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
 
                       return (
                         <div
-                          key={veh.type}
+                          key={vehKey}
                           className="vehicle-card-container"
                           onClick={() => {
                             if (isUnderMaintenance) {
                               setQuoteError(`The ${veh.title} is currently under maintenance / repair and unavailable for booking. Please select another active fleet class.`);
                               return;
                             }
-                            handleSelectVehicleClass(veh.type);
+                            handleSelectVehicleClass(veh.type, veh, vehIdx);
                           }}
                           style={{
                             border: isSelected ? '1.5px solid #9A7B4F' : isUnderMaintenance ? '1px dashed #CBD5E1' : '1px solid #EAE6DF',
@@ -2647,7 +2687,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({ config, initialD
                       </div>
                       <div>
                         <div style={{ fontSize: '14px', fontWeight: 800, color: '#0A192F' }}>
-                          {vehicleOptions.find(v => v.type === vehicleClass)?.title || 'Executive Vehicle'}
+                          {selectedVehicleObj?.title || vehicleOptions.find(v => v.type === vehicleClass)?.title || 'Executive Vehicle'}
                         </div>
                         <div style={{ fontSize: '11.5px', color: '#64748B' }}>
                           All-inclusive guaranteed rate (includes all tolls, airport fees & applicable taxes)

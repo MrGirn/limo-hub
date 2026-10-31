@@ -111,11 +111,26 @@ const MainLayout: React.FC = () => {
           setIsCustomerLookupOpen(true);
         }
 
+        const mode = await fetchSystemRuntimeMode();
+        setRuntimeMode(mode);
+
+        // Load sovereign vendor configuration even when deep-linking directly to ?view=vendor / ?view=driver
+        if (mode.is_sovereign_cell && mode.sovereign_vendor_id) {
+          try {
+            const config = await fetchVendorPortalConfig(mode.sovereign_vendor_id);
+            if (config) {
+              setVendorConfig(config);
+            }
+          } catch (e) {
+            console.error('Could not load sovereign config:', e);
+          }
+        }
+
         if (viewParam === 'driver' || viewParam === 'chauffeur') {
           setActiveView('DRIVER_APP');
           return;
         }
-        if (viewParam === 'vendor' || viewParam === 'owner' || viewParam === 'dispatch') {
+        if (viewParam === 'vendor' || viewParam === 'owner' || viewParam === 'dispatch' || viewParam === 'operations') {
           setActiveView('VENDOR_OWNER_DASHBOARD');
           return;
         }
@@ -149,9 +164,6 @@ const MainLayout: React.FC = () => {
           return;
         }
 
-        const mode = await fetchSystemRuntimeMode();
-        setRuntimeMode(mode);
-
         // 1. Central Global Federation Hub (Port 8000) -> Boots into Worldwide Customer Marketplace
         if (mode.hub_mode) {
           setActiveView('GLOBAL_MARKETPLACE');
@@ -172,14 +184,6 @@ const MainLayout: React.FC = () => {
           }
           setActiveView('PUBLIC_WEBSITE');
           setPublicPage('HOME');
-          try {
-            const config = await fetchVendorPortalConfig(mode.sovereign_vendor_id);
-            if (config) {
-              setVendorConfig(config);
-            }
-          } catch (e) {
-            console.error('Could not load sovereign config:', e);
-          }
           return;
         }
 
@@ -535,8 +539,8 @@ const MainLayout: React.FC = () => {
           {publicPage === 'FLEET' && (
             <PublicFleetPage
               config={vendorConfig}
-              onSelectVehicle={(vClass) => {
-                setPendingBookingDetails({ vehicleClass: vClass });
+              onSelectVehicle={(vClass, vId) => {
+                setPendingBookingDetails({ vehicleClass: vClass, vehicleId: vId });
                 setPublicPage('BOOKING');
               }}
             />

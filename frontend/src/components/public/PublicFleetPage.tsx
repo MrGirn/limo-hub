@@ -37,7 +37,7 @@ interface FleetVehicle {
 
 interface PublicFleetPageProps {
   config: VendorPortalConfig;
-  onSelectVehicle: (vClass: VehicleClass) => void;
+  onSelectVehicle: (vClass: VehicleClass, vId?: string) => void;
 }
 
 export const PublicFleetPage: React.FC<PublicFleetPageProps> = ({ config, onSelectVehicle }) => {
@@ -577,7 +577,7 @@ export const PublicFleetPage: React.FC<PublicFleetPageProps> = ({ config, onSele
                   </div>
 
                   <button
-                    onClick={() => onSelectVehicle(vehicle.type)}
+                    onClick={() => onSelectVehicle(vehicle.type, vehicle.id)}
                     style={{
                       background: '#967B42',
                       color: '#FFFFFF',
